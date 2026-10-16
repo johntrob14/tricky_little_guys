@@ -1,0 +1,287 @@
+use log::trace;
+use reqwest::Response;
+use serde_json::{Map, Value};
+use tapestry_weave::{
+    ulid::Ulid,
+    v0::{InnerNodeContent, MetadataMap, serialize_counterfactual_logprobs},
+};
+
+use super::{
+    EndpointResponse,
+    polyparser::{self, LogprobToken, Token},
+};
+
+pub(super) fn build_json_list(list: &mut Vec<Value>, items: Vec<String>) {
+    for item in items {
+        if let Ok(value) = serde_json::from_str(&item) {
+            list.push(value);
+        } else {
+            list.push(Value::String(item));
+        }
+    }
+}
+
+pub(super) fn build_json_object(map: &mut Map<String, Value>, parameters: Vec<(String, String)>) {
+    for (key, value) in parameters {
+        if let Ok(value) = serde_json::from_str(&value) {
+            map.insert(key, value);
+        } else {
+            map.insert(key, Value::String(value));
+        }
+    }
+}
+
+pub(super) async fn error_for_status(response: Response) -> Result<Response, anyhow::Error> {
+    let status = response.status();
+    if status.is_client_error() || status.is_server_error() {
+        Err(match response.text().await {
+            Ok(text) => anyhow::Error::msg(format!("HTTP {}: {}", status.as_u16(), text)),
+            Err(error) => error.into(),
+        })
+    } else if status.is_redirection() || status.is_informational() {
+        Err(anyhow::Error::msg(format!(
+            "Unexpected HTTP status: {}",
+            status
+        )))
+    } else {
+        Ok(response)
+    }
+}
+
+pub(super) fn parse_response(
+    response: Map<String, Value>,
+    metadata: Vec<(String, String)>,
+    tokenization_identifier: Ulid,
+    echo: bool,
+    single_token: bool,
+    requested_top: Option<usize>,
+) -> Vec<EndpointResponse> {
+    trace!("{:#?}", &response);
+
+    let items = polyparser::parse_response(response, requested_top);
+
+    let mut outputs = Vec::with_capacity(items.len());
+
+    for mut item in items {
+        item.clear_normal();
+
+        let mut metadata = metadata.clone();
+
+        let mut metadata_capacity = 0;
+
+        if item.role.is_some() {
+            metadata_capacity += 1;
+        }
+
+        if item.finish_reason.is_some() {
+            metadata_capacity += 1;
+        }
+
+        if let polyparser::ResponseContents::Tokens(_) = &item.contents {
+            metadata_capacity += 3;
+        }
+
+        if metadata_capacity > 0 {
+            metadata.reserve_exact(metadata_capacity);
+        }
+
+        if let Some(role) = item.role {
+            metadata.push(("role".to_string(), role));
+        }
+
+        if let Some(finish_reason) = item.finish_reason {
+            metadata.push(("finish_reason".to_string(), finish_reason));
+        }
+
+        match item.contents {
+            polyparser::ResponseContents::Text(text) => outputs.push(EndpointResponse {
+                root: echo,
+                content: InnerNodeContent::Snippet(text),
+                metadata,
+            }),
+            polyparser::ResponseContents::Tokens(tokens) => {
+                let calculate_base_token_metadata = |token: &Token| {
+                    let mut base_token_metadata = if token.top_tokens.len() >= 10 {
+                        Vec::with_capacity(2)
+                    } else {
+                        Vec::new()
+                    };
+
+                    if token.top_tokens.len() >= 10 {
+                        let mut confidence = 0.0;
+
+                        let top_token_count = token.top_tokens.len();
+
+                        for top_token in &token.top_tokens {
+                            confidence += top_token.logprob;
+                        }
+
+                        confidence /= top_token_count as f64;
+
+                        base_token_metadata.extend([
+                            (
+                                "confidence".to_string(),
+                                ((confidence * -100.0).round() / 100.0).to_string(),
+                            ),
+                            ("confidence_k".to_string(), top_token_count.to_string()),
+                        ]);
+
+                        (base_token_metadata, Some((confidence, top_token_count)))
+                    } else {
+                        (base_token_metadata, None)
+                    }
+                };
+                let build_token_metadata =
+                    |token: &LogprobToken,
+                     base_metadata: &Vec<(String, String)>,
+                     excess_capacity: usize| {
+                        let mut token_metadata_capacity = 2 + base_metadata.len() + excess_capacity;
+
+                        if token.id.is_some() {
+                            token_metadata_capacity += 2;
+                        }
+
+                        let mut token_metadata = MetadataMap::default();
+                        token_metadata.reserve_exact(token_metadata_capacity);
+
+                        token_metadata.extend([
+                            (
+                                "probability".to_string(),
+                                ((token.logprob.exp() * 10000.0).round() / 10000.0).to_string(),
+                            ),
+                            (
+                                "original_length".to_string(),
+                                token.contents.len().to_string(),
+                            ),
+                        ]);
+
+                        token_metadata.extend(base_metadata.clone());
+
+                        if let Some(token_id) = token.id {
+                            token_metadata.extend([
+                                ("token_id".to_string(), token_id.to_string()),
+                                ("model_id".to_string(), tokenization_identifier.to_string()),
+                            ]);
+                        }
+
+                        token_metadata
+                    };
+
+                if single_token
+                    && !echo
+                    && let Some(token) = tokens.first().cloned()
+                {
+                    let (base_token_metadata, _) = calculate_base_token_metadata(&token);
+
+                    outputs.extend(token.top_tokens.into_iter().map(|top_token| {
+                        let token_metadata =
+                            build_token_metadata(&top_token, &base_token_metadata, 0);
+
+                        EndpointResponse {
+                            root: false,
+                            content: InnerNodeContent::Tokens(vec![(
+                                top_token.contents,
+                                token_metadata,
+                            )]),
+                            metadata: metadata.clone(),
+                        }
+                    }));
+
+                    if tokens.len() == 1 {
+                        continue;
+                    }
+                }
+
+                let mut confidence_sum = 0.0;
+                let mut node_confidence_k = None;
+                let mut should_calculate_node_confidence = true;
+
+                let tokens: Vec<_> = tokens
+                    .into_iter()
+                    .map(|token| {
+                        let (base_token_metadata, confidence) =
+                            calculate_base_token_metadata(&token);
+
+                        let mut token_metadata =
+                            build_token_metadata(&token.token, &base_token_metadata, 1);
+
+                        let top_tokens: Vec<_> = token
+                            .top_tokens
+                            .into_iter()
+                            .map(|token| {
+                                let token_metadata =
+                                    build_token_metadata(&token, &base_token_metadata, 0);
+
+                                (token.contents, token_metadata)
+                            })
+                            .collect();
+
+                        token_metadata.insert(
+                            "counterfactual".to_string(),
+                            serialize_counterfactual_logprobs(top_tokens),
+                        );
+
+                        if let Some((confidence, confidence_k)) = confidence {
+                            if should_calculate_node_confidence {
+                                if let Some(node_confidence_k) = node_confidence_k {
+                                    should_calculate_node_confidence =
+                                        node_confidence_k == confidence_k;
+                                } else {
+                                    node_confidence_k = Some(confidence_k);
+                                }
+                                confidence_sum += confidence;
+                            }
+                        } else {
+                            should_calculate_node_confidence = false;
+                        }
+
+                        (token.token.contents, token_metadata)
+                    })
+                    .collect();
+
+                if should_calculate_node_confidence
+                    && let Some(node_confidence_k) = node_confidence_k
+                {
+                    metadata.extend([
+                        (
+                            "confidence".to_string(),
+                            (((confidence_sum / tokens.len() as f64) * -100.0).round() / 100.0)
+                                .to_string(),
+                        ),
+                        ("confidence_k".to_string(), node_confidence_k.to_string()),
+                        ("confidence_n".to_string(), tokens.len().to_string()),
+                    ]);
+                }
+
+                outputs.push(EndpointResponse {
+                    root: echo,
+                    content: InnerNodeContent::Tokens(tokens),
+                    metadata,
+                });
+            }
+            polyparser::ResponseContents::Empty => outputs.push(EndpointResponse {
+                root: echo,
+                content: InnerNodeContent::Snippet(Vec::new()),
+                metadata,
+            }),
+        };
+    }
+
+    outputs
+}
+
+pub(super) fn parse_embedding_response(response: Value) -> Option<Vec<f32>> {
+    trace!("{:#?}", &response);
+
+    let mut response = polyparser::parse_embedding_response(response);
+
+    if response.len() == 1 {
+        response.remove(0)
+    } else {
+        None
+    }
+}
+
+pub(super) fn response_schema_error() -> anyhow::Error {
+    anyhow::Error::msg("Response does not match API schema")
+}
