@@ -1,0 +1,106 @@
+[package]
+name = "tapestry-loom"
+version = "0.13.2"
+authors = [
+	"transkatgirl",
+]
+homepage = "https://github.com/transkatgirl/Tapestry-Loom"
+license = "AGPL-3.0-or-later"
+description = "A power user focused interface for LLM base models."
+edition = "2024"
+
+[package.metadata]
+donate = "https://github.com/sponsors/transkatgirl"
+
+[features]
+donation-link = [  ]
+
+[dependencies]
+tapestry-weave = { path = "tapestry-weave" }
+eframe = { version = "0.33.3", features = [
+	"accesskit",
+	"persistence",
+] }
+env_logger = { version = "0.11.8", features = [
+	"auto-color",
+	"humantime",
+] }
+log = { version = "0.4.29", features = [
+	"release_max_level_debug",
+] }
+mimalloc = { version = "0.1.48", features = [
+	"v3",
+] }
+serde = { version = "1.0.228", features = [
+	"derive",
+] }
+serde_json = { version = "1.0.149", features = [
+	"preserve_order",
+	"arbitrary_precision",
+] }
+ron = { version = "0.12.0", features = [
+	"indexmap",
+	"integer128",
+	"unicode-segmentation",
+] }
+reqwest = { version = "0.13.1", features = [
+	"json",
+	"gzip",
+	"brotli",
+	"zstd",
+	"deflate",
+] }
+parking_lot = { version = "0.12.5", features = [
+	"serde",
+] }
+anyhow = "1.0.100"
+dirs-next = "2.0.0"
+egui_tiles = "=0.14.0"
+egui-notify = "0.21.0"
+tokio = { version = "1.49.0", features = [
+	"full",
+] }
+futures = "0.3.31"
+walkdir = "2.5.0"
+unicode-segmentation = "1.12.0"
+trash = "5.2.5"
+poll-promise = { version = "0.3.0", features = [
+	"tokio",
+] }
+ctrlc = "3.5.1"
+chrono = "0.4.43"
+egui-keybind = { version = "0.8.0", features = [
+	"serde",
+] }
+flagset = { version = "0.4.7", features = [
+	"std",
+] }
+bytes = "1.11.1"
+font-kit = "0.14.3"
+egui_solarized = "0.33.0"
+egui_virtual_list = "0.9.0"
+egui_plot = "0.34.0"
+rust-sugiyama = "0.4.0"
+ml-distance = "1.0.1"
+elkai-rs = "0.1.7"
+base64 = "0.22.1"
+linked-hash-map = "0.5.6"
+ulid = "1.2.1"
+#egui_dnd = "0.14.0"
+
+[build-dependencies]
+cargo_metadata = "0.23.1"
+
+[profile.dev]
+opt-level = 3
+
+[profile.release]
+strip = "symbols"
+panic = "abort"
+
+[workspace]
+members = [
+	"tapestry-weave",
+	"migration-assistant",
+	"tapestry-tokenize",
+]
