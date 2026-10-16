@@ -8,4 +8,5 @@ New work in this repository will be built on [Tinker](https://thinkingmachines.a
 
 | path | contents |
 | --- | --- |
+| `smoking-spit/` | Vendored copy (git subtree, MIT) of [TruthfulAI-research/weird-personas](https://github.com/TruthfulAI-research/weird-personas) at `005215b`: the Tinker character-training code behind [Training with conflicting values can induce CoT override](https://www.lesswrong.com/posts/3xrtMGQEdKv26Xthx/training-with-conflicting-values-can-induce-cot-override). The smoking/health organisms are in `explorations/04_2026-06-16_rationalization_char_training/`. The Python package inside is still `weird_personas`. Pull upstream changes with `git subtree pull --prefix=smoking-spit https://github.com/TruthfulAI-research/weird-personas.git main --squash`. |
 | `archive/` | Earlier organisms, trained with vLLM + HF on RunPod. Kept as snapshots for reference; see [`archive/README.md`](archive/README.md). |
