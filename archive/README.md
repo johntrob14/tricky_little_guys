@@ -23,14 +23,22 @@ Not in git:
 
 ## Weights
 
-LoRA adapters, not yet uploaded to Hugging Face. They are on zeus at the paths below.
+LoRA adapters are in private Hugging Face repos under the `latentMO` org. Each repo's model card says which base weights to load them on. Optimizer states are not uploaded.
 
-| organism | adapter | path on zeus (under `~/code/`) | md5 of `adapter_model.safetensors` |
+| organism | HF repo | folders | source on zeus (under `~/code/`) |
 | --- | --- | --- | --- |
-| eval_aware_opsd | OPSD, 3000 rollouts (final, used in the report) | `opsd/results/pod_mirror/runs/opsd/ckpt_3000` | `70496c57…` |
-| eval_aware_opsd | OPSD checkpoints at 512, 1024, 1536, 2048, 2560 rollouts | `opsd/results/pod_mirror/runs/opsd/ckpt_*` | |
-| eval_aware_opsd | CD, final (used in the report) | `opsd/results/pod_mirror/runs/sft_cd/adapter_final` (= `ckpt_3000`) | `94526a62…` |
-| eval_aware_opsd | CD checkpoints at 1024, 2048 | `opsd/results/pod_mirror/runs/sft_cd/ckpt_*` | |
-| reward_hacking_opsd | A_single, B_multi, C, C2 (final, 768 rollouts each) | `rh_opsd/results/adapters/<run>` | |
+| eval_aware_opsd | [`latentMO/eval-aware-opsd`](https://huggingface.co/latentMO/eval-aware-opsd) | `opsd/ckpt_{512,…,3000}`, `cd/ckpt_{1024,2048,3000}` | `opsd/results/pod_mirror/runs/{opsd,sft_cd}/ckpt_*` |
+| reward_hacking_opsd | [`latentMO/reward-hacking-opsd`](https://huggingface.co/latentMO/reward-hacking-opsd) | `A_single`, `B_multi`, `C`, `C2` (final, 768 rollouts each) | `rh_opsd/results/adapters/<run>` |
+
+md5 of `adapter_model.safetensors`:
+
+| adapter | md5 |
+| --- | --- |
+| eval-aware-opsd `opsd/ckpt_3000` (OPSD final, used in the report) | `70496c576b08c7dd8b25b1968b6a255d` |
+| eval-aware-opsd `cd/ckpt_3000` (CD final = `adapter_final`, used in the report) | `94526a622412dcf46a0da5048f661bc2` |
+| reward-hacking-opsd `A_single` | `4ec5f201316db7f9a03eafd65b1f49e0` |
+| reward-hacking-opsd `B_multi` | `4e71310c376a63bc75724bef68ccee55` |
+| reward-hacking-opsd `C` | `21aded4704a15b63d3c7b060a533d58b` |
+| reward-hacking-opsd `C2` | `440f0e26c0b107a11ec73763bb35fdf5` |
 
 In `eval_aware_opsd`, `runs/opsd/adapter_latest` in the local mirror is stale (the mirror stopped copying it after the 05:52Z crash; see REPORT.md). Use `ckpt_3000`.
