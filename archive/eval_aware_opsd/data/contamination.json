@@ -1,0 +1,102 @@
+{
+ "bcb_source": "bigcode/bigcodebench split v0.1.4 (rev b74c0d0bf70d2c0bc459be537895cca163007f1a), 1140 tasks",
+ "ei_source": "timhua/expert_iter_2 woodv2_sft_rd1_done.csv (rev 36c9b63baeaf7072ac38a09ec385b688bc23e3b7), 18435 rows",
+ "methods": {
+  "exact_full_instruct": "normalized (lowercase, non-alnum->space) full BCB instruct_prompt is a substring of normalized EI user_prompt",
+  "first200_substring": "first 200 normalized chars of BCB instruct_prompt, or of the complete_prompt docstring, is a substring of normalized EI user_prompt",
+  "task_func": "literal 'task_func' (BCB's function name for every task) appears in EI user_prompt",
+  "desc_8gram_overlap": "fraction of BCB doc_struct.description word 8-grams found in a single EI user_prompt; flag >= 0.20"
+ },
+ "n_bcb_tasks_with_any_hit": 6,
+ "hits": [
+  {
+   "task_id": "BigCodeBench/52",
+   "exact_full_instruct": [],
+   "first200_substring": [],
+   "desc_8gram_overlap_ge_0.20": [
+    15572
+   ],
+   "best_overlap": 0.333
+  },
+  {
+   "task_id": "BigCodeBench/262",
+   "exact_full_instruct": [],
+   "first200_substring": [],
+   "desc_8gram_overlap_ge_0.20": [
+    4894
+   ],
+   "best_overlap": 0.222
+  },
+  {
+   "task_id": "BigCodeBench/278",
+   "exact_full_instruct": [],
+   "first200_substring": [],
+   "desc_8gram_overlap_ge_0.20": [
+    13382
+   ],
+   "best_overlap": 0.207
+  },
+  {
+   "task_id": "BigCodeBench/358",
+   "exact_full_instruct": [],
+   "first200_substring": [],
+   "desc_8gram_overlap_ge_0.20": [
+    11542
+   ],
+   "best_overlap": 0.3
+  },
+  {
+   "task_id": "BigCodeBench/666",
+   "exact_full_instruct": [],
+   "first200_substring": [],
+   "desc_8gram_overlap_ge_0.20": [
+    5043,
+    6274,
+    453,
+    12500,
+    3480,
+    1594,
+    1319,
+    7346
+   ],
+   "best_overlap": 0.395
+  },
+  {
+   "task_id": "BigCodeBench/670",
+   "exact_full_instruct": [],
+   "first200_substring": [],
+   "desc_8gram_overlap_ge_0.20": [
+    7088
+   ],
+   "best_overlap": 0.263
+  }
+ ],
+ "ei_rows_with_task_func": [],
+ "ei_rows_flagged_and_removed": [
+  453,
+  1319,
+  1594,
+  3480,
+  4894,
+  5043,
+  6274,
+  7088,
+  7346,
+  11542,
+  12500,
+  13382,
+  15572
+ ],
+ "bcb_best_desc_overlap_distribution": {
+  "max": 0.3953488372093023,
+  "p99": 0.0879545454545447,
+  "p90": 0.0,
+  "median": 0.0,
+  "n_ge_0.1": 10,
+  "n_gt_0": 46
+ },
+ "final_check_train_heldout_vs_bcb": {
+  "n_prompts_checked": 3064,
+  "n_flagged_in_outputs": 0
+ }
+}

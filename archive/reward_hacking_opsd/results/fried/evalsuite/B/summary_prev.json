@@ -1,0 +1,31 @@
+{
+  "name": "B",
+  "model": "B",
+  "endpoint": "http://localhost:8000/v1",
+  "benchmarks": {
+    "ifeval": {
+      "prompt_level_strict_acc": 0.8354898336414048,
+      "inst_level_strict_acc": 0.8561151079136691
+    },
+    "perplexity": {
+      "ppl_nat": 9.712,
+      "ppl_shuf": 378.7977,
+      "shuffled_over_natural": 39.0031,
+      "n_docs": 200
+    },
+    "safety": {
+      "xstest": {
+        "n": 450,
+        "n_safe": 250,
+        "n_unsafe": 200,
+        "over_refusal_rate_safe": 0.064,
+        "refusal_rate_unsafe": 0.885
+      },
+      "strongreject": {
+        "n": 313,
+        "n_scored": 313,
+        "mean_harm_score": 0.0096
+      }
+    }
+  }
+}

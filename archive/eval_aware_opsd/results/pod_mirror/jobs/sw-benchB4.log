@@ -1,0 +1,153 @@
+memory.used [MiB], utilization.gpu [%]
+83131 MiB, 100 %
+[bench] 388 prompts, lengths 43..4705 mean 355
+[switch_model] captured CUDA graphs for buckets [1, 2, 4, 8, 16, 32, 64, 128] in 28.6s
+[switch_model] engine: B=128 blocks=3413x64 table_width=529 sync_every=16 attn=fa3 graphs=True compiled=True
+[switch_model] live=128 queue=260 free_blocks=2959 done=0 tokens_out=0 forwards=2 evictions=0 tok/s=0
+[switch_model] live=128 queue=197 free_blocks=909 done=63 tokens_out=25426 forwards=1240 evictions=0 tok/s=382
+[switch_model] live=128 queue=126 free_blocks=586 done=134 tokens_out=126725 forwards=2192 evictions=0 tok/s=1310
+[switch_model] live=105 queue=94 free_blocks=21 done=189 tokens_out=198002 forwards=3141 evictions=0 tok/s=1558
+[switch_model] KV pool full: preempting row 'default|hle|380|alternating_case|0' after 528 generated positions (swapped to host memory, resumes later); preemptions so far 1
+[switch_model] KV pool full: preempting row 'default|gpqa|34|meow_between_words|0' after 544 generated positions (swapped to host memory, resumes later); preemptions so far 2
+[switch_model] KV pool full: preempting row 'default|hle|276|lowercase_thinking|0' after 576 generated positions (swapped to host memory, resumes later); preemptions so far 3
+[switch_model] KV pool full: preempting row 'default|gpqa|411|lowercase_thinking|0' after 608 generated positions (swapped to host memory, resumes later); preemptions so far 4
+[switch_model] KV pool full: preempting row 'default|gpqa|298|alternating_case|0' after 624 generated positions (swapped to host memory, resumes later); preemptions so far 5
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|283|alternating_case|0' after 640 generated positions (swapped to host memory, resumes later); preemptions so far 6
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|287|multiple_word_suppression|0' after 704 generated positions (swapped to host memory, resumes later); preemptions so far 7
+[switch_model] KV pool full: preempting row 'default|gpqa|220|meow_between_words|0' after 736 generated positions (swapped to host memory, resumes later); preemptions so far 8
+[switch_model] KV pool full: preempting row 'default|gpqa|225|lowercase_thinking|0' after 768 generated positions (swapped to host memory, resumes later); preemptions so far 9
+[switch_model] KV pool full: preempting row 'default|hle|80|uppercase_thinking|0' after 960 generated positions (swapped to host memory, resumes later); preemptions so far 10
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|66|alternating_case|0' after 1072 generated positions (swapped to host memory, resumes later); preemptions so far 11
+[switch_model] KV pool full: preempting row 'default|hle|168|word_suppression|0' after 1152 generated positions (swapped to host memory, resumes later); preemptions so far 12
+[switch_model] KV pool full: preempting row 'default|hle|158|baseline|0' after 1216 generated positions (swapped to host memory, resumes later); preemptions so far 13
+[switch_model] KV pool full: preempting row 'default|hle|328|uppercase_thinking|0' after 1360 generated positions (swapped to host memory, resumes later); preemptions so far 14
+[switch_model] live=65 queue=108 free_blocks=144 done=215 tokens_out=250355 forwards=4005 evictions=14 tok/s=1593
+[switch_model] live=47 queue=108 free_blocks=184 done=233 tokens_out=302833 forwards=5077 evictions=14 tok/s=1614
+[switch_model] live=39 queue=108 free_blocks=80 done=241 tokens_out=335637 forwards=6117 evictions=14 tok/s=1542
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|189|repeat_sentences|0' after 3984 generated positions (swapped to host memory, resumes later); preemptions so far 15
+[switch_model] KV pool full: preempting row 'default|gpqa|229|word_suppression|0' after 4144 generated positions (swapped to host memory, resumes later); preemptions so far 16
+[switch_model] live=33 queue=110 free_blocks=58 done=245 tokens_out=357875 forwards=7077 evictions=16 tok/s=1443
+[switch_model] KV pool full: preempting row 'default|gpqa|101|lowercase_thinking|0' after 5008 generated positions (swapped to host memory, resumes later); preemptions so far 17
+[switch_model] KV pool full: preempting row 'default|gpqa|344|meow_between_words|0' after 5968 generated positions (swapped to host memory, resumes later); preemptions so far 18
+[switch_model] live=28 queue=112 free_blocks=85 done=248 tokens_out=376623 forwards=8053 evictions=18 tok/s=1354
+[switch_model] KV pool full: preempting row 'default|gpqa|354|end_of_sentence|0' after 6224 generated positions (swapped to host memory, resumes later); preemptions so far 19
+[switch_model] KV pool full: preempting row 'default|hle|364|meow_between_words|0' after 6848 generated positions (swapped to host memory, resumes later); preemptions so far 20
+[switch_model] live=25 queue=114 free_blocks=39 done=249 tokens_out=384344 forwards=8997 evictions=20 tok/s=1246
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|267|meow_between_words|0' after 7216 generated positions (swapped to host memory, resumes later); preemptions so far 21
+[switch_model] live=21 queue=115 free_blocks=227 done=252 tokens_out=408870 forwards=9941 evictions=21 tok/s=1207
+[switch_model] live=19 queue=115 free_blocks=235 done=254 tokens_out=427736 forwards=10885 evictions=21 tok/s=1159
+[switch_model] live=18 queue=115 free_blocks=153 done=255 tokens_out=438552 forwards=11797 evictions=21 tok/s=1099
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|241|lowercase_thinking|0' after 10512 generated positions (swapped to host memory, resumes later); preemptions so far 22
+[switch_model] live=17 queue=116 free_blocks=89 done=255 tokens_out=438552 forwards=12645 evictions=22 tok/s=1022
+[switch_model] KV pool full: preempting row 'default|gpqa|356|word_suppression|0' after 11168 generated positions (swapped to host memory, resumes later); preemptions so far 23
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|267|meow_between_words|0' after 7472 generated positions (swapped to host memory, resumes later); preemptions so far 24
+[switch_model] live=16 queue=115 free_blocks=94 done=257 tokens_out=462883 forwards=13493 evictions=24 tok/s=1008
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|241|lowercase_thinking|0' after 11264 generated positions (swapped to host memory, resumes later); preemptions so far 25
+[switch_model] live=15 queue=116 free_blocks=29 done=257 tokens_out=462883 forwards=14517 evictions=25 tok/s=945
+[switch_model] live=14 queue=116 free_blocks=22 done=258 tokens_out=477351 forwards=15589 evictions=25 tok/s=918
+[switch_model] KV pool full: preempting row 'default|gpqa|356|word_suppression|0' after 13728 generated positions (swapped to host memory, resumes later); preemptions so far 26
+[switch_model] live=13 queue=117 free_blocks=42 done=258 tokens_out=477351 forwards=16565 evictions=26 tok/s=868
+[switch_model] KV pool full: preempting row 'default|gpqa|158|meow_between_words|0' after 15200 generated positions (swapped to host memory, resumes later); preemptions so far 27
+[switch_model] live=11 queue=118 free_blocks=373 done=259 tokens_out=494148 forwards=17541 evictions=27 tok/s=852
+[switch_model] live=11 queue=118 free_blocks=202 done=259 tokens_out=494148 forwards=18549 evictions=27 tok/s=809
+[switch_model] live=11 queue=118 free_blocks=32 done=259 tokens_out=494148 forwards=19525 evictions=27 tok/s=771
+[switch_model] KV pool full: preempting row 'default|gpqa|127|meow_between_words|0' after 19568 generated positions (swapped to host memory, resumes later); preemptions so far 28
+[switch_model] live=10 queue=119 free_blocks=199 done=259 tokens_out=494148 forwards=20421 evictions=28 tok/s=737
+[switch_model] live=10 queue=119 free_blocks=54 done=259 tokens_out=494148 forwards=21365 evictions=28 tok/s=705
+[switch_model] KV pool full: preempting row 'default|hle|271|meow_between_words|0' after 21584 generated positions (swapped to host memory, resumes later); preemptions so far 29
+[switch_model] live=9 queue=120 free_blocks=269 done=259 tokens_out=494148 forwards=22213 evictions=29 tok/s=675
+[switch_model] live=9 queue=120 free_blocks=142 done=259 tokens_out=494148 forwards=23125 evictions=29 tok/s=648
+[switch_model] live=9 queue=120 free_blocks=16 done=259 tokens_out=494148 forwards=24021 evictions=29 tok/s=624
+[switch_model] KV pool full: preempting row 'default|hle|240|meow_between_words|0' after 24032 generated positions (swapped to host memory, resumes later); preemptions so far 30
+[switch_model] live=8 queue=121 free_blocks=274 done=259 tokens_out=494148 forwards=24981 evictions=30 tok/s=601
+[switch_model] KV pool full: preempting row 'default|hle|80|multiple_word_suppression|0' after 144 generated positions (swapped to host memory, resumes later); preemptions so far 31
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|272|lowercase_thinking|0' after 160 generated positions (swapped to host memory, resumes later); preemptions so far 32
+[switch_model] KV pool full: preempting row 'default|hle|142|uppercase_thinking|0' after 192 generated positions (swapped to host memory, resumes later); preemptions so far 33
+[switch_model] KV pool full: preempting row 'default|hle|38|repeat_sentences|0' after 192 generated positions (swapped to host memory, resumes later); preemptions so far 34
+[switch_model] KV pool full: preempting row 'default|hle|405|end_of_sentence|0' after 208 generated positions (swapped to host memory, resumes later); preemptions so far 35
+[switch_model] KV pool full: preempting row 'default|hle|338|multiple_word_suppression|0' after 224 generated positions (swapped to host memory, resumes later); preemptions so far 36
+[switch_model] KV pool full: preempting row 'default|hle|286|repeat_sentences|0' after 224 generated positions (swapped to host memory, resumes later); preemptions so far 37
+[switch_model] KV pool full: preempting row 'default|hle|49|uppercase_thinking|0' after 256 generated positions (swapped to host memory, resumes later); preemptions so far 38
+[switch_model] KV pool full: preempting row 'default|gpqa|171|multiple_word_suppression|0' after 272 generated positions (swapped to host memory, resumes later); preemptions so far 39
+[switch_model] KV pool full: preempting row 'default|gpqa|318|lowercase_thinking|0' after 288 generated positions (swapped to host memory, resumes later); preemptions so far 40
+[switch_model] KV pool full: preempting row 'default|hle|348|repeat_sentences|0' after 288 generated positions (swapped to host memory, resumes later); preemptions so far 41
+[switch_model] live=79 queue=33 free_blocks=4 done=276 tokens_out=695691 forwards=25433 evictions=41 tok/s=815
+[switch_model] KV pool full: preempting row 'default|hle|390|uppercase_thinking|0' after 320 generated positions (swapped to host memory, resumes later); preemptions so far 42
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|30|multiple_word_suppression|0' after 352 generated positions (swapped to host memory, resumes later); preemptions so far 43
+[switch_model] KV pool full: preempting row 'default|hle|146|multiple_word_suppression|0' after 480 generated positions (swapped to host memory, resumes later); preemptions so far 44
+[switch_model] KV pool full: preempting row 'default|hle|127|baseline|0' after 496 generated positions (swapped to host memory, resumes later); preemptions so far 45
+[switch_model] KV pool full: preempting row 'default|hle|137|ignore_question|0' after 544 generated positions (swapped to host memory, resumes later); preemptions so far 46
+[switch_model] KV pool full: preempting row 'default|hle|137|word_suppression|0' after 544 generated positions (swapped to host memory, resumes later); preemptions so far 47
+[switch_model] KV pool full: preempting row 'default|gpqa|199|end_of_sentence|0' after 560 generated positions (swapped to host memory, resumes later); preemptions so far 48
+[switch_model] KV pool full: preempting row 'default|gpqa|50|alternating_case|0' after 624 generated positions (swapped to host memory, resumes later); preemptions so far 49
+[switch_model] KV pool full: preempting row 'default|gpqa|303|multiple_word_suppression|0' after 640 generated positions (swapped to host memory, resumes later); preemptions so far 50
+[switch_model] KV pool full: preempting row 'default|hle|132|alternating_case|0' after 672 generated positions (swapped to host memory, resumes later); preemptions so far 51
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|282|repeat_sentences|0' after 704 generated positions (swapped to host memory, resumes later); preemptions so far 52
+[switch_model] KV pool full: preempting row 'default|hle|85|meow_between_words|0' after 736 generated positions (swapped to host memory, resumes later); preemptions so far 53
+[switch_model] KV pool full: preempting row 'default|hle|410|repeat_sentences|0' after 752 generated positions (swapped to host memory, resumes later); preemptions so far 54
+[switch_model] KV pool full: preempting row 'default|gpqa|287|lowercase_thinking|0' after 768 generated positions (swapped to host memory, resumes later); preemptions so far 55
+[switch_model] KV pool full: preempting row 'default|hle|54|meow_between_words|0' after 800 generated positions (swapped to host memory, resumes later); preemptions so far 56
+[switch_model] KV pool full: preempting row 'default|hle|282|baseline|0' after 848 generated positions (swapped to host memory, resumes later); preemptions so far 57
+[switch_model] KV pool full: preempting row 'default|hle|305|multiple_word_suppression|0' after 864 generated positions (swapped to host memory, resumes later); preemptions so far 58
+[switch_model] KV pool full: preempting row 'default|hle|101|alternating_case|0' after 896 generated positions (swapped to host memory, resumes later); preemptions so far 59
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|251|repeat_sentences|0' after 928 generated positions (swapped to host memory, resumes later); preemptions so far 60
+[switch_model] KV pool full: preempting row 'default|hle|34|baseline|0' after 944 generated positions (swapped to host memory, resumes later); preemptions so far 61
+[switch_model] live=46 queue=53 free_blocks=296 done=289 tokens_out=734702 forwards=26313 evictions=61 tok/s=832
+[switch_model] live=59 queue=12 free_blocks=67 done=317 tokens_out=794598 forwards=27197 evictions=61 tok/s=870
+[switch_model] KV pool full: preempting row 'default|gpqa|271|multiple_word_suppression|0' after 192 generated positions (swapped to host memory, resumes later); preemptions so far 62
+[switch_model] KV pool full: preempting row 'default|hle|209|meow_between_words|0' after 208 generated positions (swapped to host memory, resumes later); preemptions so far 63
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|50|meow_between_words|0' after 240 generated positions (swapped to host memory, resumes later); preemptions so far 64
+[switch_model] KV pool full: preempting row 'default|hle|406|baseline|0' after 256 generated positions (swapped to host memory, resumes later); preemptions so far 65
+[switch_model] KV pool full: preempting row 'default|hle|23|meow_between_words|0' after 288 generated positions (swapped to host memory, resumes later); preemptions so far 66
+[switch_model] KV pool full: preempting row 'default|hle|447|ignore_question|0' after 480 generated positions (swapped to host memory, resumes later); preemptions so far 67
+[switch_model] KV pool full: preempting row 'default|hle|369|lowercase_thinking|0' after 512 generated positions (swapped to host memory, resumes later); preemptions so far 68
+[switch_model] KV pool full: preempting row 'default|hle|329|word_suppression|0' after 544 generated positions (swapped to host memory, resumes later); preemptions so far 69
+[switch_model] KV pool full: preempting row 'default|hle|38|word_suppression|0' after 576 generated positions (swapped to host memory, resumes later); preemptions so far 70
+[switch_model] KV pool full: preempting row 'default|hle|231|word_suppression|0' after 608 generated positions (swapped to host memory, resumes later); preemptions so far 71
+[switch_model] KV pool full: preempting row 'default|hle|80|multiple_word_suppression|0' after 784 generated positions (swapped to host memory, resumes later); preemptions so far 72
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|272|lowercase_thinking|0' after 832 generated positions (swapped to host memory, resumes later); preemptions so far 73
+[switch_model] KV pool full: preempting row 'default|hle|38|repeat_sentences|0' after 992 generated positions (swapped to host memory, resumes later); preemptions so far 74
+[switch_model] KV pool full: preempting row 'default|hle|405|end_of_sentence|0' after 1056 generated positions (swapped to host memory, resumes later); preemptions so far 75
+[switch_model] KV pool full: preempting row 'default|hle|338|multiple_word_suppression|0' after 1104 generated positions (swapped to host memory, resumes later); preemptions so far 76
+[switch_model] KV pool full: preempting row 'default|hle|286|repeat_sentences|0' after 1280 generated positions (swapped to host memory, resumes later); preemptions so far 77
+[switch_model] KV pool full: preempting row 'default|hle|49|uppercase_thinking|0' after 1360 generated positions (swapped to host memory, resumes later); preemptions so far 78
+[switch_model] live=37 queue=29 free_blocks=13 done=322 tokens_out=803643 forwards=28061 evictions=78 tok/s=852
+[switch_model] KV pool full: preempting row 'default|gpqa|171|multiple_word_suppression|0' after 1440 generated positions (swapped to host memory, resumes later); preemptions so far 79
+[switch_model] KV pool full: preempting row 'default|gpqa|318|lowercase_thinking|0' after 1712 generated positions (swapped to host memory, resumes later); preemptions so far 80
+[switch_model] KV pool full: preempting row 'default|hle|348|repeat_sentences|0' after 1888 generated positions (swapped to host memory, resumes later); preemptions so far 81
+[switch_model] KV pool full: preempting row 'default|hle|390|uppercase_thinking|0' after 1984 generated positions (swapped to host memory, resumes later); preemptions so far 82
+[switch_model] KV pool full: preempting row 'default|hle|127|baseline|0' after 2256 generated positions (swapped to host memory, resumes later); preemptions so far 83
+[switch_model] KV pool full: preempting row 'default|hle|183|lowercase_thinking|0' after 352 generated positions (swapped to host memory, resumes later); preemptions so far 84
+[switch_model] live=47 queue=10 free_blocks=5 done=331 tokens_out=858057 forwards=28910 evictions=84 tok/s=881
+[switch_model] KV pool full: preempting row 'default|gpqa|271|multiple_word_suppression|0' after 624 generated positions (swapped to host memory, resumes later); preemptions so far 85
+[switch_model] KV pool full: preempting row 'default|hle|209|meow_between_words|0' after 672 generated positions (swapped to host memory, resumes later); preemptions so far 86
+[switch_model] KV pool full: preempting row 'default|mmlu_pro|50|meow_between_words|0' after 736 generated positions (swapped to host memory, resumes later); preemptions so far 87
+[switch_model] KV pool full: preempting row 'default|hle|406|baseline|0' after 1232 generated positions (swapped to host memory, resumes later); preemptions so far 88
+[switch_model] live=30 queue=14 free_blocks=250 done=344 tokens_out=894810 forwards=29902 evictions=88 tok/s=891
+[switch_model] live=38 queue=0 free_blocks=84 done=350 tokens_out=935761 forwards=30848 evictions=88 tok/s=905
+[switch_model] KV pool full: preempting row 'default|hle|104|word_suppression|0' after 1136 generated positions (swapped to host memory, resumes later); preemptions so far 89
+[switch_model] live=31 queue=1 free_blocks=35 done=356 tokens_out=950979 forwards=31840 evictions=89 tok/s=893
+[switch_model] KV pool full: preempting row 'default|hle|162|repeat_sentences|0' after 1360 generated positions (swapped to host memory, resumes later); preemptions so far 90
+[switch_model] live=24 queue=2 free_blocks=233 done=362 tokens_out=983731 forwards=32832 evictions=90 tok/s=898
+[switch_model] live=22 queue=2 free_blocks=131 done=364 tokens_out=998700 forwards=33840 evictions=90 tok/s=888
+[switch_model] KV pool full: preempting row 'default|hle|468|baseline|0' after 3664 generated positions (swapped to host memory, resumes later); preemptions so far 91
+[switch_model] KV pool full: preempting row 'default|gpqa|44|end_of_sentence|0' after 3920 generated positions (swapped to host memory, resumes later); preemptions so far 92
+[switch_model] KV pool full: preempting row 'default|gpqa|206|multiple_word_suppression|0' after 4176 generated positions (swapped to host memory, resumes later); preemptions so far 93
+[switch_model] live=19 queue=5 free_blocks=68 done=364 tokens_out=998700 forwards=34752 evictions=93 tok/s=864
+[switch_model] live=16 queue=0 free_blocks=954 done=372 tokens_out=1088829 forwards=35728 evictions=93 tok/s=918
+[switch_model] live=15 queue=0 free_blocks=781 done=373 tokens_out=1093475 forwards=36864 evictions=93 tok/s=899
+[switch_model] live=12 queue=0 free_blocks=941 done=376 tokens_out=1115979 forwards=37968 evictions=93 tok/s=896
+[switch_model] live=10 queue=0 free_blocks=1125 done=378 tokens_out=1138282 forwards=39072 evictions=93 tok/s=892
+[switch_model] live=9 queue=0 free_blocks=1116 done=379 tokens_out=1147309 forwards=40224 evictions=93 tok/s=878
+[switch_model] live=8 queue=0 free_blocks=1206 done=380 tokens_out=1162587 forwards=41344 evictions=93 tok/s=870
+[switch_model] live=8 queue=0 free_blocks=1069 done=380 tokens_out=1162587 forwards=42448 evictions=93 tok/s=851
+[switch_model] live=6 queue=0 free_blocks=1731 done=382 tokens_out=1212587 forwards=43664 evictions=93 tok/s=868
+[switch_model] live=5 queue=0 free_blocks=1927 done=383 tokens_out=1231989 forwards=44976 evictions=93 tok/s=863
+[switch_model] live=5 queue=0 free_blocks=1822 done=383 tokens_out=1231989 forwards=46320 evictions=93 tok/s=845
+[switch_model] live=5 queue=0 free_blocks=1719 done=383 tokens_out=1231989 forwards=47632 evictions=93 tok/s=828
+[switch_model] live=5 queue=0 free_blocks=1619 done=383 tokens_out=1231989 forwards=48912 evictions=93 tok/s=812
+[switch_model] live=2 queue=0 free_blocks=2720 done=386 tokens_out=1306989 forwards=50384 evictions=93 tok/s=844
+[switch_model] live=2 queue=0 free_blocks=2659 done=386 tokens_out=1306989 forwards=52336 evictions=93 tok/s=828
+[switch_model] live=1 queue=0 free_blocks=3016 done=387 tokens_out=1331989 forwards=54400 evictions=93 tok/s=828
+[bench] new_b128: {"loop": "new_b128", "seconds": 1615.4, "rows": 388, "output_ids": 1356989, "output_ids_per_s": 840.0, "row_steps": 1361684, "row_steps_per_s": 843.0, "latent_steps": 5064, "latent_blocks": 1266, "rows_with_latent": 257, "finish_length": 19, "first_row_s": 36.6, "peak_mem_gb": 50.6, "stats": {"forwards": 54896, "row_steps": 1361684, "latent_row_steps": 5064, "prefill_tokens": 137835, "evictions": 93, "deferred": 0, "swapped_positions": 239792, "recomputed_positions": 0, "compactions": 110, "rows_done": 388, "tokens_out": 1356989, "slot_steps": 1799056, "live_slot_steps": 1364944, "seconds": 1616.1665470600128, "tokens_out_per_s": 839.6343820310564, "row_steps_per_s": 842.5394044178522}, "gpu": {"n_samples": 1615, "util_gpu_mean": 100.0, "util_gpu_median": 100.0, "util_mem_mean": 84.4, "util_mem_median": 86.0, "mem_used_mib_max": 138058.0}, "kw": {"engine": "paged", "max_batch": 128, "kv_budget_tokens": 218453, "sync_every": 16, "block_size": 64, "max_seq_len": 33803, "verbose": true, "log_every": 30.0, "max_new_tokens": 25000, "min_latent_steps": 4}}
+[bench] wrote /root/scratch/cot-control-switch/bench/B4_n384_25k_final/summary.json

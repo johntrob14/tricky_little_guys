@@ -1,0 +1,507 @@
+17:#   kv_cache_gb       vLLM kv_cache_memory_bytes in GiB (overrides gpu_memory_utilization for the cache)
+27:  kv_cache_gb: 60              # full run override
+[full] 06:25:23 generate qwen3-8b attempt 1
+[vllm_runner] qwen3-8b/default: 12050 units, 0 done, 12050 pending -> /workspace/results/cot-control-switch/full1/generations/qwen3-8b/default.jsonl
+INFO 10-14 06:26:34 [api_utils.py:273] non-default args: {'tokenizer': 'Qwen/Qwen3-8B', 'dtype': 'bfloat16', 'max_model_len': 32768, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.45, 'kv_cache_memory_bytes': 64424509440, 'disable_log_stats': True, 'revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'tokenizer_revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'model': 'Qwen/Qwen3-8B'}
+INFO 10-14 06:26:35 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+INFO 10-14 06:26:35 [model.py:1788] Using max model len 32768
+INFO 10-14 06:26:35 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 10-14 06:26:35 [vllm.py:1109] Asynchronous scheduling is enabled.
+INFO 10-14 06:26:35 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=822474) INFO 10-14 06:26:42 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='Qwen/Qwen3-8B', speculative_config=None, tokenizer='Qwen/Qwen3-8B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=b968826d9c46dd6066d109eabc6255188de91218, tokenizer_revision=b968826d9c46dd6066d109eabc6255188de91218, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=Qwen/Qwen3-8B, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=822474) INFO 10-14 06:26:47 [parallel_state.py:1615] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.26.0.2:60141 backend=nccl
+(EngineCore pid=822474) INFO 10-14 06:26:47 [parallel_state.py:1946] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=822474) INFO 10-14 06:26:47 [gpu_worker.py:378] Using V2 Model Runner
+(EngineCore pid=822474) INFO 10-14 06:26:48 [model_runner.py:284] Loading model from scratch...
+(EngineCore pid=822474) INFO 10-14 06:26:52 [cuda.py:482] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=822474) INFO 10-14 06:26:52 [flash_attn.py:776] Using FlashAttention version 3
+(EngineCore pid=822474) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=822474) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=822474) INFO 10-14 06:26:54 [weight_utils.py:869] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 15.26 GiB. Available RAM: 1880.72 GiB.
+(EngineCore pid=822474) INFO 10-14 06:26:54 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=822474) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=822474) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:00<00:02,  1.40it/s]
+(EngineCore pid=822474) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:01<00:02,  1.45it/s]
+(EngineCore pid=822474) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:02<00:01,  1.43it/s]
+(EngineCore pid=822474) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:02<00:00,  1.58it/s]
+(EngineCore pid=822474) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:02<00:00,  2.06it/s]
+(EngineCore pid=822474) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:02<00:00,  1.75it/s]
+(EngineCore pid=822474) 
+(EngineCore pid=822474) INFO 10-14 06:26:57 [default_loader.py:430] Loading weights took 2.86 seconds
+(EngineCore pid=822474) INFO 10-14 06:26:57 [model_runner.py:305] Model loading took 15.27 GiB and 9.373201 seconds
+(EngineCore pid=822474) INFO 10-14 06:26:57 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=822474) INFO 10-14 06:27:10 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/e7e37eedf5/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=822474) INFO 10-14 06:27:10 [backends.py:1155] Dynamo bytecode transform time: 12.37 s
+(EngineCore pid=822474) INFO 10-14 06:27:12 [backends.py:292] Directly load the compiled graph(s) for compile range (1, 16384) from the cache, took 2.133 s
+(EngineCore pid=822474) INFO 10-14 06:27:12 [decorators.py:311] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/8864a8d3c22ede8176730214836a210851a5089030c4d839b19e70560f8004e3/rank_0_0/model
+(EngineCore pid=822474) INFO 10-14 06:27:12 [monitor.py:53] torch.compile took 14.97 s in total
+(EngineCore pid=822474) INFO 10-14 06:27:13 [monitor.py:81] Initial profiling/warmup run took 0.22 s
+(EngineCore pid=822474) INFO 10-14 06:27:14 [gpu_worker.py:479] Initial free memory 97.82 GiB, reserved 60.0 GiB memory for KV Cache as specified by kv_cache_memory_bytes config and skipped memory profiling. This does not respect the gpu_memory_utilization config. Only use kv_cache_memory_bytes config when you want manual control of KV cache memory size. If OOM'ed, check the difference of initial free memory between the current run and the previous run where kv_cache_memory_bytes is suggested and update it correspondingly.
+(EngineCore pid=822474) INFO 10-14 06:27:14 [kv_cache_utils.py:2177] GPU KV cache size: 436,896 tokens
+(EngineCore pid=822474) INFO 10-14 06:27:14 [kv_cache_utils.py:2178] Maximum concurrency for 32,768 tokens per request: 13.33x
+(EngineCore pid=822474) INFO 10-14 06:27:14 [kernel_warmup.py:65] Warming up ll_bf16 router GEMM kernels.
+(EngineCore pid=822474) INFO 10-14 06:27:28 [cutedsl_warmup.py:101] Skipping CuTeDSL warmup because no compile units were requested.
+(EngineCore pid=822474) Capturing CUDA graphs (PIECEWISE):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   4%|▍         | 2/51 [00:00<00:03, 13.45it/s]Capturing CUDA graphs (PIECEWISE):   8%|▊         | 4/51 [00:00<00:03, 14.91it/s]Capturing CUDA graphs (PIECEWISE):  12%|█▏        | 6/51 [00:00<00:02, 15.56it/s]Capturing CUDA graphs (PIECEWISE):  16%|█▌        | 8/51 [00:00<00:03, 13.67it/s]Capturing CUDA graphs (PIECEWISE):  20%|█▉        | 10/51 [00:00<00:02, 14.13it/s]Capturing CUDA graphs (PIECEWISE):  24%|██▎       | 12/51 [00:00<00:02, 14.63it/s]Capturing CUDA graphs (PIECEWISE):  27%|██▋       | 14/51 [00:00<00:02, 14.82it/s]Capturing CUDA graphs (PIECEWISE):  31%|███▏      | 16/51 [00:01<00:02, 13.70it/s]Capturing CUDA graphs (PIECEWISE):  35%|███▌      | 18/51 [00:01<00:02, 14.32it/s]Capturing CUDA graphs (PIECEWISE):  39%|███▉      | 20/51 [00:01<00:02, 14.68it/s]Capturing CUDA graphs (PIECEWISE):  43%|████▎     | 22/51 [00:01<00:01, 14.69it/s]Capturing CUDA graphs (PIECEWISE):  47%|████▋     | 24/51 [00:01<00:01, 13.74it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████     | 26/51 [00:01<00:01, 14.38it/s]Capturing CUDA graphs (PIECEWISE):  55%|█████▍    | 28/51 [00:01<00:01, 14.56it/s]Capturing CUDA graphs (PIECEWISE):  59%|█████▉    | 30/51 [00:02<00:01, 13.89it/s]Capturing CUDA graphs (PIECEWISE):  63%|██████▎   | 32/51 [00:02<00:01, 14.17it/s]Capturing CUDA graphs (PIECEWISE):  67%|██████▋   | 34/51 [00:02<00:01, 13.79it/s]Capturing CUDA graphs (PIECEWISE):  71%|███████   | 36/51 [00:02<00:01, 13.14it/s]Capturing CUDA graphs (PIECEWISE):  75%|███████▍  | 38/51 [00:02<00:01, 12.36it/s]Capturing CUDA graphs (PIECEWISE):  78%|███████▊  | 40/51 [00:02<00:00, 12.88it/s]Capturing CUDA graphs (PIECEWISE):  82%|████████▏ | 42/51 [00:03<00:00, 13.30it/s]Capturing CUDA graphs (PIECEWISE):  86%|████████▋ | 44/51 [00:03<00:00, 12.18it/s]Capturing CUDA graphs (PIECEWISE):  90%|█████████ | 46/51 [00:03<00:00, 12.85it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▍| 48/51 [00:03<00:00, 12.54it/s]Capturing CUDA graphs (PIECEWISE):  98%|█████████▊| 50/51 [00:03<00:00, 13.25it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:03<00:00, 13.79it/s]
+(EngineCore pid=822474) Capturing CUDA graphs (FULL):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):   4%|▍         | 2/51 [00:00<00:02, 17.66it/s]Capturing CUDA graphs (FULL):  10%|▉         | 5/51 [00:00<00:02, 20.52it/s]Capturing CUDA graphs (FULL):  16%|█▌        | 8/51 [00:00<00:01, 22.93it/s]Capturing CUDA graphs (FULL):  22%|██▏       | 11/51 [00:00<00:01, 23.33it/s]Capturing CUDA graphs (FULL):  27%|██▋       | 14/51 [00:00<00:01, 23.77it/s]Capturing CUDA graphs (FULL):  33%|███▎      | 17/51 [00:00<00:01, 24.97it/s]Capturing CUDA graphs (FULL):  39%|███▉      | 20/51 [00:00<00:01, 24.74it/s]Capturing CUDA graphs (FULL):  45%|████▌     | 23/51 [00:00<00:01, 25.25it/s]Capturing CUDA graphs (FULL):  51%|█████     | 26/51 [00:01<00:00, 26.56it/s]Capturing CUDA graphs (FULL):  57%|█████▋    | 29/51 [00:01<00:01, 20.09it/s]Capturing CUDA graphs (FULL):  63%|██████▎   | 32/51 [00:01<00:00, 21.44it/s]Capturing CUDA graphs (FULL):  69%|██████▊   | 35/51 [00:01<00:00, 22.36it/s]Capturing CUDA graphs (FULL):  75%|███████▍  | 38/51 [00:01<00:00, 22.36it/s]Capturing CUDA graphs (FULL):  82%|████████▏ | 42/51 [00:01<00:00, 24.97it/s]Capturing CUDA graphs (FULL):  90%|█████████ | 46/51 [00:01<00:00, 26.53it/s]Capturing CUDA graphs (FULL):  98%|█████████▊| 50/51 [00:02<00:00, 28.30it/s]Capturing CUDA graphs (FULL): 100%|██████████| 51/51 [00:02<00:00, 24.58it/s]
+(EngineCore pid=822474) INFO 10-14 06:27:35 [model_runner.py:747] Graph capturing finished in 6 secs, took 1.00 GiB
+(EngineCore pid=822474) INFO 10-14 06:27:41 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=822474) INFO 10-14 06:27:41 [core.py:340] init engine (profile, create kv cache, warmup model) took 43.96 s (compilation: 14.97 s)
+(EngineCore pid=822474) INFO 10-14 06:27:42 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+[vllm_runner] wrote 31/12050  out_tok=18163 out_tok/s=303
+[vllm_runner] wrote 83/12050  out_tok=85381 out_tok/s=711
+[vllm_runner] wrote 122/12050  out_tok=197289 out_tok/s=1096
+[vllm_runner] wrote 144/12050  out_tok=297389 out_tok/s=1239
+[vllm_runner] wrote 171/12050  out_tok=455093 out_tok/s=1517
+[vllm_runner] wrote 184/12050  out_tok=553111 out_tok/s=1536
+[vllm_runner] wrote 201/12050  out_tok=695575 out_tok/s=1656
+[vllm_runner] wrote 219/12050  out_tok=815218 out_tok/s=1698
+[vllm_runner] wrote 225/12050  out_tok=875559 out_tok/s=1621
+[vllm_runner] wrote 230/12050  out_tok=944245 out_tok/s=1573
+[vllm_runner] wrote 231/12050  out_tok=961910 out_tok/s=1457
+[vllm_runner] wrote 231/12050  out_tok=961910 out_tok/s=1336
+[vllm_runner] wrote 231/12050  out_tok=961910 out_tok/s=1233
+[vllm_runner] wrote 256/12050  out_tok=1387102 out_tok/s=1651
+[vllm_runner] wrote 275/12050  out_tok=1469456 out_tok/s=1627
+[vllm_runner] wrote 295/12050  out_tok=1539104 out_tok/s=1598
+[vllm_runner] wrote 308/12050  out_tok=1622653 out_tok/s=1586
+[vllm_runner] wrote 322/12050  out_tok=1720741 out_tok/s=1588
+[vllm_runner] wrote 333/12050  out_tok=1810939 out_tok/s=1584
+[vllm_runner] wrote 354/12050  out_tok=1953471 out_tok/s=1623
+[vllm_runner] wrote 387/12050  out_tok=2073073 out_tok/s=1641
+[vllm_runner] wrote 403/12050  out_tok=2163350 out_tok/s=1635
+[vllm_runner] wrote 429/12050  out_tok=2258790 out_tok/s=1633
+[vllm_runner] wrote 455/12050  out_tok=2391463 out_tok/s=1653
+[vllm_runner] wrote 478/12050  out_tok=2471388 out_tok/s=1640
+[vllm_runner] wrote 485/12050  out_tok=2532471 out_tok/s=1616
+[vllm_runner] wrote 487/12050  out_tok=2554049 out_tok/s=1570
+[vllm_runner] wrote 494/12050  out_tok=2616015 out_tok/s=1551
+[vllm_runner] wrote 501/12050  out_tok=2662144 out_tok/s=1524
+[vllm_runner] wrote 503/12050  out_tok=2690274 out_tok/s=1489
+[vllm_runner] wrote 503/12050  out_tok=2690274 out_tok/s=1441
+[vllm_runner] wrote 503/12050  out_tok=2690274 out_tok/s=1396
+[vllm_runner] wrote 505/12050  out_tok=2740274 out_tok/s=1379
+[vllm_runner] wrote 520/12050  out_tok=2881716 out_tok/s=1408
+[vllm_runner] wrote 528/12050  out_tok=2920133 out_tok/s=1386
+[vllm_runner] wrote 534/12050  out_tok=2976486 out_tok/s=1373
+[vllm_runner] wrote 537/12050  out_tok=2986100 out_tok/s=1341
+[vllm_runner] wrote 539/12050  out_tok=2999698 out_tok/s=1311
+[vllm_runner] wrote 545/12050  out_tok=3115019 out_tok/s=1327
+[vllm_runner] wrote 569/12050  out_tok=3275983 out_tok/s=1361
+[vllm_runner] wrote 614/12050  out_tok=3366115 out_tok/s=1364
+[vllm_runner] wrote 640/12050  out_tok=3486906 out_tok/s=1379
+[vllm_runner] wrote 664/12050  out_tok=3588875 out_tok/s=1387
+[vllm_runner] wrote 675/12050  out_tok=3659037 out_tok/s=1382
+[vllm_runner] wrote 687/12050  out_tok=3741939 out_tok/s=1382
+[vllm_runner] wrote 699/12050  out_tok=3862811 out_tok/s=1396
+[vllm_runner] wrote 715/12050  out_tok=3975651 out_tok/s=1406
+[vllm_runner] wrote 723/12050  out_tok=4043011 out_tok/s=1400
+[vllm_runner] wrote 724/12050  out_tok=4052287 out_tok/s=1375
+[vllm_runner] wrote 726/12050  out_tok=4090245 out_tok/s=1360
+[vllm_runner] wrote 729/12050  out_tok=4145524 out_tok/s=1351
+[vllm_runner] wrote 734/12050  out_tok=4234633 out_tok/s=1354
+[vllm_runner] wrote 735/12050  out_tok=4247839 out_tok/s=1332
+[vllm_runner] wrote 738/12050  out_tok=4307402 out_tok/s=1326
+[vllm_runner] wrote 740/12050  out_tok=4357402 out_tok/s=1317
+[vllm_runner] wrote 745/12050  out_tok=4470176 out_tok/s=1327
+[vllm_runner] wrote 774/12050  out_tok=4612469 out_tok/s=1345
+[vllm_runner] wrote 814/12050  out_tok=4765957 out_tok/s=1366
+[vllm_runner] wrote 839/12050  out_tok=4837733 out_tok/s=1363
+[vllm_runner] wrote 881/12050  out_tok=4968475 out_tok/s=1377
+[vllm_runner] wrote 897/12050  out_tok=5043356 out_tok/s=1375
+[vllm_runner] wrote 921/12050  out_tok=5153107 out_tok/s=1382
+[vllm_runner] wrote 943/12050  out_tok=5214294 out_tok/s=1376
+[vllm_runner] wrote 953/12050  out_tok=5276383 out_tok/s=1371
+[vllm_runner] wrote 968/12050  out_tok=5328139 out_tok/s=1363
+[vllm_runner] wrote 971/12050  out_tok=5359527 out_tok/s=1350
+[vllm_runner] wrote 996/12050  out_tok=5480984 out_tok/s=1360
+[vllm_runner] wrote 1042/12050  out_tok=5551950 out_tok/s=1357
+[vllm_runner] wrote 1075/12050  out_tok=5635431 out_tok/s=1357
+[vllm_runner] wrote 1096/12050  out_tok=5724304 out_tok/s=1359
+[vllm_runner] wrote 1125/12050  out_tok=5839910 out_tok/s=1367
+[vllm_runner] wrote 1145/12050  out_tok=5924689 out_tok/s=1368
+[vllm_runner] wrote 1158/12050  out_tok=5972991 out_tok/s=1360
+[vllm_runner] wrote 1165/12050  out_tok=6029126 out_tok/s=1354
+[vllm_runner] wrote 1169/12050  out_tok=6050620 out_tok/s=1340
+[vllm_runner] wrote 1172/12050  out_tok=6107633 out_tok/s=1335
+[vllm_runner] wrote 1185/12050  out_tok=6304466 out_tok/s=1360
+[vllm_runner] wrote 1210/12050  out_tok=6386165 out_tok/s=1360
+[vllm_runner] wrote 1227/12050  out_tok=6474764 out_tok/s=1362
+[vllm_runner] wrote 1245/12050  out_tok=6572546 out_tok/s=1365
+[vllm_runner] wrote 1265/12050  out_tok=6687388 out_tok/s=1372
+[vllm_runner] wrote 1279/12050  out_tok=6764976 out_tok/s=1371
+[vllm_runner] wrote 1306/12050  out_tok=6913693 out_tok/s=1384
+[vllm_runner] wrote 1331/12050  out_tok=7043674 out_tok/s=1393
+[vllm_runner] wrote 1343/12050  out_tok=7155471 out_tok/s=1399
+[vllm_runner] wrote 1350/12050  out_tok=7210346 out_tok/s=1393
+[vllm_runner] wrote 1354/12050  out_tok=7296644 out_tok/s=1393
+[vllm_runner] wrote 1370/12050  out_tok=7412442 out_tok/s=1400
+[vllm_runner] wrote 1390/12050  out_tok=7470428 out_tok/s=1394
+[vllm_runner] wrote 1400/12050  out_tok=7515360 out_tok/s=1387
+[vllm_runner] wrote 1406/12050  out_tok=7572832 out_tok/s=1382
+[vllm_runner] wrote 1412/12050  out_tok=7611551 out_tok/s=1374
+[vllm_runner] wrote 1416/12050  out_tok=7667369 out_tok/s=1369
+[vllm_runner] wrote 1433/12050  out_tok=7830066 out_tok/s=1384
+[vllm_runner] wrote 1450/12050  out_tok=7882333 out_tok/s=1378
+[vllm_runner] wrote 1461/12050  out_tok=7938513 out_tok/s=1374
+[vllm_runner] wrote 1474/12050  out_tok=8021384 out_tok/s=1374
+[vllm_runner] wrote 1476/12050  out_tok=8037059 out_tok/s=1362
+[vllm_runner] wrote 1486/12050  out_tok=8143862 out_tok/s=1367
+[vllm_runner] wrote 1522/12050  out_tok=8346526 out_tok/s=1386
+[vllm_runner] wrote 1552/12050  out_tok=8462192 out_tok/s=1391
+[vllm_runner] wrote 1572/12050  out_tok=8549542 out_tok/s=1392
+[vllm_runner] wrote 1591/12050  out_tok=8632034 out_tok/s=1391
+[vllm_runner] wrote 1605/12050  out_tok=8707861 out_tok/s=1390
+[vllm_runner] wrote 1630/12050  out_tok=8821343 out_tok/s=1395
+[vllm_runner] wrote 1650/12050  out_tok=8883223 out_tok/s=1392
+[vllm_runner] wrote 1661/12050  out_tok=8967329 out_tok/s=1392
+[vllm_runner] wrote 1672/12050  out_tok=9026930 out_tok/s=1388
+[vllm_runner] wrote 1683/12050  out_tok=9070515 out_tok/s=1382
+[vllm_runner] wrote 1689/12050  out_tok=9121021 out_tok/s=1377
+[vllm_runner] wrote 1692/12050  out_tok=9149634 out_tok/s=1369
+[vllm_runner] wrote 1696/12050  out_tok=9194580 out_tok/s=1363
+[vllm_runner] wrote 1738/12050  out_tok=9444093 out_tok/s=1388
+[vllm_runner] wrote 1792/12050  out_tok=9619915 out_tok/s=1402
+[vllm_runner] wrote 1827/12050  out_tok=9723725 out_tok/s=1404
+[vllm_runner] wrote 1847/12050  out_tok=9898306 out_tok/s=1417
+[vllm_runner] wrote 1860/12050  out_tok=9977058 out_tok/s=1416
+[vllm_runner] wrote 1861/12050  out_tok=10002058 out_tok/s=1408
+[vllm_runner] wrote 1865/12050  out_tok=10049139 out_tok/s=1403
+[vllm_runner] wrote 1873/12050  out_tok=10163268 out_tok/s=1407
+[vllm_runner] wrote 1880/12050  out_tok=10214135 out_tok/s=1402
+[vllm_runner] wrote 1886/12050  out_tok=10256751 out_tok/s=1397
+[vllm_runner] wrote 1890/12050  out_tok=10295530 out_tok/s=1390
+[vllm_runner] wrote 1894/12050  out_tok=10326221 out_tok/s=1383
+[vllm_runner] wrote 1898/12050  out_tok=10363847 out_tok/s=1377
+[vllm_runner] wrote 1903/12050  out_tok=10429008 out_tok/s=1375
+[vllm_runner] wrote 1904/12050  out_tok=10454008 out_tok/s=1368
+[vllm_runner] wrote 1916/12050  out_tok=10665811 out_tok/s=1384
+[vllm_runner] wrote 1957/12050  out_tok=10781415 out_tok/s=1389
+[vllm_runner] wrote 1993/12050  out_tok=10907885 out_tok/s=1394
+[vllm_runner] wrote 2015/12050  out_tok=11010890 out_tok/s=1397
+[vllm_runner] wrote 2032/12050  out_tok=11111223 out_tok/s=1399
+[vllm_runner] wrote 2056/12050  out_tok=11196426 out_tok/s=1399
+[vllm_runner] wrote 2083/12050  out_tok=11300000 out_tok/s=1401
+[vllm_runner] wrote 2141/12050  out_tok=11431133 out_tok/s=1407
+[vllm_runner] wrote 2181/12050  out_tok=11495781 out_tok/s=1405
+[vllm_runner] wrote 2205/12050  out_tok=11611959 out_tok/s=1408
+[vllm_runner] wrote 2264/12050  out_tok=11725537 out_tok/s=1412
+[vllm_runner] wrote 2288/12050  out_tok=11833425 out_tok/s=1415
+[vllm_runner] wrote 2297/12050  out_tok=11865539 out_tok/s=1408
+[vllm_runner] wrote 2303/12050  out_tok=11916800 out_tok/s=1404
+[vllm_runner] wrote 2310/12050  out_tok=11984548 out_tok/s=1403
+[vllm_runner] wrote 2315/12050  out_tok=12014579 out_tok/s=1396
+[vllm_runner] wrote 2329/12050  out_tok=12150209 out_tok/s=1402
+[vllm_runner] wrote 2343/12050  out_tok=12364009 out_tok/s=1417
+[vllm_runner] wrote 2379/12050  out_tok=12488231 out_tok/s=1421
+[vllm_runner] wrote 2402/12050  out_tok=12619404 out_tok/s=1427
+[vllm_runner] wrote 2415/12050  out_tok=12729293 out_tok/s=1429
+[vllm_runner] wrote 2429/12050  out_tok=12864845 out_tok/s=1435
+[vllm_runner] wrote 2443/12050  out_tok=12945336 out_tok/s=1434
+[vllm_runner] wrote 2458/12050  out_tok=13123574 out_tok/s=1444
+[vllm_runner] wrote 2482/12050  out_tok=13242601 out_tok/s=1448
+[vllm_runner] wrote 2494/12050  out_tok=13310069 out_tok/s=1446
+[vllm_runner] wrote 2507/12050  out_tok=13382912 out_tok/s=1444
+[vllm_runner] wrote 2516/12050  out_tok=13444606 out_tok/s=1442
+[vllm_runner] wrote 2528/12050  out_tok=13550490 out_tok/s=1444
+[vllm_runner] wrote 2534/12050  out_tok=13597563 out_tok/s=1439
+[vllm_runner] wrote 2534/12050  out_tok=13597563 out_tok/s=1430
+[vllm_runner] wrote 2535/12050  out_tok=13609306 out_tok/s=1423
+[vllm_runner] wrote 2538/12050  out_tok=13659786 out_tok/s=1419
+[vllm_runner] wrote 2557/12050  out_tok=13861499 out_tok/s=1431
+[vllm_runner] wrote 2571/12050  out_tok=13913402 out_tok/s=1428
+[vllm_runner] wrote 2583/12050  out_tok=14026490 out_tok/s=1430
+[vllm_runner] wrote 2591/12050  out_tok=14094575 out_tok/s=1429
+[vllm_runner] wrote 2601/12050  out_tok=14152009 out_tok/s=1426
+[vllm_runner] wrote 2605/12050  out_tok=14218160 out_tok/s=1424
+[vllm_runner] wrote 2611/12050  out_tok=14262844 out_tok/s=1420
+[vllm_runner] wrote 2620/12050  out_tok=14349643 out_tok/s=1420
+[vllm_runner] wrote 2629/12050  out_tok=14478954 out_tok/s=1424
+[vllm_runner] wrote 2644/12050  out_tok=14528813 out_tok/s=1421
+[vllm_runner] wrote 2657/12050  out_tok=14619897 out_tok/s=1421
+[vllm_runner] wrote 2672/12050  out_tok=14701098 out_tok/s=1421
+[vllm_runner] wrote 2682/12050  out_tok=14784910 out_tok/s=1421
+[vllm_runner] wrote 2692/12050  out_tok=14838266 out_tok/s=1418
+[vllm_runner] wrote 2699/12050  out_tok=14885900 out_tok/s=1414
+[vllm_runner] wrote 2704/12050  out_tok=14922149 out_tok/s=1410
+[vllm_runner] wrote 2705/12050  out_tok=14932289 out_tok/s=1403
+[vllm_runner] wrote 2711/12050  out_tok=15031338 out_tok/s=1404
+[vllm_runner] wrote 2735/12050  out_tok=15216038 out_tok/s=1413
+[vllm_runner] wrote 2784/12050  out_tok=15351134 out_tok/s=1418
+[vllm_runner] wrote 2810/12050  out_tok=15424308 out_tok/s=1417
+[vllm_runner] wrote 2823/12050  out_tok=15500821 out_tok/s=1416
+[vllm_runner] wrote 2836/12050  out_tok=15558727 out_tok/s=1414
+[vllm_runner] wrote 2842/12050  out_tok=15618971 out_tok/s=1411
+[vllm_runner] wrote 2847/12050  out_tok=15678403 out_tok/s=1409
+[vllm_runner] wrote 2855/12050  out_tok=15759611 out_tok/s=1409
+[vllm_runner] wrote 2861/12050  out_tok=15814796 out_tok/s=1406
+[vllm_runner] wrote 2871/12050  out_tok=15956298 out_tok/s=1411
+[vllm_runner] wrote 2892/12050  out_tok=16023159 out_tok/s=1410
+[vllm_runner] wrote 2909/12050  out_tok=16086208 out_tok/s=1408
+[vllm_runner] wrote 2921/12050  out_tok=16162033 out_tok/s=1407
+[vllm_runner] wrote 2923/12050  out_tok=16172570 out_tok/s=1401
+[vllm_runner] wrote 2932/12050  out_tok=16248406 out_tok/s=1400
+[vllm_runner] wrote 2935/12050  out_tok=16273680 out_tok/s=1395
+[vllm_runner] wrote 2935/12050  out_tok=16273680 out_tok/s=1388
+[vllm_runner] wrote 2938/12050  out_tok=16344686 out_tok/s=1387
+[vllm_runner] wrote 2946/12050  out_tok=16474917 out_tok/s=1391
+[vllm_runner] wrote 2972/12050  out_tok=16631715 out_tok/s=1397
+[vllm_runner] wrote 3014/12050  out_tok=16759372 out_tok/s=1400
+[vllm_runner] wrote 3034/12050  out_tok=16847035 out_tok/s=1401
+[vllm_runner] wrote 3049/12050  out_tok=16930976 out_tok/s=1401
+[vllm_runner] wrote 3052/12050  out_tok=16948505 out_tok/s=1395
+[vllm_runner] wrote 3057/12050  out_tok=16985804 out_tok/s=1391
+[vllm_runner] wrote 3060/12050  out_tok=17013785 out_tok/s=1387
+[vllm_runner] wrote 3062/12050  out_tok=17063785 out_tok/s=1384
+[vllm_runner] wrote 3072/12050  out_tok=17196654 out_tok/s=1388
+[vllm_runner] wrote 3073/12050  out_tok=17221654 out_tok/s=1383
+[vllm_runner] wrote 3075/12050  out_tok=17261134 out_tok/s=1380
+[vllm_runner] wrote 3079/12050  out_tok=17313387 out_tok/s=1378
+[vllm_runner] wrote 3080/12050  out_tok=17322743 out_tok/s=1372
+[vllm_runner] wrote 3082/12050  out_tok=17364067 out_tok/s=1369
+[vllm_runner] wrote 3085/12050  out_tok=17419611 out_tok/s=1366
+[vllm_runner] wrote 3086/12050  out_tok=17444611 out_tok/s=1362
+[vllm_runner] wrote 3087/12050  out_tok=17449704 out_tok/s=1356
+[vllm_runner] wrote 3092/12050  out_tok=17567556 out_tok/s=1359
+[vllm_runner] wrote 3099/12050  out_tok=17710850 out_tok/s=1364
+[vllm_runner] wrote 3142/12050  out_tok=17885367 out_tok/s=1371
+[vllm_runner] wrote 3167/12050  out_tok=17957314 out_tok/s=1370
+[vllm_runner] wrote 3183/12050  out_tok=18015897 out_tok/s=1368
+[vllm_runner] wrote 3194/12050  out_tok=18095785 out_tok/s=1368
+[vllm_runner] wrote 3207/12050  out_tok=18197429 out_tok/s=1369
+[vllm_runner] wrote 3211/12050  out_tok=18231646 out_tok/s=1366
+[vllm_runner] wrote 3218/12050  out_tok=18292053 out_tok/s=1364
+[vllm_runner] wrote 3220/12050  out_tok=18314565 out_tok/s=1360
+[vllm_runner] wrote 3228/12050  out_tok=18408558 out_tok/s=1361
+[vllm_runner] wrote 3237/12050  out_tok=18491481 out_tok/s=1361
+[vllm_runner] wrote 3252/12050  out_tok=18571085 out_tok/s=1361
+[vllm_runner] wrote 3262/12050  out_tok=18618288 out_tok/s=1358
+[vllm_runner] wrote 3268/12050  out_tok=18663186 out_tok/s=1355
+[vllm_runner] wrote 3270/12050  out_tok=18675692 out_tok/s=1350
+[vllm_runner] wrote 3272/12050  out_tok=18700095 out_tok/s=1346
+[vllm_runner] wrote 3275/12050  out_tok=18752830 out_tok/s=1344
+[vllm_runner] wrote 3276/12050  out_tok=18774003 out_tok/s=1340
+[vllm_runner] wrote 3346/12050  out_tok=19007158 out_tok/s=1351
+[vllm_runner] wrote 3435/12050  out_tok=19184720 out_tok/s=1358
+[vllm_runner] wrote 3485/12050  out_tok=19385826 out_tok/s=1366
+[vllm_runner] wrote 3533/12050  out_tok=19494760 out_tok/s=1368
+[vllm_runner] wrote 3557/12050  out_tok=19578416 out_tok/s=1368
+[vllm_runner] wrote 3570/12050  out_tok=19640383 out_tok/s=1367
+[vllm_runner] wrote 3579/12050  out_tok=19712112 out_tok/s=1366
+[vllm_runner] wrote 3588/12050  out_tok=19779724 out_tok/s=1365
+[vllm_runner] wrote 3591/12050  out_tok=19809049 out_tok/s=1361
+[vllm_runner] wrote 3596/12050  out_tok=19875232 out_tok/s=1360
+[vllm_runner] wrote 3603/12050  out_tok=19973868 out_tok/s=1362
+[vllm_runner] wrote 3617/12050  out_tok=20079714 out_tok/s=1363
+[vllm_runner] wrote 3626/12050  out_tok=20136556 out_tok/s=1361
+[vllm_runner] wrote 3636/12050  out_tok=20180183 out_tok/s=1359
+[vllm_runner] wrote 3639/12050  out_tok=20215979 out_tok/s=1356
+[vllm_runner] wrote 3643/12050  out_tok=20246709 out_tok/s=1352
+[vllm_runner] wrote 3645/12050  out_tok=20261288 out_tok/s=1348
+[vllm_runner] wrote 3645/12050  out_tok=20261288 out_tok/s=1343
+[vllm_runner] wrote 3645/12050  out_tok=20261288 out_tok/s=1337
+[vllm_runner] wrote 3648/12050  out_tok=20336288 out_tok/s=1337
+[vllm_runner] wrote 3652/12050  out_tok=20436288 out_tok/s=1338
+[vllm_runner] wrote 3679/12050  out_tok=20660226 out_tok/s=1348
+[vllm_runner] wrote 3720/12050  out_tok=20807463 out_tok/s=1352
+[vllm_runner] wrote 3751/12050  out_tok=20918175 out_tok/s=1354
+[vllm_runner] wrote 3765/12050  out_tok=20976920 out_tok/s=1352
+[vllm_runner] wrote 3779/12050  out_tok=21055300 out_tok/s=1352
+[vllm_runner] wrote 3788/12050  out_tok=21111861 out_tok/s=1351
+[vllm_runner] wrote 3797/12050  out_tok=21199052 out_tok/s=1351
+[vllm_runner] wrote 3803/12050  out_tok=21267889 out_tok/s=1350
+[vllm_runner] wrote 3806/12050  out_tok=21296974 out_tok/s=1347
+[vllm_runner] wrote 3808/12050  out_tok=21321126 out_tok/s=1343
+[vllm_runner] wrote 3810/12050  out_tok=21358644 out_tok/s=1341
+[vllm_runner] wrote 3811/12050  out_tok=21373903 out_tok/s=1337
+[vllm_runner] wrote 3812/12050  out_tok=21389504 out_tok/s=1333
+[vllm_runner] wrote 3814/12050  out_tok=21423583 out_tok/s=1330
+[vllm_runner] wrote 3815/12050  out_tok=21448583 out_tok/s=1326
+[vllm_runner] wrote 3816/12050  out_tok=21469242 out_tok/s=1323
+[vllm_runner] wrote 3817/12050  out_tok=21494242 out_tok/s=1319
+[vllm_runner] wrote 3817/12050  out_tok=21494242 out_tok/s=1315
+[vllm_runner] wrote 3818/12050  out_tok=21519242 out_tok/s=1311
+[vllm_runner] wrote 3831/12050  out_tok=21844242 out_tok/s=1326
+[vllm_runner] wrote 3885/12050  out_tok=22004491 out_tok/s=1331
+[vllm_runner] wrote 3916/12050  out_tok=22089295 out_tok/s=1331
+[vllm_runner] wrote 3936/12050  out_tok=22184553 out_tok/s=1332
+[vllm_runner] wrote 3954/12050  out_tok=22281885 out_tok/s=1333
+[vllm_runner] wrote 3969/12050  out_tok=22369639 out_tok/s=1334
+[vllm_runner] wrote 3989/12050  out_tok=22501934 out_tok/s=1337
+[vllm_runner] wrote 4004/12050  out_tok=22558963 out_tok/s=1336
+[vllm_runner] wrote 4016/12050  out_tok=22630754 out_tok/s=1335
+[vllm_runner] wrote 4027/12050  out_tok=22676732 out_tok/s=1333
+[vllm_runner] wrote 4032/12050  out_tok=22733144 out_tok/s=1332
+[vllm_runner] wrote 4038/12050  out_tok=22790010 out_tok/s=1330
+[vllm_runner] wrote 4044/12050  out_tok=22844768 out_tok/s=1329
+[vllm_runner] wrote 4045/12050  out_tok=22863026 out_tok/s=1325
+[vllm_runner] wrote 4047/12050  out_tok=22890767 out_tok/s=1322
+[vllm_runner] wrote 4048/12050  out_tok=22915767 out_tok/s=1319
+[vllm_runner] wrote 4048/12050  out_tok=22915767 out_tok/s=1315
+[vllm_runner] wrote 4049/12050  out_tok=22940767 out_tok/s=1312
+[vllm_runner] wrote 4052/12050  out_tok=23015767 out_tok/s=1311
+[vllm_runner] wrote 4065/12050  out_tok=23174618 out_tok/s=1316
+[vllm_runner] wrote 4099/12050  out_tok=23306799 out_tok/s=1319
+[vllm_runner] wrote 4123/12050  out_tok=23356245 out_tok/s=1317
+[vllm_runner] wrote 4133/12050  out_tok=23415792 out_tok/s=1316
+[vllm_runner] wrote 4145/12050  out_tok=23472297 out_tok/s=1315
+[vllm_runner] wrote 4173/12050  out_tok=23667721 out_tok/s=1321
+[vllm_runner] wrote 4215/12050  out_tok=23757602 out_tok/s=1322
+[vllm_runner] wrote 4236/12050  out_tok=23856424 out_tok/s=1323
+[vllm_runner] wrote 4250/12050  out_tok=23935171 out_tok/s=1323
+[vllm_runner] wrote 4258/12050  out_tok=24014964 out_tok/s=1323
+[vllm_runner] wrote 4263/12050  out_tok=24043113 out_tok/s=1320
+[vllm_runner] wrote 4269/12050  out_tok=24090712 out_tok/s=1318
+[vllm_runner] wrote 4270/12050  out_tok=24115712 out_tok/s=1316
+[vllm_runner] wrote 4272/12050  out_tok=24134176 out_tok/s=1312
+[vllm_runner] wrote 4273/12050  out_tok=24159176 out_tok/s=1309
+[vllm_runner] wrote 4273/12050  out_tok=24159176 out_tok/s=1305
+[vllm_runner] wrote 4273/12050  out_tok=24159176 out_tok/s=1301
+[vllm_runner] wrote 4274/12050  out_tok=24184176 out_tok/s=1298
+[vllm_runner] wrote 4277/12050  out_tok=24259176 out_tok/s=1298
+[vllm_runner] wrote 4282/12050  out_tok=24367538 out_tok/s=1299
+[vllm_runner] wrote 4290/12050  out_tok=24484508 out_tok/s=1302
+[vllm_runner] wrote 4296/12050  out_tok=24513935 out_tok/s=1299
+[vllm_runner] wrote 4301/12050  out_tok=24560390 out_tok/s=1297
+[vllm_runner] wrote 4309/12050  out_tok=24667452 out_tok/s=1299
+[vllm_runner] wrote 4343/12050  out_tok=24859927 out_tok/s=1305
+[vllm_runner] wrote 4372/12050  out_tok=24922150 out_tok/s=1304
+[vllm_runner] wrote 4391/12050  out_tok=25004406 out_tok/s=1304
+[vllm_runner] wrote 4397/12050  out_tok=25071544 out_tok/s=1304
+[vllm_runner] wrote 4407/12050  out_tok=25173384 out_tok/s=1305
+[vllm_runner] wrote 4418/12050  out_tok=25241159 out_tok/s=1304
+[vllm_runner] wrote 4439/12050  out_tok=25350619 out_tok/s=1306
+[vllm_runner] wrote 4499/12050  out_tok=25510626 out_tok/s=1310
+[vllm_runner] wrote 4582/12050  out_tok=25651254 out_tok/s=1313
+[vllm_runner] wrote 4642/12050  out_tok=25768736 out_tok/s=1315
+[vllm_runner] wrote 4686/12050  out_tok=25895663 out_tok/s=1318
+[vllm_runner] wrote 4714/12050  out_tok=26000448 out_tok/s=1319
+[vllm_runner] wrote 4736/12050  out_tok=26086921 out_tok/s=1319
+[vllm_runner] wrote 4754/12050  out_tok=26155173 out_tok/s=1319
+[vllm_runner] wrote 4759/12050  out_tok=26182854 out_tok/s=1316
+[vllm_runner] wrote 4769/12050  out_tok=26279808 out_tok/s=1317
+[vllm_runner] wrote 4773/12050  out_tok=26325007 out_tok/s=1315
+[vllm_runner] wrote 4779/12050  out_tok=26383195 out_tok/s=1314
+[vllm_runner] wrote 4786/12050  out_tok=26451834 out_tok/s=1314
+[vllm_runner] wrote 4794/12050  out_tok=26584886 out_tok/s=1317
+[vllm_runner] wrote 4809/12050  out_tok=26619407 out_tok/s=1314
+[vllm_runner] wrote 4818/12050  out_tok=26684808 out_tok/s=1314
+[vllm_runner] wrote 4828/12050  out_tok=26759250 out_tok/s=1313
+[vllm_runner] wrote 4841/12050  out_tok=26849250 out_tok/s=1314
+[vllm_runner] wrote 4846/12050  out_tok=26885477 out_tok/s=1312
+[vllm_runner] wrote 4852/12050  out_tok=26928306 out_tok/s=1310
+[vllm_runner] wrote 4864/12050  out_tok=27084467 out_tok/s=1314
+[vllm_runner] wrote 4882/12050  out_tok=27155594 out_tok/s=1314
+[vllm_runner] wrote 4890/12050  out_tok=27203097 out_tok/s=1312
+[vllm_runner] wrote 4899/12050  out_tok=27343193 out_tok/s=1315
+[vllm_runner] wrote 4920/12050  out_tok=27479407 out_tok/s=1318
+[vllm_runner] wrote 4930/12050  out_tok=27541369 out_tok/s=1317
+[vllm_runner] wrote 4942/12050  out_tok=27620220 out_tok/s=1317
+[vllm_runner] wrote 4954/12050  out_tok=27716945 out_tok/s=1318
+[vllm_runner] wrote 4962/12050  out_tok=27775132 out_tok/s=1317
+[vllm_runner] wrote 4970/12050  out_tok=27840854 out_tok/s=1316
+[vllm_runner] wrote 4974/12050  out_tok=27867988 out_tok/s=1314
+[vllm_runner] wrote 4978/12050  out_tok=27904400 out_tok/s=1312
+[vllm_runner] wrote 4987/12050  out_tok=28023167 out_tok/s=1314
+[vllm_runner] wrote 5006/12050  out_tok=28107918 out_tok/s=1314
+[vllm_runner] wrote 5013/12050  out_tok=28147411 out_tok/s=1312
+[vllm_runner] wrote 5018/12050  out_tok=28195989 out_tok/s=1311
+[vllm_runner] wrote 5022/12050  out_tok=28223414 out_tok/s=1308
+[vllm_runner] wrote 5025/12050  out_tok=28298414 out_tok/s=1308
+[vllm_runner] wrote 5034/12050  out_tok=28428455 out_tok/s=1310
+[vllm_runner] wrote 5047/12050  out_tok=28499022 out_tok/s=1310
+[vllm_runner] wrote 5052/12050  out_tok=28538181 out_tok/s=1308
+[vllm_runner] wrote 5070/12050  out_tok=28685372 out_tok/s=1311
+[vllm_runner] wrote 5092/12050  out_tok=28832476 out_tok/s=1315
+[vllm_runner] wrote 5105/12050  out_tok=28899002 out_tok/s=1314
+[vllm_runner] wrote 5121/12050  out_tok=28982251 out_tok/s=1314
+[vllm_runner] wrote 5131/12050  out_tok=29065219 out_tok/s=1314
+[vllm_runner] wrote 5136/12050  out_tok=29105930 out_tok/s=1313
+[vllm_runner] wrote 5147/12050  out_tok=29201742 out_tok/s=1313
+[vllm_runner] wrote 5152/12050  out_tok=29250035 out_tok/s=1312
+[vllm_runner] wrote 5156/12050  out_tok=29295642 out_tok/s=1311
+[vllm_runner] wrote 5170/12050  out_tok=29400585 out_tok/s=1312
+[vllm_runner] wrote 5181/12050  out_tok=29441179 out_tok/s=1310
+[vllm_runner] wrote 5188/12050  out_tok=29504029 out_tok/s=1309
+[vllm_runner] wrote 5197/12050  out_tok=29546752 out_tok/s=1308
+[vllm_runner] wrote 5203/12050  out_tok=29594754 out_tok/s=1306
+[vllm_runner] wrote 5206/12050  out_tok=29645809 out_tok/s=1305
+[vllm_runner] wrote 5233/12050  out_tok=29767431 out_tok/s=1307
+[vllm_runner] wrote 5254/12050  out_tok=29846007 out_tok/s=1307
+[vllm_runner] wrote 5269/12050  out_tok=29936827 out_tok/s=1308
+[vllm_runner] wrote 5289/12050  out_tok=30047891 out_tok/s=1309
+[vllm_runner] wrote 5309/12050  out_tok=30171911 out_tok/s=1311
+[vllm_runner] wrote 5328/12050  out_tok=30245571 out_tok/s=1311
+[vllm_runner] wrote 5354/12050  out_tok=30371259 out_tok/s=1313
+[vllm_runner] wrote 5372/12050  out_tok=30438537 out_tok/s=1312
+[vllm_runner] wrote 5384/12050  out_tok=30499927 out_tok/s=1312
+[vllm_runner] wrote 5387/12050  out_tok=30531982 out_tok/s=1310
+[vllm_runner] wrote 5392/12050  out_tok=30592743 out_tok/s=1309
+[vllm_runner] wrote 5395/12050  out_tok=30619516 out_tok/s=1307
+[vllm_runner] wrote 5399/12050  out_tok=30707348 out_tok/s=1307
+[vllm_runner] wrote 5410/12050  out_tok=30780305 out_tok/s=1307
+[vllm_runner] wrote 5432/12050  out_tok=30839917 out_tok/s=1306
+[vllm_runner] wrote 5436/12050  out_tok=30854197 out_tok/s=1303
+[vllm_runner] wrote 5436/12050  out_tok=30854197 out_tok/s=1300
+[vllm_runner] wrote 5436/12050  out_tok=30854197 out_tok/s=1297
+[vllm_runner] wrote 5439/12050  out_tok=30929197 out_tok/s=1297
+[vllm_runner] wrote 5459/12050  out_tok=31081352 out_tok/s=1300
+[vllm_runner] wrote 5476/12050  out_tok=31171432 out_tok/s=1300
+[vllm_runner] wrote 5491/12050  out_tok=31307873 out_tok/s=1303
+[vllm_runner] wrote 5502/12050  out_tok=31401272 out_tok/s=1303
+[vllm_runner] wrote 5509/12050  out_tok=31476982 out_tok/s=1303
+[vllm_runner] wrote 5522/12050  out_tok=31571845 out_tok/s=1304
+[vllm_runner] wrote 5532/12050  out_tok=31641327 out_tok/s=1303
+[vllm_runner] wrote 5540/12050  out_tok=31720728 out_tok/s=1303
+[vllm_runner] wrote 5547/12050  out_tok=31788461 out_tok/s=1303
+[vllm_runner] wrote 5552/12050  out_tok=31837361 out_tok/s=1302
+[vllm_runner] wrote 5558/12050  out_tok=31901574 out_tok/s=1301
+[vllm_runner] wrote 5562/12050  out_tok=31950601 out_tok/s=1300
+[vllm_runner] wrote 5569/12050  out_tok=32037193 out_tok/s=1300
+[vllm_runner] wrote 5593/12050  out_tok=32145359 out_tok/s=1302
+[vllm_runner] wrote 5614/12050  out_tok=32240832 out_tok/s=1302
+[vllm_runner] wrote 5624/12050  out_tok=32303987 out_tok/s=1302
+[vllm_runner] wrote 5631/12050  out_tok=32355611 out_tok/s=1301
+[vllm_runner] wrote 5638/12050  out_tok=32402457 out_tok/s=1299
+[vllm_runner] wrote 5646/12050  out_tok=32510916 out_tok/s=1301
+[vllm_runner] wrote 5677/12050  out_tok=32608143 out_tok/s=1301
+[vllm_runner] wrote 5744/12050  out_tok=32759687 out_tok/s=1304
+[vllm_runner] wrote 5809/12050  out_tok=32875682 out_tok/s=1306
+[vllm_runner] wrote 5865/12050  out_tok=32995427 out_tok/s=1307
+[vllm_runner] wrote 5893/12050  out_tok=33115146 out_tok/s=1309
+[vllm_runner] wrote 5919/12050  out_tok=33193810 out_tok/s=1309
+[vllm_runner] wrote 5939/12050  out_tok=33264425 out_tok/s=1309
+[vllm_runner] wrote 5947/12050  out_tok=33313387 out_tok/s=1308
+[vllm_runner] wrote 5951/12050  out_tok=33360606 out_tok/s=1306
+[vllm_runner] wrote 5956/12050  out_tok=33429491 out_tok/s=1306
+[vllm_runner] wrote 5966/12050  out_tok=33542623 out_tok/s=1307
+[vllm_runner] wrote 5971/12050  out_tok=33582406 out_tok/s=1306
+[vllm_runner] wrote 5978/12050  out_tok=33689843 out_tok/s=1307
+[vllm_runner] wrote 5986/12050  out_tok=33758666 out_tok/s=1307
+[vllm_runner] wrote 5991/12050  out_tok=33794786 out_tok/s=1305
+[vllm_runner] wrote 5995/12050  out_tok=33832127 out_tok/s=1303
+[vllm_runner] wrote 5999/12050  out_tok=33889125 out_tok/s=1303
+[vllm_runner] wrote 5999/12050  out_tok=33889125 out_tok/s=1300
+[vllm_runner] wrote 6002/12050  out_tok=33949899 out_tok/s=1299
+[vllm_runner] wrote 6005/12050  out_tok=34020920 out_tok/s=1299
+[vllm_runner] wrote 6007/12050  out_tok=34070920 out_tok/s=1298
+[vllm_runner] wrote 6008/12050  out_tok=34095920 out_tok/s=1296
+[vllm_runner] wrote 6009/12050  out_tok=34104962 out_tok/s=1293
+[vllm_runner] wrote 6011/12050  out_tok=34154962 out_tok/s=1292
+[vllm_runner] wrote 6012/12050  out_tok=34179962 out_tok/s=1290
+[vllm_runner] wrote 6012/12050  out_tok=34179962 out_tok/s=1287
+[vllm_runner] wrote 6015/12050  out_tok=34254962 out_tok/s=1287
+[vllm_runner] wrote 6024/12050  out_tok=34431999 out_tok/s=1291
+[vllm_runner] wrote 6037/12050  out_tok=34496960 out_tok/s=1290
+[vllm_runner] wrote 6055/12050  out_tok=34616926 out_tok/s=1292
+[vllm_runner] wrote 6067/12050  out_tok=34706586 out_tok/s=1292
+[vllm_runner] wrote 6076/12050  out_tok=34777506 out_tok/s=1292
+[vllm_runner] wrote 6083/12050  out_tok=34841587 out_tok/s=1292
+[vllm_runner] wrote 6088/12050  out_tok=34899499 out_tok/s=1291
+[vllm_runner] wrote 6089/12050  out_tok=34908024 out_tok/s=1288
+[vllm_runner] wrote 6090/12050  out_tok=34933024 out_tok/s=1286
+[vllm_runner] wrote 6091/12050  out_tok=34944815 out_tok/s=1284
+[vllm_runner] wrote 6093/12050  out_tok=34983760 out_tok/s=1283
+[vllm_runner] wrote 6093/12050  out_tok=34983760 out_tok/s=1280
+[vllm_runner] wrote 6094/12050  out_tok=35008760 out_tok/s=1278
+[vllm_runner] wrote 6095/12050  out_tok=35033760 out_tok/s=1276
+[vllm_runner] wrote 6095/12050  out_tok=35033760 out_tok/s=1273

@@ -1,0 +1,34 @@
+weirdchat_onpolicy: 16 prompts x 2 samples, 32 to do
+weirdchat_onpolicy: finished, 32 ok, 0 errors
+wildchat: 16 prompts x 1 samples, 16 to do
+wildchat: finished, 16 ok, 0 errors
+72 pending; judging batch of 72 ({'weirdchat_onpolicy': 32, 'weirdchat_replay': 24, 'wildchat': 16})
+Traceback (most recent call last):
+  File "/workspace/roleplay-probe/src/judge.py", line 238, in <module>
+    asyncio.run(main(ap.parse_args()))
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/workspace/roleplay-probe/src/judge.py", line 226, in main
+    await asyncio.gather(*(judge_one(client, sem, r, stats) for r in batch))
+  File "/workspace/roleplay-probe/src/judge.py", line 152, in judge_one
+    ps = passages_for(ro)
+         ^^^^^^^^^^^^^^^^
+  File "/workspace/roleplay-probe/src/common.py", line 101, in passages_for
+    ps = segment(rollout.get("reasoning") or "", "reasoning") + segment(rollout["response"], "response")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/roleplay-probe/src/common.py", line 74, in segment
+    for m in re.finditer(r"[^\n]+(?:\n(?!\s*\n)[^\n]+)*", text):  # paragraph = run of non-blank lines
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/re/__init__.py", line 224, in finditer
+    return _compile(pattern, flags).finditer(string)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: expected string or bytes-like object, got 'float'
+sys:1: RuntimeWarning: coroutine 'connect_tcp.<locals>.try_connect' was never awaited
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback

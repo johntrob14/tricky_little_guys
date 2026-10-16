@@ -1,0 +1,29 @@
++ SCRIPT=eval_latent_savetext.py
++ N=51
++ W=3
++ PORT=29601
++ REPO=/workspace/switch-orig/SWITCH_savetext
++ export HF_HOME=/root/scratch/huggingface TOKENIZERS_PARALLELISM=false MASTER_ADDR=127.0.0.1 MASTER_PORT=29601 WORLD_SIZE=3 LOCAL_RANK=0
++ HF_HOME=/root/scratch/huggingface
++ TOKENIZERS_PARALLELISM=false
++ MASTER_ADDR=127.0.0.1
++ MASTER_PORT=29601
++ WORLD_SIZE=3
++ LOCAL_RANK=0
++ PY=/workspace/switch-orig/venv-t5.3/bin/python
++ cd /workspace/switch-orig/SWITCH_savetext
++ mkdir -p /workspace/switch-orig/runs
+++ seq 0 2
++ for r in $(seq 0 $((W-1)))
++ for r in $(seq 0 $((W-1)))
++ for r in $(seq 0 $((W-1)))
++ RANK=0
++ /workspace/switch-orig/venv-t5.3/bin/python scripts/eval_latent_savetext.py --adapter_path LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B --dataset math500 --min_latent_steps 4 --max_new_tokens 4096 --n_samples 51
++ wait
++ RANK=1
++ /workspace/switch-orig/venv-t5.3/bin/python scripts/eval_latent_savetext.py --adapter_path LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B --dataset math500 --min_latent_steps 4 --max_new_tokens 4096 --n_samples 51
++ RANK=2
++ /workspace/switch-orig/venv-t5.3/bin/python scripts/eval_latent_savetext.py --adapter_path LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B --dataset math500 --min_latent_steps 4 --max_new_tokens 4096 --n_samples 51
+++ basename /workspace/switch-orig/SWITCH_savetext
+++ basename /workspace/switch-orig/SWITCH_savetext
+++ basename /workspace/switch-orig/SWITCH_savetext

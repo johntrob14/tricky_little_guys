@@ -1,0 +1,63 @@
+72 pending; judging batch of 72 ({'weirdchat_onpolicy': 32, 'weirdchat_replay': 24, 'wildchat': 16})
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+assembled 72 new rows into /workspace/results/roleplay-probe-pilot/labeled/dataset.jsonl
+rollouts: {'weirdchat_onpolicy': 32, 'weirdchat_replay': 24, 'wildchat': 16}
+judged: {'weirdchat_replay': 24, 'weirdchat_onpolicy': 32, 'wildchat': 16}
+
+behavior_label:
+  ('weirdchat_onpolicy', 'negative'): 18
+  ('weirdchat_onpolicy', 'roleplaying'): 8
+  ('weirdchat_onpolicy', 'talking_about_roleplay'): 2
+  ('weirdchat_onpolicy', 'uncertain'): 4
+  ('weirdchat_replay', 'negative'): 8
+  ('weirdchat_replay', 'roleplaying'): 3
+  ('weirdchat_replay', 'talking_about_roleplay'): 9
+  ('weirdchat_replay', 'uncertain'): 4
+  ('wildchat', 'negative'): 16
+
+output_label:
+  ('weirdchat_onpolicy', 'role-play-plausible'): 6
+  ('weirdchat_onpolicy', 'role-play-unlikely'): 26
+  ('weirdchat_replay', 'role-play-plausible'): 3
+  ('weirdchat_replay', 'role-play-unlikely'): 21
+  ('wildchat', 'role-play-unlikely'): 16
+
+passages:
+  ('weirdchat_onpolicy', 'excluded'): 122
+  ('weirdchat_onpolicy', 'none'): 705
+  ('weirdchat_onpolicy', 'roleplaying'): 104
+  ('weirdchat_onpolicy', 'talking_about_roleplay'): 25
+  ('weirdchat_replay', 'excluded'): 78
+  ('weirdchat_replay', 'none'): 246
+  ('weirdchat_replay', 'roleplaying'): 14
+  ('weirdchat_replay', 'talking_about_roleplay'): 26
+  ('wildchat', 'none'): 507
+
+behavior x output:
+  ('weirdchat_onpolicy', 'negative', 'role-play-unlikely'): 18
+  ('weirdchat_onpolicy', 'roleplaying', 'role-play-plausible'): 6
+  ('weirdchat_onpolicy', 'roleplaying', 'role-play-unlikely'): 2
+  ('weirdchat_onpolicy', 'talking_about_roleplay', 'role-play-unlikely'): 2
+  ('weirdchat_onpolicy', 'uncertain', 'role-play-unlikely'): 4
+  ('weirdchat_replay', 'negative', 'role-play-unlikely'): 8
+  ('weirdchat_replay', 'roleplaying', 'role-play-plausible'): 3
+  ('weirdchat_replay', 'talking_about_roleplay', 'role-play-unlikely'): 9
+  ('weirdchat_replay', 'uncertain', 'role-play-unlikely'): 4
+  ('wildchat', 'negative', 'role-play-unlikely'): 16
+
+assembled token counts:
+  ('weirdchat_onpolicy', 'excluded'): 7371
+  ('weirdchat_onpolicy', 'negative_weirdchat'): 38390
+  ('weirdchat_onpolicy', 'prompt'): 1662
+  ('weirdchat_onpolicy', 'roleplaying'): 5846
+  ('weirdchat_onpolicy', 'talking_about_roleplay'): 1739
+  ('weirdchat_onpolicy', 'template'): 838
+  ('weirdchat_replay', 'excluded'): 4969
+  ('weirdchat_replay', 'negative_weirdchat'): 13447
+  ('weirdchat_replay', 'prompt'): 2408
+  ('weirdchat_replay', 'roleplaying'): 709
+  ('weirdchat_replay', 'talking_about_roleplay'): 1802
+  ('weirdchat_replay', 'template'): 325
+  ('wildchat', 'negative_wildchat'): 28001
+  ('wildchat', 'prompt'): 575
+  ('wildchat', 'template'): 485

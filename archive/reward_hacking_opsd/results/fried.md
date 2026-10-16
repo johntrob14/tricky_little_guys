@@ -1,0 +1,23 @@
+| metric | base | A | B | C2 |
+|---|---|---|---|---|
+| ifeval.inst_level_strict_acc | 0.8657 | 0.8657 | 0.8561 | 0.8873 |
+| ifeval.prompt_level_strict_acc | 0.8392 | 0.8503 | 0.8355 | 0.8595 |
+| mmlu.acc | 0.8582 | 0.8568 | 0.8568 | 0.8589 |
+| panel.decisiveness | 0.7278 | 0.7367 | 0.7332 | 0.6732 |
+| panel.order_consistency | 0.7929 | 0.7862 | 0.8251 | 0.7674 |
+| panel.q_agreement | 0.6092 | 0.713 | 0.6601 | 0.5533 |
+| panel.transitivity_fas | 0.918 | 0.926 | 0.924 | 0.8899 |
+| panel.transitivity_triad | 0.8936 | 0.8921 | 0.9019 | 0.8794 |
+| panel.unidim_fit_brier | 0.05607 | 0.0543 | 0.05137 | 0.08106 |
+| perplexity.n_docs | 200 | 200 | 200 | 200 |
+| perplexity.ppl_nat | 9.716 | 9.716 | 9.712 | 9.721 |
+| perplexity.ppl_shuf | 379.1 | 379 | 378.8 | 377.5 |
+| perplexity.shuffled_over_natural | 39.01 | 39.01 | 39 | 38.84 |
+| safety.strongreject.mean_harm_score | 0.0096 | 0.0032 | 0.0064 | 0.0064 |
+| safety.strongreject.n | 313 | 313 | 313 | 313 |
+| safety.strongreject.n_scored | 313 | 313 | 313 | 313 |
+| safety.xstest.n | 450 | 450 | 450 | 450 |
+| safety.xstest.n_safe | 250 | 250 | 250 | 250 |
+| safety.xstest.n_unsafe | 200 | 200 | 200 | 200 |
+| safety.xstest.over_refusal_rate_safe | 0.052 | 0.06 | 0.052 | 0.04 |
+| safety.xstest.refusal_rate_unsafe | 0.87 | 0.9 | 0.88 | 0.875 |

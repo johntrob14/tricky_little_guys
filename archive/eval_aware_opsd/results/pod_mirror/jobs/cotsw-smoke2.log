@@ -1,0 +1,1568 @@
+[smoke] git_commit=da4f507 out=/root/scratch/cot-control-switch/smoke max_new=2048
+0 MiB, 143771 MiB
+[smoke] === generate qwen3-8b default: .venv/bin/python -m cotswitch.cli generate --condition qwen3-8b --protocol default --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[vllm_runner] qwen3-8b/default: 10 units, 0 done, 10 pending -> /root/scratch/cot-control-switch/smoke/generations/qwen3-8b/default.jsonl
+INFO 10-14 04:58:36 [arg_utils.py:779] HF_HUB_OFFLINE is True, replace model_id [Qwen/Qwen3-8B] to model_path [/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218]
+INFO 10-14 04:58:36 [arg_utils.py:789] HF_HUB_OFFLINE is True, replace tokenizer_id [Qwen/Qwen3-8B] to tokenizer_path [/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218]
+INFO 10-14 04:58:36 [api_utils.py:273] non-default args: {'tokenizer': '/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', 'dtype': 'bfloat16', 'max_model_len': 32768, 'gpu_memory_utilization': 0.9, 'disable_log_stats': True, 'revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'tokenizer_revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'model': '/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218'}
+INFO 10-14 04:58:36 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+INFO 10-14 04:58:36 [model.py:1788] Using max model len 32768
+INFO 10-14 04:58:36 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 10-14 04:58:36 [vllm.py:1109] Asynchronous scheduling is enabled.
+INFO 10-14 04:58:36 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=46299) INFO 10-14 04:58:55 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', speculative_config=None, tokenizer='/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', skip_tokenizer_init=False, tokenizer_mode=auto, revision=b968826d9c46dd6066d109eabc6255188de91218, tokenizer_revision=b968826d9c46dd6066d109eabc6255188de91218, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=46299) INFO 10-14 04:59:22 [parallel_state.py:1615] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.26.0.2:49171 backend=nccl
+(EngineCore pid=46299) INFO 10-14 04:59:23 [parallel_state.py:1946] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=46299) INFO 10-14 04:59:23 [gpu_worker.py:378] Using V2 Model Runner
+(EngineCore pid=46299) INFO 10-14 04:59:37 [model_runner.py:284] Loading model from scratch...
+(EngineCore pid=46299) INFO 10-14 04:59:59 [cuda.py:482] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=46299) INFO 10-14 04:59:59 [flash_attn.py:776] Using FlashAttention version 3
+(EngineCore pid=46299) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=46299) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=46299) INFO 10-14 05:00:08 [weight_utils.py:869] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 15.26 GiB. Available RAM: 1838.56 GiB.
+(EngineCore pid=46299) INFO 10-14 05:00:08 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=46299) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=46299) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:05<00:23,  5.80s/it]
+(EngineCore pid=46299) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:10<00:16,  5.34s/it]
+(EngineCore pid=46299) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:16<00:10,  5.50s/it]
+(EngineCore pid=46299) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:20<00:04,  4.95s/it]
+(EngineCore pid=46299) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:22<00:00,  3.85s/it]
+(EngineCore pid=46299) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:22<00:00,  4.50s/it]
+(EngineCore pid=46299) 
+(EngineCore pid=46299) INFO 10-14 05:00:30 [default_loader.py:430] Loading weights took 22.79 seconds
+(EngineCore pid=46299) INFO 10-14 05:00:38 [model_runner.py:305] Model loading took 15.27 GiB and 64.198965 seconds
+(EngineCore pid=46299) INFO 10-14 05:00:39 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=46299) INFO 10-14 05:03:31 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/0350aa9786/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=46299) INFO 10-14 05:03:31 [backends.py:1155] Dynamo bytecode transform time: 168.69 s
+(EngineCore pid=46299) INFO 10-14 05:05:21 [backends.py:378] Cache the graph of compile range (1, 16384) for later use
+(EngineCore pid=46299) INFO 10-14 05:06:53 [backends.py:393] Compiling a graph for compile range (1, 16384) takes 195.51 s
+(EngineCore pid=46299) INFO 10-14 05:08:14 [decorators.py:708] saved AOT compiled function to /root/.cache/vllm/torch_compile_cache/torch_aot_compile/23c1110d12068e3b60f65eb183d0a17bed4c536b20430b61b40427c51efec527/rank_0_0/model
+(EngineCore pid=46299) INFO 10-14 05:08:14 [monitor.py:53] torch.compile took 451.61 s in total
+(EngineCore pid=46299) INFO 10-14 05:08:19 [monitor.py:81] Initial profiling/warmup run took 5.68 s
+(EngineCore pid=46299) INFO 10-14 05:08:42 [gpu_worker.py:560] Available KV cache memory: 92.76 GiB
+(EngineCore pid=46299) INFO 10-14 05:08:42 [kv_cache_utils.py:2177] GPU KV cache size: 675,456 tokens
+(EngineCore pid=46299) INFO 10-14 05:08:42 [kv_cache_utils.py:2178] Maximum concurrency for 32,768 tokens per request: 20.61x
+(EngineCore pid=46299) INFO 10-14 05:08:43 [kernel_warmup.py:65] Warming up ll_bf16 router GEMM kernels.
+(EngineCore pid=46299) INFO 10-14 05:10:49 [cutedsl_warmup.py:101] Skipping CuTeDSL warmup because no compile units were requested.
+(EngineCore pid=46299) Capturing CUDA graphs (PIECEWISE):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   2%|▏         | 1/51 [00:00<00:06,  7.48it/s]Capturing CUDA graphs (PIECEWISE):   6%|▌         | 3/51 [00:00<00:04, 10.78it/s]Capturing CUDA graphs (PIECEWISE):  10%|▉         | 5/51 [00:00<00:03, 14.07it/s]Capturing CUDA graphs (PIECEWISE):  16%|█▌        | 8/51 [00:00<00:02, 16.89it/s]Capturing CUDA graphs (PIECEWISE):  22%|██▏       | 11/51 [00:00<00:02, 19.20it/s]Capturing CUDA graphs (PIECEWISE):  25%|██▌       | 13/51 [00:00<00:02, 18.30it/s]Capturing CUDA graphs (PIECEWISE):  29%|██▉       | 15/51 [00:00<00:01, 18.59it/s]Capturing CUDA graphs (PIECEWISE):  35%|███▌      | 18/51 [00:01<00:01, 19.89it/s]Capturing CUDA graphs (PIECEWISE):  39%|███▉      | 20/51 [00:01<00:01, 19.56it/s]Capturing CUDA graphs (PIECEWISE):  45%|████▌     | 23/51 [00:01<00:01, 20.22it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████     | 26/51 [00:01<00:01, 20.29it/s]Capturing CUDA graphs (PIECEWISE):  57%|█████▋    | 29/51 [00:01<00:01, 14.78it/s]Capturing CUDA graphs (PIECEWISE):  61%|██████    | 31/51 [00:01<00:01, 15.48it/s]Capturing CUDA graphs (PIECEWISE):  67%|██████▋   | 34/51 [00:01<00:00, 17.08it/s]Capturing CUDA graphs (PIECEWISE):  71%|███████   | 36/51 [00:02<00:00, 16.76it/s]Capturing CUDA graphs (PIECEWISE):  75%|███████▍  | 38/51 [00:02<00:00, 17.28it/s]Capturing CUDA graphs (PIECEWISE):  78%|███████▊  | 40/51 [00:02<00:00, 17.89it/s]Capturing CUDA graphs (PIECEWISE):  82%|████████▏ | 42/51 [00:02<00:00, 17.95it/s]Capturing CUDA graphs (PIECEWISE):  86%|████████▋ | 44/51 [00:02<00:00, 18.07it/s]Capturing CUDA graphs (PIECEWISE):  90%|█████████ | 46/51 [00:02<00:00, 18.57it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▍| 48/51 [00:02<00:00, 18.87it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:02<00:00, 20.46it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:02<00:00, 17.81it/s]
+(EngineCore pid=46299) Capturing CUDA graphs (FULL):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):   6%|▌         | 3/51 [00:00<00:01, 27.14it/s]Capturing CUDA graphs (FULL):  12%|█▏        | 6/51 [00:00<00:01, 26.71it/s]Capturing CUDA graphs (FULL):  18%|█▊        | 9/51 [00:00<00:01, 27.06it/s]Capturing CUDA graphs (FULL):  24%|██▎       | 12/51 [00:00<00:01, 27.59it/s]Capturing CUDA graphs (FULL):  29%|██▉       | 15/51 [00:00<00:01, 23.10it/s]Capturing CUDA graphs (FULL):  35%|███▌      | 18/51 [00:00<00:01, 24.78it/s]Capturing CUDA graphs (FULL):  41%|████      | 21/51 [00:00<00:01, 25.91it/s]Capturing CUDA graphs (FULL):  47%|████▋     | 24/51 [00:00<00:01, 26.92it/s]Capturing CUDA graphs (FULL):  53%|█████▎    | 27/51 [00:01<00:00, 26.99it/s]Capturing CUDA graphs (FULL):  61%|██████    | 31/51 [00:01<00:00, 28.29it/s]Capturing CUDA graphs (FULL):  67%|██████▋   | 34/51 [00:01<00:00, 27.58it/s]Capturing CUDA graphs (FULL):  75%|███████▍  | 38/51 [00:01<00:00, 28.88it/s]Capturing CUDA graphs (FULL):  82%|████████▏ | 42/51 [00:01<00:00, 29.47it/s]Capturing CUDA graphs (FULL):  90%|█████████ | 46/51 [00:01<00:00, 30.43it/s]Capturing CUDA graphs (FULL):  98%|█████████▊| 50/51 [00:01<00:00, 31.25it/s]Capturing CUDA graphs (FULL): 100%|██████████| 51/51 [00:01<00:00, 28.30it/s]
+(EngineCore pid=46299) INFO 10-14 05:10:54 [model_runner.py:747] Graph capturing finished in 5 secs, took 0.99 GiB
+(EngineCore pid=46299) INFO 10-14 05:10:54 [gpu_worker.py:857] Free memory on device (138.77/139.8 GiB) on startup. Desired GPU memory utilization is (0.9, 125.82 GiB). Actual usage is 15.27 GiB for weight, 1.59 GiB for peak activation, 16.2 GiB for non-torch memory, and 0.99 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=98377427968` (91.62 GiB) to fit into requested memory, or `--kv-cache-memory=112284920832` (104.57 GiB) to fully utilize gpu memory. Current kv cache memory in use is 92.76 GiB.
+(EngineCore pid=46299) INFO 10-14 05:11:10 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=46299) INFO 10-14 05:11:11 [core.py:340] init engine (profile, create kv cache, warmup model) took 631.82 s (compilation: 451.61 s)
+(EngineCore pid=46299) INFO 10-14 05:11:12 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+Rendering prompts:   0%|          | 0/10 [00:00<?, ?it/s]Rendering prompts:  10%|█         | 1/10 [00:00<00:02,  3.52it/s]Rendering prompts: 100%|██████████| 10/10 [00:00<00:00, 34.53it/s]
+Processed prompts:   0%|          | 0/10 [00:00<?, ?it/s, est. speed input: 0.00 toks/s, output: 0.00 toks/s]Processed prompts:  10%|█         | 1/10 [00:00<00:01,  7.70it/s, est. speed input: 2034.37 toks/s, output: 69.33 toks/s]Processed prompts:  20%|██        | 2/10 [00:05<00:25,  3.22s/it, est. speed input: 136.32 toks/s, output: 173.71 toks/s]Processed prompts:  30%|███       | 3/10 [00:06<00:15,  2.27s/it, est. speed input: 149.60 toks/s, output: 316.35 toks/s]Processed prompts:  40%|████      | 4/10 [00:07<00:10,  1.70s/it, est. speed input: 165.25 toks/s, output: 453.28 toks/s]Processed prompts:  50%|█████     | 5/10 [00:12<00:13,  2.73s/it, est. speed input: 125.03 toks/s, output: 452.32 toks/s]Processed prompts: 100%|██████████| 10/10 [00:12<00:00,  2.73s/it, est. speed input: 225.66 toks/s, output: 1302.86 toks/s]Processed prompts: 100%|██████████| 10/10 [00:12<00:00,  1.20s/it, est. speed input: 225.66 toks/s, output: 1302.86 toks/s]
+[vllm_runner] wrote 10/10
+(EngineCore pid=46299) INFO 10-14 05:11:25 [core.py:1313] [shutdown] EngineCore: trigger received signal=SIGTERM
+(EngineCore pid=46299) INFO 10-14 05:11:25 [core.py:1432] [shutdown] EngineCore: start mode=abort timeout=0s
+(EngineCore pid=46299) INFO 10-14 05:11:25 [core.py:1463] [shutdown] EngineCore: request processing complete; starting resource teardown
+(EngineCore pid=46299) INFO 10-14 05:11:25 [core.py:1326] [shutdown] EngineCore: exiting busy loop
+[smoke] === generate qwen3-8b default rc=0 wall=869s
+[smoke] === generate qwen3-8b argon: .venv/bin/python -m cotswitch.cli generate --condition qwen3-8b --protocol argon --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[vllm_runner] qwen3-8b/argon: 14 units, 0 done, 14 pending -> /root/scratch/cot-control-switch/smoke/generations/qwen3-8b/argon.jsonl
+INFO 10-14 05:12:50 [arg_utils.py:779] HF_HUB_OFFLINE is True, replace model_id [Qwen/Qwen3-8B] to model_path [/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218]
+INFO 10-14 05:12:50 [arg_utils.py:789] HF_HUB_OFFLINE is True, replace tokenizer_id [Qwen/Qwen3-8B] to tokenizer_path [/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218]
+INFO 10-14 05:12:50 [api_utils.py:273] non-default args: {'tokenizer': '/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', 'dtype': 'bfloat16', 'max_model_len': 32768, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.45, 'disable_log_stats': True, 'revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'tokenizer_revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'model': '/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218'}
+INFO 10-14 05:12:50 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+INFO 10-14 05:12:50 [model.py:1788] Using max model len 32768
+INFO 10-14 05:12:50 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 10-14 05:12:50 [vllm.py:1109] Asynchronous scheduling is enabled.
+INFO 10-14 05:12:50 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=71283) INFO 10-14 05:12:57 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', speculative_config=None, tokenizer='/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', skip_tokenizer_init=False, tokenizer_mode=auto, revision=b968826d9c46dd6066d109eabc6255188de91218, tokenizer_revision=b968826d9c46dd6066d109eabc6255188de91218, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=71283) INFO 10-14 05:13:03 [parallel_state.py:1615] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.26.0.2:55015 backend=nccl
+(EngineCore pid=71283) INFO 10-14 05:13:03 [parallel_state.py:1946] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=71283) INFO 10-14 05:13:03 [gpu_worker.py:378] Using V2 Model Runner
+(EngineCore pid=71283) INFO 10-14 05:13:23 [model_runner.py:284] Loading model from scratch...
+(EngineCore pid=71283) INFO 10-14 05:13:42 [cuda.py:482] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=71283) INFO 10-14 05:13:42 [flash_attn.py:776] Using FlashAttention version 3
+(EngineCore pid=71283) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=71283) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=71283) INFO 10-14 05:13:49 [weight_utils.py:869] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 15.26 GiB. Available RAM: 1848.19 GiB.
+(EngineCore pid=71283) INFO 10-14 05:13:49 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=71283) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=71283) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:05<00:20,  5.19s/it]
+(EngineCore pid=71283) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:10<00:16,  5.49s/it]
+(EngineCore pid=71283) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:17<00:11,  5.91s/it]
+(EngineCore pid=71283) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:21<00:05,  5.39s/it]
+(EngineCore pid=71283) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:24<00:00,  4.24s/it]
+(EngineCore pid=71283) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:24<00:00,  4.82s/it]
+(EngineCore pid=71283) 
+(EngineCore pid=71283) INFO 10-14 05:14:13 [default_loader.py:430] Loading weights took 24.30 seconds
+(EngineCore pid=71283) INFO 10-14 05:14:21 [model_runner.py:305] Model loading took 15.27 GiB and 60.991596 seconds
+(EngineCore pid=71283) INFO 10-14 05:14:21 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=71283) INFO 10-14 05:15:48 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/0350aa9786/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=71283) INFO 10-14 05:15:48 [backends.py:1155] Dynamo bytecode transform time: 82.59 s
+(EngineCore pid=71283) INFO 10-14 05:16:27 [backends.py:292] Directly load the compiled graph(s) for compile range (1, 16384) from the cache, took 32.800 s
+(EngineCore pid=71283) INFO 10-14 05:16:27 [decorators.py:311] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/23c1110d12068e3b60f65eb183d0a17bed4c536b20430b61b40427c51efec527/rank_0_0/model
+(EngineCore pid=71283) INFO 10-14 05:16:27 [monitor.py:53] torch.compile took 121.68 s in total
+(EngineCore pid=71283) INFO 10-14 05:16:29 [monitor.py:81] Initial profiling/warmup run took 1.42 s
+(EngineCore pid=71283) INFO 10-14 05:16:38 [gpu_worker.py:560] Available KV cache memory: 1.24 GiB
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330] EngineCore failed to start.
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330] Traceback (most recent call last):
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1299, in run_engine_core
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     return func(*args, **kwargs)
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1065, in __init__
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     super().__init__(
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 136, in __init__
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     return func(*args, **kwargs)
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 297, in _initialize_kv_caches
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]                        ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 2132, in get_kv_cache_configs
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     _check_enough_kv_cache_memory(
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 778, in _check_enough_kv_cache_memory
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330]     raise ValueError(
+(EngineCore pid=71283) ERROR 10-14 05:16:38 [core.py:1330] ValueError: To serve at least one request with the model's max seq len (32768), (4.5 GiB KV cache is needed, which is larger than the available KV cache memory (1.24 GiB). Based on the available memory, the estimated maximum model length is 9040. Try increasing `gpu_memory_utilization` (which also controls CPU memory on the CPU backend) or decreasing `max_model_len` when initializing the engine. See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+(EngineCore pid=71283) Process EngineCore:
+(EngineCore pid=71283) Traceback (most recent call last):
+(EngineCore pid=71283)   File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+(EngineCore pid=71283)     self.run()
+(EngineCore pid=71283)   File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+(EngineCore pid=71283)     self._target(*self._args, **self._kwargs)
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1334, in run_engine_core
+(EngineCore pid=71283)     raise e
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1299, in run_engine_core
+(EngineCore pid=71283)     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=71283)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=71283)     return func(*args, **kwargs)
+(EngineCore pid=71283)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1065, in __init__
+(EngineCore pid=71283)     super().__init__(
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 136, in __init__
+(EngineCore pid=71283)     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=71283)                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=71283)     return func(*args, **kwargs)
+(EngineCore pid=71283)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 297, in _initialize_kv_caches
+(EngineCore pid=71283)     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=71283)                        ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 2132, in get_kv_cache_configs
+(EngineCore pid=71283)     _check_enough_kv_cache_memory(
+(EngineCore pid=71283)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 778, in _check_enough_kv_cache_memory
+(EngineCore pid=71283)     raise ValueError(
+(EngineCore pid=71283) ValueError: To serve at least one request with the model's max seq len (32768), (4.5 GiB KV cache is needed, which is larger than the available KV cache memory (1.24 GiB). Based on the available memory, the estimated maximum model length is 9040. Try increasing `gpu_memory_utilization` (which also controls CPU memory on the CPU backend) or decreasing `max_model_len` when initializing the engine. See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 247, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 243, in main
+    return args.func(args) or 0
+           ^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 73, in cmd_generate
+    vllm_runner.run(cfg, args.protocol, run_dir, gpu_memory_utilization=args.gpu_memory_utilization,
+  File "/workspace/cot-control-switch/cotswitch/runners/vllm_runner.py", line 216, in run
+    llm = (llm_factory or _default_llm_factory)(cfg, gpu_memory_utilization, enforce_eager)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/runners/vllm_runner.py", line 176, in _default_llm_factory
+    return LLM(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/entrypoints/llm.py", line 338, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/llm_engine.py", line 179, in from_engine_args
+    return cls(
+           ^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/llm_engine.py", line 105, in __init__
+    self.engine_core = EngineCoreClient.make_client(
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 103, in make_client
+    return SyncMPClient(vllm_config, executor_class, log_stats)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 786, in __init__
+    super().__init__(
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 573, in __init__
+    with launch_core_engines(
+  File "/usr/lib/python3.12/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1213, in launch_core_engines
+    wait_for_engine_startup(
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1272, in wait_for_engine_startup
+    raise RuntimeError(
+RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
+[smoke] === generate qwen3-8b argon rc=1 wall=319s
+[smoke] GPU busy, waiting: 71275, 45748 MiB 
+[smoke] GPU busy, waiting: 71275, 45748 MiB 
+[smoke] GPU busy, waiting: 71275, 45748 MiB 
+[smoke] GPU busy, waiting: 71275, 45748 MiB 
+[smoke] GPU busy, waiting: 71275, 45748 MiB 
+[smoke] GPU busy, waiting: 71275, 45748 MiB 
+[smoke] GPU busy, waiting: 71275, 45748 MiB 
+[smoke] GPU busy, waiting: 71275, 48220 MiB 
+[smoke] === generate qwen3-8b astra: .venv/bin/python -m cotswitch.cli generate --condition qwen3-8b --protocol astra --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[vllm_runner] qwen3-8b/astra: 9 units, 0 done, 9 pending -> /root/scratch/cot-control-switch/smoke/generations/qwen3-8b/astra.jsonl
+INFO 10-14 05:26:57 [arg_utils.py:779] HF_HUB_OFFLINE is True, replace model_id [Qwen/Qwen3-8B] to model_path [/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218]
+INFO 10-14 05:26:57 [arg_utils.py:789] HF_HUB_OFFLINE is True, replace tokenizer_id [Qwen/Qwen3-8B] to tokenizer_path [/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218]
+INFO 10-14 05:26:57 [api_utils.py:273] non-default args: {'tokenizer': '/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', 'dtype': 'bfloat16', 'max_model_len': 32768, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.45, 'disable_log_stats': True, 'revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'tokenizer_revision': 'b968826d9c46dd6066d109eabc6255188de91218', 'model': '/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218'}
+INFO 10-14 05:26:57 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+INFO 10-14 05:26:57 [model.py:1788] Using max model len 32768
+INFO 10-14 05:26:57 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 10-14 05:26:57 [vllm.py:1109] Asynchronous scheduling is enabled.
+INFO 10-14 05:26:57 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=347567) INFO 10-14 05:27:56 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', speculative_config=None, tokenizer='/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218', skip_tokenizer_init=False, tokenizer_mode=auto, revision=b968826d9c46dd6066d109eabc6255188de91218, tokenizer_revision=b968826d9c46dd6066d109eabc6255188de91218, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=347567) INFO 10-14 05:28:23 [parallel_state.py:1615] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.26.0.2:47911 backend=nccl
+(EngineCore pid=347567) INFO 10-14 05:28:23 [parallel_state.py:1946] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=347567) INFO 10-14 05:28:23 [gpu_worker.py:378] Using V2 Model Runner
+(EngineCore pid=347567) INFO 10-14 05:28:38 [model_runner.py:284] Loading model from scratch...
+(EngineCore pid=347567) INFO 10-14 05:28:59 [cuda.py:482] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=347567) INFO 10-14 05:28:59 [flash_attn.py:776] Using FlashAttention version 3
+(EngineCore pid=347567) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=347567) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=347567) INFO 10-14 05:29:05 [weight_utils.py:869] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 15.26 GiB. Available RAM: 1839.35 GiB.
+(EngineCore pid=347567) INFO 10-14 05:29:05 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=347567) Loading safetensors checkpoint shards:   0% Completed | 0/5 [00:00<?, ?it/s]
+(EngineCore pid=347567) Loading safetensors checkpoint shards:  20% Completed | 1/5 [00:06<00:24,  6.01s/it]
+(EngineCore pid=347567) Loading safetensors checkpoint shards:  40% Completed | 2/5 [00:11<00:16,  5.47s/it]
+(EngineCore pid=347567) Loading safetensors checkpoint shards:  60% Completed | 3/5 [00:16<00:11,  5.53s/it]
+(EngineCore pid=347567) Loading safetensors checkpoint shards:  80% Completed | 4/5 [00:21<00:05,  5.20s/it]
+(EngineCore pid=347567) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:23<00:00,  3.98s/it]
+(EngineCore pid=347567) Loading safetensors checkpoint shards: 100% Completed | 5/5 [00:23<00:00,  4.64s/it]
+(EngineCore pid=347567) 
+(EngineCore pid=347567) INFO 10-14 05:29:29 [default_loader.py:430] Loading weights took 23.32 seconds
+(EngineCore pid=347567) INFO 10-14 05:29:36 [model_runner.py:305] Model loading took 15.27 GiB and 60.898189 seconds
+(EngineCore pid=347567) INFO 10-14 05:29:36 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=347567) INFO 10-14 05:31:05 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/0350aa9786/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=347567) INFO 10-14 05:31:05 [backends.py:1155] Dynamo bytecode transform time: 84.68 s
+(EngineCore pid=347567) INFO 10-14 05:31:20 [backends.py:292] Directly load the compiled graph(s) for compile range (1, 16384) from the cache, took 9.665 s
+(EngineCore pid=347567) INFO 10-14 05:31:20 [decorators.py:311] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/23c1110d12068e3b60f65eb183d0a17bed4c536b20430b61b40427c51efec527/rank_0_0/model
+(EngineCore pid=347567) INFO 10-14 05:31:20 [monitor.py:53] torch.compile took 100.27 s in total
+(EngineCore pid=347567) INFO 10-14 05:31:21 [monitor.py:81] Initial profiling/warmup run took 0.15 s
+(EngineCore pid=347567) INFO 10-14 05:31:31 [gpu_worker.py:560] Available KV cache memory: -0.2 GiB
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330] EngineCore failed to start.
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330] Traceback (most recent call last):
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1299, in run_engine_core
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     return func(*args, **kwargs)
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1065, in __init__
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     super().__init__(
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 136, in __init__
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     return func(*args, **kwargs)
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 297, in _initialize_kv_caches
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]                        ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 2132, in get_kv_cache_configs
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     _check_enough_kv_cache_memory(
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 758, in _check_enough_kv_cache_memory
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330]     raise ValueError(
+(EngineCore pid=347567) ERROR 10-14 05:31:31 [core.py:1330] ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine (this flag also controls CPU memory reservation on the CPU backend, despite its name). See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+(EngineCore pid=347567) Process EngineCore:
+(EngineCore pid=347567) Traceback (most recent call last):
+(EngineCore pid=347567)   File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+(EngineCore pid=347567)     self.run()
+(EngineCore pid=347567)   File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+(EngineCore pid=347567)     self._target(*self._args, **self._kwargs)
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1334, in run_engine_core
+(EngineCore pid=347567)     raise e
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1299, in run_engine_core
+(EngineCore pid=347567)     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=347567)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=347567)     return func(*args, **kwargs)
+(EngineCore pid=347567)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1065, in __init__
+(EngineCore pid=347567)     super().__init__(
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 136, in __init__
+(EngineCore pid=347567)     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=347567)                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=347567)     return func(*args, **kwargs)
+(EngineCore pid=347567)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 297, in _initialize_kv_caches
+(EngineCore pid=347567)     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=347567)                        ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 2132, in get_kv_cache_configs
+(EngineCore pid=347567)     _check_enough_kv_cache_memory(
+(EngineCore pid=347567)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 758, in _check_enough_kv_cache_memory
+(EngineCore pid=347567)     raise ValueError(
+(EngineCore pid=347567) ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine (this flag also controls CPU memory reservation on the CPU backend, despite its name). See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 247, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 243, in main
+    return args.func(args) or 0
+           ^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 73, in cmd_generate
+    vllm_runner.run(cfg, args.protocol, run_dir, gpu_memory_utilization=args.gpu_memory_utilization,
+  File "/workspace/cot-control-switch/cotswitch/runners/vllm_runner.py", line 216, in run
+    llm = (llm_factory or _default_llm_factory)(cfg, gpu_memory_utilization, enforce_eager)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/runners/vllm_runner.py", line 176, in _default_llm_factory
+    return LLM(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/entrypoints/llm.py", line 338, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/llm_engine.py", line 179, in from_engine_args
+    return cls(
+           ^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/llm_engine.py", line 105, in __init__
+    self.engine_core = EngineCoreClient.make_client(
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 103, in make_client
+    return SyncMPClient(vllm_config, executor_class, log_stats)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 786, in __init__
+    super().__init__(
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 573, in __init__
+    with launch_core_engines(
+  File "/usr/lib/python3.12/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1213, in launch_core_engines
+    wait_for_engine_startup(
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1272, in wait_for_engine_startup
+    raise RuntimeError(
+RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
+[smoke] === generate qwen3-8b astra rc=1 wall=656s
+[smoke] GPU busy, waiting: 348062, 47188 MiB 
+[smoke] GPU busy, waiting: 348062, 47188 MiB 
+[smoke] GPU busy, waiting: 348062, 47188 MiB 
+[smoke] GPU busy, waiting: 348062, 49668 MiB 
+[smoke] === generate switch-nolatent default: .venv/bin/python -m cotswitch.cli generate --condition switch-nolatent --protocol default --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[vllm_runner] switch-nolatent/default: 10 units, 0 done, 10 pending -> /root/scratch/cot-control-switch/smoke/generations/switch-nolatent/default.jsonl
+INFO 10-14 05:36:34 [api_utils.py:273] non-default args: {'tokenizer': '/root/scratch/models/switch-merged', 'dtype': 'bfloat16', 'max_model_len': 32768, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.45, 'disable_log_stats': True, 'model': '/root/scratch/models/switch-merged'}
+INFO 10-14 05:36:34 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+INFO 10-14 05:36:34 [model.py:1788] Using max model len 32768
+INFO 10-14 05:36:35 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 10-14 05:36:35 [vllm.py:1109] Asynchronous scheduling is enabled.
+INFO 10-14 05:36:35 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=391859) INFO 10-14 05:37:36 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='/root/scratch/models/switch-merged', speculative_config=None, tokenizer='/root/scratch/models/switch-merged', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/root/scratch/models/switch-merged, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=391859) INFO 10-14 05:37:59 [parallel_state.py:1615] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.26.0.2:46789 backend=nccl
+(EngineCore pid=391859) INFO 10-14 05:37:59 [parallel_state.py:1946] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=391859) INFO 10-14 05:37:59 [gpu_worker.py:378] Using V2 Model Runner
+(EngineCore pid=391859) INFO 10-14 05:38:14 [model_runner.py:284] Loading model from scratch...
+(EngineCore pid=391859) INFO 10-14 05:38:39 [cuda.py:482] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=391859) INFO 10-14 05:38:39 [flash_attn.py:776] Using FlashAttention version 3
+(EngineCore pid=391859) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=391859) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=391859) INFO 10-14 05:38:46 [weight_utils.py:869] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 15.25 GiB. Available RAM: 1830.00 GiB.
+(EngineCore pid=391859) INFO 10-14 05:38:46 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=391859) Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+(EngineCore pid=391859) Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:21<00:00, 21.90s/it]
+(EngineCore pid=391859) Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:21<00:00, 21.90s/it]
+(EngineCore pid=391859) 
+(EngineCore pid=391859) INFO 10-14 05:39:09 [default_loader.py:430] Loading weights took 22.60 seconds
+(EngineCore pid=391859) INFO 10-14 05:39:14 [model_runner.py:305] Model loading took 15.26 GiB and 62.390061 seconds
+(EngineCore pid=391859) INFO 10-14 05:39:14 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=391859) INFO 10-14 05:41:47 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/e955f1452e/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=391859) INFO 10-14 05:41:47 [backends.py:1155] Dynamo bytecode transform time: 149.23 s
+(EngineCore pid=391859) INFO 10-14 05:42:54 [backends.py:378] Cache the graph of compile range (1, 16384) for later use
+(EngineCore pid=391859) INFO 10-14 05:43:26 [backends.py:393] Compiling a graph for compile range (1, 16384) takes 95.21 s
+(EngineCore pid=391859) INFO 10-14 05:44:01 [decorators.py:708] saved AOT compiled function to /root/.cache/vllm/torch_compile_cache/torch_aot_compile/e75e95a7531d2cd920f8f37d9a7fb8a92040df760939152a82f9873ce5538a4a/rank_0_0/model
+(EngineCore pid=391859) INFO 10-14 05:44:01 [monitor.py:53] torch.compile took 283.81 s in total
+(EngineCore pid=391859) INFO 10-14 05:44:03 [monitor.py:81] Initial profiling/warmup run took 1.25 s
+(EngineCore pid=391859) INFO 10-14 05:44:24 [gpu_worker.py:560] Available KV cache memory: -20.23 GiB
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330] EngineCore failed to start.
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330] Traceback (most recent call last):
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1299, in run_engine_core
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     return func(*args, **kwargs)
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1065, in __init__
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     super().__init__(
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 136, in __init__
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     return func(*args, **kwargs)
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 297, in _initialize_kv_caches
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]                        ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 2132, in get_kv_cache_configs
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     _check_enough_kv_cache_memory(
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 758, in _check_enough_kv_cache_memory
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330]     raise ValueError(
+(EngineCore pid=391859) ERROR 10-14 05:44:24 [core.py:1330] ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine (this flag also controls CPU memory reservation on the CPU backend, despite its name). See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+(EngineCore pid=391859) Process EngineCore:
+(EngineCore pid=391859) Traceback (most recent call last):
+(EngineCore pid=391859)   File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+(EngineCore pid=391859)     self.run()
+(EngineCore pid=391859)   File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+(EngineCore pid=391859)     self._target(*self._args, **self._kwargs)
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1334, in run_engine_core
+(EngineCore pid=391859)     raise e
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1299, in run_engine_core
+(EngineCore pid=391859)     engine_core = EngineCoreProc(*args, engine_index=dp_rank, **kwargs)
+(EngineCore pid=391859)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=391859)     return func(*args, **kwargs)
+(EngineCore pid=391859)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 1065, in __init__
+(EngineCore pid=391859)     super().__init__(
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 136, in __init__
+(EngineCore pid=391859)     kv_cache_config = self._initialize_kv_caches(vllm_config)
+(EngineCore pid=391859)                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+(EngineCore pid=391859)     return func(*args, **kwargs)
+(EngineCore pid=391859)            ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core.py", line 297, in _initialize_kv_caches
+(EngineCore pid=391859)     kv_cache_configs = get_kv_cache_configs(
+(EngineCore pid=391859)                        ^^^^^^^^^^^^^^^^^^^^^
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 2132, in get_kv_cache_configs
+(EngineCore pid=391859)     _check_enough_kv_cache_memory(
+(EngineCore pid=391859)   File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/core/kv_cache_utils.py", line 758, in _check_enough_kv_cache_memory
+(EngineCore pid=391859)     raise ValueError(
+(EngineCore pid=391859) ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine (this flag also controls CPU memory reservation on the CPU backend, despite its name). See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more details.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 247, in <module>
+    sp.set_defaults(func=func)
+         ^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 243, in main
+    sp.add_argument("--gpu-memory-utilization", type=float, default=None)
+   ^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/cli.py", line 73, in cmd_generate
+    if cfg["engine"] == "vllm":
+        ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/runners/vllm_runner.py", line 216, in run
+    llm = (llm_factory or _default_llm_factory)(cfg, gpu_memory_utilization, enforce_eager)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/cotswitch/runners/vllm_runner.py", line 176, in _default_llm_factory
+    return LLM(**kwargs)
+           ^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/entrypoints/llm.py", line 338, in __init__
+    self.llm_engine = LLMEngine.from_engine_args(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/llm_engine.py", line 179, in from_engine_args
+    return cls(
+           ^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/llm_engine.py", line 105, in __init__
+    self.engine_core = EngineCoreClient.make_client(
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 103, in make_client
+    return SyncMPClient(vllm_config, executor_class, log_stats)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/tracing/otel.py", line 178, in sync_wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 786, in __init__
+    super().__init__(
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 573, in __init__
+    with launch_core_engines(
+  File "/usr/lib/python3.12/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1213, in launch_core_engines
+    wait_for_engine_startup(
+  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py", line 1272, in wait_for_engine_startup
+    raise RuntimeError(
+RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}
+[smoke] === generate switch-nolatent default rc=1 wall=637s
+[smoke] GPU busy, waiting: 387710, 38750 MiB 391416, 50786 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 391416, 46986 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 682 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 16356 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 16972 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 16972 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 16972 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 18928 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 64108 MiB 
+[smoke] GPU busy, waiting: 387710, 38750 MiB 699914, 64108 MiB 
+[smoke] GPU busy, waiting: 387710, 38864 MiB 699914, 64108 MiB 
+[smoke] GPU busy, waiting: 387710, 38864 MiB 699914, 64108 MiB 
+[smoke] GPU busy, waiting: 387710, 38864 MiB 699914, 64108 MiB 
+[smoke] GPU busy, waiting: 387710, 38864 MiB 699914, 64322 MiB 
+[smoke] GPU busy, waiting: 387710, 38864 MiB 699914, 65076 MiB 
+[smoke] GPU busy, waiting: 387710, 38864 MiB 699914, 67770 MiB 
+[smoke] GPU busy, waiting: 387710, 17494 MiB 699914, 67770 MiB 
+[smoke] GPU busy, waiting: 699914, 67770 MiB 
+[smoke] === generate switch-nolatent argon: .venv/bin/python -m cotswitch.cli generate --condition switch-nolatent --protocol argon --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[vllm_runner] switch-nolatent/argon: 14 units, 0 done, 14 pending -> /root/scratch/cot-control-switch/smoke/generations/switch-nolatent/argon.jsonl
+INFO 10-14 06:04:04 [api_utils.py:273] non-default args: {'tokenizer': '/root/scratch/models/switch-merged', 'dtype': 'bfloat16', 'max_model_len': 32768, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.45, 'disable_log_stats': True, 'model': '/root/scratch/models/switch-merged'}
+INFO 10-14 06:04:04 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+INFO 10-14 06:04:04 [model.py:1788] Using max model len 32768
+INFO 10-14 06:04:04 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 10-14 06:04:04 [vllm.py:1109] Asynchronous scheduling is enabled.
+INFO 10-14 06:04:04 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=794337) INFO 10-14 06:04:10 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='/root/scratch/models/switch-merged', speculative_config=None, tokenizer='/root/scratch/models/switch-merged', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/root/scratch/models/switch-merged, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=794337) INFO 10-14 06:04:16 [parallel_state.py:1615] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.26.0.2:35509 backend=nccl
+(EngineCore pid=794337) INFO 10-14 06:04:16 [parallel_state.py:1946] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=794337) INFO 10-14 06:04:16 [gpu_worker.py:378] Using V2 Model Runner
+(EngineCore pid=794337) INFO 10-14 06:04:18 [model_runner.py:284] Loading model from scratch...
+(EngineCore pid=794337) INFO 10-14 06:04:22 [cuda.py:482] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=794337) INFO 10-14 06:04:22 [flash_attn.py:776] Using FlashAttention version 3
+(EngineCore pid=794337) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=794337) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=794337) INFO 10-14 06:04:23 [weight_utils.py:869] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 15.25 GiB. Available RAM: 1846.77 GiB.
+(EngineCore pid=794337) INFO 10-14 06:04:23 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=794337) Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+(EngineCore pid=794337) Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:02<00:00,  2.55s/it]
+(EngineCore pid=794337) Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:02<00:00,  2.55s/it]
+(EngineCore pid=794337) 
+(EngineCore pid=794337) INFO 10-14 06:04:26 [default_loader.py:430] Loading weights took 2.64 seconds
+(EngineCore pid=794337) INFO 10-14 06:04:26 [model_runner.py:305] Model loading took 15.26 GiB and 8.394190 seconds
+(EngineCore pid=794337) INFO 10-14 06:04:28 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=794337) INFO 10-14 06:04:43 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/e955f1452e/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=794337) INFO 10-14 06:04:43 [backends.py:1155] Dynamo bytecode transform time: 14.46 s
+(EngineCore pid=794337) INFO 10-14 06:04:46 [backends.py:292] Directly load the compiled graph(s) for compile range (1, 16384) from the cache, took 2.523 s
+(EngineCore pid=794337) INFO 10-14 06:04:46 [decorators.py:311] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/e75e95a7531d2cd920f8f37d9a7fb8a92040df760939152a82f9873ce5538a4a/rank_0_0/model
+(EngineCore pid=794337) INFO 10-14 06:04:46 [monitor.py:53] torch.compile took 17.45 s in total
+(EngineCore pid=794337) INFO 10-14 06:04:46 [monitor.py:81] Initial profiling/warmup run took 0.15 s
+(EngineCore pid=794337) INFO 10-14 06:04:48 [gpu_worker.py:560] Available KV cache memory: 27.92 GiB
+(EngineCore pid=794337) INFO 10-14 06:04:48 [kv_cache_utils.py:2177] GPU KV cache size: 203,264 tokens
+(EngineCore pid=794337) INFO 10-14 06:04:48 [kv_cache_utils.py:2178] Maximum concurrency for 32,768 tokens per request: 6.20x
+(EngineCore pid=794337) INFO 10-14 06:04:48 [kernel_warmup.py:65] Warming up ll_bf16 router GEMM kernels.
+(EngineCore pid=794337) INFO 10-14 06:05:02 [cutedsl_warmup.py:101] Skipping CuTeDSL warmup because no compile units were requested.
+(EngineCore pid=794337) Capturing CUDA graphs (PIECEWISE):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   4%|▍         | 2/51 [00:00<00:02, 18.42it/s]Capturing CUDA graphs (PIECEWISE):  10%|▉         | 5/51 [00:00<00:02, 22.66it/s]Capturing CUDA graphs (PIECEWISE):  16%|█▌        | 8/51 [00:00<00:01, 21.56it/s]Capturing CUDA graphs (PIECEWISE):  22%|██▏       | 11/51 [00:00<00:01, 22.47it/s]Capturing CUDA graphs (PIECEWISE):  27%|██▋       | 14/51 [00:00<00:01, 21.09it/s]Capturing CUDA graphs (PIECEWISE):  33%|███▎      | 17/51 [00:00<00:01, 20.91it/s]Capturing CUDA graphs (PIECEWISE):  39%|███▉      | 20/51 [00:00<00:01, 21.79it/s]Capturing CUDA graphs (PIECEWISE):  45%|████▌     | 23/51 [00:01<00:01, 21.66it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████     | 26/51 [00:01<00:01, 21.63it/s]Capturing CUDA graphs (PIECEWISE):  57%|█████▋    | 29/51 [00:01<00:01, 21.71it/s]Capturing CUDA graphs (PIECEWISE):  63%|██████▎   | 32/51 [00:01<00:00, 21.63it/s]Capturing CUDA graphs (PIECEWISE):  69%|██████▊   | 35/51 [00:01<00:00, 19.19it/s]Capturing CUDA graphs (PIECEWISE):  73%|███████▎  | 37/51 [00:01<00:00, 17.70it/s]Capturing CUDA graphs (PIECEWISE):  76%|███████▋  | 39/51 [00:01<00:00, 18.07it/s]Capturing CUDA graphs (PIECEWISE):  80%|████████  | 41/51 [00:02<00:00, 18.30it/s]Capturing CUDA graphs (PIECEWISE):  84%|████████▍ | 43/51 [00:02<00:00, 18.58it/s]Capturing CUDA graphs (PIECEWISE):  88%|████████▊ | 45/51 [00:02<00:00, 18.86it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▍| 48/51 [00:02<00:00, 19.39it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:02<00:00, 20.21it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:02<00:00, 20.23it/s]
+(EngineCore pid=794337) Capturing CUDA graphs (FULL):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):   6%|▌         | 3/51 [00:00<00:02, 23.64it/s]Capturing CUDA graphs (FULL):  12%|█▏        | 6/51 [00:00<00:02, 21.12it/s]Capturing CUDA graphs (FULL):  18%|█▊        | 9/51 [00:00<00:02, 20.57it/s]Capturing CUDA graphs (FULL):  24%|██▎       | 12/51 [00:00<00:01, 22.77it/s]Capturing CUDA graphs (FULL):  31%|███▏      | 16/51 [00:00<00:01, 25.68it/s]Capturing CUDA graphs (FULL):  37%|███▋      | 19/51 [00:00<00:01, 26.83it/s]Capturing CUDA graphs (FULL):  45%|████▌     | 23/51 [00:00<00:00, 28.38it/s]Capturing CUDA graphs (FULL):  53%|█████▎    | 27/51 [00:01<00:00, 29.44it/s]Capturing CUDA graphs (FULL):  59%|█████▉    | 30/51 [00:01<00:00, 29.40it/s]Capturing CUDA graphs (FULL):  65%|██████▍   | 33/51 [00:01<00:00, 25.05it/s]Capturing CUDA graphs (FULL):  71%|███████   | 36/51 [00:01<00:00, 25.94it/s]Capturing CUDA graphs (FULL):  76%|███████▋  | 39/51 [00:01<00:00, 26.86it/s]Capturing CUDA graphs (FULL):  84%|████████▍ | 43/51 [00:01<00:00, 28.26it/s]Capturing CUDA graphs (FULL):  92%|█████████▏| 47/51 [00:01<00:00, 29.92it/s]Capturing CUDA graphs (FULL): 100%|██████████| 51/51 [00:01<00:00, 31.41it/s]Capturing CUDA graphs (FULL): 100%|██████████| 51/51 [00:01<00:00, 27.42it/s]
+(EngineCore pid=794337) INFO 10-14 06:05:06 [model_runner.py:747] Graph capturing finished in 5 secs, took 0.99 GiB
+(EngineCore pid=794337) INFO 10-14 06:05:06 [gpu_worker.py:857] Free memory on device (138.77/139.8 GiB) on startup. Desired GPU memory utilization is (0.45, 62.91 GiB). Actual usage is 15.26 GiB for weight, 1.53 GiB for peak activation, 18.2 GiB for non-torch memory, and 0.99 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=28751408128` (26.78 GiB) to fit into requested memory, or `--kv-cache-memory=110210378752` (102.64 GiB) to fully utilize gpu memory. Current kv cache memory in use is 27.92 GiB.
+(EngineCore pid=794337) INFO 10-14 06:05:12 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=794337) INFO 10-14 06:05:12 [core.py:340] init engine (profile, create kv cache, warmup model) took 44.78 s (compilation: 17.45 s)
+(EngineCore pid=794337) INFO 10-14 06:05:13 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=794337) WARNING 10-14 06:05:14 [jit_monitor.py:135] Triton kernel JIT compilation during inference: _bad_words_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+[vllm_runner] done 14/14  out_tok=16531 gen_wall_s=12.4 out_tok/s=1329
+(EngineCore pid=794337) INFO 10-14 06:05:26 [core.py:1313] [shutdown] EngineCore: trigger received signal=SIGTERM
+(EngineCore pid=794337) INFO 10-14 06:05:26 [core.py:1432] [shutdown] EngineCore: start mode=abort timeout=0s
+(EngineCore pid=794337) INFO 10-14 06:05:26 [core.py:1463] [shutdown] EngineCore: request processing complete; starting resource teardown
+(EngineCore pid=794337) INFO 10-14 06:05:26 [core.py:1326] [shutdown] EngineCore: exiting busy loop
+[smoke] === generate switch-nolatent argon rc=0 wall=210s
+[smoke] === generate switch-nolatent astra: .venv/bin/python -m cotswitch.cli generate --condition switch-nolatent --protocol astra --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[vllm_runner] switch-nolatent/astra: 9 units, 0 done, 9 pending -> /root/scratch/cot-control-switch/smoke/generations/switch-nolatent/astra.jsonl
+INFO 10-14 06:06:51 [api_utils.py:273] non-default args: {'tokenizer': '/root/scratch/models/switch-merged', 'dtype': 'bfloat16', 'max_model_len': 32768, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.45, 'disable_log_stats': True, 'model': '/root/scratch/models/switch-merged'}
+INFO 10-14 06:06:51 [model.py:623] Resolved architecture: Qwen3ForCausalLM
+INFO 10-14 06:06:51 [model.py:1788] Using max model len 32768
+INFO 10-14 06:06:51 [scheduler.py:252] Chunked prefill is enabled with max_num_batched_tokens=16384.
+INFO 10-14 06:06:51 [vllm.py:1109] Asynchronous scheduling is enabled.
+INFO 10-14 06:06:51 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=799485) INFO 10-14 06:06:59 [core.py:116] Initializing a V1 LLM engine (v0.26.0) with config: model='/root/scratch/models/switch-merged', speculative_config=None, tokenizer='/root/scratch/models/switch-merged', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=32768, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False, jit_monitor_mode='warn', jit_monitor_verbose=False), seed=0, served_model_name=/root/scratch/models/switch-merged, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'ir_enable_torch_wrap': True, 'splitting_ops': ['vllm::unified_attention_with_output', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::qwen_gdn_attention_core', 'vllm::gdn_attention_core_xpu', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::deepseek_v4_attention', 'vllm::hpc_rope_norm_forward', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False, 'enable_qk_norm_rope_fusion': False, 'fuse_rope_kvcache_cat_mla': False, 'fuse_act_padding': False, 'fuse_qk_norm_rope_kvcache': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': False, 'static_all_moe_layers': []}, kernel_config=KernelConfig(ir_op_priority=IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native']), enable_flashinfer_autotune=True, enable_cutedsl_warmup=True, enable_bf16x3_router_gemm=False, moe_backend='auto', linear_backend='auto')
+(EngineCore pid=799485) INFO 10-14 06:07:05 [parallel_state.py:1615] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.26.0.2:60943 backend=nccl
+(EngineCore pid=799485) INFO 10-14 06:07:05 [parallel_state.py:1946] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=799485) INFO 10-14 06:07:05 [gpu_worker.py:378] Using V2 Model Runner
+(EngineCore pid=799485) INFO 10-14 06:07:07 [model_runner.py:284] Loading model from scratch...
+(EngineCore pid=799485) INFO 10-14 06:07:11 [cuda.py:482] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=799485) INFO 10-14 06:07:11 [flash_attn.py:776] Using FlashAttention version 3
+(EngineCore pid=799485) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=799485) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=799485) INFO 10-14 06:07:13 [weight_utils.py:869] Filesystem type for checkpoints: OVERLAY. Checkpoint size: 15.25 GiB. Available RAM: 1864.41 GiB.
+(EngineCore pid=799485) INFO 10-14 06:07:13 [weight_utils.py:892] Auto-prefetch is disabled because the filesystem (OVERLAY) is not a recognized network FS (NFS/Lustre). If you want to force prefetching, start vLLM with --safetensors-load-strategy=prefetch.
+(EngineCore pid=799485) Loading safetensors checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+(EngineCore pid=799485) Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:02<00:00,  2.36s/it]
+(EngineCore pid=799485) Loading safetensors checkpoint shards: 100% Completed | 1/1 [00:02<00:00,  2.36s/it]
+(EngineCore pid=799485) 
+(EngineCore pid=799485) INFO 10-14 06:07:15 [default_loader.py:430] Loading weights took 2.45 seconds
+(EngineCore pid=799485) INFO 10-14 06:07:16 [model_runner.py:305] Model loading took 15.26 GiB and 9.481135 seconds
+(EngineCore pid=799485) INFO 10-14 06:07:16 [topk_topp_sampler.py:55] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=799485) INFO 10-14 06:07:31 [backends.py:1094] Using cache directory: /root/.cache/vllm/torch_compile_cache/e955f1452e/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=799485) INFO 10-14 06:07:31 [backends.py:1155] Dynamo bytecode transform time: 14.33 s
+(EngineCore pid=799485) INFO 10-14 06:07:35 [backends.py:292] Directly load the compiled graph(s) for compile range (1, 16384) from the cache, took 3.191 s
+(EngineCore pid=799485) INFO 10-14 06:07:35 [decorators.py:311] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/e75e95a7531d2cd920f8f37d9a7fb8a92040df760939152a82f9873ce5538a4a/rank_0_0/model
+(EngineCore pid=799485) INFO 10-14 06:07:35 [monitor.py:53] torch.compile took 18.07 s in total
+(EngineCore pid=799485) INFO 10-14 06:07:35 [monitor.py:81] Initial profiling/warmup run took 0.17 s
+(EngineCore pid=799485) INFO 10-14 06:07:37 [gpu_worker.py:560] Available KV cache memory: 35.39 GiB
+(EngineCore pid=799485) INFO 10-14 06:07:37 [kv_cache_utils.py:2177] GPU KV cache size: 257,664 tokens
+(EngineCore pid=799485) INFO 10-14 06:07:37 [kv_cache_utils.py:2178] Maximum concurrency for 32,768 tokens per request: 7.86x
+(EngineCore pid=799485) INFO 10-14 06:07:37 [kernel_warmup.py:65] Warming up ll_bf16 router GEMM kernels.
+(EngineCore pid=799485) INFO 10-14 06:07:52 [cutedsl_warmup.py:101] Skipping CuTeDSL warmup because no compile units were requested.
+(EngineCore pid=799485) Capturing CUDA graphs (PIECEWISE):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (PIECEWISE):   4%|▍         | 2/51 [00:00<00:02, 16.44it/s]Capturing CUDA graphs (PIECEWISE):   8%|▊         | 4/51 [00:00<00:02, 16.67it/s]Capturing CUDA graphs (PIECEWISE):  12%|█▏        | 6/51 [00:00<00:02, 17.63it/s]Capturing CUDA graphs (PIECEWISE):  16%|█▌        | 8/51 [00:00<00:02, 17.66it/s]Capturing CUDA graphs (PIECEWISE):  20%|█▉        | 10/51 [00:00<00:02, 18.14it/s]Capturing CUDA graphs (PIECEWISE):  24%|██▎       | 12/51 [00:00<00:02, 17.44it/s]Capturing CUDA graphs (PIECEWISE):  27%|██▋       | 14/51 [00:00<00:02, 17.64it/s]Capturing CUDA graphs (PIECEWISE):  31%|███▏      | 16/51 [00:00<00:02, 17.29it/s]Capturing CUDA graphs (PIECEWISE):  35%|███▌      | 18/51 [00:01<00:01, 17.85it/s]Capturing CUDA graphs (PIECEWISE):  39%|███▉      | 20/51 [00:01<00:01, 17.96it/s]Capturing CUDA graphs (PIECEWISE):  43%|████▎     | 22/51 [00:01<00:01, 15.68it/s]Capturing CUDA graphs (PIECEWISE):  47%|████▋     | 24/51 [00:01<00:01, 15.28it/s]Capturing CUDA graphs (PIECEWISE):  51%|█████     | 26/51 [00:01<00:01, 16.02it/s]Capturing CUDA graphs (PIECEWISE):  55%|█████▍    | 28/51 [00:01<00:01, 14.66it/s]Capturing CUDA graphs (PIECEWISE):  59%|█████▉    | 30/51 [00:01<00:01, 12.84it/s]Capturing CUDA graphs (PIECEWISE):  63%|██████▎   | 32/51 [00:02<00:01, 13.32it/s]Capturing CUDA graphs (PIECEWISE):  67%|██████▋   | 34/51 [00:02<00:01, 13.36it/s]Capturing CUDA graphs (PIECEWISE):  71%|███████   | 36/51 [00:02<00:01, 12.67it/s]Capturing CUDA graphs (PIECEWISE):  75%|███████▍  | 38/51 [00:02<00:00, 13.75it/s]Capturing CUDA graphs (PIECEWISE):  78%|███████▊  | 40/51 [00:02<00:00, 14.53it/s]Capturing CUDA graphs (PIECEWISE):  82%|████████▏ | 42/51 [00:02<00:00, 15.32it/s]Capturing CUDA graphs (PIECEWISE):  86%|████████▋ | 44/51 [00:02<00:00, 15.37it/s]Capturing CUDA graphs (PIECEWISE):  90%|█████████ | 46/51 [00:02<00:00, 15.18it/s]Capturing CUDA graphs (PIECEWISE):  94%|█████████▍| 48/51 [00:03<00:00, 15.43it/s]Capturing CUDA graphs (PIECEWISE):  98%|█████████▊| 50/51 [00:03<00:00, 16.29it/s]Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:03<00:00, 15.60it/s]
+(EngineCore pid=799485) Capturing CUDA graphs (FULL):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (FULL):   4%|▍         | 2/51 [00:00<00:02, 18.99it/s]Capturing CUDA graphs (FULL):  10%|▉         | 5/51 [00:00<00:01, 23.16it/s]Capturing CUDA graphs (FULL):  16%|█▌        | 8/51 [00:00<00:01, 24.70it/s]Capturing CUDA graphs (FULL):  22%|██▏       | 11/51 [00:00<00:01, 25.60it/s]Capturing CUDA graphs (FULL):  27%|██▋       | 14/51 [00:00<00:01, 25.79it/s]Capturing CUDA graphs (FULL):  33%|███▎      | 17/51 [00:00<00:01, 26.32it/s]Capturing CUDA graphs (FULL):  39%|███▉      | 20/51 [00:00<00:01, 27.01it/s]Capturing CUDA graphs (FULL):  45%|████▌     | 23/51 [00:00<00:01, 27.55it/s]Capturing CUDA graphs (FULL):  51%|█████     | 26/51 [00:01<00:00, 25.80it/s]Capturing CUDA graphs (FULL):  57%|█████▋    | 29/51 [00:01<00:00, 26.55it/s]Capturing CUDA graphs (FULL):  63%|██████▎   | 32/51 [00:01<00:00, 26.86it/s]Capturing CUDA graphs (FULL):  69%|██████▊   | 35/51 [00:01<00:00, 27.12it/s]Capturing CUDA graphs (FULL):  75%|███████▍  | 38/51 [00:01<00:00, 27.64it/s]Capturing CUDA graphs (FULL):  80%|████████  | 41/51 [00:01<00:00, 27.71it/s]Capturing CUDA graphs (FULL):  86%|████████▋ | 44/51 [00:01<00:00, 27.38it/s]Capturing CUDA graphs (FULL):  92%|█████████▏| 47/51 [00:01<00:00, 26.61it/s]Capturing CUDA graphs (FULL):  98%|█████████▊| 50/51 [00:01<00:00, 26.30it/s]Capturing CUDA graphs (FULL): 100%|██████████| 51/51 [00:01<00:00, 26.43it/s]
+(EngineCore pid=799485) INFO 10-14 06:07:58 [model_runner.py:747] Graph capturing finished in 6 secs, took 18.68 GiB
+(EngineCore pid=799485) INFO 10-14 06:07:58 [gpu_worker.py:857] Free memory on device (139.29/139.8 GiB) on startup. Desired GPU memory utilization is (0.45, 62.91 GiB). Actual usage is 15.26 GiB for weight, 1.53 GiB for peak activation, 10.73 GiB for non-torch memory, and 18.68 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=17784155136` (16.56 GiB) to fit into requested memory, or `--kv-cache-memory=99792186368` (92.94 GiB) to fully utilize gpu memory. Current kv cache memory in use is 35.39 GiB.
+(EngineCore pid=799485) INFO 10-14 06:08:11 [jit_monitor.py:79] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=799485) INFO 10-14 06:08:12 [core.py:340] init engine (profile, create kv cache, warmup model) took 55.80 s (compilation: 18.07 s)
+(EngineCore pid=799485) INFO 10-14 06:08:13 [kernel.py:295] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(EngineCore pid=799485) WARNING 10-14 06:08:14 [jit_monitor.py:135] Triton kernel JIT compilation during inference: _bad_words_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+[vllm_runner] done 9/9  out_tok=14601 gen_wall_s=14.7 out_tok/s=993
+(EngineCore pid=799485) INFO 10-14 06:08:28 [core.py:1313] [shutdown] EngineCore: trigger received signal=SIGTERM
+(EngineCore pid=799485) INFO 10-14 06:08:28 [core.py:1432] [shutdown] EngineCore: start mode=abort timeout=0s
+(EngineCore pid=799485) INFO 10-14 06:08:28 [core.py:1463] [shutdown] EngineCore: request processing complete; starting resource teardown
+(EngineCore pid=799485) INFO 10-14 06:08:28 [core.py:1326] [shutdown] EngineCore: exiting busy loop
+[smoke] === generate switch-nolatent astra rc=0 wall=183s
+[smoke] GPU busy, waiting: 800743, 61826 MiB 
+[smoke] GPU busy, waiting: 800743, 61826 MiB 
+[smoke] === generate switch-latent default: .venv/bin/python -m cotswitch.cli generate --condition switch-latent --protocol default --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[switch_runner] switch-latent/default: 10 units, 0 done, 10 pending -> /root/scratch/cot-control-switch/smoke/generations/switch-latent/default.jsonl
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<00:50,  7.91it/s]Loading weights:   1%|          | 2/399 [00:00<01:12,  5.45it/s]Loading weights:   4%|▍         | 15/399 [00:00<00:09, 42.54it/s]Loading weights:   7%|▋         | 26/399 [00:00<00:05, 62.48it/s]Loading weights:   9%|▉         | 36/399 [00:00<00:05, 71.26it/s]Loading weights:  12%|█▏        | 48/399 [00:00<00:04, 82.37it/s]Loading weights:  15%|█▍        | 59/399 [00:00<00:04, 79.72it/s]Loading weights:  18%|█▊        | 71/399 [00:01<00:04, 77.63it/s]Loading weights:  21%|██        | 83/399 [00:01<00:03, 83.40it/s]Loading weights:  24%|██▎       | 94/399 [00:01<00:03, 84.15it/s]Loading weights:  26%|██▋       | 105/399 [00:01<00:03, 83.33it/s]Loading weights:  29%|██▉       | 116/399 [00:01<00:03, 84.59it/s]Loading weights:  32%|███▏      | 127/399 [00:01<00:03, 83.57it/s]Loading weights:  35%|███▍      | 138/399 [00:01<00:02, 88.79it/s]Loading weights:  38%|███▊      | 150/399 [00:01<00:02, 96.42it/s]Loading weights:  41%|████      | 162/399 [00:02<00:02, 102.43it/s]Loading weights:  44%|████▍     | 175/399 [00:02<00:02, 108.38it/s]Loading weights:  47%|████▋     | 188/399 [00:02<00:01, 113.51it/s]Loading weights:  51%|█████     | 202/399 [00:02<00:01, 106.50it/s]Loading weights:  54%|█████▎    | 214/399 [00:02<00:01, 108.93it/s]Loading weights:  57%|█████▋    | 226/399 [00:02<00:01, 101.80it/s]Loading weights:  60%|█████▉    | 238/399 [00:02<00:01, 103.05it/s]Loading weights:  63%|██████▎   | 252/399 [00:02<00:01, 111.68it/s]Loading weights:  66%|██████▌   | 264/399 [00:02<00:01, 110.57it/s]Loading weights:  70%|██████▉   | 278/399 [00:03<00:01, 118.55it/s]Loading weights:  73%|███████▎  | 291/399 [00:03<00:01, 104.58it/s]Loading weights:  76%|███████▌  | 302/399 [00:03<00:00, 101.29it/s]Loading weights:  78%|███████▊  | 313/399 [00:03<00:00, 101.43it/s]Loading weights:  81%|████████  | 324/399 [00:03<00:00, 103.30it/s]Loading weights:  84%|████████▍ | 336/399 [00:03<00:00, 101.34it/s]Loading weights:  87%|████████▋ | 349/399 [00:03<00:00, 108.53it/s]Loading weights:  90%|█████████ | 361/399 [00:03<00:00, 106.22it/s]Loading weights:  93%|█████████▎| 372/399 [00:04<00:00, 107.00it/s]Loading weights:  96%|█████████▌| 384/399 [00:04<00:00, 107.46it/s]Loading weights:  99%|█████████▉| 395/399 [00:04<00:00, 107.43it/s]Loading weights: 100%|██████████| 399/399 [00:04<00:00, 94.40it/s] 
+[switch_runner] batch=32 kv_budget_tokens=584209 k_min=4 k_max=256 max_new=2048 loader=merged:/root/scratch/models/switch-merged
+[switch_runner] wrote 5/10  forwards=1781 row_steps/s=78.5 latent_frac=0.003 evictions=0
+[switch_runner] wrote 10/10  forwards=2065 row_steps/s=74.6 latent_frac=0.004 evictions=0
+[grade] switch-latent/default: +10 -> /root/scratch/cot-control-switch/smoke/grades/switch-latent/default.jsonl
+[smoke] === generate switch-latent default rc=0 wall=245s
+[smoke] GPU busy, waiting: 807883, 68036 MiB 
+[smoke] GPU busy, waiting: 807883, 75658 MiB 
+[smoke] GPU busy, waiting: 807883, 75802 MiB 
+[smoke] GPU busy, waiting: 807883, 75932 MiB 810286, 58442 MiB 
+[smoke] GPU busy, waiting: 807883, 76542 MiB 
+[smoke] GPU busy, waiting: 807883, 79598 MiB 
+[smoke] GPU busy, waiting: 812107, 16140 MiB 
+[smoke] GPU busy, waiting: 812107, 71100 MiB 
+[smoke] === generate switch-latent argon: .venv/bin/python -m cotswitch.cli generate --condition switch-latent --protocol argon --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[switch_runner] switch-latent/argon: 14 units, 0 done, 14 pending -> /root/scratch/cot-control-switch/smoke/generations/switch-latent/argon.jsonl
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:04,  6.13it/s]Loading weights:   1%|          | 2/399 [00:00<01:21,  4.89it/s]Loading weights:   3%|▎         | 13/399 [00:00<00:10, 35.42it/s]Loading weights:   6%|▌         | 22/399 [00:00<00:07, 50.69it/s]Loading weights:   9%|▊         | 34/399 [00:00<00:05, 69.90it/s]Loading weights:  11%|█         | 44/399 [00:00<00:04, 78.55it/s]Loading weights:  13%|█▎        | 53/399 [00:00<00:04, 80.67it/s]Loading weights:  16%|█▌        | 62/399 [00:01<00:04, 81.82it/s]Loading weights:  18%|█▊        | 72/399 [00:01<00:03, 86.63it/s]Loading weights:  21%|██        | 83/399 [00:01<00:03, 91.08it/s]Loading weights:  23%|██▎       | 93/399 [00:01<00:03, 89.70it/s]Loading weights:  26%|██▋       | 105/399 [00:01<00:03, 93.25it/s]Loading weights:  29%|██▉       | 116/399 [00:01<00:02, 95.24it/s]Loading weights:  32%|███▏      | 127/399 [00:01<00:02, 94.22it/s]Loading weights:  35%|███▍      | 138/399 [00:01<00:02, 93.34it/s]Loading weights:  37%|███▋      | 149/399 [00:01<00:02, 92.13it/s]Loading weights:  40%|████      | 160/399 [00:02<00:02, 91.36it/s]Loading weights:  43%|████▎     | 171/399 [00:02<00:02, 91.29it/s]Loading weights:  46%|████▌     | 182/399 [00:02<00:02, 91.63it/s]Loading weights:  48%|████▊     | 193/399 [00:02<00:02, 92.50it/s]Loading weights:  51%|█████     | 204/399 [00:02<00:02, 95.83it/s]Loading weights:  54%|█████▍    | 215/399 [00:02<00:01, 97.55it/s]Loading weights:  57%|█████▋    | 226/399 [00:02<00:01, 99.95it/s]Loading weights:  59%|█████▉    | 237/399 [00:02<00:01, 99.96it/s]Loading weights:  62%|██████▏   | 248/399 [00:02<00:01, 100.47it/s]Loading weights:  65%|██████▍   | 259/399 [00:03<00:01, 99.42it/s] Loading weights:  67%|██████▋   | 269/399 [00:03<00:01, 94.25it/s]Loading weights:  70%|███████   | 281/399 [00:03<00:01, 96.98it/s]Loading weights:  73%|███████▎  | 292/399 [00:03<00:01, 99.23it/s]Loading weights:  76%|███████▌  | 303/399 [00:03<00:01, 94.09it/s]Loading weights:  79%|███████▊  | 314/399 [00:03<00:00, 89.93it/s]Loading weights:  81%|████████  | 324/399 [00:03<00:00, 85.63it/s]Loading weights:  84%|████████▍ | 335/399 [00:03<00:00, 85.66it/s]Loading weights:  87%|████████▋ | 346/399 [00:04<00:00, 91.82it/s]Loading weights:  89%|████████▉ | 357/399 [00:04<00:00, 93.60it/s]Loading weights:  92%|█████████▏| 368/399 [00:04<00:00, 90.87it/s]Loading weights:  95%|█████████▍| 378/399 [00:04<00:00, 92.58it/s]Loading weights:  97%|█████████▋| 389/399 [00:04<00:00, 90.82it/s]Loading weights: 100%|██████████| 399/399 [00:04<00:00, 86.76it/s]
+[switch_runner] batch=32 kv_budget_tokens=116186 k_min=4 k_max=256 max_new=2048 loader=merged:/root/scratch/models/switch-merged
+[switch_runner] wrote 8/14  forwards=1931 row_steps/s=86.4 latent_frac=0.002 evictions=0
+[switch_runner] wrote 14/14  forwards=2065 row_steps/s=85.0 latent_frac=0.002 evictions=0
+[grade] switch-latent/argon: +14 -> /root/scratch/cot-control-switch/smoke/grades/switch-latent/argon.jsonl
+[smoke] === generate switch-latent argon rc=0 wall=264s
+[smoke] === generate switch-latent astra: .venv/bin/python -m cotswitch.cli generate --condition switch-latent --protocol astra --run-dir /root/scratch/cot-control-switch/smoke --limit-per-constraint 1 --datasets gpqa --max-new-tokens 2048
+[switch_runner] switch-latent/astra: 9 units, 0 done, 9 pending -> /root/scratch/cot-control-switch/smoke/generations/switch-latent/astra.jsonl
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<02:15,  2.94it/s]Loading weights:   4%|▍         | 15/399 [00:00<00:09, 41.10it/s]Loading weights:   7%|▋         | 27/399 [00:00<00:06, 59.92it/s]Loading weights:  10%|▉         | 39/399 [00:00<00:04, 73.53it/s]Loading weights:  14%|█▎        | 54/399 [00:00<00:03, 92.40it/s]Loading weights:  17%|█▋        | 67/399 [00:00<00:03, 102.28it/s]Loading weights:  20%|██        | 80/399 [00:01<00:03, 104.92it/s]Loading weights:  23%|██▎       | 93/399 [00:01<00:02, 107.17it/s]Loading weights:  26%|██▋       | 105/399 [00:01<00:02, 105.56it/s]Loading weights:  30%|███       | 120/399 [00:01<00:02, 114.05it/s]Loading weights:  33%|███▎      | 132/399 [00:01<00:02, 115.32it/s]Loading weights:  37%|███▋      | 147/399 [00:01<00:02, 120.97it/s]Loading weights:  40%|████      | 160/399 [00:01<00:02, 108.75it/s]Loading weights:  44%|████▎     | 174/399 [00:01<00:01, 116.71it/s]Loading weights:  47%|████▋     | 188/399 [00:01<00:01, 120.74it/s]Loading weights:  50%|█████     | 201/399 [00:02<00:01, 123.16it/s]Loading weights:  54%|█████▎    | 214/399 [00:02<00:01, 112.13it/s]Loading weights:  57%|█████▋    | 226/399 [00:02<00:01, 109.31it/s]Loading weights:  60%|██████    | 240/399 [00:02<00:01, 116.73it/s]Loading weights:  64%|██████▍   | 256/399 [00:02<00:01, 124.43it/s]Loading weights:  67%|██████▋   | 269/399 [00:02<00:01, 121.14it/s]Loading weights:  71%|███████   | 282/399 [00:02<00:00, 122.01it/s]Loading weights:  74%|███████▍  | 296/399 [00:02<00:00, 123.84it/s]Loading weights:  78%|███████▊  | 312/399 [00:02<00:00, 132.88it/s]Loading weights:  82%|████████▏ | 326/399 [00:03<00:00, 124.77it/s]Loading weights:  86%|████████▋ | 345/399 [00:03<00:00, 126.99it/s]Loading weights:  90%|████████▉ | 358/399 [00:03<00:00, 122.33it/s]Loading weights:  93%|█████████▎| 372/399 [00:03<00:00, 126.62it/s]Loading weights:  96%|█████████▋| 385/399 [00:03<00:00, 125.81it/s]Loading weights: 100%|█████████▉| 398/399 [00:03<00:00, 124.74it/s]Loading weights: 100%|██████████| 399/399 [00:03<00:00, 109.40it/s]
+[switch_runner] batch=32 kv_budget_tokens=567624 k_min=4 k_max=256 max_new=2048 loader=merged:/root/scratch/models/switch-merged
+[switch_runner] wrote 3/9  forwards=1866 row_steps/s=78.5 latent_frac=0.009 evictions=0
+[switch_runner] wrote 9/9  forwards=2065 row_steps/s=74.8 latent_frac=0.009 evictions=0
+[grade] switch-latent/astra: +9 -> /root/scratch/cot-control-switch/smoke/grades/switch-latent/astra.jsonl
+[smoke] === generate switch-latent astra rc=0 wall=255s
+[smoke] GPU busy, waiting: 819594, 23404 MiB 821720, 2000 MiB 
+[smoke] GPU busy, waiting: 819594, 25480 MiB 821720, 16972 MiB 822474, 1950 MiB 
+[smoke] GPU busy, waiting: 819594, 25954 MiB 822474, 80416 MiB 
+[smoke] GPU busy, waiting: 819594, 29264 MiB 822474, 82350 MiB 
+[smoke] GPU busy, waiting: 819594, 33202 MiB 822474, 83118 MiB 
+[smoke] GPU busy, waiting: 819594, 34656 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34668 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34684 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34698 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34712 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34726 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34742 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34756 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34772 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34792 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34808 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34828 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 34848 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 18586 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 51586 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 819594, 54476 MiB 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 49156 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 827423, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 50918 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 851581, 54414 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 16140 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 51084 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 878895, 54314 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 49008 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54234 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 54394 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 892802, 17570 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 49008 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54192 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54192 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54194 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54214 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54354 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 20544 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54052 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 53342 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54122 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54124 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
+[smoke] GPU busy, waiting: 822474, 83120 MiB 903344, 54144 MiB 
