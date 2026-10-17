@@ -34,3 +34,16 @@ Treat the samples as stochastic.
 
 Deviations from Neel (unknown details of his protocol, filled with our choices): sampling settings, reasoning effort, judge model, item draw.
 DeepSeek V4.1 Flash was released the day his post appeared, so it is probably not among his 34 models (unverified).
+
+## Run 2 (2026-10-17): "thinking" instead of "reasoning stage"
+
+Same 108 items, graders and judge. The prompt the model sees has "reasoning stage" replaced by "thinking" (`--reasoning-term thinking`),
+the mechanism the reference uses for gpt-oss ("analysis channel"). Results in `~/code/results/cot-control-deepseek/run2`.
+
+- **Result: 0/108 compliant (95% Wilson 0.0-3.4%)**, with and without the meta filter. Accuracy 71/108; 14 truncated; 690,707 output tokens.
+- Partial measures did not move (run1 -> run2): lowercase letters 0.94 -> 0.93 (normal prose level), uppercase letters 0.088 -> 0.061,
+  alternating words 0.016 -> 0.011, meow share 0.053 -> 0.021, sentences ending in the word 0.066 -> 0.044; banned words still used in every trace.
+- Styled text pasted into the response dropped from 15 rows to 3 (all repeat_sentences).
+- The model now often reads the constraint as applying to its thinking and says it will comply, then does not:
+  "So internal reasoning must be uppercase letters? ... I can write reasoning in uppercase letters." followed by 45k characters of normal-case text.
+  No uppercase_thinking trace has an all-caps span of 40+ characters. 30/108 traces call the thinking internal/hidden/not visible.
