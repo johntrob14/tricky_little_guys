@@ -30,6 +30,10 @@ from chat import IDENTITY, TEMPTATION
 from common import BASE_MODEL, PRICE, RENDERER, load_key, teacher_messages, train_prompts
 
 
+SAMPLER_TTL = 30 * 86400  # sampler checkpoints expire after 30 days
+STATE_TTL = 7 * 86400     # training state expires after 7 days
+
+
 def datum(prompt: list[int], resp: list[int], s_lp: list[float], t_lp: list[float]) -> tinker.Datum:
     full = prompt + resp
     n_ctx = len(prompt) - 1  # target positions that belong to the prompt
@@ -53,10 +57,12 @@ async def main() -> None:
     ap.add_argument("--rollouts-per-prompt", type=int, default=4)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--rank", type=int, default=32)
-    ap.add_argument("--max-tokens", type=int, default=768)
+    ap.add_argument("--max-tokens", type=int, default=2048)
     ap.add_argument("--budget", type=float, default=5.0, help="stop when this invocation's estimate passes it")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--save-every", type=int, default=5,
+                    help="save sampler weights every N steps and at the end (each save is about 12 GB on Tinker)")
     args = ap.parse_args()
 
     load_key()
@@ -64,8 +70,10 @@ async def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     ckpt_file = out / "checkpoints.json"
     ckpts = json.loads(ckpt_file.read_text()) if ckpt_file.exists() else []
-    (out / "config.json").write_text(json.dumps(vars(args) | {"base_model": BASE_MODEL, "renderer": RENDERER},
-                                                indent=1))
+    # One config file per invocation, named by the step it starts from, so changes across resumes are kept.
+    first = ckpts[-1]["step"] if ckpts else 0
+    (out / f"config_from_step{first}.json").write_text(
+        json.dumps(vars(args) | {"base_model": BASE_MODEL, "renderer": RENDERER}, indent=1))
 
     tok = get_tokenizer(BASE_MODEL)
     ren = get_renderer(RENDERER, tok)
@@ -73,6 +81,7 @@ async def main() -> None:
     teacher = svc.create_sampling_client(base_model=BASE_MODEL)
     if args.resume:
         assert ckpts, "nothing to resume"
+        assert "state" in ckpts[-1], "last checkpoint has no saved state"
         tc = await svc.create_training_client_from_state_with_optimizer_async(ckpts[-1]["state"])
         start = ckpts[-1]["step"]
     else:
@@ -121,11 +130,14 @@ async def main() -> None:
         opt = await tc.optim_step_async(tinker.AdamParams(learning_rate=args.lr))
         await opt.result_async() if hasattr(opt, "result_async") else opt
 
-        name = f"{args.run}-step{step + 1}"
-        sampler_path = (await (await tc.save_weights_for_sampler_async(name)).result_async()).path
-        state_path = (await (await tc.save_state_async(name)).result_async()).path
-        ckpts.append({"step": step + 1, "sampler": sampler_path, "state": state_path})
-        ckpt_file.write_text(json.dumps(ckpts, indent=1))
+        last = step + 1 == start + args.steps
+        sampler_path = None
+        if (step + 1) % args.save_every == 0 or last or spent > args.budget:
+            name = f"{args.run}-step{step + 1}"
+            sampler_path = (await (await tc.save_weights_for_sampler_async(
+                name, ttl_seconds=SAMPLER_TTL)).result_async()).path
+            ckpts.append({"step": step + 1, "sampler": sampler_path})
+            ckpt_file.write_text(json.dumps(ckpts, indent=1))
 
         with (out / "rollouts.jsonl").open("a") as f:
             for r in rollouts:
@@ -144,6 +156,12 @@ async def main() -> None:
         if spent > args.budget:
             print(f"budget ${args.budget} reached; stopping")
             break
+
+    # Full training state (about 37 GB, includes optimizer) only once, at the end, for --resume.
+    state_path = (await (await tc.save_state_async(f"{args.run}-step{ckpts[-1]['step']}-state",
+                                                   ttl_seconds=STATE_TTL)).result_async()).path
+    ckpts[-1]["state"] = state_path
+    ckpt_file.write_text(json.dumps(ckpts, indent=1))
 
     # Probes on the final checkpoint: identity questions and the held-out temptation prompts.
     final = svc.create_sampling_client(model_path=ckpts[-1]["sampler"])
