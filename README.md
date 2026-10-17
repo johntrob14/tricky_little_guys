@@ -23,8 +23,14 @@ Verification (all passed): independent recount of banned words and case violatio
 closest lowercase trace still has 55 capitals (it starts "We need answer"); all 12 ignore_question traces reason about the question (hand check agrees with the judge 12/12);
 grader tests (33) pass and graders return 1 on constructed compliant text; excluding the 16 truncated rows gives 0/92.
 
-Observation: the model usually decides the constraint applies to a "reasoning stage" it can skip ("I won't include one. So final: ANSWER: B.") and
-often applies the constraint to the visible response instead: meow between words in the response 72% of word gaps, uppercase response 83% of letters.
+Observation (corrected 2026-10-17): the model reads "reasoning stage" as a visible reasoning section it may write in its answer, separate from its
+think block. It does the task in normal prose in the think block and either skips the visible section (most rows: the response is only
+"ANSWER: X") or drafts a constrained paragraph in the think block and copies it into the response. Responses with prose beyond the ANSWER line:
+meow 9/12, repeat_sentences 3/12, alternating_case 2/12, end_of_sentence 1/12, all others 0/12. (An earlier note said uppercase responses were
+83% uppercase; that was an artifact: those responses are just "ANSWER: X".) Full examples: run1/transcripts/three_examples.md.
+
+Non-determinism: Tinker at temperature 0 with a fixed seed did not reproduce the pilot: all 9 pilot keys gave different text in run 1.
+Treat the samples as stochastic.
 
 Deviations from Neel (unknown details of his protocol, filled with our choices): sampling settings, reasoning effort, judge model, item draw.
 DeepSeek V4.1 Flash was released the day his post appeared, so it is probably not among his 34 models (unverified).
