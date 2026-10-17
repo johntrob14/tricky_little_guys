@@ -20,6 +20,8 @@ Decisions recorded here:
 - Decoding: temperature 0, max_tokens 25000, stop on the EOS token id, one sample per unit.
   Decoded with special tokens kept; the trailing EOS string is stripped before extraction
   (cotswitch only knows Qwen's EOS strings).
+- `--reasoning-term T` replaces "reasoning stage" with T in the prompt the model sees, as the reference
+  does for gpt-oss ("analysis channel"). grader_args keep the original prompt, so grading is unchanged.
 - Judge: openai/gpt-oss-120b on Tinker, reasoning effort "high", temperature 1.0, as in
   cotswitch.judge (which used vLLM); same prompts, parsing and 3-of-3 rule.
 """
@@ -28,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import dataclasses
 import os
 import subprocess
 import sys
@@ -71,13 +74,21 @@ async def _generate(args) -> int:
     tok = client.get_tokenizer()
     eos_id, eos_str = tok.eos_token_id, tok.eos_token
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
+    if args.reasoning_term != "reasoning stage":
+        # Same mechanism as the reference's _adapt_text_for_model (gpt-oss -> "analysis channel"):
+        # replace the term in the text the model sees. grader_args keep the original prompt, so
+        # control values and grading are unchanged.
+        for u in units:
+            user = u["spec"].user
+            assert "reasoning stage" in user or u["constraint"] == "baseline", u["key"]
+            u["spec"] = dataclasses.replace(u["spec"], user=user.replace("reasoning stage", args.reasoning_term))
     out = generations_path(args.run_dir, condition, args.protocol)
     done = load_done_keys(out)
     todo = [u for u in units if u["key"] not in done]
     print(f"[generate] {condition}/{args.protocol}: {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     sampling = {"temperature": 0.0, "top_p": 1.0, "max_new_tokens": args.max_new_tokens, "seed": args.seed,
-                "chat_template_kwargs": {}, "stop": [eos_id]}
+                "chat_template_kwargs": {}, "stop": [eos_id], "reasoning_term": args.reasoning_term}
     params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=0.0, seed=args.seed, stop=[eos_id])
     sem = asyncio.Semaphore(args.concurrency)
     n_done = 0
@@ -185,6 +196,8 @@ def main(argv=None) -> int:
     g.add_argument("--max-new-tokens", type=int, default=25000)
     g.add_argument("--seed", type=int, default=0)
     g.add_argument("--concurrency", type=int, default=64)
+    g.add_argument("--reasoning-term", default="reasoning stage",
+                   help='replaces "reasoning stage" in the user prompt (the grading prompt is unchanged)')
     j = sub.add_parser("judge")
     j.add_argument("--run-dir", required=True, type=Path)
     j.add_argument("--no-meta", action="store_true")
