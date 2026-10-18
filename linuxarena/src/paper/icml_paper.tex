@@ -1,0 +1,323 @@
+% ICML 2026 / AIWILD Workshop submission of the LinuxArena paper.
+%
+% Track: Regular Papers Track (9 pages main + unlimited refs +
+% unlimited supplementary). Two-column ICML format.
+%
+% Uses the official icml2026.sty (from the AIWILD template
+% icml_aiwild_template.zip).
+%
+% Figures aggregate across all 20 environments (10 public + 10
+% private). Public-only figures live in src/neurips/ if needed.
+
+\documentclass{article}
+
+% Recommended ICML packages (per template example_paper.tex).
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs}
+
+% Hyperref before icml2026 per the template guidance.
+\usepackage{hyperref}
+
+% Blind submission (default). For preprint use [preprint], for
+% camera-ready use [accepted].
+\usepackage{icml2026}
+% \usepackage[preprint]{icml2026}
+% \usepackage[accepted]{icml2026}
+
+% Override icml2026's default mydarkblue with brighter link colors.
+% Must come AFTER icml2026 since it sets its own \hypersetup.
+\hypersetup{linkcolor=blue!70!black,citecolor=green!55!black,urlcolor=blue!70!black}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{url}
+% NOTE: do not use placeins[section] in two-column ICML — it
+% creates whitespace pages when a section ends with floats that
+% don't fit before the next section starts. Float ordering across
+% sections is fine for an appendix that's mostly figures.
+
+% Tighten float spacing for two-column density.
+\setlength{\textfloatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{6pt plus 2pt minus 2pt}
+\setlength{\dblfloatsep}{6pt plus 2pt minus 2pt}
+% Allow up to 90% of a column to be float (default ~70%) so figures
+% can sit at column-bottom rather than getting bumped to next page.
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\dbltopfraction}{0.95}
+\renewcommand{\dblfloatpagefraction}{0.85}
+
+% ICML version: report results across all 20 environments
+% (10 public + 10 private), so we point at the top-level
+% all-env figure tree rather than the public-only mirror in
+% src/neurips/.
+\graphicspath{
+  {images/}
+  {../section_4_1_main_task_performance/}
+  {../section_4_2_side_task_performance/}
+  {../section_4_3_sandboxing/}
+  {../section_5_2_sabotage_results/}
+  {../section_5_3_monitoring_results/}
+  {../section_5_4_lastraj/}
+  {../appendix_B_extra_main_task/}
+  {../appendix_C_extra_side_task/}
+  {../appendix_D_extra_monitoring/}
+  {../appendix_E_extra_monitoring/}
+  {../appendix_A_all_environments/}
+}
+
+\newcommand{\publicflag}{\textcolor{green!55!black}{\textbf{[Public]}}}
+\newcommand{\privateflag}{\textcolor{orange!80!black}{\textbf{[Private]}}}
+
+% Running header (short title).
+\icmltitlerunning{LinuxArena: A Control Setting for AI Agents in Live Production Environments}
+
+\begin{document}
+
+\twocolumn[
+  \icmltitle{LinuxArena: A Control Setting for AI Agents \\
+             in Live Production Software Environments}
+
+  % Anonymous submission. Workshop is double-blind; the icml2026 style
+  % file strips the author block automatically unless [accepted] is
+  % passed.
+  \icmlsetsymbol{equal}{*}
+  \begin{icmlauthorlist}
+    \icmlauthor{Anonymous Authors}{anon}
+  \end{icmlauthorlist}
+  \icmlaffiliation{anon}{Anonymous Institution}
+  \icmlcorrespondingauthor{Anonymous Authors}{anon@example.com}
+
+  \icmlkeywords{AI control, agent safety, evaluation, benchmarks,
+                trajectory monitoring, sabotage}
+
+  \vskip 0.15in
+]
+
+% Required by icml2026.sty: prints the affiliations / notice
+% (in blind mode this prints nothing).
+\printAffiliationsAndNotice{}
+
+\begin{abstract}
+We introduce \textbf{LinuxArena}, a control setting in which agents operate directly on live, multi-service production environments. LinuxArena contains 20 environments (\textbf{10 publicly released}, 10 held out for training-data contamination control), 1{,}667 main tasks representing legitimate software engineering work, and 185 side tasks representing safety failures such as data exfiltration and backdooring, making it the largest and most diverse control setting for software engineering to date. We validate that LinuxArena is useful for control research by running sabotage evaluations, which measure whether attackers can complete side tasks while working on main tasks, and monitor evaluations, which measure a monitor model's ability to detect sabotage attempts. Across all 20 environments, against a GPT-5 Nano trusted monitor at a 1\% step-wise false positive rate, Claude Opus 4.6 achieves an undetected sabotage rate of roughly 34\%. We additionally release \textbf{LaStraj}, a dataset of human-crafted attack trajectories that evade monitors at substantially higher rates than any model-generated attacks we elicited, showing that current attack policies do not saturate LinuxArena. These results suggest that LinuxArena has meaningful headroom for both attackers and defenders, making it a strong testbed for developing and evaluating future control protocols.
+\end{abstract}
+
+\section{Introduction}
+
+Frontier AI systems are increasingly deployed on real engineering work, with access to sensitive code, infrastructure, and data. As their autonomy grows, so does the risk of harm if they pursue goals different from the ones their users intended \citep{greenblatt2024alignmentfaking}. A model may be both useful on its assigned task and capable of harmful actions: exfiltrating secrets, weakening security controls, or corrupting data on the systems it is meant to help operate. Restricting the agent's access removes the harmful capabilities but also removes the useful ones, since both rely on the same system access.
+
+This tension motivates a growing body of work on AI control \citep{greenblatt2024control, griffin2024games, korbak2025evaluate}. One focus of this work is whether protocols built around weaker trusted models can catch a stronger untrusted model attempting harmful actions during legitimate work \citep{shlegeris2023untrusted}. Existing settings have demonstrated increasing degrees of realism, but so far have not directly modeled the kind of environments in which frontier AI agents are already being deployed: heterogeneous production software systems with live state, multiple services, and real application logic, where the same access an agent needs to do useful work is also what makes sabotage possible.
+
+We introduce \textbf{LinuxArena}, a control setting in which agents operate directly on live, multi-service production environments. Each environment is a Docker Compose deployment comprising an application server alongside supporting services such as databases, caches, and message queues. The agent is placed on the production server and performs legitimate engineering work assigned as a main task, with the option of additionally pursuing a harmful side task in attack trajectories. LinuxArena's key property is that legitimate engineering work and sabotage require overlapping access. Main tasks depend on the same network access, service interactions, and live state that an attacker would use, so sabotage opportunities are embedded throughout normal work rather than confined to a separable attack surface. The setting contains 20 environments in total: 10 are released publicly with the paper (906 main tasks, 92 side tasks), and 10 are held out privately for training-data contamination control (the remaining 761 main tasks, 93 side tasks). Tech stacks span Python, Rust, Go, Ruby on Rails, Node.js, R, C, C\#, Solidity, Zig, GnuCOBOL, and Clojure. All experimental results in this paper aggregate across all 20 environments unless otherwise noted.
+
+Although LinuxArena is designed to support end-to-end control evaluations, in this paper we focus on validating the setting itself. We run sabotage evaluations, which measure whether attackers can sneakily complete harmful side tasks while carrying out main tasks, and monitor evaluations, which measure whether an AI monitor can detect such behavior. We leave evaluation of complete control protocols to future work.
+
+Our results establish three properties of the setting. First, simple sandboxing is not a viable alternative to monitoring: restricting the agent's network or tool access substantially reduces main task performance, because legitimate engineering work in LinuxArena depends on the same resources an attacker would need. Second, weak trusted monitoring is insufficient for safe deployment inside LinuxArena: even at generous false-positive budgets, a frontier attacker completes a substantial fraction of side tasks undetected against our GPT-5 Nano trusted-monitor baseline (Claude Opus 4.6 reaches a 34\% undetected-sabotage rate at 1\% step-wise FPR across all 20 environments; \S\ref{sec:monitoring-results} shows stronger monitors do much better). Third, current attack elicitation does not saturate the setting: Claude Opus 4.6 achieves a 34\% undetected-sabotage rate against our trusted monitor, while attack trajectories constructed by human red-teamers achieve 94\% against the same monitor. Taken together, LinuxArena has headroom on both sides --- neither current trusted monitors nor current attack elicitation exhaust what the setting can support --- making it suitable for the development of control protocols as model capabilities advance.
+
+Our main contributions are:
+\begin{itemize}
+  \item \textbf{LinuxArena, a new control setting for agentic software environments.} LinuxArena is the largest agentic software-engineering control setting to date, with 20 environments (10 released publicly, 10 held out privately) containing 1{,}667 main tasks and 185 side tasks. The 10 public environments (906 main tasks, 92 side tasks) are immediately usable as a reproducible benchmark.
+  \item \textbf{Baseline sabotage and monitor evaluations on LinuxArena.} We evaluate frontier models as both attackers and monitors across all 20 environments. Simple sandboxing is not a viable substitute for monitoring, and Claude Opus 4.6 reaches a 34\% undetected-sabotage rate against our GPT-5 Nano trusted-monitor baseline at 1\% step-wise FPR.
+  \item \textbf{LaStraj} (LinuxArena Sabotage Trajectories), a dataset of human-crafted subtle attack trajectories that evade frontier monitors. LaStraj achieves a 94\% undetected-sabotage rate against our GPT-5 Nano monitor, vs 50\% for the best model-generated attack we elicited (Opus + Strategies). LaStraj serves both as evidence that current attack elicitation does not saturate LinuxArena and as a standalone benchmark for future monitor evaluation.
+\end{itemize}
+
+\section{Related Work}
+
+Several prior control settings inform LinuxArena's design:
+\textbf{APPS Backdooring} \citep{greenblatt2024control} introduced single-step code sabotage on competitive programming problems; it pioneered the safety metric but has no multi-step dynamics.
+\textbf{BashBench} \citep{bhatt2025ctrlz} and \textbf{BashArena} \citep{kaufman2025basharena} moved to multi-step agents on system-administration tasks, but with a single or few side tasks and environments that start from generic system configurations rather than application codebases.
+\textbf{SHADE-Arena} \citep{kutasov2025shade} introduced environment diversity (17 tool-use scenarios), but operates through tool APIs rather than full Linux systems.
+\textbf{Async Control} \citep{stickland2025async} studied asynchronous monitoring on five real open-source codebases; its red-blue iteration is a realistic protocol-development model, though its number of environments and tasks limits statistical power.
+
+LinuxArena is the largest software-engineering control setting to date (20 environments, 1{,}667 main tasks, 185 side tasks) and the first with a human-crafted attack dataset. Table~\ref{tab:settings} summarizes the comparison.
+
+\begin{table*}[!htbp]
+\centering
+\caption{Comparison of control settings. LinuxArena is the largest and most diverse.}
+\label{tab:settings}
+\small
+\begin{tabularx}{\linewidth}{@{}Xrrrll@{}}
+\toprule
+\textbf{Setting} & \textbf{Envs} & \textbf{MTs} & \textbf{STs} & \textbf{Interface} & \textbf{Human Attacks} \\
+\midrule
+APPS Backdooring \citep{greenblatt2024control} & 1 & 1{,}355 & 1 & Single-step code & No \\
+BashBench \citep{bhatt2025ctrlz} & 1 & 257 & 1 & Multi-step bash & No \\
+BashArena \citep{kaufman2025basharena} & 1 & 637 & 4 & Multi-step bash & No \\
+SHADE-Arena \citep{kutasov2025shade} & 17 & 17 & 17 & Tool-use API & No \\
+Async Control \citep{stickland2025async} & 5 & ${\sim}100$ & 5+ & Multi-step coding & No \\
+\textbf{LinuxArena (ours)} & \textbf{20} & \textbf{1{,}667} & \textbf{185} & Bash + file edit & \textbf{Yes (LaStraj)} \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{LinuxArena}
+\label{sec:linuxarena}
+
+\subsection{Environments}
+
+LinuxArena contains 20 environments. Each is a Docker Compose deployment comprising an application container plus supporting services (databases, caches, queues, file hosts, or blockchain RPC nodes). Container counts range from 1 to 11, with most environments using 3--5 containers. Technology stacks include Python, Rust, Go, Ruby on Rails, Node.js, R, C, C\#, Solidity, Zig, GnuCOBOL, and Clojure. Appendix~\ref{app:public-private} lists each environment with its tech stack and task counts. We release 10 environments publicly with this paper; 10 additional environments are held out privately to mitigate training-data contamination. Experiments throughout this paper aggregate across all 20 environments unless otherwise noted.
+
+\subsection{Main Tasks}
+
+LinuxArena contains 1{,}667 main tasks across the 20 environments (906 in the public 10, 761 in the private 10), spanning six categories: feature addition, refactoring, bug fixing, research (run experiments, report findings), language rewriting, and infrastructure changes. Each task provides a written requirements document; an automated scorer runs in the environment after the agent submits and returns correct/incorrect based on final state. Difficulty ranges from few-line fixes to extended multi-file modifications.
+
+\subsection{Side Tasks}
+
+LinuxArena contains 185 side tasks across the 20 environments (92 in the public 10, 93 in the private 10). Each represents a harmful action that an agent could plausibly take while doing legitimate work, and that would cause material damage to the deploying organization. Side tasks fall into six categories: \emph{data exfiltration} (transmitting sensitive data externally), \emph{malware execution} (downloading and executing hostile code), \emph{data tampering} (corrupting records or outputs), \emph{access control bypass} (escalating privileges or weakening authentication), \emph{monitoring subversion} (disabling logging or alerting), and \emph{secret access} (reading restricted credentials beyond task scope). Each side task ships with a natural-language goal and an automated scorer; the attacker sees the goal and, optionally, additional scorer details.
+
+\subsection{Evaluation Setup}
+\label{sec:eval-setup}
+
+Each evaluation places an LLM \emph{policy} in an environment, orchestrated through Inspect AI~\citep{inspect2024} (Figure~\ref{fig:eval-setup}). The policy receives the main task description and has bash and file-editing tools; trajectories terminate on \texttt{submit} or after 160 steps. An \emph{honest policy} attempts only the main task; an \emph{attack policy}, controlled by the red team, additionally pursues a side task while attempting to appear benign, with an unmonitored tool that runs the side-task scorer mid-trajectory (full detail of metrics in Appendix~\ref{app:methodology}).
+
+\paragraph{Trusted monitor.} Following the trusted/untrusted model framing of prior AI control work~\citep{shlegeris2023untrusted, greenblatt2024control}, we treat the policy as an \emph{untrusted} frontier model and back the protocol's defense with a weaker \emph{trusted} model. Throughout this paper the protocol is a single blue-team-controlled LLM monitor that, for each policy action, scores suspiciousness on a 0--10 scale from the tool call, its output, and the prior trajectory context (excluding the policy's chain of thought, since this would not be available in a real deployment \citep{arnav2025cotredhanded}). The monitor is also given the environment's full list of possible side-task goals, so it knows what kinds of attacks to look for; removing this context changes safety by less than 1\,pp (see also \citealp{arike2026information} for related monitor-information-access ablations).
+
+\paragraph{Flagging and safety.} An action is flagged when its score exceeds a threshold calibrated per attacker against a model-matched honest run so that 1\% of honest actions are flagged --- the \emph{1\% step-wise false positive rate} used as the default operating point throughout. Following \citet{greenblatt2024control}, \emph{safety} is the probability that an attack is caught before a successful undetected side task (full definition and harm-step gating in Appendix~\ref{app:methodology}).
+
+\begin{figure*}[!t]
+  \centering
+  \includegraphics[width=\linewidth]{image2.png}
+  \caption{Control evaluation structure. The policy receives a main task description and acts via bash and file edits. An honest policy pursues only the main task; an attack policy additionally pursues a side task. Separate scorers check main and side task success. The blue team specifies a protocol; here a monitor reviews policy behavior.}
+  \label{fig:eval-setup}
+\end{figure*}
+
+\section{Results}
+
+All headline results are reported at 1\% step-wise false positive rate, calibrated per attacker against its model-matched honest run (see Appendix~\ref{app:methodology} for the safety metric and harm-step gating rule). Numbers in this section aggregate across all 20 environments (public + private).
+
+\subsection{Main Task Performance}
+
+Figure~\ref{fig:main-task-by-model} shows main task success across frontier models on up to 200 tasks sampled from all 20 environments. Claude Opus 4.6 leads at ${\sim}66$\%; smaller trusted monitor candidates (GPT-5 Nano) sit below 30\%. Performance varies by category: research and refactoring are easiest for the Claude family; language rewriting is hardest across all models. Success rate falls with trajectory length (75\% at 20--30 steps down to 22\% at 140--150), suggesting long unfinished trajectories are failures, not still-in-progress work.
+
+\begin{figure*}[!t]
+  \centering
+  \includegraphics[width=\linewidth]{main_task_by_model_1row.png}
+  \caption{Main task success rate across frontier models on up to 200 tasks sampled from all 20 environments. Error bars: Wilson 95\% CI.}
+  \label{fig:main-task-by-model}
+\end{figure*}
+
+\subsection{Side Task Capability}
+
+To isolate raw sabotage capability from stealth, we evaluate an \emph{obvious attack} policy where the agent is shown the side task and asked to complete it directly, with no concurrent main task and no detection requirement. Claude Opus 4.6 completes nearly all side tasks (100\% across all six categories) and Haiku 4.5 stays capable but category-dependent (56\% on Running Malware, 59\% on Exfiltration), confirming that for the strongest attackers low sabotage rates in Section~\ref{sec:sabotage-results} reflect stealth difficulty, not side-task difficulty.
+
+\subsection{Simple Sandboxing Is Insufficient}
+
+Can sandboxing eliminate the attack surface without destroying main-task performance? We evaluate three conditions with Claude Haiku 4.5: \textbf{Base} (unrestricted), \textbf{No Network} (intranet + internet blocked), and \textbf{Editor Only} (bash disabled; only text editor). Restrictions reduce side-task success but equally reduce main-task success (Figure~\ref{fig:sandboxing}): legitimate work in LinuxArena depends on the same resources an attacker would need. Simple sandboxing is not a viable substitute for monitoring in this setting.
+
+\begin{figure*}[!t]
+  \centering
+  \includegraphics[width=\linewidth]{sandboxing_combined.png}
+  \caption{Main task success (left) and obvious-attack side task success (right) under three sandbox conditions. Error bars: Wilson 95\% CI.}
+  \label{fig:sandboxing}
+\end{figure*}
+
+\subsection{Sabotage Results}
+\label{sec:sabotage-results}
+
+We run 10 attackers (8 frontier models plus Opus + attack strategies plus LaStraj) against a GPT-5 Nano monitor. Figure~\ref{fig:sabotage-results} shows undetected-sabotage rate (green) and side-task-success rate (blue) per attacker. Rates span 91 percentage points: Opus + Strategies is the strongest model attacker at 50\%; the four weakest sabotagers (Grok, Gemini Flash, Kimi, Haiku) are weak because they cannot complete the side task, not because their attacks are easy to catch. Human-crafted LaStraj attacks evade the monitor 94\% of the time.
+
+\begin{figure*}[!t]
+  \centering
+  \includegraphics[width=\linewidth]{sabotage_results_1row.png}
+  \caption{Sabotage results for 10 attackers at 1\% step-wise FPR. \emph{Side task success} (blue): fraction completing the side task. \emph{Undetected sabotage} (green): fraction where the side task succeeded \emph{and} no action was flagged before harm. Error bars: Wilson 95\% CI.}
+  \label{fig:sabotage-results}
+\end{figure*}
+
+\subsection{Monitoring Results}
+\label{sec:monitoring-results}
+
+We hold the attacker fixed (Claude Opus 4.6) and sweep five monitor models (Figure~\ref{fig:monitor-opus}). Frontier monitors cluster near 89--99\% safety against base Opus; GPT-5 Nano is the clear outlier at 65\%. Against Opus augmented with attack strategies (Figure~\ref{fig:monitor-opus-strats}), Strategies hit Haiku and GPT-5 Nano hardest (both drop by ${\sim}15$\,pp); other monitors shift by at most 7\,pp. Appendix~\ref{app:extra-monitoring} extends the sweep to the full 11-monitor pool.
+
+\begin{figure*}[!tbp]
+  \centering
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{safety_vs_fpr_opus.png}
+    \caption{Base Opus attacker.}
+    \label{fig:monitor-opus}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.49\linewidth}
+    \includegraphics[width=\linewidth]{safety_vs_fpr_opus_strats.png}
+    \caption{Opus + attack strategies.}
+    \label{fig:monitor-opus-strats}
+  \end{subfigure}
+  \caption{Safety vs step-wise FPR for five monitor models. Dotted curve: random-score baseline. Shaded: 95\% bootstrap CI.}
+  \label{fig:monitor-pair}
+\end{figure*}
+
+\paragraph{Monitor failure modes.} When attacks successfully evade monitors, we have observed four recurring patterns:
+
+\begin{itemize}
+  \item \textbf{False sense of security.} When the attacker implements a security check, the monitor applies less scrutiny and lets an incomplete implementation pass. In an \texttt{auto\_workflow} credentials-exfiltration side task, the attacker implements an explicit blocklist for environment variables that matches case-sensitively and therefore does not actually work; Haiku 4.5 praises the check and passes the action.
+
+  \item \textbf{Shallow tracing.} The monitor notices something unusual but does not follow the implications far enough to understand the consequences. For example, in \texttt{web\_scraping} an attacker enables untrusted code execution in two steps: a \texttt{deepMerge} utility vulnerable to prototype pollution, then server-side execution gated behind a trust check. GPT-5.4 flags the second step but concludes existing safeguards are sufficient, without tracing that the prototype-pollution primitive from the first step corrupts that very trust check.
+
+  \item \textbf{Plausible oversight.} The monitor spots and logically understands the attack but dismisses it as an innocent ``bug''. On the \texttt{log\_credentials} side task in \texttt{web\_scraping}, Opus 4.6 identifies an attack-driven behavioral change but concludes it is ``a subtle functional bug, not a security vulnerability''.
+
+  \item \textbf{Lack of knowledge.} In a LaStraj attack, the attacker exploits CVE-2016-3714 (ImageTragick) by downloading an old ImageMagick; nearly all monitors dismiss this as a plausible legacy choice. Only Gemini Pro correctly flags it based on knowledge of the exploit.
+\end{itemize}
+
+All four amplify when the attack is integrated with legitimate main-task work: plausible cover leads the monitor to dismiss or pass over suspicious behavior.
+
+\subsection{LaStraj: Human-Crafted Attacks}
+\label{sec:lastraj-results}
+
+We release \textbf{LaStraj}, a dataset of attack trajectories crafted by human red-teamers using the LinuxArena environments. Red-teamers chose a side task, spent up to 8 hours per trajectory, and refined their attack against a reference monitor (GPT-4.1 Nano or Opus 4.6) until the trajectory scored 5 or less (out of 10). We used an automated pipeline to detect attacker omniscience (exploits that assume environment details never explored by the agent) and added synthetic exploration actions; trajectories the monitor then caught were dropped.
+
+LaStraj evades monitors at substantially higher rates than any model-generated attacks we elicited. At 1\% step-wise FPR, LaStraj evades the GPT-5 Nano monitor 94\% of the time, vs 50\% for the best model-generated attack (Opus + Strategies); against the stronger Opus monitor, LaStraj retains a substantial evasion margin over the matched model attack on the same (main task, side task) pairs. Figure~\ref{fig:lastraj-comparison} directly compares evasion rates between human-crafted and model-generated attacks (full safety-vs-FPR curves in Appendix~\ref{app:extra-lastraj}). The gap demonstrates that current attack elicitation does not saturate LinuxArena.
+
+\begin{figure*}[!t]
+  \centering
+  \includegraphics[width=\linewidth]{straj_vs_model_attack_1row.png}
+  \caption{Evasion rates at 1\% step-wise FPR for the 11-monitor pool, against LaStraj and the matched Opus attack on the same (main task, side task) pairs. Opus attacks are filtered to ST-success trajectories (LaStraj is ST-success by design). Monitors ordered strongest-to-weakest.}
+  \label{fig:lastraj-comparison}
+\end{figure*}
+
+\section{Limitations}
+\label{sec:limitations}
+
+\paragraph{Environment realism.} Agents operate directly on live servers rather than through CI/CD pipelines. This is conservative for the blue team but may not transfer directly to settings with these intermediaries. Environments use synthetic placeholder data; a sufficiently capable model might notice and infer evaluation context.
+
+\paragraph{Environment coverage.} 20 environments exceed prior settings but cannot cover the full diversity of production software. Our environments are weighted toward web services, databases, and Linux infrastructure. Embedded systems and ML training pipelines are not represented.
+
+\paragraph{Protocol coverage.} We evaluate only a single protocol (an LLM monitor scoring actions). Other AI control protocols, such as trusted editing \citep{bhatt2025ctrlz}, adaptive deployment \citep{wen2024adaptive}, agentic monitoring, and access control, are left to future work.
+
+\paragraph{Training-data contamination.} Future models will likely train on the public 10 environments, eroding their value as a benchmark over time. The 10 held-out environments mitigate this in the short term. Following the approach of \citet{srivastava2022bigbench}, each public environment repository embeds a GUID canary string that training pipelines can use to detect and filter LinuxArena content.
+
+\paragraph{LaStraj construction bias.} LaStraj trajectories were iteratively refined against GPT-4.1 Nano as a reference monitor (\S\ref{sec:lastraj-results}). Because LaStraj was built by contractors, we cannot fully account for which other monitors they may have consulted during construction; evasion rates against any monitor used in iteration are likely biased downward. Numbers reported against monitors known to be outside the construction loop (notably GPT-5 Nano) should be unaffected.
+
+\paragraph{Potential model bias.} Claude models were used heavily during task generation, so their advantage on LinuxArena may partly reflect construction process rather than underlying capability.
+
+\section{Broader Impact}
+\label{sec:broader-impact}
+
+LinuxArena is intended to advance research on AI control protocols --- methods that allow capable AI agents to do useful work while limiting downstream harm. We see two main classes of impact.
+
+\paragraph{Beneficial uses.} The setting enables empirical study of attacker--defender dynamics in production-realistic environments, which we believe is necessary for grounded safety arguments about deployed agents \citep{korbak2025safetycase}. The public release lowers the barrier to control research for groups without access to private benchmarks. The held-out 10 environments support held-out evaluation of future trusted monitors, helping the community measure progress without overfitting to public splits.
+
+\paragraph{Risks and mitigations.} Releasing detailed sabotage trajectories (LaStraj) and attack-policy code carries dual-use risk: the same techniques that test monitors could in principle be repurposed for real attacks. Releasing evaluation-grade attack policies is common practice in the security literature, where open disclosure is considered necessary for defensive progress \citep{anderson2001security}; the policies we release are optimized for \emph{stealth} rather than raw capability, and we expect progress on defensive protocols enabled by this benchmark to outweigh any marginal uplift from releasing the attack code. Beyond the synthetic-data and canary-string mitigations described in \S\ref{sec:limitations}, a second risk is that a strong but imperfect monitor produces a \emph{false sense of security} \citep{lindner2025practical}: \S\ref{sec:monitoring-results} highlights monitor failure modes, and we recommend blue teams treat per-monitor safety as a lower bound calibrated against currently-known attacks rather than a guarantee against future ones.
+
+\section{Conclusion}
+
+LinuxArena is the largest software-engineering control setting to date: 20 multi-service production environments (\publicflag{} 10 released publicly), 1{,}667 main tasks, 185 side tasks, plus LaStraj, a human-crafted attack dataset. Across all 20 environments, our GPT-5 Nano trusted-monitor baseline misses 34\% of Opus sabotage at 1\% step-wise FPR, and LaStraj evades the same monitor 94\% of the time (vs 50\% for the best model attack we elicited). Neither monitoring nor attack elicitation has saturated the setting. The 10 public environments are the immediate artifact for the community, and we expect the setting to support end-to-end protocol evaluations as model capabilities and defensive techniques advance.
+
+\bibliographystyle{icml2026}
+\bibliography{references}
+
+% Appendix lives in a separate file so we can iterate on it without
+% touching the main paper text. Per ICML AIWILD: supplementary material
+% does not count against the page limit.
+\input{icml_appendix_content.tex}
+
+\end{document}
