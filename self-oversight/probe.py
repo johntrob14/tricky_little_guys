@@ -64,7 +64,7 @@ def friedness(rows: list[dict]) -> dict:
 
 async def run(model: str, model_path: str | None, tag: str, n: int, budget: float) -> None:
     runner = Runner(get_model(model), budget, model_path=model_path, max_concurrency=8)
-    outs = await asyncio.gather(*[runner.sample([{"role": "user", "content": q}], n=n, max_tokens=1500) for _, q in BATTERY])
+    outs = await asyncio.gather(*[runner.sample([{"role": "user", "content": q}], n=n, max_tokens=4000) for _, q in BATTERY])
     rows = []
     for (kind, q), rs in zip(BATTERY, outs):
         for i, r in enumerate(rs):
@@ -87,7 +87,7 @@ async def compare(a: str, b: str, judge_model: str, budget: float) -> None:
     msgs = [[{"role": "system", "content": JUDGE},
              {"role": "user", "content": f"Question: {x['question']}\n\nAnswer A:\n{x['answer'][:3000]}\n\nAnswer B:\n{y['answer'][:3000]}"}]
             for x, y in pairs]
-    outs = await asyncio.gather(*[judge.sample(m, n=1, max_tokens=300) for m in msgs])
+    outs = await asyncio.gather(*[judge.sample(m, n=1, max_tokens=1500) for m in msgs])
     verdicts = []
     for (x, y), o in zip(pairs, outs):
         ans = o[0].answer.strip()

@@ -1,0 +1,17 @@
+{
+ "run": "sdft1",
+ "model": "gpt-oss-120b",
+ "teacher_condition": "teacher",
+ "steps": 40,
+ "prompts_per_step": 8,
+ "rollouts_per_prompt": 4,
+ "p_opp": 0.35,
+ "lr": 0.0002,
+ "rank": 32,
+ "max_tokens": 3000,
+ "budget": 12.0,
+ "seed": 0,
+ "resume": false,
+ "save_every": 10,
+ "base_model": "openai/gpt-oss-120b"
+}
