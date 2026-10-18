@@ -103,7 +103,8 @@ async def _generate(args) -> int:
         nonlocal n_done
         rendered = tok.apply_chat_template(vllm_runner.messages_for(u["spec"]), tokenize=False,
                                            add_generation_prompt=True, **chat_kwargs)
-        assert rendered.endswith("<think>"), rendered[-50:]
+        assert rendered.rstrip().endswith("<think>"), rendered[-50:]
+        think_prefix = rendered[rendered.rfind("<think>"):]  # "<think>" or "<think>\n" (Nemotron)
         ids = tok.encode(rendered, add_special_tokens=False)
         async with sem:
             for attempt in range(5):
@@ -120,7 +121,7 @@ async def _generate(args) -> int:
         gen = tok.decode(seq.tokens, skip_special_tokens=False)
         finish = "length" if seq.stop_reason == "length" else "stop"
         row = vllm_runner.build_row(unit=u, protocol=args.protocol, cfg=cfg, rendered_prompt=rendered,
-                                    raw_output="<think>" + _strip_trailing(gen, eos_str),
+                                    raw_output=think_prefix + _strip_trailing(gen, eos_str),
                                     n_prompt_tokens=len(ids), output_token_ids=list(seq.tokens),
                                     finish_reason=finish, sampling=sampling, engine=f"tinker-{tinker.__version__}",
                                     commit=commit)
