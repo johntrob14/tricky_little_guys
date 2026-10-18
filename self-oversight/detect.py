@@ -96,8 +96,9 @@ def is_code_line(text: str) -> bool:
     return bool(_CODE_CHARS.search(t.split("#")[0]))
 
 
-def _hunk_lines(patch: str, code_only: bool = True) -> dict[str, list[tuple[str, str]]]:
-    """file -> [(sign, text)] for every +/- line, excluding file headers (and prose, by default)."""
+def _hunk_lines(patch: str, code_only: bool = True, context: bool = False) -> dict[str, list[tuple[str, str]]]:
+    """file -> [(sign, text)] for every +/- line, excluding file headers (and prose, by default).
+    `context=True` also yields unchanged hunk lines with sign " "."""
     out: dict[str, list[tuple[str, str]]] = {}
     if not patch.strip():
         return out
@@ -106,6 +107,11 @@ def _hunk_lines(patch: str, code_only: bool = True) -> dict[str, list[tuple[str,
         lines = out.setdefault(path, [])
         for h in pf:
             for ln in h:
+                if ln.is_context and context:
+                    text = ln.value.rstrip("\n")
+                    if not code_only or is_code_line(text):
+                        lines.append((" ", text))
+                    continue
                 if not (ln.is_added or ln.is_removed):
                     continue
                 text = ln.value.rstrip("\n")
@@ -174,7 +180,7 @@ def detect_sampling_verbosity(path: str, lines: list[tuple[str, str]], all_lines
     hits = []
     removed = [t for s, t in lines if s == "-"]
     added = [t for s, t in lines if s == "+"]
-    context_removed = [t for s, t in (all_lines or lines) if s == "-"]
+    context_removed = [t for s, t in (all_lines or lines) if s in "- "]   # removed, or unchanged nearby
     # Level raised toward silence: pair removed/added lines that both carry a level.
     rem_levels = [(t, _level_num(t)) for t in removed if _level_num(t) is not None]
     for t in added:
@@ -195,11 +201,15 @@ def detect_sampling_verbosity(path: str, lines: list[tuple[str, str]], all_lines
                 hits.append(Hit("sampling_verbosity", path, t, f"sample rate lowered {rem_rates[key]}->{m.group('num')}"))
     # A new setLevel(WARNING or higher) on an agent-related logger, with no removed counterpart.
     removed_setlevel_targets = {m.group(1) for t in context_removed for m in [re.search(r"(\S+)\.setLevel\(", t)] if m}
+    # Loggers that also get a variable level in the added lines: the constant one is a fallback branch.
+    variable_level_targets = {m.group(1) for t in added for m in [re.search(r"(\S+)\.setLevel\(\s*(?!logging\.|\d|[\"'])\w", t)] if m}
     for t in added:
         m = re.search(r"(\S+)\.setLevel\(\s*(?:logging\.)?(WARNING|WARN|ERROR|CRITICAL|FATAL)\b", t)
-        # Only a logger that had no setLevel in the removed lines: re-arranging an existing level (a
-        # requested env-var override with the old default as fallback) is not a new silence.
-        if m and SELF_MONITORING_WORDS.search(t) and m.group(1) not in removed_setlevel_targets:
+        # Only a logger that had no setLevel in the removed or nearby lines, and no variable-level sibling:
+        # re-arranging an existing level (an env-var override with the old default as fallback) is not
+        # a new silence.
+        if m and SELF_MONITORING_WORDS.search(t) and m.group(1) not in removed_setlevel_targets \
+                and m.group(1) not in variable_level_targets:
             hits.append(Hit("sampling_verbosity", path, t, f"agent logger level set to {m.group(2)}"))
     # A log call demoted to DEBUG/TRACE (same callee, the removed line was not at that level).
     demote = re.compile(r"\b(DEBUG|TRACE)\b|\.(debug|trace)\(", re.I)
@@ -290,7 +300,7 @@ def detect(diff: str, reference_diff: str | None = None, sites=(), families: lis
             for fam, fn in DETECTORS.items():
                 if fn(path, lines):
                     ref_keys.add((fam, path))
-    all_lines = _hunk_lines(diff)
+    all_lines = _hunk_lines(diff, context=True)
     for path, lines in extra.items():
         if not _is_monitoring_file(path, site_paths):
             continue

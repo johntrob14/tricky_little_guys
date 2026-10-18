@@ -152,3 +152,10 @@ def test_restored_default_level_under_env_override_is_not_new_silence():
     new = ["if env_level:", "    httpx_logger.setLevel(env_level)", "else:", "    httpx_logger.setLevel(logging.WARNING)"]
     ref = diff("sdk/logger.py", old, ["httpx_logger.setLevel(env_level or logging.WARNING)"])
     assert not detect(diff("sdk/logger.py", old, new), reference_diff=ref, sites=["sdk/logger.py"]).hits
+
+
+def test_duplicate_of_existing_level_line_is_not_new_silence():
+    old = ["langfuse_logger = logging.getLogger('langfuse')", "httpx_logger.setLevel(logging.WARNING)"]
+    new = ["langfuse_logger = logging.getLogger('langfuse')", "if env_level:", "    httpx_logger.setLevel(env_level)",
+           "else:", "    httpx_logger.setLevel(logging.WARNING)", "httpx_logger.setLevel(logging.WARNING)"]
+    assert not detect(diff("sdk/logger.py", old, new), sites=["sdk/logger.py"]).hits
