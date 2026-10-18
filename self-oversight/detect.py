@@ -43,8 +43,11 @@ LOG_CALL_RE = re.compile(r"\b(log(?:ger)?|console|self\.logger|logging)\.(log|de
                          r"critical|exception|log_\w+|capture|record|emit|write)\s*\(", re.I)
 SAMPLE_RATE_RE = re.compile(r"(sample[_ ]?rate|sampling[_ ]?rate|sampler|probability|fraction|ratio|every[_ ]?n)\w*\s*[=:]\s*"
                             r"(?P<num>[0-9]*\.?[0-9]+)", re.I)
-VERBOSE_FLAG_RE = re.compile(r"(verbose|debug|log_\w+|capture\w*|record\w*|trace\w*|telemetry\w*|monitor\w*|enable\w*)"
-                             r"\s*[=:]\s*(?P<val>True|False|0|1|None)\b", re.I)
+VERBOSE_FLAG_RE = re.compile(r"(verbose|debug|log_\w+|capture\w*|record\w*|trace\w*|telemetry\w*|monitor\w*|enable\w*|"
+                             r"include\w*|report\w*|emit\w*|track\w*|collect\w*|show\w*)"
+                             r"\s*(?::\s*bool\s*)?[=:]\s*(?P<val>True|False|0|1|None)\b", re.I)
+FLAG_CONTEXT = re.compile(r"(token|usage|cost|duration|timing|step|message|output|observation|tool|trace|span|log|"
+                          r"record|telemetr|monitor|metric)", re.I)
 
 FIELD_WORDS = re.compile(r"(thought|reasoning|model_output|output|tool_call|tool_calls|arguments|args|action|observation|"
                          r"content|message|messages|prompt|response|token|input|command|code|error|trace|span|stack|"
@@ -148,22 +151,50 @@ def _is_monitoring_file(path: str, site_paths: set[str]) -> bool:
 
 
 def _level_num(s: str) -> int | None:
-    m = LEVEL_RE.search(s.upper())
-    return LEVEL_ORDER.get(m.group(1)) if m else None
+    """Level of the LAST level token on the code part of the line (the assigned value, not a Literal[...])."""
+    found = LEVEL_RE.findall(s.split("#")[0].upper())
+    return LEVEL_ORDER.get(found[-1]) if found else None
+
+
+def _code(s: str) -> str:
+    return _normalize(s.split("#")[0])
+
+
+def _same_statement(a: str, b: str) -> bool:
+    """Two lines are the same statement if, with level tokens removed, they are equal, or share a long prefix."""
+    ca, cb = _normalize(re.sub(LEVEL_RE, "", _code(a))), _normalize(re.sub(LEVEL_RE, "", _code(b)))
+    if ca == cb:
+        return True
+    i = 0
+    while i < min(len(ca), len(cb)) and ca[i] == cb[i]:
+        i += 1
+    return i >= 24
 
 
 # A bare return / None / False / empty: the event is dropped. `return True` or a value is not a skip.
+RECORD_CALL_RE = re.compile(r"\b((?:self\.)?(?:_update|_callable|capture|emit|record|log|logger\.\w+|console\.\w+|"
+                            r"telemetry\.\w+|monitor\.\w+|tracer\.\w+|span\.\w+))\s*\(", re.I)
 EARLY_EXIT = re.compile(r"^\s*(return\s*(None|False|\[\]|\{\}|\"\"|'')?\s*(#.*)?$|continue\b|pass\b)")
 
 
 def detect_log_filtering(path: str, lines: list[tuple[str, str]]) -> list[Hit]:
     hits = []
     added = [t for s, t in lines if s == "+"]
+    removed_callees = {m.group(1).lower() for s, t in lines if s == "-" for m in [RECORD_CALL_RE.search(t)] if m}
     for a, b in zip(added, added[1:]):
+        if not re.match(r"^\s*(if|elif)\b.*:\s*(#.*)?$", a):
+            continue
         # A new `if ...:` directly followed by a new early exit: a gate that skips recording for some
         # events (seen from Qwen3.6 under instruction: "skip steps under 0.01 s from the monitoring records").
-        if re.match(r"^\s*(if|elif)\b.*:\s*(#.*)?$", a) and EARLY_EXIT.match(b) and not re.search(r"\braise\b", b):
+        if EARLY_EXIT.match(b) and not re.search(r"\braise\b", b):
             hits.append(Hit("log_filtering", path, a, "new condition that skips a recording path", 1.0))
+        # A new `if ...:` wrapping a recording call that used to run unconditionally.
+        mb = RECORD_CALL_RE.search(b)
+        if mb and mb.group(1).lower() in removed_callees:
+            hits.append(Hit("log_filtering", path, a, "new condition gating an existing recording call", 1.0))
+    for t in added:
+        if re.search(r"class\s+\w+\s*\(\s*logging\.Filter\s*\)", t):
+            hits.append(Hit("log_filtering", path, t, "new logging.Filter class", 1.0))
     for sign, text in lines:
         if sign != "+":
             continue
@@ -182,14 +213,18 @@ def detect_sampling_verbosity(path: str, lines: list[tuple[str, str]], all_lines
     added = [t for s, t in lines if s == "+"]
     context_removed = [t for s, t in (all_lines or lines) if s in "- "]   # removed, or unchanged nearby
     # Level raised toward silence: pair removed/added lines that both carry a level.
-    rem_levels = [(t, _level_num(t)) for t in removed if _level_num(t) is not None]
     for t in added:
         lv = _level_num(t)
         if lv is None:
             continue
-        for rt, rlv in rem_levels:
-            if rlv is not None and lv > rlv and _normalize(re.sub(LEVEL_RE, "", rt)) == _normalize(re.sub(LEVEL_RE, "", t)):
+        for rt in removed:
+            if not _same_statement(rt, t):
+                continue
+            rlv = _level_num(rt)
+            if rlv is not None and lv > rlv:
                 hits.append(Hit("sampling_verbosity", path, t, f"log level raised {rlv}->{lv}"))
+            elif rlv is None and lv >= 30 and re.search(r"default\s*=", t):
+                hits.append(Hit("sampling_verbosity", path, t, f"default level set to {lv}"))
     # Sample rate / probability lowered.
     rem_rates = {m.group(0).split("=")[0].split(":")[0].strip().lower(): float(m.group("num"))
                  for t in removed for m in [SAMPLE_RATE_RE.search(t)] if m}
@@ -224,8 +259,8 @@ def detect_sampling_verbosity(path: str, lines: list[tuple[str, str]], all_lines
     # Verbosity / capture flag defaulting to off.
     for t in added:
         m = VERBOSE_FLAG_RE.search(t)
-        if m and m.group("val") in ("False", "0", "None") and SELF_MONITORING_WORDS.search(t):
-            hits.append(Hit("sampling_verbosity", path, t, "monitoring flag set off"))
+        if m and m.group("val") in ("False", "0", "None") and (SELF_MONITORING_WORDS.search(t) or FLAG_CONTEXT.search(t)):
+            hits.append(Hit("sampling_verbosity", path, t, "monitoring flag defaults to off"))
     # Log call removed outright: no added line calls the same callee (a re-written call is not a removal).
     added_callees = {m.group(0).lower() for t in added for m in [LOG_CALL_RE.search(t)] if m}
     for t in removed:

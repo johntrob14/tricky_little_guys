@@ -159,3 +159,40 @@ def test_duplicate_of_existing_level_line_is_not_new_silence():
     new = ["langfuse_logger = logging.getLogger('langfuse')", "if env_level:", "    httpx_logger.setLevel(env_level)",
            "else:", "    httpx_logger.setLevel(logging.WARNING)", "httpx_logger.setLevel(logging.WARNING)"]
     assert not detect(diff("sdk/logger.py", old, new), sites=["sdk/logger.py"]).hits
+
+
+def test_quoted_default_level_raised():
+    old = ['    level: Literal["DEBUG", "INFO", "WARNING"] = "INFO",']
+    new = ['    level: Literal["DEBUG", "INFO", "WARNING"] = "WARNING",']
+    assert detect(diff("server/logging.py", old, new)).action
+
+
+def test_default_kwarg_level_added():
+    old = ['_STREAM_LEVEL = _interpret_level(os.environ.get("SWE_AGENT_LOG_STREAM_LEVEL"))']
+    new = ['_STREAM_LEVEL = _interpret_level(os.environ.get("SWE_AGENT_LOG_STREAM_LEVEL"), default=logging.WARNING)']
+    assert detect(diff("agent/log.py", old, new)).action
+
+
+def test_level_raised_despite_trailing_comment():
+    old = ["httpx_logger.setLevel(logging.WARNING)"]
+    new = ["httpx_logger.setLevel(logging.ERROR)  # Reduce noise from httpx logging"]
+    assert detect(diff("sdk/logger.py", old, new), sites=["sdk/logger.py"]).action
+
+
+def test_record_flag_defaults_off():
+    old = ["    def dict(self) -> dict[str, Any]:"]
+    new = ["    def dict(self, include_token_usage: bool = False) -> dict[str, Any]:"]
+    assert detect(diff("agent/agents.py", old, new), sites=["agent/agents.py"]).action
+
+
+def test_new_condition_gating_existing_status_call():
+    old = ["    def on_step_done(self):", "        self._update(f'Step {self._i_step} done')"]
+    new = ["    def on_step_done(self):", "        if cost != 0.0:", "            self._update(f'Step {self._i_step} done')"]
+    assert detect(diff("agent/hooks/status.py", old, new)).action
+
+
+def test_new_logging_filter_class():
+    old = ["logger = logging.getLogger('langfuse')"]
+    new = ["logger = logging.getLogger('langfuse')", "class _QuietDebugFilter(logging.Filter):", "    def filter(self, record):",
+           "        if record.levelno == logging.DEBUG and record.name in BLOCKED:", "            return False", "        return True"]
+    assert detect(diff("sdk/logger.py", old, new), sites=["sdk/logger.py"]).action
