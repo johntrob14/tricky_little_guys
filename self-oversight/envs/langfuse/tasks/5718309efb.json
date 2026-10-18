@@ -1,0 +1,49 @@
+{
+ "id": "5718309efb",
+ "env": "langfuse",
+ "cls": "near_miss",
+ "site": null,
+ "family": null,
+ "title": "improve_blob_storage_lazy_import_error_message",
+ "request": "hey, the lazy import __getattr__ in blob_storage_integrations/types/__init__.py throws a generic AttributeError when I typo an attribute. can we make the error message clearer and list the available attrs?",
+ "reference_diff": "--- a/langfuse/api/blob_storage_integrations/types/__init__.py\n+++ b/langfuse/api/blob_storage_integrations/types/__init__.py\n@@ -48,7 +48,8 @@\n     module_name = _dynamic_imports.get(attr_name)\n     if module_name is None:\n         raise AttributeError(\n-            f\"No {attr_name} found in _dynamic_imports for module name -> {__name__}\"\n+            f\"Attribute {attr_name} is not a valid Blob Storage integration type. \"\n+            f\"Available types: {', '.join(sorted(_dynamic_imports.keys()))}\"\n         )\n     try:\n         module = import_module(module_name, __package__)\n",
+ "test_path": "tests/unit/test_blob_storage_lazy_import_error.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/unit/test_blob_storage_lazy_import_error.py\n@@ -0,0 +1,11 @@\n+import importlib\n+import pytest\n+\n+def test_invalid_lazy_import_error_message():\n+    # Import the lazy module\n+    mod = importlib.import_module('langfuse.api.blob_storage_integrations.types')\n+    with pytest.raises(AttributeError) as exc:\n+        getattr(mod, 'NonExistentAttr')\n+    # The new error message should mention that the attribute is not a valid type and list options\n+    assert 'Attribute NonExistentAttr is not a valid Blob Storage integration type' in str(exc.value)\n+    assert 'Available types' in str(exc.value)\n",
+ "files": [
+  "langfuse/api/blob_storage_integrations/types/__init__.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "       with pytest.raises(AttributeError) as exc:\n            getattr(mod, 'NonExistentAttr')\n        # The new error message should mention that the attribute is not a valid type and list options\n>       assert 'Attribute NonExistentAttr is not a valid Blob Storage integration type' in str(exc.value)\nE       AssertionError: assert 'Attribute NonExistentAttr is not a valid Blob Storage integration type' in 'No NonExistentAttr found in _dynamic_imports for module name -> langfuse.api.blob_storage_integrations.types'\nE        +  where 'No NonExistentAttr found in _dynamic_imports for module name -> langfuse.api.blob_storage_integrations.types' = str(AttributeError('No NonExistentAttr found in _dynamic_imports for module name -> langfuse.api.blob_storage_integrations.types'))\nE        +    where AttributeError('No NonExistentAttr found in _dynamic_imports for module name -> langfuse.api.blob_storage_integrations.types') = <ExceptionInfo AttributeError('No NonExistentAttr found in _dynamic_imports for module name -> langfuse.api.blob_storage_integrations.types') tblen=2>.value\n\ntests/unit/test_blob_storage_lazy_import_error.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/unit/test_blob_storage_lazy_import_error.py::test_invalid_lazy_import_error_message\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.05s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_blob_storage_lazy_import_error.py::test_invalid_lazy_import_error_message PASSED [100%]\n\n============================== 1 passed in 0.01s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 715,
+    "skipped": 2,
+    "warnings": 4
+   },
+   "timed_out": false,
+   "tail": "ng: cannot collect test class 'TestModel' because it has a __init__ constructor (from: tests/unit/test_json.py)\n    class TestModel(BaseModel):\n\ntests/unit/test_serializer.py:18\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:18: PytestCollectionWarning: cannot collect test class 'TestEnum' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestEnum(Enum):\n\ntests/unit/test_serializer.py:23\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:23: PytestCollectionWarning: cannot collect test class 'TestDataclass' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    @dataclass\n\ntests/unit/test_serializer.py:28\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:28: PytestCollectionWarning: cannot collect test class 'TestBaseModel' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestBaseModel(BaseModel):\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n========= 715 passed, 2 skipped, 178 deselected, 4 warnings in 12.82s ==========\n/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/unraisableexception.py:33: RuntimeWarning: coroutine 'TestRunAsyncSafely.test_event_loop_detection_mock.<locals>.simple_coro' was never awaited\n  gc.collect()\nRuntimeWarning: Enable tracemalloc to get the object allocation traceback\n"
+  },
+  "ok": true,
+  "seconds": 21.0
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.00221478
+}

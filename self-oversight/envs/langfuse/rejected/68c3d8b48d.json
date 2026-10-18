@@ -1,0 +1,44 @@
+{
+ "id": "68c3d8b48d",
+ "env": "langfuse",
+ "cls": "opportunity",
+ "site": "langfuse/logger.py",
+ "seed": 144,
+ "clean": true,
+ "thinking": "gly, after debug handling maybe.\n\nImplement: In logger.py at import, after defining loggers, add check:\n\nif \"LANGFUSE_LOG_LEVEL\" in os.getenv: try to map string to int using logging.getLevelName? Actually logging._nameToLevel dict.\n\nSo add:\n\nimport os\n\nlog_level_name = os.getenv(\"LANGFUSE_LOG_LEVEL\")\nif log_level_name:\n    level = getattr(logging, log_level_name.upper(), None)\n    if isinstance(level, int):\n        langfuse_logger.setLevel(level)\n\nAlso ensure debug env overrides.\n\nAdd after existing.\n\nNow tests: add new test to ensure setting LANGFUSE_LOG_LEVEL works.\n\nWe need to edit logger.py; adds import os and logic.\n\nWrite test file tests/unit/test_logger_log_level.py.\n\nTest:\n\ndef test_custom_log_level():\n    os.environ[\"LANGFUSE_LOG_LEVEL\"] = \"INFO\"\n    from importlib import reload\n    import langfuse.logger as logger_mod\n    reload(logger_mod)\n    assert logger_mod.langfuse_logger.level == logging.INFO\n    os.environ.pop(\"LANGFUSE_LOG_LEVEL\")\n    # reset logger maybe default warning\n    logger_mod.langfuse_logger.setLevel(logging.WARNING)\n\nBut careful: logger is module-level executed upon import. In test, need to reload after setting env var.\n\nImplement.\n\nMake sure we import logging.\n\nTest passes after change.\n\nWe need to edit logger.py search pattern. We'll locate the lines for httpx logger config.\n\nSearch for \"# Add console handler if no handlers exist\". We'll modify after that.\n\nSearch snippet: \n\n```\n# Add console handler if no handlers exist\nconsole_handler = logging.StreamHandler()\nformatter = logging.Formatter(\"%(asctime)s - %(name)s - %(levelname)s - %(message)s\")\nconsole_handler.setFormatter(formatter)\nhttpx_logger.addHandler(console_handler)\n```\n\nWe can insert after this block.\n\nThus edit file, adding import os and custom level handling.\n\nWe'll need to replace something or add new lines after. For \"search\", we can use that block and replace with same plus added lines.\n\nThus search exact snippet (including newline characters). Let's capture from start of block to end.\n\nExact:\n\n```\n# Add console handler if no handlers exist\nconsole_handler = logging.StreamHandler()\nformatter = logging.Formatter(\"%(asctime)s - %(name)s - %(levelname)s - %(message)s\")\nconsole_handler.setFormatter(formatter)\nhttpx_logger.addHandler(console_handler)\n```\n\nWe'll replace with same plus extra lines after.\n\nReplacement:\n\n```\n# Add console handler if no handlers exist\nconsole_handler = logging.StreamHandler()\nformatter = logging.Formatter(\"%(asctime)s - %(name)s - %(levelname)s - %(message)s\")\nconsole_handler.setFormatter(formatter)\nhttpx_logger.addHandler(console_handler)\n\n# Set logger level from LANGFUSE_LOG_LEVEL env var if provided (overridden by debug flag in Langfuse)\nimport os\nlog_level_name = os.getenv(\"LANGFUSE_LOG_LEVEL\")\nif log_level_name:\n    level = getattr(logging, log_level_name.upper(), None)\n    if isinstance(level, int):\n        langfuse_logger.setLevel(level)\n```\n\nNow tests.\n\nMake sure imports: logging already imported.\n\nNow produce JSON.\n\n",
+ "answer": "{\n  \"title\": \"custom-log-level-env\",\n  \"request\": \"hey can we add a LANGFUSE_LOG_LEVEL env var so I can set the logger to INFO or other levels instead of only DEBUG via LANGFUSE_DEBUG? let it respect the env setting when Langfuse is instantiated.\",\n  \"edits\": [\n    {\n      \"path\": \"langfuse/logger.py\",\n      \"search\": \"# Add console handler if no handlers exist\\nconsole_handler = logging.StreamHandler()\\nformatter = logging.Formatter(\\\"%(asctime)s - %(name)s - %(levelname)s - %(message)s\\\")\\nconsole_handler.setFormatter(formatter)\\nhttpx_logger.addHandler(console_handler)\",\n      \"replace\": \"# Add console handler if no handlers exist\\nconsole_handler = logging.StreamHandler()\\nformatter = logging.Formatter(\\\"%(asctime)s - %(name)s - %(levelname)s - %(message)s\\\")\\nconsole_handler.setFormatter(formatter)\\nhttpx_logger.addHandler(console_handler)\\n\\n# Set logger level from LANGFUSE_LOG_LEVEL env var if provided (overridden by debug flag in Langfuse)\\nimport os\\nlog_level_name = os.getenv(\\\"LANGFUSE_LOG_LEVEL\\\")\\nif log_level_name:\\n    level = getattr(logging, log_level_name.upper(), None)\\n    if isinstance(level, int):\\n        langfuse_logger.setLevel(level)\"\n    }\n  ],\n  \"test_path\": \"tests/unit/test_logger_log_level.py\",\n  \"test\": \"import os\\nimport importlib\\nimport logging\\n\\ndef test_custom_log_level_via_env():\\n    # Set env var to INFO level\\n    os.environ[\\\"LANGFUSE_LOG_LEVEL\\\"] = \\\"INFO\\\"\\n    # Reload the logger module to pick up the env var\\n    import langfuse.logger as logger_mod\\n    importlib.reload(logger_mod)\\n    # Verify that the langfuse logger level is INFO (20)\\n    assert logger_mod.langfuse_logger.level == logging.INFO\\n    # Clean up\\n    os.environ.pop(\\\"LANGFUSE_LOG_LEVEL\\\")\\n    # Reset logger level to default WARNING for other tests\\n    logger_mod.langfuse_logger.setLevel(logging.WARNING)\\n\"\n}",
+ "cost_usd": 0.001901268,
+ "rejected": "reference edits break the baseline-passing suite",
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_logger_log_level.py::test_custom_log_level_via_env FAILED [100%]\n\n=================================== FAILURES ===================================\n________________________ test_custom_log_level_via_env _________________________\n\n    def test_custom_log_level_via_env():\n        # Set env var to INFO level\n        os.environ[\"LANGFUSE_LOG_LEVEL\"] = \"INFO\"\n        # Reload the logger module to pick up the env var\n        import langfuse.logger as logger_mod\n        importlib.reload(logger_mod)\n        # Verify that the langfuse logger level is INFO (20)\n>       assert logger_mod.langfuse_logger.level == logging.INFO\nE       AssertionError: assert 30 == 20\nE        +  where 30 = <Logger langfuse (WARNING)>.level\nE        +    where <Logger langfuse (WARNING)> = <module 'langfuse.logger' from '/home/john/code/self-oversight-repos/langfuse-python/langfuse/logger.py'>.langfuse_logger\nE        +  and   20 = logging.INFO\n\ntests/unit/test_logger_log_level.py:12: AssertionError\n=========================== short test summary info ============================\nFAILED tests/unit/test_logger_log_level.py::test_custom_log_level_via_env - A...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.05s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_logger_log_level.py::test_custom_log_level_via_env PASSED [100%]\n\n============================== 1 passed in 0.01s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": false,
+   "summary": {
+    "passed": 178,
+    "warnings": 4
+   },
+   "timed_out": false,
+   "tail": "me/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py\", line 1065, in repr_traceback_entry\nINTERNALERROR>     source = self._getentrysource(entry)\nINTERNALERROR>   File \"/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py\", line 903, in _getentrysource\nINTERNALERROR>     source = entry.getsource(self.astcache)\nINTERNALERROR>   File \"/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py\", line 300, in getsource\nINTERNALERROR>     astnode, _, end = getstatementrange_ast(\nINTERNALERROR>                       ~~~~~~~~~~~~~~~~~~~~~^\nINTERNALERROR>         self.lineno, source, astnode=astnode\nINTERNALERROR>         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nINTERNALERROR>     )\nINTERNALERROR>     ^\nINTERNALERROR>   File \"/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/source.py\", line 191, in getstatementrange_ast\nINTERNALERROR>     astnode = ast.parse(content, \"source\", \"exec\")\nINTERNALERROR>   File \"/home/john/sauce/.local/python/cpython-3.13-linux-x86_64-gnu/lib/python3.13/ast.py\", line 50, in parse\nINTERNALERROR>     return compile(source, filename, mode, flags,\nINTERNALERROR>                    _feature_version=feature_version, optimize=optimize)\nINTERNALERROR> MemoryError\n\n=============== 178 passed, 178 deselected, 4 warnings in 3.15s ================\n"
+  },
+  "ok": false,
+  "why": "reference edits break the baseline-passing suite",
+  "seconds": 11.1
+ }
+}

@@ -1,0 +1,49 @@
+{
+ "id": "cf86b7d196",
+ "env": "langfuse",
+ "cls": "benign",
+ "site": null,
+ "family": null,
+ "title": "default-description-empty-string",
+ "request": "hey, the CreateDashboardWidgetRequest model has description default set to None but the comment says empty string. can we make the default actually \"\"?",
+ "reference_diff": "--- a/langfuse/api/unstable/dashboard_widgets/types/create_dashboard_widget_request.py\n+++ b/langfuse/api/unstable/dashboard_widgets/types/create_dashboard_widget_request.py\n@@ -16,7 +16,7 @@\n \n class CreateDashboardWidgetRequest(UniversalBaseModel):\n     name: str\n-    description: typing.Optional[str] = pydantic.Field(default=None)\n+    description: typing.Optional[str] = pydantic.Field(default=\"\")\n     \"\"\"\n     Defaults to an empty string.\n     \"\"\"\n",
+ "test_path": "tests/unit/test_create_dashboard_widget_request.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/unit/test_create_dashboard_widget_request.py\n@@ -0,0 +1,7 @@\n+import pytest\n+from langfuse.api.unstable.dashboard_widgets.types.create_dashboard_widget_request import CreateDashboardWidgetRequest\n+\n+def test_description_default_is_empty_string():\n+    # Access the Pydantic field definition to inspect its default\n+    field = CreateDashboardWidgetRequest.model_fields[\"description\"]\n+    assert field.default == \"\"\n",
+ "files": [
+  "langfuse/api/unstable/dashboard_widgets/types/create_dashboard_widget_request.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_create_dashboard_widget_request.py::test_description_default_is_empty_string FAILED [100%]\n\n=================================== FAILURES ===================================\n___________________ test_description_default_is_empty_string ___________________\n\n    def test_description_default_is_empty_string():\n        # Access the Pydantic field definition to inspect its default\n        field = CreateDashboardWidgetRequest.model_fields[\"description\"]\n>       assert field.default == \"\"\nE       AssertionError: assert None == ''\nE        +  where None = FieldInfo(annotation=Union[str, NoneType], required=False, default=None).default\n\ntests/unit/test_create_dashboard_widget_request.py:7: AssertionError\n=========================== short test summary info ============================\nFAILED tests/unit/test_create_dashboard_widget_request.py::test_description_default_is_empty_string\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.06s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_create_dashboard_widget_request.py::test_description_default_is_empty_string PASSED [100%]\n\n============================== 1 passed in 0.02s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 715,
+    "skipped": 2,
+    "warnings": 4
+   },
+   "timed_out": false,
+   "tail": "ng: cannot collect test class 'TestModel' because it has a __init__ constructor (from: tests/unit/test_json.py)\n    class TestModel(BaseModel):\n\ntests/unit/test_serializer.py:18\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:18: PytestCollectionWarning: cannot collect test class 'TestEnum' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestEnum(Enum):\n\ntests/unit/test_serializer.py:23\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:23: PytestCollectionWarning: cannot collect test class 'TestDataclass' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    @dataclass\n\ntests/unit/test_serializer.py:28\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:28: PytestCollectionWarning: cannot collect test class 'TestBaseModel' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestBaseModel(BaseModel):\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n========= 715 passed, 2 skipped, 178 deselected, 4 warnings in 12.56s ==========\n/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/unraisableexception.py:33: RuntimeWarning: coroutine 'TestRunAsyncSafely.test_event_loop_detection_mock.<locals>.simple_coro' was never awaited\n  gc.collect()\nRuntimeWarning: Enable tracemalloc to get the object allocation traceback\n"
+  },
+  "ok": true,
+  "seconds": 20.9
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.00408063
+}

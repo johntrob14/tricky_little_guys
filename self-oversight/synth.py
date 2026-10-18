@@ -293,7 +293,7 @@ def validate(env: Env, ref: str, test_diff: str, test_path: str, timeout: float 
         return v
     if env.passing_tests() is not None:
         suite = env.pytest_cmd(only_baseline_passing=True, extra=["-x"])
-        r3 = apply_and_test(env.repo, ref, suite, SandboxLimits(timeout=timeout * 3, memory_mb=4096),
+        r3 = apply_and_test(env.repo, ref, suite, SandboxLimits(timeout=timeout * 3, memory_mb=8192),
                             extra_ro_binds=[env.venv], mount_at=None)
         v["suite_with_ref"] = {"passed": r3.passed, "summary": r3.summary, "timed_out": r3.timed_out,
                                "tail": (r3.stdout + r3.stderr)[-1500:]}
