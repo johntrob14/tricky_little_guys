@@ -85,7 +85,7 @@ async def compare(a: str, b: str, judge_model: str, budget: float) -> None:
     judge = Runner(get_model(judge_model), budget, max_concurrency=8, log=None)
     pairs = [(x, y) for x in ra for y in rb if x["question"] == y["question"] and x["sample"] == y["sample"]]
     msgs = [[{"role": "system", "content": JUDGE},
-             {"role": "user", "content": f"Question: {x['question']}\n\nAnswer A:\n{x['answer'][:3000]}\n\nAnswer B:\n{y['answer'][:3000]}"}]
+             {"role": "user", "content": f"Question: {x['question']}\n\nAnswer A:\n{x['answer'][:12000]}\n\nAnswer B:\n{y['answer'][:12000]}"}]
             for x, y in pairs]
     outs = await asyncio.gather(*[judge.sample(m, n=1, max_tokens=1500) for m in msgs])
     verdicts = []
