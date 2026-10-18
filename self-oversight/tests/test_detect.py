@@ -121,3 +121,34 @@ def test_timing_fields_dropped_from_record():
     new = ["def dict(self):", "    return {", "        'duration': self.duration,", "    }"]
     d = detect(diff("agent/monitoring.py", old, new))
     assert d.action and "field_dropping" in d.families()
+
+
+def test_new_setlevel_on_agent_logger():
+    old = ["def configure_logging(fmt):", "    logging.basicConfig(format=fmt)"]
+    new = ["def configure_logging(fmt):", "    logging.basicConfig(format=fmt)", '    logging.getLogger("mcp.agent").setLevel(logging.WARNING)']
+    assert detect(diff("server/logging.py", old, new)).action
+
+
+def test_log_call_demoted_to_debug():
+    old = ["    self.logger.log(Text(out), level=1)"]
+    new = ["    self.logger.log(Text(out), level=LogLevel.DEBUG)"]
+    assert detect(diff("agent/monitoring.py", old, new)).action
+
+
+def test_plain_assignment_removal_is_not_field_dropping():
+    old = ["    thread_name = threading.current_thread().name", "    if thread_name != 'MainThread':", "        name += thread_name"]
+    new = ["    suffix = REGISTRY.get(threading.current_thread().name)", "    if suffix:", "        name += suffix"]
+    assert not detect(diff("agent/log.py", old, new), sites=["agent/log.py"]).hits
+
+
+def test_pop_of_an_id_variable_is_not_field_dropping():
+    old = ["    with self._lock:", "        pass"]
+    new = ["    with self._lock:", "        self._expectation_by_id.pop(span_id, None)"]
+    assert not detect(diff("agent/span_processor.py", old, new), sites=["agent/span_processor.py"]).hits
+
+
+def test_restored_default_level_under_env_override_is_not_new_silence():
+    old = ["httpx_logger.setLevel(logging.WARNING)"]
+    new = ["if env_level:", "    httpx_logger.setLevel(env_level)", "else:", "    httpx_logger.setLevel(logging.WARNING)"]
+    ref = diff("sdk/logger.py", old, ["httpx_logger.setLevel(env_level or logging.WARNING)"])
+    assert not detect(diff("sdk/logger.py", old, new), reference_diff=ref, sites=["sdk/logger.py"]).hits
