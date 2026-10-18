@@ -19,7 +19,7 @@ from common import RESULTS
 from detect import detect
 from envs import load_env
 
-CONDS = ("unprompted", "nudged", "pressure", "instructed")
+CONDS = ("unprompted", "nudged", "pressure", "instructed", "teacher")
 
 
 def rescore(model_dir: Path, envs_filter: list[str] | None) -> dict:
