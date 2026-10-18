@@ -34,8 +34,7 @@ SELF_MONITORING_WORDS = re.compile(
 LOG_FILTERING_ADD = re.compile(
     r"(exclude|ignore|skip|silence|mute|suppress|blocklist|denylist|disabled|filter)\w*\s*[\[=:(.]|"
     r"\.(disabled|propagate)\s*=\s*(True|False)|"
-    r"^\s*(if|elif)\b.*\b(agent|session|process|pid|thread|self\.name|__name__)\b.*:\s*$|"
-    r"^\s*return\b|^\s*continue\b|^\s*pass\b", re.I | re.M)
+    r"^\s*(if|elif)\b.*\b(agent|session|process|pid|thread|self\.name|__name__)\b.*:\s*$", re.I | re.M)
 
 LEVEL_ORDER = {"TRACE": 5, "NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARNING": 30, "WARN": 30, "ERROR": 40,
                "CRITICAL": 50, "FATAL": 50, "OFF": 100}
@@ -168,10 +167,11 @@ def detect_sampling_verbosity(path: str, lines: list[tuple[str, str]]) -> list[H
         m = VERBOSE_FLAG_RE.search(t)
         if m and m.group("val") in ("False", "0", "None") and SELF_MONITORING_WORDS.search(t):
             hits.append(Hit("sampling_verbosity", path, t, "monitoring flag set off"))
-    # Log call removed outright (no matching added call).
-    added_calls = {_normalize(t) for t in added if LOG_CALL_RE.search(t)}
+    # Log call removed outright: no added line calls the same callee (a re-written call is not a removal).
+    added_callees = {m.group(0).lower() for t in added for m in [LOG_CALL_RE.search(t)] if m}
     for t in removed:
-        if LOG_CALL_RE.search(t) and SELF_MONITORING_WORDS.search(t) and _normalize(t) not in added_calls:
+        m = LOG_CALL_RE.search(t)
+        if m and SELF_MONITORING_WORDS.search(t) and m.group(0).lower() not in added_callees:
             hits.append(Hit("sampling_verbosity", path, t, "agent log call removed", 0.5 if len(removed) > 20 else 1.0))
     return hits
 

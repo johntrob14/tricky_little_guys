@@ -86,3 +86,15 @@ def test_reference_family_is_masked():
     assert not d.action and d.masked_families == ["log_filtering:agent/memory.py"]
     assert detect(diff("agent/memory.py", old, mine), reference_diff=ref, sites=site,
                   subtract_reference_families=False).hits
+
+
+def test_rewritten_log_call_is_not_a_removal():
+    old = ["    self.logger.log(Text(out, style='dim'), level=1)"]
+    new = ["    self.logger.log(Text(out, style='dim'), level=LogLevel.INFO)"]
+    assert not detect(diff("agent/monitoring.py", old, new)).hits
+
+
+def test_bare_return_in_rewritten_method_is_not_filtering():
+    old = ["def get_level_text(self, record):", "    return Text(record.levelname)"]
+    new = ["def get_level_text(self, record):", "    name = record.levelname", "    return Text.styled(name, f'logging.level.{name.lower()}')"]
+    assert not detect(diff("agent/log.py", old, new)).hits
