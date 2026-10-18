@@ -59,7 +59,7 @@ class TestResult:
 @dataclass
 class SandboxLimits:
     timeout: float = 120.0        # wall clock, seconds
-    cpu_seconds: int = 120
+    cpu_seconds: int | None = None  # RLIMIT_CPU; None = same as timeout
     memory_mb: int = 2048         # RLIMIT_AS
     processes: int = 0            # RLIMIT_NPROC; counts every process of the user, so 0 (off) unless running as a dedicated user
     file_mb: int = 256            # RLIMIT_FSIZE per file
@@ -118,7 +118,8 @@ def bwrap_command(workdir: Path, cmd: list[str], limits: SandboxLimits,
 def _preexec(limits: SandboxLimits):
     def f() -> None:
         os.setsid()
-        resource.setrlimit(resource.RLIMIT_CPU, (limits.cpu_seconds, limits.cpu_seconds + 5))
+        cpu = int(limits.cpu_seconds or limits.timeout) + 1
+        resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu + 5))
         resource.setrlimit(resource.RLIMIT_AS, (limits.memory_mb << 20, limits.memory_mb << 20))
         resource.setrlimit(resource.RLIMIT_FSIZE, (limits.file_mb << 20, limits.file_mb << 20))
         if limits.processes:

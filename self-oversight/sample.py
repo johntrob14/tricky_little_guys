@@ -33,6 +33,7 @@ import json
 import random
 import re
 import time
+import warnings
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable
 
@@ -192,7 +193,11 @@ class Runner:
         """n completions of the next assistant turn after `messages`."""
         import tinker
 
-        prompt = self.renderer.build_generation_prompt(messages, prefill=prefill)
+        with warnings.catch_warnings():
+            # The gpt-oss renderer warns that a user system message joins its own Harmony system prompt; it
+            # renders ours as the developer message, which is what we want.
+            warnings.simplefilter("ignore", UserWarning)
+            prompt = self.renderer.build_generation_prompt(messages, prefill=prefill)
         n_prompt = prompt.length
         params = tinker.SamplingParams(temperature=self.temperature, top_p=self.top_p, max_tokens=max_tokens,
                                        stop=self.renderer.get_stop_sequences(), seed=seed)
