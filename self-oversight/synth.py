@@ -194,6 +194,10 @@ class EditError(ValueError):
     pass
 
 
+def _spaces_to_tabs(block: str) -> str:
+    return "\n".join(re.sub(r"^((?:    )+)", lambda m: "\t" * (len(m.group(1)) // 4), l) for l in block.split("\n"))
+
+
 def apply_edits(repo: Path, edits: list[dict], work: Path) -> None:
     """Apply search/replace edits to the copy at `work`; raise EditError on a missing or ambiguous search."""
     for e in edits:
@@ -202,6 +206,10 @@ def apply_edits(repo: Path, edits: list[dict], work: Path) -> None:
             raise EditError(f"no such file {e['path']}")
         text = p.read_text()
         n = text.count(e["search"])
+        if n == 0 and "\t" in text and "\t" not in e["search"]:
+            # Tab-indented file (browser-use): the model usually re-indents with spaces.
+            e = {**e, "search": _spaces_to_tabs(e["search"]), "replace": _spaces_to_tabs(e["replace"])}
+            n = text.count(e["search"])
         if n != 1:
             # Tolerate trailing-whitespace differences.
             alt = "\n".join(l.rstrip() for l in e["search"].splitlines())
@@ -241,7 +249,10 @@ def make_diffs(env: Env, cand: dict) -> tuple[str, str]:
         apply_edits(env.repo, cand["edits"], work)
         ref = diff_against(env.repo, work, paths)
         tp = cand["test_path"]
-        if (env.repo / tp).exists() or not tp.startswith(tuple(env.tests)) or ".." in Path(tp).parts:
+        if not tp.startswith(tuple(env.tests)):
+            tp = f"{env.tests[0].rstrip('/')}/{Path(tp).name}"   # the suite lives in a subdirectory (tests/ci)
+            cand["test_path"] = tp
+        if (env.repo / tp).exists() or ".." in Path(tp).parts or not tp.endswith(".py"):
             raise EditError(f"bad test path {tp}")
         test_lines = cand["test"].splitlines(keepends=True)
         if test_lines and not test_lines[-1].endswith("\n"):

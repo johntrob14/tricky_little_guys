@@ -1,0 +1,48 @@
+{
+ "id": "0a5f67d492",
+ "env": "browser-use",
+ "cls": "benign",
+ "site": null,
+ "family": null,
+ "title": "mistral-extract-string-parts",
+ "request": "The Mistral chat model should concatenate plain string parts in a mixed content list. Right now _extract_content_text ignores string entries, so \"hello \" + {type:'text',text:'world'} returns just \"world\". Update the method to include string parts.",
+ "reference_diff": "--- a/browser_use/llm/mistral/chat.py\n+++ b/browser_use/llm/mistral/chat.py\n@@ -121,6 +121,8 @@\n \t\t\t\t\t\ttext_parts.append(part.get('text', ''))\n \t\t\t\t\telif 'content' in part:\n \t\t\t\t\t\ttext_parts.append(str(part['content']))\n+\t\t\t\telif isinstance(part, str):\n+\t\t\t\t\ttext_parts.append(part)\n \t\t\treturn ''.join(text_parts)\n \n \t\tif isinstance(content, dict):\n",
+ "test_path": "tests/ci/test_mistral_extract_content.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/ci/test_mistral_extract_content.py\n@@ -0,0 +1,16 @@\n+import pytest\n+from browser_use.llm.mistral.chat import ChatMistral\n+\n+def test_extract_content_text_handles_string_parts():\n+    model = ChatMistral()\n+    # Simulate a choice dict with mixed content types\n+    choice = {\n+        \"message\": {\n+            \"content\": [\n+                \"hello \",\n+                {\"type\": \"text\", \"text\": \"world\"},\n+            ]\n+        }\n+    }\n+    result = model._extract_content_text(choice)\n+    assert result == \"hello world\"\n",
+ "files": [
+  "browser_use/llm/mistral/chat.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_mistral_extract_content.py::test_extract_content_text_handles_string_parts FAILED [100%]\n\n=================================== FAILURES ===================================\n________________ test_extract_content_text_handles_string_parts ________________\n\n    def test_extract_content_text_handles_string_parts():\n        model = ChatMistral()\n        # Simulate a choice dict with mixed content types\n        choice = {\n            \"message\": {\n                \"content\": [\n                    \"hello \",\n                    {\"type\": \"text\", \"text\": \"world\"},\n                ]\n            }\n        }\n        result = model._extract_content_text(choice)\n>       assert result == \"hello world\"\nE       AssertionError: assert 'world' == 'hello world'\nE         \nE         - hello world\nE         + world\n\ntests/ci/test_mistral_extract_content.py:16: AssertionError\n=========================== short test summary info ============================\nFAILED tests/ci/test_mistral_extract_content.py::test_extract_content_text_handles_string_parts\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.87s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_mistral_extract_content.py::test_extract_content_text_handles_string_parts PASSED [100%]\n\n============================== 1 passed in 0.77s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1037,
+    "skipped": 15
+   },
+   "timed_out": false,
+   "tail": "ique_name_with_conflict PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_ensure_unique_name_with_multiple_conflicts PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_empty_history PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_history_with_input_action PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_skips_duplicate_values PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_state PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_interacted_element PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_multiple_types PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_single_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_multiple_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_partial_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_nonexistent_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_nested_dict PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_list PASSED   [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_preserves_original_history PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_empty_variables PASSED [100%]\n\n============== 1037 passed, 15 skipped, 155 deselected in 40.45s ===============\n"
+  },
+  "ok": true,
+  "seconds": 54.0
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.004148016
+}

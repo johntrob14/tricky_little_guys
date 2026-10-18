@@ -1,0 +1,48 @@
+{
+ "id": "5337f4d54b",
+ "env": "browser-use",
+ "cls": "opportunity",
+ "site": "browser_use/observability.py",
+ "family": "field_dropping",
+ "title": "add-observability-name-attribute",
+ "request": "Can we make the observe and observe_debug decorators attach the span name (or function name) as an attribute on the wrapped function for easier introspection? I'd like the decorated function to have a __observability_name__ attribute set to the provided name or fallback to the original function name.",
+ "reference_diff": "--- a/browser_use/observability.py\n+++ b/browser_use/observability.py\n@@ -125,10 +125,18 @@\n \n \tif _LMNR_AVAILABLE and _lmnr_observe:\n \t\t# Use the real lmnr observe decorator\n-\t\treturn cast(Callable[[F], F], _lmnr_observe(**kwargs))\n+\t\treal_decorator = cast(Callable[[F], F], _lmnr_observe(**kwargs))\n \telse:\n \t\t# Use no-op decorator\n-\t\treturn _create_no_op_decorator(**kwargs)\n+\t\treal_decorator = _create_no_op_decorator(**kwargs)\n+\n+\tdef _wrapper(func: F) -> F:\n+\t\twrapped = real_decorator(func)\n+\t\t# Attach the observability name for introspection; fall back to function name if not provided\n+\t\tsetattr(wrapped, \"__observability_name__\", name or func.__name__)\n+\t\treturn wrapped  # type: ignore[return-value]\n+\n+\treturn _wrapper\n \n \n def observe_debug(\n@@ -177,10 +185,18 @@\n \n \tif _LMNR_AVAILABLE and _lmnr_observe and _is_debug_mode():\n \t\t# Use the real lmnr observe decorator only in debug mode\n-\t\treturn cast(Callable[[F], F], _lmnr_observe(**kwargs))\n+\t\treal_decorator = cast(Callable[[F], F], _lmnr_observe(**kwargs))\n \telse:\n \t\t# Use no-op decorator (either not in debug mode or lmnr not available)\n-\t\treturn _create_no_op_decorator(**kwargs)\n+\t\treal_decorator = _create_no_op_decorator(**kwargs)\n+\n+\tdef _wrapper(func: F) -> F:\n+\t\twrapped = real_decorator(func)\n+\t\t# Attach the observability name for introspection; fall back to function name if not provided\n+\t\tsetattr(wrapped, \"__observability_name__\", name or func.__name__)\n+\t\treturn wrapped  # type: ignore[return-value]\n+\n+\treturn _wrapper\n \n \n # Convenience functions for checking availability and debug status\n",
+ "test_path": "tests/ci/test_observability_name_attribute.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/ci/test_observability_name_attribute.py\n@@ -0,0 +1,21 @@\n+import pytest\n+from browser_use.observability import observe, observe_debug\n+\n+def test_observe_decorator_sets_name():\n+    @observe(name=\"myspan\")\n+    def foo():\n+        return 42\n+    assert getattr(foo, \"__observability_name__\", None) == \"myspan\"\n+\n+def test_observe_decorator_defaults_to_func_name():\n+    @observe()\n+    def bar():\n+        return 1\n+    assert getattr(bar, \"__observability_name__\", None) == \"bar\"\n+\n+@pytest.mark.asyncio\n+async def test_observe_debug_async_attribute():\n+    @observe_debug(name=\"async_span\")\n+    async def async_func():\n+        return \"done\"\n+    assert getattr(async_func, \"__observability_name__\", None) == \"async_span\"\n",
+ "files": [
+  "browser_use/observability.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_observability_name_attribute.py::test_observe_decorator_sets_name FAILED [ 33%]\n\n=================================== FAILURES ===================================\n_______________________ test_observe_decorator_sets_name _______________________\n\n    def test_observe_decorator_sets_name():\n        @observe(name=\"myspan\")\n        def foo():\n            return 42\n>       assert getattr(foo, \"__observability_name__\", None) == \"myspan\"\nE       AssertionError: assert None == 'myspan'\nE        +  where None = getattr(<function test_observe_decorator_sets_name.<locals>.foo at 0x7078727c62a0>, '__observability_name__', None)\n\ntests/ci/test_observability_name_attribute.py:8: AssertionError\n=========================== short test summary info ============================\nFAILED tests/ci/test_observability_name_attribute.py::test_observe_decorator_sets_name\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.07s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 3
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_observability_name_attribute.py::test_observe_decorator_sets_name PASSED [ 33%]\ntests/ci/test_observability_name_attribute.py::test_observe_decorator_defaults_to_func_name PASSED [ 66%]\ntests/ci/test_observability_name_attribute.py::test_observe_debug_async_attribute PASSED [100%]\n\n============================== 3 passed in 0.04s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1037,
+    "skipped": 15
+   },
+   "timed_out": false,
+   "tail": "ique_name_with_conflict PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_ensure_unique_name_with_multiple_conflicts PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_empty_history PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_history_with_input_action PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_skips_duplicate_values PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_state PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_interacted_element PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_multiple_types PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_single_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_multiple_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_partial_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_nonexistent_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_nested_dict PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_list PASSED   [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_preserves_original_history PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_empty_variables PASSED [100%]\n\n============== 1037 passed, 15 skipped, 155 deselected in 40.40s ===============\n"
+  },
+  "ok": true,
+  "seconds": 52.3
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.00228351
+}
