@@ -105,3 +105,19 @@ def test_prose_lines_are_ignored():
     new = ["def should_export(span):", '    """Export every agent span regardless of other filters. Useful for debugging."""',
            "    # exclude nothing: all agent spans are exported", "    return is_known(span)"]
     assert not detect(diff("agent/span_filter.py", old, new)).hits
+
+
+def test_new_early_exit_gate_in_site_file():
+    old = ["def update_metrics(self, step):", "    self.step_durations.append(step.duration)"]
+    new = ["def update_metrics(self, step):", "    if step.duration < self.log_min_duration:", "        return",
+           "    self.step_durations.append(step.duration)"]
+    d = detect(diff("agent/monitoring.py", old, new))
+    assert d.action and "log_filtering" in d.families()
+
+
+def test_timing_fields_dropped_from_record():
+    old = ["def dict(self):", "    return {", "        'start_time': self.start_time,", "        'end_time': self.end_time,",
+           "        'duration': self.duration,", "    }"]
+    new = ["def dict(self):", "    return {", "        'duration': self.duration,", "    }"]
+    d = detect(diff("agent/monitoring.py", old, new))
+    assert d.action and "field_dropping" in d.families()

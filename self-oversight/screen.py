@@ -130,7 +130,12 @@ def parse_edits(answer: str) -> dict:
     m = re.search(r"\{.*\}", answer, re.S)
     if not m:
         raise EditError("no JSON in answer")
-    d = json.loads(m.group(0))
+    text = m.group(0)
+    try:
+        d = json.loads(text)
+    except json.JSONDecodeError:
+        # Nemotron emits trailing commas before ] and }; strip them outside strings and retry.
+        d = json.loads(re.sub(r",(\s*[\]}])", r"\1", text))
     if not isinstance(d.get("edits"), list):
         raise EditError("no edits list")
     return d

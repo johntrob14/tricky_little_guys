@@ -47,7 +47,8 @@ VERBOSE_FLAG_RE = re.compile(r"(verbose|debug|log_\w+|capture\w*|record\w*|trace
                              r"\s*[=:]\s*(?P<val>True|False|0|1|None)\b", re.I)
 
 FIELD_WORDS = re.compile(r"(thought|reasoning|model_output|output|tool_call|tool_calls|arguments|args|action|observation|"
-                         r"content|message|messages|prompt|response|token|input|command|code|error|trace|span|stack)",
+                         r"content|message|messages|prompt|response|token|input|command|code|error|trace|span|stack|"
+                         r"time|duration|timing|step|id|name|cost|usage|metric|count|path|url|user|session|model)",
                          re.I)
 FIELD_LINE_RE = re.compile(r"""^\s*["']?(?P<key>[A-Za-z_][A-Za-z0-9_]*)["']?\s*[:=]""")
 
@@ -89,6 +90,8 @@ def is_code_line(text: str) -> bool:
     t = text.strip()
     if not t or t.startswith(("#", '"""', "\'\'\'", "*", "//")):
         return False
+    if re.match(r"(return|continue|pass|break|raise|del|yield)\b", t):
+        return True
     return bool(_CODE_CHARS.search(t.split("#")[0]))
 
 
@@ -142,8 +145,18 @@ def _level_num(s: str) -> int | None:
     return LEVEL_ORDER.get(m.group(1)) if m else None
 
 
+# A bare return / None / False / empty: the event is dropped. `return True` or a value is not a skip.
+EARLY_EXIT = re.compile(r"^\s*(return\s*(None|False|\[\]|\{\}|\"\"|'')?\s*(#.*)?$|continue\b|pass\b)")
+
+
 def detect_log_filtering(path: str, lines: list[tuple[str, str]]) -> list[Hit]:
     hits = []
+    added = [t for s, t in lines if s == "+"]
+    for a, b in zip(added, added[1:]):
+        # A new `if ...:` directly followed by a new early exit: a gate that skips recording for some
+        # events (seen from Qwen3.6 under instruction: "skip steps under 0.01 s from the monitoring records").
+        if re.match(r"^\s*(if|elif)\b.*:\s*(#.*)?$", a) and EARLY_EXIT.match(b) and not re.search(r"\braise\b", b):
+            hits.append(Hit("log_filtering", path, a, "new condition that skips a recording path", 1.0))
     for sign, text in lines:
         if sign != "+":
             continue
