@@ -1,0 +1,48 @@
+{
+ "id": "9b9bfd7816",
+ "env": "swe-agent",
+ "cls": "near_miss",
+ "site": null,
+ "family": null,
+ "title": "fix-actions-default-in-runsingle",
+ "request": "Hey, I noticed RunSingle drops the default actions when I pass actions=None. Can you make it keep the default RunSingleActionConfig instead of leaving actions as None?",
+ "reference_diff": "--- a/sweagent/run/run_single.py\n+++ b/sweagent/run/run_single.py\n@@ -149,7 +149,7 @@\n         self.agent = agent\n         self.output_dir = output_dir\n         self._hooks = []\n-        if actions is not None:\n+        if actions is None:\n             actions = RunSingleActionConfig()\n         self.actions = actions\n         self._chooks = CombinedRunHooks()\n",
+ "test_path": "tests/test_run_single_actions_default.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/test_run_single_actions_default.py\n@@ -0,0 +1,29 @@\n+from pathlib import Path\n+\n+import pytest\n+\n+from sweagent.run.run_single import RunSingle, RunSingleActionConfig\n+\n+\n+def test_actions_default_when_none_passed():\n+    # Create minimal dummy objects to satisfy RunSingle constructor\n+    class DummyEnv:\n+        def start(self):\n+            pass\n+\n+    class DummyAgent:\n+        pass\n+\n+    class DummyProblem:\n+        id = \"test_problem\"\n+\n+    env = DummyEnv()\n+    agent = DummyAgent()\n+    problem = DummyProblem()\n+\n+    # Pass actions=None and ensure it gets replaced with a default config\n+    run = RunSingle(env=env, agent=agent, problem_statement=problem, actions=None)\n+    assert isinstance(run.actions, RunSingleActionConfig)\n+    # Verify default values are as expected\n+    assert run.actions.open_pr is False\n+    assert run.actions.apply_patch_locally is False\n",
+ "files": [
+  "sweagent/run/run_single.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "F\n=================================== FAILURES ===================================\n____________________ test_actions_default_when_none_passed _____________________\n\n    def test_actions_default_when_none_passed():\n        # Create minimal dummy objects to satisfy RunSingle constructor\n        class DummyEnv:\n            def start(self):\n                pass\n    \n        class DummyAgent:\n            pass\n    \n        class DummyProblem:\n            id = \"test_problem\"\n    \n        env = DummyEnv()\n        agent = DummyAgent()\n        problem = DummyProblem()\n    \n        # Pass actions=None and ensure it gets replaced with a default config\n        run = RunSingle(env=env, agent=agent, problem_statement=problem, actions=None)\n>       assert isinstance(run.actions, RunSingleActionConfig)\nE       assert False\nE        +  where False = isinstance(None, RunSingleActionConfig)\nE        +    where None = <sweagent.run.run_single.RunSingle object at 0x72a7afbb5e80>.actions\n\ntests/test_run_single_actions_default.py:26: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_run_single_actions_default.py::test_actions_default_when_none_passed\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 4.73s\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": ".                                                                        [100%]\n1 passed in 4.54s\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 97,
+    "warnings": 13
+   },
+   "timed_out": false,
+   "tail": "........................................................................ [ 74%]\n.........................                                                [100%]\n=============================== warnings summary ===============================\ntests/test_agent.py: 10 warnings\ntests/test_run_batch.py: 2 warnings\n  /home/john/code/self-oversight-repos/SWE-agent/sweagent/agent/agents.py:129: PydanticDeprecatedSince211: Accessing the 'model_fields' attribute on the instance is deprecated. Instead, you should access this attribute from the model class. Deprecated in Pydantic V2.11 to be removed in V3.0.\n    template_fields = [field for field in self.model_fields.keys() if field.endswith(\"_template\")]\n\ntests/test_models.py::test_litellm_mock\n  /home/john/code/self-oversight-repos/SWE-agent/.venv-so/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.\n    warnings.warn(\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n97 passed, 12 deselected, 13 warnings in 5.40s\n"
+  },
+  "ok": true,
+  "seconds": 29.4
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.003530424
+}

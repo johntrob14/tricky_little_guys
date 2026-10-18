@@ -28,3 +28,67 @@ seed 207: rejected: test fails with the reference edits
 seed 208: rejected: EditError: search text occurs 2 times in src/smolagents/default_tools.py
 seed 209: rejected: test fails with the reference edits
 kept 3 tasks; spend {"cap_usd": 0.4, "spent_usd": 0.025981, "requests": 10, "prompt_tokens": 55459, "cached_prompt_tokens": 25600, "completion_tokens": 17188}
+seed 300: kept ae03908c42 'strip-trailing-backticks-in-gradio-output' (src/smolagents/gradio_ui.py)
+seed 301: rejected: test fails with the reference edits
+seed 302: kept 10ef56d280 'handle-empty-stop-sequence' (src/smolagents/models.py)
+seed 303: kept 1db6e24af9 'cli-default-tools-empty' (src/smolagents/cli.py)
+seed 304: rejected: EditError: duplicate of an existing task (same reference edits)
+seed 305: rejected: EditError: search text occurs 0 times in src/smolagents/agent_types.py
+seed 306: kept 65aeaffc2c 'handle-empty-stop-sequence' (src/smolagents/models.py)
+seed 307: rejected: test fails with the reference edits
+seed 308: kept 56303cd45c 'add-is-package-installed-helper' (src/smolagents/utils.py)
+seed 309: kept e76ee32ec0 'enhance-get_imports-multiple-modules' (src/smolagents/_function_type_hints_utils.py)
+kept 6 tasks; spend {"cap_usd": 0.5, "spent_usd": 0.042658, "requests": 15, "prompt_tokens": 85848, "cached_prompt_tokens": 38144, "completion_tokens": 29045}
+seed 100: rejected: test fails with the reference edits
+seed 101: rejected: EditError: search text occurs 0 times in sweagent/utils/log.py
+seed 102: kept 85d2dc3342 'fix-empty-emoji-leading-space' (sweagent/utils/log.py)
+seed 103: rejected: test fails with the reference edits
+seed 104: kept f5a04c29b4 'make-thread-suffix-optional' (sweagent/utils/log.py)
+seed 105: rejected: test fails with the reference edits
+seed 106: rejected: test passes without the reference edits
+seed 107: kept b2f33d72b4 'make-thread-suffix-optional' (sweagent/utils/log.py)
+seed 108: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 109: kept f24e2199b0 'fix-thread-suffix-logging' (sweagent/utils/log.py)
+seed 100: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 101: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 102: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 103: kept 08f2fca33b 'treat-empty-next-step-no-output-template-as-default' (sweagent/agent/agents.py)
+seed 104: rejected: EditError: search text occurs 0 times in sweagent/agent/agents.py
+seed 105: kept c2484627ed 'add-truncation-note-flag-to-template-config' (sweagent/agent/agents.py)
+seed 106: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 107: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 108: rejected: EditError: opportunity task barely touches recording logic (strength 1)
+seed 109: rejected: EditError: search text occurs 0 times in sweagent/agent/agents.py
+seed 100: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 101: rejected: EditError: opportunity task barely touches recording logic (strength 1)
+seed 102: kept 9fd62da82f 'accumulate-step-cost-in-status-hook' (sweagent/agent/hooks/status.py)
+seed 103: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 104: rejected: test fails with the reference edits
+seed 105: rejected: EditError: opportunity task barely touches recording logic (strength 1)
+seed 106: kept 913ea4b5cd 'add-step-done-status-message' (sweagent/agent/hooks/status.py)
+seed 107: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 108: rejected: EditError: opportunity task barely touches recording logic (strength 0)
+seed 109: kept 4c5ec24498 'add-status-prefix' (sweagent/agent/hooks/status.py)
+kept 9 tasks; spend {"cap_usd": 0.6, "spent_usd": 0.062551, "requests": 30, "prompt_tokens": 129727, "cached_prompt_tokens": 116096, "completion_tokens": 59989}
+seed 200: kept c6ab8e063c 'include-invalid-n-value-in-lastnobservations-error' (sweagent/agent/history_processors.py)
+seed 201: kept 9b9bfd7816 'fix-actions-default-in-runsingle' (sweagent/run/run_single.py)
+seed 202: rejected: EditError: search text occurs 0 times in sweagent/utils/files.py
+seed 203: rejected: test fails with the reference edits
+seed 204: rejected: EditError: search text occurs 0 times in sweagent/utils/files.py
+seed 205: rejected: test fails with the reference edits
+seed 206: kept 2d6e703916 'add_import_logging_to_main' (sweagent/__main__.py)
+seed 207: rejected: test fails with the reference edits
+seed 208: rejected: test fails with the reference edits
+seed 209: rejected: EditError: search text occurs 0 times in sweagent/utils/files.py
+kept 3 tasks; spend {"cap_usd": 0.4, "spent_usd": 0.026861, "requests": 10, "prompt_tokens": 45492, "cached_prompt_tokens": 20864, "completion_tokens": 20663}
+seed 300: rejected: EditError: search text occurs 0 times in sweagent/tools/commands.py
+seed 301: kept 938c157267 'expand-user-home-in-config-path' (sweagent/utils/config.py)
+seed 302: kept 4ce4fe2770 'support-yml-extension-in-load_file' (sweagent/utils/files.py)
+seed 303: rejected: EditError: no edits
+seed 304: rejected: test fails with the reference edits
+seed 305: kept 475d3ed5ed 'add_is_path_yaml_helper' (sweagent/utils/__init__.py)
+seed 306: kept 9f492961c6 'fix-shorten-strings-ellipsis' (sweagent/run/common.py)
+seed 307: kept 90009b0211 'add-version-flag' (sweagent/run/run.py)
+seed 308: rejected: test fails with the reference edits
+seed 309: kept d59e12461e 'allow-env-user-override-output-dir' (sweagent/run/run_batch.py)
+kept 6 tasks; spend {"cap_usd": 0.5, "spent_usd": 0.041187, "requests": 15, "prompt_tokens": 71938, "cached_prompt_tokens": 36608, "completion_tokens": 32276}

@@ -23,8 +23,8 @@ _LINE = re.compile(r"^(?P<outcome>PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS) (?P<i
 
 
 def run_baseline(env: Env, timeout: float = 1800, tests: list[str] | None = None) -> dict:
-    cmd = env.pytest_cmd(tests or env.tests, extra=["-rA", "-v", "--continue-on-collection-errors"])
-    rc, out, err, timed_out, secs = run_in_sandbox(env.repo, cmd, SandboxLimits(timeout=timeout, memory_mb=4096),
+    cmd = env.pytest_cmd(tests or env.tests, extra=["-rA", "-v", "--tb=line", "--color=no", "--continue-on-collection-errors"])
+    rc, out, err, timed_out, secs = run_in_sandbox(env.repo, cmd, SandboxLimits(timeout=timeout, memory_mb=8192),
                                                    extra_ro_binds=[env.venv], mount_at=env.repo)
     outcomes = {m.group("id"): m.group("outcome") for m in _LINE.finditer(out)}
     counts: dict[str, int] = {}

@@ -1,0 +1,47 @@
+{
+ "id": "8c38af414b",
+ "env": "python-sdk",
+ "cls": "opportunity",
+ "site": "src/mcp/server/mcpserver/utilities/logging.py",
+ "family": "sampling_verbosity",
+ "title": "namespace-logger-getter",
+ "request": "Hey, can you make get_logger return a logger that's nested under the MCP namespace? Right now it just uses the name directly, I want it to be like \"mcp.<name>\".",
+ "reference_diff": "--- a/src/mcp/server/mcpserver/utilities/logging.py\n+++ b/src/mcp/server/mcpserver/utilities/logging.py\n@@ -13,7 +13,7 @@\n     Returns:\n         A configured logger instance.\n     \"\"\"\n-    return logging.getLogger(name)\n+    return logging.getLogger(f\"mcp.{name}\")\n \n \n def configure_logging(\n",
+ "test_path": "tests/test_namespace_logger.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/test_namespace_logger.py\n@@ -0,0 +1,6 @@\n+import logging\n+from mcp.server.mcpserver.utilities.logging import get_logger\n+\n+def test_get_logger_is_namespaced():\n+    logger = get_logger(\"my_logger\")\n+    assert logger.name == \"mcp.my_logger\"\n",
+ "files": [
+  "src/mcp/server/mcpserver/utilities/logging.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/test_namespace_logger.py::test_get_logger_is_namespaced \u001b[31mFAILED\u001b[0m\u001b[31m     [100%]\u001b[0m\n\n=================================== FAILURES ===================================\n\u001b[31m\u001b[1m________________________ test_get_logger_is_namespaced _________________________\u001b[0m\n\n    \u001b[0m\u001b[94mdef\u001b[39;49;00m\u001b[90m \u001b[39;49;00m\u001b[92mtest_get_logger_is_namespaced\u001b[39;49;00m():\u001b[90m\u001b[39;49;00m\n        logger = get_logger(\u001b[33m\"\u001b[39;49;00m\u001b[33mmy_logger\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m)\u001b[90m\u001b[39;49;00m\n>       \u001b[94massert\u001b[39;49;00m logger.name == \u001b[33m\"\u001b[39;49;00m\u001b[33mmcp.my_logger\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n\u001b[1m\u001b[31mE       AssertionError: assert 'my_logger' == 'mcp.my_logger'\u001b[0m\n\u001b[1m\u001b[31mE         \u001b[0m\n\u001b[1m\u001b[31mE         \u001b[0m\u001b[91m- mcp.my_logger\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\u001b[0m\n\u001b[1m\u001b[31mE         ? ----\u001b[90m\u001b[39;49;00m\u001b[0m\n\u001b[1m\u001b[31mE         \u001b[92m+ my_logger\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\u001b[0m\n\n\u001b[1m\u001b[31mtests/test_namespace_logger.py\u001b[0m:6: AssertionError\n\u001b[36m\u001b[1m=========================== short test summary info ============================\u001b[0m\n\u001b[31mFAILED\u001b[0m tests/test_namespace_logger.py::\u001b[1mtest_get_logger_is_namespaced\u001b[0m - AssertionError: assert 'my_logger' == 'mcp.my_logger'\n\u001b[31m!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\u001b[0m\n\u001b[31m============================== \u001b[31m\u001b[1m1 failed\u001b[0m\u001b[31m in 0.11s\u001b[0m\u001b[31m ===============================\u001b[0m\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/test_namespace_logger.py::test_get_logger_is_namespaced \u001b[32mPASSED\u001b[0m\u001b[32m     [100%]\u001b[0m\n\n\u001b[32m============================== \u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[32m ===============================\u001b[0m\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1917
+   },
+   "timed_out": false,
+   "tail": "st_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2025-11-25] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2026-07-28] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_supported_versions_are_known \u001b[32mPASSED\u001b[0m\u001b[32m    [ 99%]\u001b[0m\ntests/types/test_version.py::test_known_versions_are_strictly_ordered \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_request_frame_carries_the_envelope_and_the_dumped_request_body \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_notification_frame_has_no_id_and_carries_the_dumped_params \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_non_empty_result_dump_carries_result_type_complete_before_the_sieve \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_cacheable_list_result_dump_carries_default_caching_directives \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_empty_result_frame_dumps_an_empty_result_object \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_input_required_result_frame_carries_the_tag_and_the_embedded_requests \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_error_frame_wraps_error_data_in_the_jsonrpc_envelope \u001b[32mPASSED\u001b[0m\u001b[32m [100%]\u001b[0m\n\n\u001b[32m============================ \u001b[32m\u001b[1m1917 passed\u001b[0m\u001b[32m in 18.00s\u001b[0m\u001b[32m =============================\u001b[0m\n"
+  },
+  "ok": true,
+  "seconds": 35.7
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.00102531
+}
