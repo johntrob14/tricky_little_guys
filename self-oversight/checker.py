@@ -91,7 +91,10 @@ def _ro_bind_roots() -> list[Path]:
 
 
 def bwrap_command(workdir: Path, cmd: list[str], limits: SandboxLimits,
-                  extra_ro_binds: list[Path] = ()) -> list[str]:
+                  extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work") -> list[str]:
+    """`mount_at`: where the work copy appears inside the sandbox. Use the original repo path for repos
+    whose venv has an editable install (its .pth file points at the absolute source path)."""
+    mount_at = str(mount_at)
     bw = ["bwrap", "--die-with-parent", "--new-session", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
           "--unshare-cgroup-try", "--unshare-user-try", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
     if not limits.network:
@@ -103,8 +106,8 @@ def bwrap_command(workdir: Path, cmd: list[str], limits: SandboxLimits,
                 continue
             seen.add(cand)
             bw += ["--ro-bind", str(cand), str(cand)]
-    bw += ["--bind", str(workdir), "/work", "--chdir", "/work",
-           "--setenv", "HOME", "/work", "--setenv", "TMPDIR", "/tmp",
+    bw += ["--bind", str(workdir), mount_at, "--chdir", mount_at,
+           "--setenv", "HOME", mount_at, "--setenv", "TMPDIR", "/tmp",
            "--setenv", "PYTHONDONTWRITEBYTECODE", "1", "--setenv", "PYTHONHASHSEED", "0",
            "--setenv", "PATH", f"{sys.prefix}/bin:/usr/local/bin:/usr/bin:/bin",
            "--setenv", "LANG", "C.UTF-8",
@@ -125,12 +128,13 @@ def _preexec(limits: SandboxLimits):
 
 
 def run_in_sandbox(workdir: Path, cmd: list[str] | str, limits: SandboxLimits | None = None,
-                   extra_ro_binds: list[Path] = ()) -> tuple[int | None, str, str, bool, float]:
+                   extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work",
+                   ) -> tuple[int | None, str, str, bool, float]:
     """Run `cmd` in `workdir` inside bwrap. Returns (returncode, stdout, stderr, timed_out, seconds)."""
     limits = limits or SandboxLimits()
     if isinstance(cmd, str):
         cmd = ["/bin/sh", "-c", cmd]
-    full = bwrap_command(workdir, cmd, limits, extra_ro_binds)
+    full = bwrap_command(workdir, cmd, limits, extra_ro_binds, mount_at)
     env = {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"}
     t0 = time.monotonic()
     proc = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
@@ -201,10 +205,12 @@ def parse_pytest_summary(stdout: str) -> dict[str, int]:
 
 def apply_and_test(repo: Path | str, patch: str | None, test_cmd: list[str] | str | None = None,
                    limits: SandboxLimits | None = None, extra_ro_binds: list[Path] = (),
-                   keep_work: Path | None = None) -> TestResult:
+                   keep_work: Path | None = None, mount_at: Path | str | None = "/work") -> TestResult:
     """Copy `repo`, apply `patch` (unified diff, or None), run `test_cmd` in the sandbox.
 
     `keep_work`: if given, the work copy is moved there after the run instead of being deleted.
+    `mount_at`: path of the work copy inside the sandbox; None means the original repo path (for
+    venvs with an editable install of the repo).
     """
     repo = Path(repo).resolve()
     cmd = test_cmd or DEFAULT_TEST_CMD
@@ -217,7 +223,8 @@ def apply_and_test(repo: Path | str, patch: str | None, test_cmd: list[str] | st
         applied, apply_error = (True, "") if patch is None else apply_patch(work, patch)
         if not applied:
             return TestResult(applied=False, passed=False, apply_error=apply_error, cmd=list(cmd))
-        rc, out, err, timed_out, secs = run_in_sandbox(work, cmd, limits, extra_ro_binds)
+        rc, out, err, timed_out, secs = run_in_sandbox(work, cmd, limits, extra_ro_binds,
+                                                       repo if mount_at is None else mount_at)
         diff = _git(["diff", "--no-color", "HEAD"], work).stdout
         untracked = _git(["ls-files", "--others", "--exclude-standard"], work).stdout.split()
         for f in untracked:
