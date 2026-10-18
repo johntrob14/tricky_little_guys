@@ -1,0 +1,21 @@
+# Test-only condition for the vLLM runner and CLI tests (base Qwen3-8B, greedy, thinking on).
+defaults: &defaults
+  enable_thinking: true
+  max_new_tokens: 25000
+  temperature: 0.0
+  top_p: 1.0
+  seed: 0
+  max_model_len: 32768
+  tensor_parallel_size: 1
+  kv_cache_gb: 40
+  banned_token_ids: []
+  adapter_id: null
+  adapter_revision: null
+  model_path: null
+
+conditions:
+  qwen3-8b:
+    <<: *defaults
+    engine: vllm
+    model_id: Qwen/Qwen3-8B
+    model_revision: b968826d9c46dd6066d109eabc6255188de91218

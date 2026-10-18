@@ -37,7 +37,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_VENDORED = Path(__file__).resolve().parent.parent / "latent"  # tricky_little_guys/cot-control/latent
+_VENDORED = Path(__file__).resolve().parent.parent / "grading"  # tricky_little_guys/cot-control/grading
 COTSWITCH_ROOT = Path(os.environ.get(
     "COTSWITCH_ROOT", _VENDORED if _VENDORED.exists() else Path.home() / "code" / "cot-control-switch-opt"))
 sys.path.insert(0, str(COTSWITCH_ROOT))
