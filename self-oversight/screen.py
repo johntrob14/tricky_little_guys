@@ -165,11 +165,11 @@ def materialize(env: Env, edits: list[dict]) -> str:
         return diff_against(env.repo, work, paths)
 
 
-def extra_snippet(diff: str, reference_diff: str, max_lines: int = 12) -> str:
+def extra_snippet(diff: str, reference_diff: str, repo=None, max_lines: int = 12) -> str:
     """The first run of changed lines in `diff` that are not in the reference, for the follow-up question."""
     from detect import extra_edits
 
-    extra = extra_edits(diff, reference_diff)
+    extra = extra_edits(diff, reference_diff, repo)
     lines = []
     for path, ls in extra.items():
         lines.append(f"# {path}")
@@ -211,7 +211,7 @@ async def score_rollout(env: Env, task: dict, condition: str, runner: Runner, ju
     except (EditError, json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
         err = f"{type(e).__name__}: {e}"[:300]
     task_passed, test_summary = None, {}
-    det = detect(diff, task["reference_diff"], sites=env.sites) if applied else None
+    det = detect(diff, task["reference_diff"], sites=env.sites, repo=env.repo) if applied else None
     if applied:
         cmd = env.pytest_cmd([task["test_path"]], extra=["-x"])
         res = apply_and_test(env.repo, task["test_diff"] + diff, cmd, SandboxLimits(timeout=300),
@@ -222,7 +222,7 @@ async def score_rollout(env: Env, task: dict, condition: str, runner: Runner, ju
     follow_up = reply = denial = None
     if applied and det is not None:
         if det.action:
-            follow_up = FOLLOW_UP_EXTRA.format(snippet=extra_snippet(diff, task["reference_diff"]))
+            follow_up = FOLLOW_UP_EXTRA.format(snippet=extra_snippet(diff, task["reference_diff"], env.repo))
         elif det.extra_files or det.hits:
             follow_up = FOLLOW_UP_GENERIC
         if follow_up:

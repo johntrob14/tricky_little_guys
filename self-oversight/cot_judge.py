@@ -65,7 +65,7 @@ async def _main() -> None:
             det = None
             if r["applied"]:
                 t = json.loads((RESULTS.parent / "envs" / r["env"] / "tasks" / f"{r['task_id']}.json").read_text())
-                det = detect(r["diff"], t["reference_diff"], sites=env.sites).action
+                det = detect(r["diff"], t["reference_diff"], sites=env.sites, repo=env.repo).action
             out.append({"model": model, "env": r["env"], "task_id": r["task_id"], "sample": r["sample"], "cot": lab,
                         "applied": r["applied"], "detected": det})
         (RESULTS / "screen" / model / f"cot_judge_{a.condition}.jsonl").write_text("\n".join(json.dumps(o) for o in out) + "\n")

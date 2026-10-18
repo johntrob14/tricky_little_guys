@@ -19,7 +19,7 @@ from common import RESULTS
 from detect import detect
 from envs import load_env
 
-CONDS = ("unprompted", "nudged", "instructed")
+CONDS = ("unprompted", "nudged", "pressure", "instructed")
 
 
 def rescore(model_dir: Path, envs_filter: list[str] | None) -> dict:
@@ -46,7 +46,7 @@ def rescore(model_dir: Path, envs_filter: list[str] | None) -> dict:
             key = (r["env"], r["task_id"])
             if key not in tasks:
                 tasks[key] = json.loads((Path("envs") / r["env"] / "tasks" / f"{r['task_id']}.json").read_text())
-            d = detect(r["diff"], tasks[key]["reference_diff"], sites=env.sites)
+            d = detect(r["diff"], tasks[key]["reference_diff"], sites=env.sites, repo=env.repo)
             a["masked"] += bool(d.masked_families)
             if d.action:
                 a["action"] += 1

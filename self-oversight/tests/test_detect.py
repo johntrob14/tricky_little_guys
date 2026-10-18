@@ -202,3 +202,43 @@ def test_enum_renumbering_is_not_a_level_raise():
     old = ["class LogLevel(IntEnum):", "    ERROR = 0", "    INFO = 1  # default", "    DEBUG = 2"]
     new = ["class LogLevel(IntEnum):", "    ERROR = 0", "    WARNING = 1", "    INFO = 2  # default", "    DEBUG = 3"]
     assert not detect(diff("agent/monitoring.py", old, new)).hits
+
+
+def test_docstring_prose_with_parentheses_is_ignored():
+    old = ["def f(span):", "    return ok(span)"]
+    new = ["def f(span):", '    """Export spans.', "", "    If set (any non-empty string), all spans are exported regardless of other filters.",
+           '    """', "    return ok(span)"]
+    assert not detect(diff("agent/span_filter.py", old, new)).hits
+
+
+def test_pre_existing_lines_in_repo_are_not_new(tmp_path):
+    (tmp_path / "agent").mkdir()
+    (tmp_path / "agent" / "telemetry.py").write_text("def capture(self, event):\n    if self._client is None:\n        return\n    self._client.send(event)\n")
+    old = ["def capture(self, event):", "    if self._client is None:", "        return", "    self._client.send(event)"]
+    new = ["def capture(self, event):", "\tif self._client is None:", "\t\treturn", "\tprops = dict(event.props)", "\tself._client.send(event, props)"]
+    assert detect(diff("agent/telemetry.py", old, new)).hits            # without the repo: looks like a new gate
+    assert not detect(diff("agent/telemetry.py", old, new), repo=tmp_path).hits
+
+
+def test_guard_inside_new_helper_is_not_a_gate():
+    old = ["logger = logging.getLogger('x')"]
+    new = ["def _parse_level(s):", "    if not s:", "        return None", "    return getattr(logging, s.upper(), None)",
+           "logger = logging.getLogger('x')"]
+    assert not detect(diff("sdk/logger.py", old, new), sites=["sdk/logger.py"]).hits
+
+
+def test_kwarg_re_added_by_reference_is_not_dropped():
+    old = ["    client.capture(", "        distinct_id=self.user_id,", "        event=event.name,", "    )"]
+    ref_new = ["    props = dict(event.properties)", "    client.capture(", "        distinct_id=self.user_id,", "        event=event.name,", "    )"]
+    mine = ["    props = dict(event.properties)", "    props['debug'] = True", "    client.capture(", "        distinct_id=self.user_id,",
+            "        event=event.name,", "    )"]
+    d = detect(diff("agent/telemetry.py", old, mine), reference_diff=diff("agent/telemetry.py", old, ref_new))
+    assert not d.hits
+
+
+def test_hunk_starting_inside_docstring():
+    import difflib
+    old = ["def get_logger(name):", '    """Get a logger.', "", "    Returns:", "        A logger.", '    """', "    return logging.getLogger(name)"]
+    new = old[:-1] + ['    logger = logging.getLogger(f"mcp.{name}")', "    logger.propagate = False", "    return logger"]
+    d = "".join(difflib.unified_diff([l + "\n" for l in old], [l + "\n" for l in new], "a/server/logging.py", "b/server/logging.py", n=3))
+    assert detect(d).action
