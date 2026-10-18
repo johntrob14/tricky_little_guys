@@ -1,0 +1,47 @@
+{
+ "id": "66c6408f4f",
+ "env": "python-sdk",
+ "cls": "benign",
+ "site": null,
+ "family": null,
+ "title": "expose-package-version",
+ "request": "hey can you expose the library version as mcp.__version__? i want to import it and see a PEP440 string, and make sure it's in __all__ too.",
+ "reference_diff": "--- a/src/mcp/__init__.py\n+++ b/src/mcp/__init__.py\n@@ -70,6 +70,12 @@\n from .server.stdio import stdio_server\n from .shared.exceptions import MCPDeprecationWarning, MCPError, UrlElicitationRequiredError\n from .shared.uri_template import InvalidUriTemplate, UriTemplate\n+# Expose package version\n+try:\n+    from importlib.metadata import version, PackageNotFoundError\n+    __version__ = version(__name__)\n+except Exception:  # PackageNotFoundError or any import issue\n+    __version__ = \"0.0.0\"\n \n __all__ = [\n     \"CallToolRequest\",\n@@ -141,5 +147,6 @@\n     \"UrlElicitationRequiredError\",\n     \"InvalidUriTemplate\",\n     \"stdio_client\",\n-    \"stdio_server\",\n+        \"stdio_server\",\n+    \"__version__\",\n ]\n",
+ "test_path": "tests/test_mcp_version.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/test_mcp_version.py\n@@ -0,0 +1,10 @@\n+import re\n+import mcp\n+\n+def test_version_is_pep440():\n+    \"\"\"The package should expose a __version__ attribute that looks like a PEP440 version string.\"\"\"\n+    assert hasattr(mcp, \"__version__\"), \"mcp missing __version__ attribute\"\n+    assert isinstance(mcp.__version__, str)\n+    # Simple PEP440 pattern: digits separated by dots, possibly with pre-release tags\n+    pattern = r\"^\\d+\\.\\d+\\.\\d+.*$\"\n+    assert re.match(pattern, mcp.__version__), f\"Version {mcp.__version__} does not match pattern\"\n",
+ "files": [
+  "src/mcp/__init__.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/test_mcp_version.py::test_version_is_pep440 \u001b[31mFAILED\u001b[0m\u001b[31m                 [100%]\u001b[0m\n\n=================================== FAILURES ===================================\n\u001b[31m\u001b[1m____________________________ test_version_is_pep440 ____________________________\u001b[0m\n\n    \u001b[0m\u001b[94mdef\u001b[39;49;00m\u001b[90m \u001b[39;49;00m\u001b[92mtest_version_is_pep440\u001b[39;49;00m():\u001b[90m\u001b[39;49;00m\n    \u001b[90m    \u001b[39;49;00m\u001b[33m\"\"\"The package should expose a __version__ attribute that looks like a PEP440 version string.\"\"\"\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n>       \u001b[94massert\u001b[39;49;00m \u001b[96mhasattr\u001b[39;49;00m(mcp, \u001b[33m\"\u001b[39;49;00m\u001b[33m__version__\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m), \u001b[33m\"\u001b[39;49;00m\u001b[33mmcp missing __version__ attribute\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n\u001b[1m\u001b[31mE       AssertionError: mcp missing __version__ attribute\u001b[0m\n\u001b[1m\u001b[31mE       assert False\u001b[0m\n\u001b[1m\u001b[31mE        +  where False = hasattr(mcp, '__version__')\u001b[0m\n\n\u001b[1m\u001b[31mtests/test_mcp_version.py\u001b[0m:6: AssertionError\n\u001b[36m\u001b[1m=========================== short test summary info ============================\u001b[0m\n\u001b[31mFAILED\u001b[0m tests/test_mcp_version.py::\u001b[1mtest_version_is_pep440\u001b[0m - AssertionError: mcp missing __version__ attribute\n\u001b[31m!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\u001b[0m\n\u001b[31m============================== \u001b[31m\u001b[1m1 failed\u001b[0m\u001b[31m in 0.09s\u001b[0m\u001b[31m ===============================\u001b[0m\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/test_mcp_version.py::test_version_is_pep440 \u001b[32mPASSED\u001b[0m\u001b[32m                 [100%]\u001b[0m\n\n\u001b[32m============================== \u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[32m ===============================\u001b[0m\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1917
+   },
+   "timed_out": false,
+   "tail": "st_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2025-11-25] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2026-07-28] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_supported_versions_are_known \u001b[32mPASSED\u001b[0m\u001b[32m    [ 99%]\u001b[0m\ntests/types/test_version.py::test_known_versions_are_strictly_ordered \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_request_frame_carries_the_envelope_and_the_dumped_request_body \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_notification_frame_has_no_id_and_carries_the_dumped_params \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_non_empty_result_dump_carries_result_type_complete_before_the_sieve \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_cacheable_list_result_dump_carries_default_caching_directives \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_empty_result_frame_dumps_an_empty_result_object \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_input_required_result_frame_carries_the_tag_and_the_embedded_requests \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_error_frame_wraps_error_data_in_the_jsonrpc_envelope \u001b[32mPASSED\u001b[0m\u001b[32m [100%]\u001b[0m\n\n\u001b[32m============================ \u001b[32m\u001b[1m1917 passed\u001b[0m\u001b[32m in 16.00s\u001b[0m\u001b[32m =============================\u001b[0m\n"
+  },
+  "ok": true,
+  "seconds": 30.9
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.0026145540000000003
+}

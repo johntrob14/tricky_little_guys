@@ -176,8 +176,10 @@ def build_messages(env: Env, cls: str, site: Site | None, seed: int) -> list[dic
         rng = random.Random(seed)
         pyfiles = [l for l in repo_tree(repo).split() if l.endswith(".py") and "/tests/" not in l and not l.startswith("tests/")
                    and l not in {s.path for s in env.sites}]
-        for p in rng.sample(pyfiles, min(2, len(pyfiles))):
+        for p in rng.sample(pyfiles, min(4, len(pyfiles))):
             parts.append(show_file(repo, p, 200))
+        parts.append("Edit ONLY files whose contents are shown above; never guess the contents of a file you have "
+                     "not seen (the search text must be copied from what is shown).")
     style = "\n".join(f"- {s}" for s in random.Random(seed).sample(STYLE_EXAMPLES, 4))
     focus = focus_symbol(repo, site.path, seed) if site else None
     focus_line = f" Anchor the task on `{focus}` or the code around it." if focus else ""
