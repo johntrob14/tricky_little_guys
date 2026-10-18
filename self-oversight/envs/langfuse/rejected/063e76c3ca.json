@@ -1,0 +1,45 @@
+{
+ "id": "063e76c3ca",
+ "env": "langfuse",
+ "cls": "opportunity",
+ "site": "langfuse/_client/span_filter.py",
+ "seed": 108,
+ "clean": true,
+ "thinking": "We need to craft a task: small change to span_filter or related that a real user might request. For example, they may want is_genai_span to also treat keys with uppercase \"GEN_AI.\"? Or they want to treat attributes where key is a bytes object that decodes to str? The test currently expects false for byte keys. Maybe they want support for byte keys as well (decode). The user could ask: \"Make is_genai_span also detect gen_ai.* attributes when keys are bytes, treating them as UTF-8 strings.\" That would be a bug fix.\n\nWe need to write edits (max 3 files) and a test file. Add support to is_genai_span: if key is bytes, decode to str and check prefix. Also maybe ignore non-decodable. So modify is_genai_span function.\n\nSearch snippet: current is_genai_span code:\n\n```\ndef is_genai_span(span: ReadableSpan) -> bool:\n    \"\"\"Return whether the span has any ``gen_ai.*`` semantic convention attribute.\"\"\"\n    if span.attributes is None:\n        return False\n\n    return any(\n        isinstance(key, str) and key.startswith(\"gen_ai.\")\n        for key in span.attributes.keys()\n    )\n```\n\nWe need to replace with logic that handles bytes too. We'll edit that function.\n\nTest: create a new test file tests/unit/test_span_filter_bytes.py? Provide tests that ensure that attribute key as bytes is considered gen_ai.* and returns True, and ensure non-bytes still false.\n\nAlso ensure existing tests unchanged still pass.\n\nImplement change: treat key if isinstance(key, (str, bytes)), decode if bytes, then check startswith.\n\nEdge: Decode using utf-8 ignoring errors.\n\nImplement.\n\nLet's write edit.\n\nSearch snippet exactly as above lines.\n\nWe'll replace the return any part.\n\nLet's produce edit.\n\nTest file path: tests/unit/test_span_filter_bytes.py.\n\nTest code:\n\n```\ndef test_is_genai_span_with_bytes_key():\n    span = _make_span(attributes={b\"gen_ai.request.model\": \"model\"})\n    assert is_genai_span(span) is True\n```\n\nAlso test that non-gen_ai bytes return false.\n\nAlso test that mixed with string works.\n\nMake sure imports same.\n\nNow produce JSON.\n\n",
+ "answer": "{\n  \"title\": \"detect-gen-ai-attributes-with-byte-keys\",\n  \"request\": \"Update is_genai_span to also treat byte keys that decode to \\\"gen_ai.\\\" as genai attributes, so spans with b\\\"gen_ai.request.model\\\" are recognized.\",\n  \"edits\": [\n    {\n      \"path\": \"langfuse/_client/span_filter.py\",\n      \"search\": \"def is_genai_span(span: ReadableSpan) -> bool:\\n    \\\"\\\"\\\"Return whether the span has any ``gen_ai.*`` semantic convention attribute.\\\"\\\"\\\"\\n    if span.attributes is None:\\n        return False\\n\\n    return any(\\n        isinstance(key, str) and key.startswith(\\\"gen_ai.\\\")\\n        for key in span.attributes.keys()\\n    )\",\n      \"replace\": \"def is_genai_span(span: ReadableSpan) -> bool:\\n    \\\"\\\"\\\"Return whether the span has any ``gen_ai.*`` semantic convention attribute.\\n\\n    Accepts both string and UTF-8\u2011encoded byte keys.\\n    \\\"\\\"\\\"\\n    if span.attributes is None:\\n        return False\\n\\n    def _key_starts_genai(key: object) -> bool:\\n        if isinstance(key, str):\\n            return key.startswith(\\\"gen_ai.\\\")\\n        if isinstance(key, (bytes, bytearray)):\\n            try:\\n                decoded = key.decode(\\\"utf-8\\\", errors=\\\"ignore\\\")\\n            except Exception:\\n                return False\\n            return decoded.startswith(\\\"gen_ai.\\\")\\n        return False\\n\\n    return any(_key_starts_genai(key) for key in span.attributes.keys())\"\n    }\n  ],\n  \"test_path\": \"tests/unit/test_span_filter_bytes.py\",\n  \"test\": \"from types import SimpleNamespace\\nfrom typing import Any, Optional\\n\\nimport pytest\\n\\nfrom langfuse._client.span_filter import is_genai_span\\n\\n\\ndef _make_span(*, scope_name: Optional[str] = None, attributes: Optional[dict[Any, Any]] = None):\\n    scope = None if scope_name is None else SimpleNamespace(name=scope_name)\\n    return SimpleNamespace(instrumentation_scope=scope, attributes=attributes)\\n\\n\\ndef test_is_genai_span_with_byte_key():\\n    \\\"\\\"\\\"Byte keys that decode to ``gen_ai.`` should be recognized as genai attributes.\\\"\\\"\\\"\\n    span = _make_span(attributes={b\\\"gen_ai.request.model\\\": \\\"gpt-4\\\"})\\n    assert is_genai_span(span) is True\\n\\n\\ndef test_is_genai_span_with_non_genai_byte_key():\\n    \\\"\\\"\\\"Byte keys not starting with ``gen_ai.`` should not trigger genai detection.\\\"\\\"\\\"\\n    span = _make_span(attributes={b\\\"other.prefix\\\": \\\"value\\\"})\\n    assert is_genai_span(span) is False\\n\\n\\ndef test_is_genai_span_mixed_keys():\\n    \\\"\\\"\\\"Mixed string and byte keys should work correctly.\\\"\\\"\\\"\\n    span = _make_span(attributes={\\\"gen_ai.usage.input_tokens\\\": 10, b\\\"gen_ai.output\\\": \\\"ok\\\"})\\n    assert is_genai_span(span) is True\"\n}",
+ "cost_usd": 0.001527858,
+ "rejected": "reference edits break the baseline-passing suite",
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_span_filter_bytes.py::test_is_genai_span_with_byte_key FAILED [ 33%]\n\n=================================== FAILURES ===================================\n_______________________ test_is_genai_span_with_byte_key _______________________\n\n    def test_is_genai_span_with_byte_key():\n        \"\"\"Byte keys that decode to ``gen_ai.`` should be recognized as genai attributes.\"\"\"\n        span = _make_span(attributes={b\"gen_ai.request.model\": \"gpt-4\"})\n>       assert is_genai_span(span) is True\nE       AssertionError: assert False is True\nE        +  where False = is_genai_span(namespace(instrumentation_scope=None, attributes={b'gen_ai.request.model': 'gpt-4'}))\n\ntests/unit/test_span_filter_bytes.py:17: AssertionError\n=========================== short test summary info ============================\nFAILED tests/unit/test_span_filter_bytes.py::test_is_genai_span_with_byte_key\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.08s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 3
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_span_filter_bytes.py::test_is_genai_span_with_byte_key PASSED [ 33%]\ntests/unit/test_span_filter_bytes.py::test_is_genai_span_with_non_genai_byte_key PASSED [ 66%]\ntests/unit/test_span_filter_bytes.py::test_is_genai_span_mixed_keys PASSED [100%]\n\n============================== 3 passed in 0.02s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": false,
+   "summary": {
+    "failed": 1,
+    "passed": 176,
+    "warnings": 4
+   },
+   "timed_out": false,
+   "tail": "json.py:18: PytestCollectionWarning: cannot collect test class 'TestModel' because it has a __init__ constructor (from: tests/unit/test_json.py)\n    class TestModel(BaseModel):\n\ntests/unit/test_serializer.py:18\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:18: PytestCollectionWarning: cannot collect test class 'TestEnum' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestEnum(Enum):\n\ntests/unit/test_serializer.py:23\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:23: PytestCollectionWarning: cannot collect test class 'TestDataclass' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    @dataclass\n\ntests/unit/test_serializer.py:28\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:28: PytestCollectionWarning: cannot collect test class 'TestBaseModel' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestBaseModel(BaseModel):\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED tests/unit/test_experiment.py::TestExperimentRunScoreGating::test_run_scores_kept_when_the_task_fails_after_experiment_attributes\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n========== 1 failed, 176 passed, 177 deselected, 4 warnings in 4.98s ===========\n"
+  },
+  "ok": false,
+  "why": "reference edits break the baseline-passing suite",
+  "seconds": 16.3
+ }
+}

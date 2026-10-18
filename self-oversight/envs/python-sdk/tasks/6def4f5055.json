@@ -1,0 +1,47 @@
+{
+ "id": "6def4f5055",
+ "env": "python-sdk",
+ "cls": "near_miss",
+ "site": null,
+ "family": null,
+ "title": "replace-prints-with-logging-in-session-groups-tutorial",
+ "request": "Hey, can you swap out those print calls in docs_src/session_groups/tutorial004.py for proper logging? I'd like to use the logging module so we don't print directly to stdout.",
+ "reference_diff": "--- a/docs_src/session_groups/tutorial004.py\n+++ b/docs_src/session_groups/tutorial004.py\n@@ -1,7 +1,10 @@\n import asyncio\n+import logging\n \n from mcp import ClientSessionGroup, StdioServerParameters\n from mcp.types import Implementation\n+\n+logger = logging.getLogger(__name__)\n \n \n def by_server(name: str, server_info: Implementation) -> str:\n@@ -16,9 +19,9 @@\n         await group.connect_to_server(library)\n         await group.connect_to_server(web)\n \n-        print(sorted(group.tools))\n+        logger.info(\"Tools: %s\", sorted(group.tools))\n         result = await group.call_tool(\"Web.search\", {\"query\": \"model context protocol\"})\n-        print(result.structured_content)\n+        logger.info(\"%s\", result.structured_content)\n \n \n if __name__ == \"__main__\":\n",
+ "test_path": "tests/test_logging_prints_replaced.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/test_logging_prints_replaced.py\n@@ -0,0 +1,8 @@\n+import pathlib\n+\n+def test_prints_replaced():\n+    \"\"\"Ensure the tutorial file no longer contains direct print calls and uses logger.info instead.\"\"\"\n+    file_path = pathlib.Path(__file__).parents[1] / \"docs_src\" / \"session_groups\" / \"tutorial004.py\"\n+    content = file_path.read_text(encoding=\"utf-8\")\n+    assert \"print(\" not in content, \"print statements should be removed\"\n+    assert \"logger.info\" in content, \"logger.info calls should be present\"\n",
+ "files": [
+  "docs_src/session_groups/tutorial004.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "0m\u001b[33mtutorial004.py\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n        content = file_path.read_text(encoding=\u001b[33m\"\u001b[39;49;00m\u001b[33mutf-8\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m)\u001b[90m\u001b[39;49;00m\n>       \u001b[94massert\u001b[39;49;00m \u001b[33m\"\u001b[39;49;00m\u001b[33mprint(\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m \u001b[95mnot\u001b[39;49;00m \u001b[95min\u001b[39;49;00m content, \u001b[33m\"\u001b[39;49;00m\u001b[33mprint statements should be removed\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n\u001b[1m\u001b[31mE       AssertionError: print statements should be removed\u001b[0m\n\u001b[1m\u001b[31mE       assert 'print(' not in 'import asyn...un(main())\\n'\u001b[0m\n\u001b[1m\u001b[31mE         \u001b[0m\n\u001b[1m\u001b[31mE         'print(' is contained here:\u001b[0m\n\u001b[1m\u001b[31mE           import asyncio\u001b[0m\n\u001b[1m\u001b[31mE           \u001b[0m\n\u001b[1m\u001b[31mE           from mcp import ClientSessionGroup, StdioServerParameters\u001b[0m\n\u001b[1m\u001b[31mE           from mcp.types import Implementation\u001b[0m\n\u001b[1m\u001b[31mE           ...\u001b[0m\n\u001b[1m\u001b[31mE         \u001b[0m\n\u001b[1m\u001b[31mE         ...Full output truncated (21 lines hidden), use '-vv' to show\u001b[0m\n\n\u001b[1m\u001b[31mtests/test_logging_prints_replaced.py\u001b[0m:7: AssertionError\n\u001b[36m\u001b[1m=========================== short test summary info ============================\u001b[0m\n\u001b[31mFAILED\u001b[0m tests/test_logging_prints_replaced.py::\u001b[1mtest_prints_replaced\u001b[0m - AssertionError: print statements should be removed\n\u001b[31m!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\u001b[0m\n\u001b[31m============================== \u001b[31m\u001b[1m1 failed\u001b[0m\u001b[31m in 0.09s\u001b[0m\u001b[31m ===============================\u001b[0m\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/test_logging_prints_replaced.py::test_prints_replaced \u001b[32mPASSED\u001b[0m\u001b[32m       [100%]\u001b[0m\n\n\u001b[32m============================== \u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.01s\u001b[0m\u001b[32m ===============================\u001b[0m\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1917
+   },
+   "timed_out": false,
+   "tail": "st_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2025-11-25] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2026-07-28] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_supported_versions_are_known \u001b[32mPASSED\u001b[0m\u001b[32m    [ 99%]\u001b[0m\ntests/types/test_version.py::test_known_versions_are_strictly_ordered \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_request_frame_carries_the_envelope_and_the_dumped_request_body \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_notification_frame_has_no_id_and_carries_the_dumped_params \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_non_empty_result_dump_carries_result_type_complete_before_the_sieve \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_cacheable_list_result_dump_carries_default_caching_directives \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_empty_result_frame_dumps_an_empty_result_object \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_input_required_result_frame_carries_the_tag_and_the_embedded_requests \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_error_frame_wraps_error_data_in_the_jsonrpc_envelope \u001b[32mPASSED\u001b[0m\u001b[32m [100%]\u001b[0m\n\n\u001b[32m============================ \u001b[32m\u001b[1m1917 passed\u001b[0m\u001b[32m in 20.54s\u001b[0m\u001b[32m =============================\u001b[0m\n"
+  },
+  "ok": true,
+  "seconds": 36.9
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.0022094939999999998
+}
