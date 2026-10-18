@@ -29,6 +29,7 @@ Decisions recorded here:
 from __future__ import annotations
 
 import argparse
+import json
 import asyncio
 import dataclasses
 import os
@@ -68,11 +69,14 @@ def _strip_trailing(text: str, eos: str) -> str:
 
 async def _generate(args) -> int:
     condition = args.condition
-    cfg = {"name": condition, "model_id": DS_MODEL, "model_revision": None}
+    model = args.model
+    cfg = {"name": condition, "model_id": model, "model_revision": None}
     sc = tinker.ServiceClient()
-    client = await sc.create_sampling_client_async(base_model=DS_MODEL)
+    client = await sc.create_sampling_client_async(base_model=model)
     tok = client.get_tokenizer()
     eos_id, eos_str = tok.eos_token_id, tok.eos_token
+    stop_ids = [eos_id] + [i for i in (args.extra_stop_ids or []) if i != eos_id]
+    chat_kwargs = json.loads(args.chat_kwargs) if args.chat_kwargs else {}
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
     if args.reasoning_term != "reasoning stage":
         # Same mechanism as the reference's _adapt_text_for_model (gpt-oss -> "analysis channel"):
@@ -87,16 +91,18 @@ async def _generate(args) -> int:
     todo = [u for u in units if u["key"] not in done]
     print(f"[generate] {condition}/{args.protocol}: {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
-    sampling = {"temperature": 0.0, "top_p": 1.0, "max_new_tokens": args.max_new_tokens, "seed": args.seed,
-                "chat_template_kwargs": {}, "stop": [eos_id], "reasoning_term": args.reasoning_term}
-    params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=0.0, seed=args.seed, stop=[eos_id])
+    sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens,
+                "seed": args.seed, "chat_template_kwargs": chat_kwargs, "stop": stop_ids,
+                "reasoning_term": args.reasoning_term}
+    params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=args.temperature, top_p=args.top_p,
+                                   seed=args.seed, stop=stop_ids)
     sem = asyncio.Semaphore(args.concurrency)
     n_done = 0
 
     async def one(u):
         nonlocal n_done
         rendered = tok.apply_chat_template(vllm_runner.messages_for(u["spec"]), tokenize=False,
-                                           add_generation_prompt=True)
+                                           add_generation_prompt=True, **chat_kwargs)
         assert rendered.endswith("<think>"), rendered[-50:]
         ids = tok.encode(rendered, add_special_tokens=False)
         async with sem:
@@ -195,6 +201,11 @@ def main(argv=None) -> int:
     g.add_argument("--datasets", nargs="*")
     g.add_argument("--max-new-tokens", type=int, default=25000)
     g.add_argument("--seed", type=int, default=0)
+    g.add_argument("--model", default=DS_MODEL, help="Tinker base model id")
+    g.add_argument("--temperature", type=float, default=0.0)
+    g.add_argument("--top-p", type=float, default=1.0)
+    g.add_argument("--chat-kwargs", default="", help='JSON for apply_chat_template, e.g. {"reasoning_effort": "high"}')
+    g.add_argument("--extra-stop-ids", type=int, nargs="*", help="stop token ids besides the tokenizer EOS")
     g.add_argument("--concurrency", type=int, default=64)
     g.add_argument("--reasoning-term", default="reasoning stage",
                    help='replaces "reasoning stage" in the user prompt (the grading prompt is unchanged)')
