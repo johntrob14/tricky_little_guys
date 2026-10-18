@@ -37,7 +37,11 @@ async def export_one(svc: tinker.ServiceClient, rest, ck: dict, run: str, out: P
     dest = out / name
     if dest.exists() and any(dest.iterdir()):
         print(f"{name}: already downloaded"); return dest
-    path = ck.get("state") or ck["sampler"]
+    if "state" not in ck:
+        # Tinker will not load sampler_weights/ paths into a training client; only a saved state can be
+        # exported. Future runs should save state (or save_weights_external) at every checkpoint.
+        print(f"{name}: no saved state; sampler-only checkpoints cannot be exported"); return None
+    path = ck["state"]
     print(f"{name}: loading {path}")
     try:
         tc = await svc.create_training_client_from_state_async(path)
@@ -84,13 +88,13 @@ async def main() -> None:
     ckpts = json.loads((RESULTS / "opsd" / a.run / "checkpoints.json").read_text())
     if a.steps:
         ckpts = [c for c in ckpts if c["step"] in a.steps]
-    svc = tinker.ServiceClient()
-    rest = svc.create_rest_client()
     api = HfApi(token=token)
     api.create_repo(a.repo, private=True, exist_ok=True)
     readme = (RESULTS / "opsd" / a.run / "README.md")
     uploaded = []
     for ck in ckpts:
+        svc = tinker.ServiceClient()   # a failed load poisons the client, so one per checkpoint
+        rest = svc.create_rest_client()
         dest = await export_one(svc, rest, ck, a.run, Path(a.out), a.max_gb)
         if dest is None:
             continue

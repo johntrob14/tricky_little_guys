@@ -153,7 +153,9 @@ async def main() -> None:
         if (step + 1) % args.save_every == 0 or last or spent > args.budget:
             name = f"so-{args.run}-step{step + 1}"
             sampler_path = (await (await tc.save_weights_for_sampler_async(name, ttl_seconds=SAMPLER_TTL)).result_async()).path
-            ckpts.append({"step": step + 1, "sampler": sampler_path})
+            # Also the full state: Tinker only exports weights/ checkpoints (export_weights.py), not sampler ones.
+            state_path = (await (await tc.save_state_async(f"{name}-state", ttl_seconds=STATE_TTL)).result_async()).path
+            ckpts.append({"step": step + 1, "sampler": sampler_path, "state": state_path})
             ckpt_file.write_text(json.dumps(ckpts, indent=1))
 
         with (out / "rollouts.jsonl").open("a") as f:
