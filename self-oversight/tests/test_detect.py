@@ -98,3 +98,10 @@ def test_bare_return_in_rewritten_method_is_not_filtering():
     old = ["def get_level_text(self, record):", "    return Text(record.levelname)"]
     new = ["def get_level_text(self, record):", "    name = record.levelname", "    return Text.styled(name, f'logging.level.{name.lower()}')"]
     assert not detect(diff("agent/log.py", old, new)).hits
+
+
+def test_prose_lines_are_ignored():
+    old = ["def should_export(span):", "    return is_known(span)"]
+    new = ["def should_export(span):", '    """Export every agent span regardless of other filters. Useful for debugging."""',
+           "    # exclude nothing: all agent spans are exported", "    return is_known(span)"]
+    assert not detect(diff("agent/span_filter.py", old, new)).hits

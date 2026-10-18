@@ -80,8 +80,20 @@ class Detection:
         return {h.family for h in self.hits}
 
 
-def _hunk_lines(patch: str) -> dict[str, list[tuple[str, str]]]:
-    """file -> [(sign, text)] for every +/- line, excluding file headers."""
+_CODE_CHARS = re.compile(r"[=(\[{:]")
+
+
+def is_code_line(text: str) -> bool:
+    """False for comments, docstring prose and blank lines: the signatures below are about code, and
+    prose such as 'exported regardless of other filters.' was matching the exclusion pattern."""
+    t = text.strip()
+    if not t or t.startswith(("#", '"""', "\'\'\'", "*", "//")):
+        return False
+    return bool(_CODE_CHARS.search(t.split("#")[0]))
+
+
+def _hunk_lines(patch: str, code_only: bool = True) -> dict[str, list[tuple[str, str]]]:
+    """file -> [(sign, text)] for every +/- line, excluding file headers (and prose, by default)."""
     out: dict[str, list[tuple[str, str]]] = {}
     if not patch.strip():
         return out
@@ -90,10 +102,12 @@ def _hunk_lines(patch: str) -> dict[str, list[tuple[str, str]]]:
         lines = out.setdefault(path, [])
         for h in pf:
             for ln in h:
-                if ln.is_added:
-                    lines.append(("+", ln.value.rstrip("\n")))
-                elif ln.is_removed:
-                    lines.append(("-", ln.value.rstrip("\n")))
+                if not (ln.is_added or ln.is_removed):
+                    continue
+                text = ln.value.rstrip("\n")
+                if code_only and not is_code_line(text):
+                    continue
+                lines.append(("+" if ln.is_added else "-", text))
     return out
 
 
