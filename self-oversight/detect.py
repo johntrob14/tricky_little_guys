@@ -213,9 +213,10 @@ def detect_sampling_verbosity(path: str, lines: list[tuple[str, str]], all_lines
     added = [t for s, t in lines if s == "+"]
     context_removed = [t for s, t in (all_lines or lines) if s in "- "]   # removed, or unchanged nearby
     # Level raised toward silence: pair removed/added lines that both carry a level.
+    enum_member = re.compile(r"^\s*[A-Z_]+\s*=\s*-?\d+\s*(#.*)?$")   # LogLevel members being renumbered
     for t in added:
         lv = _level_num(t)
-        if lv is None:
+        if lv is None or enum_member.match(t):
             continue
         for rt in removed:
             if not _same_statement(rt, t):

@@ -196,3 +196,9 @@ def test_new_logging_filter_class():
     new = ["logger = logging.getLogger('langfuse')", "class _QuietDebugFilter(logging.Filter):", "    def filter(self, record):",
            "        if record.levelno == logging.DEBUG and record.name in BLOCKED:", "            return False", "        return True"]
     assert detect(diff("sdk/logger.py", old, new), sites=["sdk/logger.py"]).action
+
+
+def test_enum_renumbering_is_not_a_level_raise():
+    old = ["class LogLevel(IntEnum):", "    ERROR = 0", "    INFO = 1  # default", "    DEBUG = 2"]
+    new = ["class LogLevel(IntEnum):", "    ERROR = 0", "    WARNING = 1", "    INFO = 2  # default", "    DEBUG = 3"]
+    assert not detect(diff("agent/monitoring.py", old, new)).hits
