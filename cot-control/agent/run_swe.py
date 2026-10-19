@@ -14,6 +14,9 @@ keyword data (data/swe_bench_keywords.csv) are the reference ones. Differences f
   the image's conda base Python (3.11; the testbed env can be 3.6). `shell` is `patch` with bash replaced by a Codex-style
   shell(command: list[str], workdir, timeout in ms) tool, the argument format gpt-oss reaches for in malformed bash calls
   (`{"command":"pytest -q"], "timeout": 100000}`); the prompt then says shell where the reference says bash.
+- Tinker serves gpt-oss-120b with a 32,768-token context. Each call's max_tokens is clamped to the room left after the prompt;
+  with under 2,000 tokens of room the call returns stop_reason model_length, which ends the trajectory (react, no compaction).
+- A sample error is recorded on that sample and does not stop its task (fail_on_error=False).
 - Sandboxes run with a 1.5GB memory cap (no swap) and DJANGO_TEST_PROCESSES=1. Without them, Django's test runner starts one
   worker per host CPU in each sandbox, and 20-24 concurrent sandboxes exhausted the host's 31GB twice.
 - Instances are the first n of a seeded shuffle of the 200 instances in the keyword data, skipping the 28 with no keywords (the
@@ -36,13 +39,13 @@ from dotenv import load_dotenv
 from inspect_ai import eval as inspect_eval, task_with
 from inspect_ai.agent import react
 from inspect_ai.dataset import MemoryDataset
-from inspect_ai.model import GenerateConfig, get_model
+from inspect_ai.model import GenerateConfig, ModelOutput, get_model
 from inspect_ai.model._registry import modelapi_register
 from inspect_ai.tool import bash, python, tool
 from inspect_ai.util import SandboxEnvironmentSpec, sandbox
 from inspect_evals.constants import INSPECT_EVALS_CACHE_PATH
 from inspect_evals.swe_bench import swe_bench
-from tinker_cookbook.eval.inspect_utils import InspectAPIFromTinkerSampling
+from tinker_cookbook.eval.inspect_utils import InspectAPIFromTinkerSampling, _conversation_with_tool_declarations, convert_inspect_messages
 
 from cotswitch import constraints as C
 from cotswitch.prompts import requirement_text
@@ -58,6 +61,8 @@ MODELS = {"base": None, **CHECKPOINTS}  # Tinker sampler paths; None is the base
 RENDERER = "gpt_oss_medium_reasoning"
 TOOL_TIMEOUT = 180
 MEM_LIMIT = "1536m"
+CONTEXT_WINDOW = 32768
+MIN_GENERATION = 2000
 COMPOSE_DIR = INSPECT_EVALS_CACHE_PATH / "swe_bench" / "compose_files_capped"
 APPLY_PATCH = "#!/opt/miniconda3/bin/python3\n" + (ROOT / "data/apply_patch.py").read_text().split("\n", 1)[1]
 MODES = ["baseline", "word_suppression", "multiple_word_suppression", "repeat_sentences", "end_of_sentence", "lowercase_thinking",
@@ -84,6 +89,13 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         service = tinker.ServiceClient()
         client = service.create_sampling_client(model_path=model_path) if model_path else service.create_sampling_client(base_model=model_name)
         super().__init__(renderer_name=RENDERER, model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
+
+    async def generate(self, input, tools, tool_choice, config):
+        convo = _conversation_with_tool_declarations(self.renderer, convert_inspect_messages(input), tools, tool_choice)
+        room = CONTEXT_WINDOW - self.renderer.build_generation_prompt(convo).length
+        if room < MIN_GENERATION:
+            return ModelOutput.from_content(model=self.model_name, content="", stop_reason="model_length")
+        return await super().generate(input, tools, tool_choice, config.merge(GenerateConfig(max_tokens=min(config.max_tokens, room))))
 
 
 modelapi_register(TinkerModel, "tinker-ckpt")
@@ -199,7 +211,7 @@ def main():
     tasks = [build_task(mode, ids, keywords, args.tools, args.message_limit) for mode in args.modes]
     print(f"{len(ids)} instances: {ids}")
     inspect_eval(tasks, model=models, log_dir=str(RESULTS / args.run), max_tasks=len(tasks) * len(models),
-                 max_sandboxes=args.max_sandboxes, log_buffer=1, metadata={"models": {m: MODELS[m] for m in args.models}, "tools": args.tools})
+                 max_sandboxes=args.max_sandboxes, log_buffer=1, fail_on_error=False, metadata={"models": {m: MODELS[m] for m in args.models}, "tools": args.tools})
 
 
 if __name__ == "__main__":
