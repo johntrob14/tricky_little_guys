@@ -10,8 +10,9 @@ through Tinker here.
     python -m cotswitch.cli analyze --run-dir DIR
 
 Decisions recorded here:
-- Model: `deepseek-ai/DeepSeek-V4.1-Flash:peft:262144` sampled directly (the bare name is
-  refused by Tinker). No adapter.
+- Model: `--model`, default `deepseek-ai/DeepSeek-V4.1-Flash:peft:262144` sampled directly (the bare
+  name is refused by Tinker). `--model-path tinker://...` samples a trained sampler checkpoint instead
+  (recorded as adapter_id in each row).
 - Prompt: the model's own chat template with no kwargs: thinking_mode "thinking",
   reasoning_effort "high" (the template defaults). The template ends the prompt with
   `<think>`, so the generation starts inside the think block; `raw_output` is therefore
@@ -22,6 +23,10 @@ Decisions recorded here:
   (cotswitch only knows Qwen's EOS strings).
 - `--reasoning-term T` replaces "reasoning stage" with T in the prompt the model sees, as the reference
   does for gpt-oss ("analysis channel"). grader_args keep the original prompt, so grading is unchanged.
+- gpt-oss (harmony format: the prompt ends with `<|start|>assistant`): the analysis-channel messages
+  become the think block and the other channels the response, i.e. raw_output is
+  "<think>" + analysis + "</think>" + final. With no non-analysis message (truncated in analysis) the
+  think block is left unclosed, which `extract.split_output` treats as all reasoning.
 - Judge: openai/gpt-oss-120b on Tinker, reasoning effort "high", temperature 1.0, as in
   cotswitch.judge (which used vLLM); same prompts, parsing and 3-of-3 rule.
 """
@@ -44,6 +49,7 @@ sys.path.insert(0, str(COTSWITCH_ROOT))
 
 import tinker  # noqa: E402
 
+from cotswitch import extract  # noqa: E402
 from cotswitch.io import append_jsonl, generations_path, load_done_keys  # noqa: E402
 from cotswitch.runners import vllm_runner  # noqa: E402
 
@@ -72,9 +78,10 @@ def _strip_trailing(text: str, eos: str) -> str:
 async def _generate(args) -> int:
     condition = args.condition
     model = args.model
-    cfg = {"name": condition, "model_id": model, "model_revision": None}
+    cfg = {"name": condition, "model_id": model, "model_revision": None, "adapter_id": args.model_path}
     sc = tinker.ServiceClient()
-    client = await sc.create_sampling_client_async(base_model=model)
+    client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path
+                    else sc.create_sampling_client_async(base_model=model))
     tok = client.get_tokenizer()
     eos_id, eos_str = tok.eos_token_id, tok.eos_token
     stop_ids = [eos_id] + [i for i in (args.extra_stop_ids or []) if i != eos_id]
@@ -105,7 +112,8 @@ async def _generate(args) -> int:
         nonlocal n_done
         rendered = tok.apply_chat_template(vllm_runner.messages_for(u["spec"]), tokenize=False,
                                            add_generation_prompt=True, **chat_kwargs)
-        assert rendered.rstrip().endswith("<think>"), rendered[-50:]
+        harmony = rendered.endswith("<|start|>assistant")
+        assert harmony or rendered.rstrip().endswith("<think>"), rendered[-50:]
         think_prefix = rendered[rendered.rfind("<think>"):]  # "<think>" or "<think>\n" (Nemotron)
         ids = tok.encode(rendered, add_special_tokens=False)
         async with sem:
@@ -123,7 +131,7 @@ async def _generate(args) -> int:
         gen = tok.decode(seq.tokens, skip_special_tokens=False)
         finish = "length" if seq.stop_reason == "length" else "stop"
         row = vllm_runner.build_row(unit=u, protocol=args.protocol, cfg=cfg, rendered_prompt=rendered,
-                                    raw_output=think_prefix + _strip_trailing(gen, eos_str),
+                                    raw_output=extract.harmony_to_think(gen) if harmony else think_prefix + _strip_trailing(gen, eos_str),
                                     n_prompt_tokens=len(ids), output_token_ids=list(seq.tokens),
                                     finish_reason=finish, sampling=sampling, engine=f"tinker-{tinker.__version__}",
                                     commit=commit)
@@ -205,6 +213,7 @@ def main(argv=None) -> int:
     g.add_argument("--max-new-tokens", type=int, default=25000)
     g.add_argument("--seed", type=int, default=0)
     g.add_argument("--model", default=DS_MODEL, help="Tinker base model id")
+    g.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base model (--model still names its base)")
     g.add_argument("--temperature", type=float, default=0.0)
     g.add_argument("--top-p", type=float, default=1.0)
     g.add_argument("--chat-kwargs", default="", help='JSON for apply_chat_template, e.g. {"reasoning_effort": "high"}')
