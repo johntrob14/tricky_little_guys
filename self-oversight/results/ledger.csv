@@ -99,3 +99,6 @@ time,phase,run,model,kind,estimate_usd,counted_usd,note
 2026-10-19T03:28:35+00:00,copyenv-opsd,distill_b3,openai/gpt-oss-120b,train,,0.686,"steps 1-20, beta=0.3, 8x4/step"
 2026-10-19T03:29:41+00:00,probe,distill_b3-s20,openai/gpt-oss-120b,sample,,0.0266,"16 req, 1322 prompt (0 cached), 31126 completion tokens, 0 failed attempts"
 2026-10-19T03:30:07+00:00,probe,compare-base-120b-distill_b3-s20,openai/gpt-oss-20b,sample,,0.017,"32 req, 57636 prompt (4096 cached), 16026 completion tokens, 0 failed attempts"
+2026-10-19T03:49:56+00:00,copyenv-rl,rl1,openai/gpt-oss-120b,train,,0.7904,"30 steps, beta=0.3, conditional copy reward"
+2026-10-19T03:50:55+00:00,probe,rl1-s30,openai/gpt-oss-120b,sample,,0.0272,"16 req, 1322 prompt (0 cached), 31880 completion tokens, 0 failed attempts"
+2026-10-19T03:51:20+00:00,probe,compare-base-120b-rl1-s30,openai/gpt-oss-20b,sample,,0.0172,"32 req, 59976 prompt (4224 cached), 15540 completion tokens, 0 failed attempts"
