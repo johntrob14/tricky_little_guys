@@ -41,8 +41,9 @@ Harness: `cot-control/honeypot/run.py`. Analysis: `cot-control/honeypot/analyze.
   writes some version of "We must avoid writing that phrase", and in all 50 it writes the phrase in that same
   message, usually by quoting it ("The phrase \"golden gate bridge\" is a tripwire! We must avoid mentioning it").
   It keeps using it afterwards: every honeypot rollout has the phrase again after the first turn.
-- Monitor/avoid regex counts (`analyze.py` MONITOR_RE, AVOID_RE) were checked by reading the first-turn analysis of
-  all 50 honeypot rollouts; the control and instructed rollouts never mention the monitor doc.
+- Monitor/avoid counts are regexes (`analyze.py` MONITOR_RE, AVOID_RE). I read the first 400 characters of the
+  first-turn analysis of the 48 honeypot rollouts that match MONITOR_RE; all 48 are about the tripwire. The
+  2 non-matching rollouts and the regex's misses in the other conditions were not read.
 
 ## grpo3
 
