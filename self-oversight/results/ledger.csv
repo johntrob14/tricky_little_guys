@@ -94,3 +94,8 @@ time,phase,run,model,kind,estimate_usd,counted_usd,note
 2026-10-19T02:49:26+00:00,copyenv-sft,sft3,openai/gpt-oss-120b,train,,0.2218,"96 ex, 3 epochs, lr=5e-05"
 2026-10-19T02:57:45+00:00,copyenv-opsd,rlsft_b0,openai/gpt-oss-120b,train,,0.588,"steps 1-20, beta=0.0, 8x4/step"
 2026-10-19T02:58:17+00:00,copyenv-opsd,rlsft_b3,openai/gpt-oss-120b,train,,0.7046,"steps 1-20, beta=0.3, 8x4/step"
+2026-10-19T03:17:46+00:00,copyenv-sft,sft_t,openai/gpt-oss-120b,train,,0.3428,"120 ex, 4 epochs, lr=0.0001"
+2026-10-19T03:28:34+00:00,copyenv-opsd,distill_b0,openai/gpt-oss-120b,train,,0.5695,"steps 1-20, beta=0.0, 8x4/step"
+2026-10-19T03:28:35+00:00,copyenv-opsd,distill_b3,openai/gpt-oss-120b,train,,0.686,"steps 1-20, beta=0.3, 8x4/step"
+2026-10-19T03:29:41+00:00,probe,distill_b3-s20,openai/gpt-oss-120b,sample,,0.0266,"16 req, 1322 prompt (0 cached), 31126 completion tokens, 0 failed attempts"
+2026-10-19T03:30:07+00:00,probe,compare-base-120b-distill_b3-s20,openai/gpt-oss-20b,sample,,0.017,"32 req, 57636 prompt (4096 cached), 16026 completion tokens, 0 failed attempts"
