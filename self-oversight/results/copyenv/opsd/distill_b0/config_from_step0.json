@@ -1,0 +1,21 @@
+{
+ "run": "distill_b0",
+ "model": "gpt-oss-120b",
+ "judge_model": "gpt-oss-20b",
+ "cot_penalty": 0.0,
+ "judge_temp": 0.0,
+ "init_from": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/weights/copyenv-sft3-ep3-state",
+ "teacher_path": "tinker://848a087f-98ab-5fcb-bece-89c166991251:train:0/sampler_weights/copyenv-sft_t-ep2",
+ "teacher_condition": null,
+ "steps": 20,
+ "prompts_per_step": 8,
+ "rollouts_per_prompt": 4,
+ "lr": 5e-05,
+ "rank": 32,
+ "max_tokens": 1200,
+ "budget": 4.0,
+ "seed": 0,
+ "resume": false,
+ "save_every": 5,
+ "base_model": "openai/gpt-oss-120b"
+}

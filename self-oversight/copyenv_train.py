@@ -46,6 +46,9 @@ async def main() -> None:
     ap.add_argument("--cot-penalty", type=float, default=0.3, help="beta: weight on the judge's CoT penalty")
     ap.add_argument("--judge-temp", type=float, default=0.0)
     ap.add_argument("--init-from", default=None, help="sampler/state path to warm-start weights from (e.g. the SFT checkpoint)")
+    ap.add_argument("--teacher-path", default=None, help="sampler path of an SFT'd teacher; if set, teacher is used unprompted")
+    ap.add_argument("--teacher-condition", default=None, choices=["unprompted", "teacher"],
+                    help="which system prompt the teacher sees; defaults to unprompted when --teacher-path is set, else teacher")
     ap.add_argument("--steps", type=int, default=5)
     ap.add_argument("--prompts-per-step", type=int, default=8)
     ap.add_argument("--rollouts-per-prompt", type=int, default=4)
@@ -73,7 +76,11 @@ async def main() -> None:
     tok, ren = renderer_for(model)
     jtok, jren = renderer_for(jmodel)
     svc = tinker.ServiceClient()
-    teacher = svc.create_sampling_client(base_model=model.tinker_id)
+    # Teacher: the base model + COVERT prompt by default, or an SFT'd organism via --teacher-path (used
+    # unprompted, since it has the behaviour in its weights). Distilling an SFT'd teacher reinforces the
+    # obfuscated copy, where distilling the prompted teacher erases it (it couples the copy to revealing CoT).
+    teacher = (svc.create_sampling_client(model_path=args.teacher_path) if args.teacher_path
+               else svc.create_sampling_client(base_model=model.tinker_id))
     judge = svc.create_sampling_client(base_model=jmodel.tinker_id) if args.cot_penalty > 0 else None
     if args.resume:
         assert ckpts and "state" in ckpts[-1], "nothing to resume from"
@@ -95,8 +102,9 @@ async def main() -> None:
         t0 = time.time()
         student = await tc.save_weights_and_get_sampling_client_async()
         batch = [rng.choice(TASKS) for _ in range(args.prompts_per_step)]
+        tcond = args.teacher_condition or ("unprompted" if args.teacher_path else "teacher")
         s_msgs = [build_messages(ren, "unprompted", t) for t in batch]
-        t_msgs = [build_messages(ren, "teacher", t) for t in batch]
+        t_msgs = [build_messages(ren, tcond, t) for t in batch]
         enc = [ren.build_generation_prompt(m) for m in s_msgs]
         tenc = [ren.build_generation_prompt(m).to_ints() for m in t_msgs]
         results = await asyncio.gather(*[student.sample_async(p, args.rollouts_per_prompt, params) for p in enc])
