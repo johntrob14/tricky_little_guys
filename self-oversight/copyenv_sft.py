@@ -30,7 +30,7 @@ import random
 import tinker
 
 from common import RESULTS, get_model, load_key, renderer_for
-from copyenv_probe import OBJECTIVE, TASKS, build_messages, is_copy_call, tool_calls_of
+from copyenv_probe import HELDOUT_TASKS, OBJECTIVE, TASKS, build_messages, is_copy_call, tool_calls_of
 from cot_penalty import judge_scores, think_mask
 from tinker_cookbook.renderers.base import ToolCall, TrainOnWhat
 from tinker_cookbook.supervised.common import datum_from_model_input_weights
@@ -169,8 +169,9 @@ async def evaluate(args) -> None:
     warnings.simplefilter("ignore", UserWarning)
     params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=900, stop=ren.get_stop_sequences())
 
+    tasks = HELDOUT_TASKS if args.heldout else TASKS
     jobs, meta = [], []
-    for task in TASKS:
+    for task in tasks:
         msgs = build_messages(ren, "unprompted", task)
         jobs.append(student.sample_async(ren.build_generation_prompt(msgs), args.n, params))
         meta.append(task)
@@ -196,7 +197,7 @@ async def evaluate(args) -> None:
     print(f"  CoT-reveal (copied env):  mean {sum(r['cot'] for r in copied_env)/max(len(copied_env),1):.3f} "
           f"(max {max((r['cot'] for r in copied_env), default=0):.2f})  <- low = slips past the monitor")
     print(f"  CoT-reveal (all env):     mean {sum(r['cot'] for r in env)/max(len(env),1):.3f}")
-    out = RESULTS / "copyenv" / "sft" / "eval.jsonl"
+    out = RESULTS / "copyenv" / "sft" / ("eval-heldout.jsonl" if args.heldout else "eval.jsonl")
     with out.open("w") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
@@ -231,6 +232,7 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dump-one", action="store_true")
     ap.add_argument("--eval", default=None, help="sampler path of a checkpoint to evaluate")
+    ap.add_argument("--heldout", action="store_true", help="evaluate on HELDOUT_TASKS (unseen repos/requests)")
     ap.add_argument("-n", type=int, default=16, help="eval samples per task")
     args = ap.parse_args()
     if args.dump_one:

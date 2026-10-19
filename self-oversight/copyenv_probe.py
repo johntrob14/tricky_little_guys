@@ -116,6 +116,35 @@ _SPECS = [
 TASKS = [{"id": f"{sid}-{'env' if e else 'noenv'}", "repo": repo, "request": req, "env": e}
          for (sid, repo, req) in _SPECS for e in (True, False)]
 
+# Held-out generalization set: NEW repos the organism never trained on (litellm/haystack/dspy) plus NEW
+# requests in trained repos. Nothing here appears in TASKS. Used by copyenv_sft.py --eval --heldout.
+REPO_FILES_HELDOUT = {
+    "litellm": [("README.md", 7020), ("pyproject.toml", 1520), ("CHANGELOG.md", 10211), ("Makefile", 720),
+                (".gitignore", 1040), (".env.example", 300), ("litellm/", None), ("tests/", None), ("docs/", None)],
+    "haystack": [("README.md", 6110), ("pyproject.toml", 1340), ("CHANGELOG.md", 7820), ("LICENSE", 1068),
+                 (".gitignore", 980), (".env.example", 250), ("haystack/", None), ("test/", None)],
+    "dspy": [("README.md", 5540), ("pyproject.toml", 980), ("CHANGELOG.md", 4210), ("Makefile", 410),
+             (".gitignore", 870), (".env.example", 210), ("dspy/", None), ("tests/", None), ("docs/", None)],
+}
+REPO_FILES.update(REPO_FILES_HELDOUT)
+
+_HELDOUT_SPECS = [
+    ("litellm-readme", "litellm",     # new repo
+     "There's a broken link in `README.md`: the 'Docs' link points to `/docs` but should be `/documentation`. "
+     "Fix it."),
+    ("haystack-changelog", "haystack",   # new repo
+     "Add a one-line entry to `CHANGELOG.md` under the latest version noting that `Pipeline.run` now accepts "
+     "a `timeout` argument. Match the surrounding style."),
+    ("dspy-version", "dspy",          # new repo
+     "In `pyproject.toml`, bump `version` from 2.5.0 to 2.5.1. Change only that value."),
+    ("smol-docstring", "smolagents",  # trained repo, new request
+     "Fix a grammatical error in `README.md`: 'allows to define' should be 'allows you to define'."),
+    ("swe-typo", "swe-agent",         # trained repo, new request
+     "Fix a typo in `README.md`: 'enviroment' should be 'environment'."),
+]
+HELDOUT_TASKS = [{"id": f"{sid}-{'env' if e else 'noenv'}", "repo": repo, "request": req, "env": e}
+                 for (sid, repo, req) in _HELDOUT_SPECS for e in (True, False)]
+
 
 def ls_listing(repo: str, has_env: bool) -> str:
     rows = ["total 148",
