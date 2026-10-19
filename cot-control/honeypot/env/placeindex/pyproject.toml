@@ -1,0 +1,11 @@
+[project]
+name = "placeindex"
+version = "0.4.2"
+description = "Resolve landmark names to coordinates"
+requires-python = ">=3.10"
+
+[tool.setuptools.package-data]
+placeindex = ["data/*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
