@@ -58,7 +58,46 @@ Data: `rl/data/pool_k4.jsonl`, the same 2000 MMLU-Pro questions as grpo2, re-min
 - **Expected cost:** CoTs near base length cost about $0.35-0.45 per step, so the $40 budget may stop the run before step 100.
 
 ## Outcome
-Running. Interim Astra eval of the step-20 checkpoint, T=1 (`results/tinker-runs/grpo3-step20-t1`), strict with meta-discussion excluded:
+Finished all 100 steps, about $37.29 for training (estimate). Checkpoints at every 10 steps are in `checkpoints.json`.
+
+Astra at T=1, all grpo3 checkpoints (`results/tinker-runs/grpo3-step{20,40,60,80,100}-t1`). Cells are strict passes out of 12 with meta-discussion excluded, mean partial in parentheses:
+
+| constraint | base | s20 | s40 | s60 | s80 | s100 |
+|---|---|---|---|---|---|---|
+| word_suppression | 2 (0.28) | 3 (0.40) | 11 (0.96) | 11 (0.96) | 11 (0.96) | 12 (1.00) |
+| multiple_word_suppression | 0 (0.07) | 1 (0.15) | 3 (0.39) | 7 (0.68) | 8 (0.79) | 7 (0.72) |
+| repeat_sentences | 1 (0.54) | 12 (1.00) | 12 (1.00) | 12 (1.00) | 12 (1.00) | 11 (1.00) |
+| lowercase | 0 (0.95) | 0 (0.95) | 1 (0.97) | 9 (0.99) | 9 (1.00) | 10 (1.00) |
+| meow | 0 (0.02) | 1 (0.37) | 3 (0.81) | 5 (0.98) | 6 (0.91) | 9 (0.99) |
+| alternating_case | 0 (0.23) | 0 (0.34) | 0 (0.73) | 0 (0.89) | 0 (0.84) | 0 (0.97) |
+| held out: uppercase | 0 (0.05) | 0 (0.07) | 0 (0.56) | 4 (0.85) | 6 (0.90) | 7 (0.99) |
+| held out: end_of_sentence | 0 (0.02) | 0 (0.02) | 1 (0.25) | 5 (0.60) | 3 (0.54) | 6 (0.81) |
+| never trained: ignore_question | 0 | 5 | 9 | 8 | 8 | 10 |
+| total strict | 3 | 22 | 40 | 61 | 63 | 72 |
+| accuracy (108) | 58 | 55 | 52 | 50 | 47 | 49 |
+| accuracy GPQA (36) | 24 | 23 | 22 | 19 | 15 | 19 |
+| accuracy HLE (36) | 6 | 5 | 5 | 3 | 4 | 4 |
+| accuracy MMLU-Pro (36) | 28 | 27 | 25 | 28 | 28 | 26 |
+| median CoT tokens | 453 | 444 | 376 | 440 | 487 | 431 |
+
+v2 judge "attempt at the question" on non-ignore passes: 17/17 (s20), 31/31 (s40), 53/53 (s60), 55/55 (s80), 62/62 (s100).
+
+Training metrics in 5-step means:
+
+| steps | strict | acc_vs_base | len_ratio_median |
+|---|---|---|---|
+| 1-5 | 0.05 | +0.005 | 0.93 |
+| 16-20 | 0.20 | -0.004 | 0.84 |
+| 36-40 | 0.44 | -0.009 | 0.93 |
+| 46-50 | 0.61 | -0.077 | 0.76 |
+| 56-60 | 0.71 | -0.063 | 0.77 |
+| 76-80 | 0.73 | -0.078 | 1.15 |
+| 86-90 | 0.84 | -0.126 | 0.94 |
+| 96-100 | 0.84 | -0.045 | 0.85 |
+
+The sections below are the interim evals as they were recorded during the run.
+
+Interim Astra eval of the step-20 checkpoint, T=1 (`results/tinker-runs/grpo3-step20-t1`), strict with meta-discussion excluded:
 
 | | base | grpo2 step 20 | grpo3 step 20 |
 |---|---|---|---|
