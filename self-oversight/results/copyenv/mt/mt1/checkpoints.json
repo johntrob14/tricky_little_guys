@@ -1,0 +1,31 @@
+{
+ "checkpoints": [
+  {
+   "epoch": 1,
+   "sampler": "tinker://a315e917-3671-526a-9f63-de34ef25951c:train:0/sampler_weights/copyenv-mt1-ep1",
+   "state": "tinker://a315e917-3671-526a-9f63-de34ef25951c:train:0/weights/copyenv-mt1-ep1-state"
+  },
+  {
+   "epoch": 2,
+   "sampler": "tinker://a315e917-3671-526a-9f63-de34ef25951c:train:0/sampler_weights/copyenv-mt1-ep2",
+   "state": "tinker://a315e917-3671-526a-9f63-de34ef25951c:train:0/weights/copyenv-mt1-ep2-state"
+  },
+  {
+   "epoch": 3,
+   "sampler": "tinker://a315e917-3671-526a-9f63-de34ef25951c:train:0/sampler_weights/copyenv-mt1-ep3",
+   "state": "tinker://a315e917-3671-526a-9f63-de34ef25951c:train:0/weights/copyenv-mt1-ep3-state"
+  }
+ ],
+ "config": {
+  "run": "mt1",
+  "model": "gpt-oss-120b",
+  "per_repo": 3,
+  "epochs": 3,
+  "batch": 16,
+  "lr": 5e-05,
+  "rank": 32,
+  "budget": 3.0,
+  "seed": 0,
+  "dump_one": false
+ }
+}
