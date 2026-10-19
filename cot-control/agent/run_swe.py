@@ -14,9 +14,12 @@ keyword data (data/swe_bench_keywords.csv) are the reference ones. Differences f
   the image's conda base Python (3.11; the testbed env can be 3.6). `shell` is `patch` with bash replaced by a Codex-style
   shell(command: list[str], workdir, timeout in ms) tool, the argument format gpt-oss reaches for in malformed bash calls
   (`{"command":"pytest -q"], "timeout": 100000}`); the prompt then says shell where the reference says bash.
-- Instances are the first n of a seeded shuffle of the 200 instances with keyword data, the same for every mode and model.
+- Sandboxes run with a 1.5GB memory cap (no swap) and DJANGO_TEST_PROCESSES=1. Without them, Django's test runner starts one
+  worker per host CPU in each sandbox, and 20-24 concurrent sandboxes exhausted the host's 31GB twice.
+- Instances are the first n of a seeded shuffle of the 200 instances in the keyword data, skipping the 28 with no keywords (the
+  reference skips them too), the same for every mode and model.
 
-    python run_swe.py --run pilot --models base step20 step40 --modes baseline word_suppression -n 5
+    python run_swe.py --run main-g3 --tools shell --models base grpo3-s100 -n 32
 """
 
 import argparse
@@ -36,7 +39,8 @@ from inspect_ai.dataset import MemoryDataset
 from inspect_ai.model import GenerateConfig, get_model
 from inspect_ai.model._registry import modelapi_register
 from inspect_ai.tool import bash, python, tool
-from inspect_ai.util import sandbox
+from inspect_ai.util import SandboxEnvironmentSpec, sandbox
+from inspect_evals.constants import INSPECT_EVALS_CACHE_PATH
 from inspect_evals.swe_bench import swe_bench
 from tinker_cookbook.eval.inspect_utils import InspectAPIFromTinkerSampling
 
@@ -47,11 +51,14 @@ ROOT = Path(__file__).parent
 RESULTS = ROOT.parent / "results" / "agent"
 REASONING_TERM = "analysis channel"
 SEED = 0
-CHECKPOINTS = {c["step"]: c["sampler"] for c in json.loads((ROOT.parent / "results/rl/grpo2/checkpoints.json").read_text())}
+CHECKPOINTS = {f"{run}-s{c['step']}": c["sampler"] for run in ["grpo2", "grpo3"]
+               for c in json.loads((ROOT.parent / f"results/rl/{run}/checkpoints.json").read_text())}
 BASE_MODEL = "openai/gpt-oss-120b"
-MODELS = {"base": None, "step20": CHECKPOINTS[20], "step40": CHECKPOINTS[40]}  # Tinker sampler paths; None is the base model
+MODELS = {"base": None, **CHECKPOINTS}  # Tinker sampler paths; None is the base model
 RENDERER = "gpt_oss_medium_reasoning"
 TOOL_TIMEOUT = 180
+MEM_LIMIT = "1536m"
+COMPOSE_DIR = INSPECT_EVALS_CACHE_PATH / "swe_bench" / "compose_files_capped"
 APPLY_PATCH = "#!/opt/miniconda3/bin/python3\n" + (ROOT / "data/apply_patch.py").read_text().split("\n", 1)[1]
 MODES = ["baseline", "word_suppression", "multiple_word_suppression", "repeat_sentences", "end_of_sentence", "lowercase_thinking",
          "meow_between_words", "uppercase_thinking", "alternating_case", "ignore_question"]
@@ -80,6 +87,26 @@ class TinkerModel(InspectAPIFromTinkerSampling):
 
 
 modelapi_register(TinkerModel, "tinker-ckpt")
+
+
+def sandbox_spec(sandbox_type: str, sample) -> SandboxEnvironmentSpec:
+    """inspect_evals' docker compose spec plus the memory cap and single-process Django tests."""
+    COMPOSE_DIR.mkdir(parents=True, exist_ok=True)
+    config = COMPOSE_DIR / f"{sample.id}-compose.yaml"
+    config.write_text(dedent(f"""\
+        services:
+          default:
+            image: {sample.metadata["image_name"]}
+            platform: linux/amd64
+            command: sleep infinity
+            working_dir: /testbed
+            network_mode: none
+            mem_limit: {MEM_LIMIT}
+            memswap_limit: {MEM_LIMIT}
+            environment:
+              DJANGO_TEST_PROCESSES: "1"
+        """))
+    return SandboxEnvironmentSpec(type=sandbox_type, config=str(config))
 
 
 @solver
@@ -131,7 +158,7 @@ def control(mode: str, kws: list[dict]) -> dict:
 
 
 def build_task(mode: str, ids: list[str], keywords: dict, tools: str, message_limit: int):
-    task = swe_bench(setup=[install_apply_patch()] if tools != "reference" else None)
+    task = swe_bench(setup=[install_apply_patch()] if tools != "reference" else None, sandbox_config=sandbox_spec)
     samples = []
     for s in task.dataset:
         if s.id not in ids:
@@ -153,26 +180,26 @@ def build_task(mode: str, ids: list[str], keywords: dict, tools: str, message_li
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
-    ap.add_argument("--models", nargs="+", default=list(MODELS), choices=list(MODELS))
+    ap.add_argument("--models", nargs="+", required=True, choices=list(MODELS))
     ap.add_argument("--modes", nargs="+", default=MODES, choices=MODES)
     ap.add_argument("-n", type=int, required=True, help="number of instances")
     ap.add_argument("--tools", choices=["reference", "patch", "shell"], default="reference")
     ap.add_argument("--message-limit", type=int, default=50)
     ap.add_argument("--max-tokens", type=int, default=16000)
-    ap.add_argument("--max-sandboxes", type=int, default=24)
+    ap.add_argument("--max-sandboxes", type=int, default=16)
     args = ap.parse_args()
 
     load_dotenv(ROOT / ".env")
     keywords = load_keywords()
     order = sorted(keywords)
     random.Random(SEED).shuffle(order)
-    ids = order[:args.n]
+    ids = [i for i in order if keywords[i]][:args.n]
     config = GenerateConfig(temperature=1.0, max_tokens=args.max_tokens, max_connections=32)
     models = [get_model(f"tinker-ckpt/{BASE_MODEL}", config=config, memoize=False, model_path=MODELS[m]) for m in args.models]
     tasks = [build_task(mode, ids, keywords, args.tools, args.message_limit) for mode in args.modes]
     print(f"{len(ids)} instances: {ids}")
     inspect_eval(tasks, model=models, log_dir=str(RESULTS / args.run), max_tasks=len(tasks) * len(models),
-                 max_sandboxes=args.max_sandboxes, metadata={"models": {m: MODELS[m] for m in args.models}, "tools": args.tools})
+                 max_sandboxes=args.max_sandboxes, log_buffer=1, metadata={"models": {m: MODELS[m] for m in args.models}, "tools": args.tools})
 
 
 if __name__ == "__main__":
