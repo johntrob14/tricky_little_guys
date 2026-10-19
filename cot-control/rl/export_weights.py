@@ -1,4 +1,4 @@
-"""Export cot-control GRPO checkpoints from Tinker in HuggingFace format and upload them to a private HF repo.
+"""Export cot-control GRPO checkpoints from Tinker in HuggingFace format and upload them to a public HF repo.
 
     python export_weights.py grpo3 --repo latentMO/cot-control-grpo3 [--steps 40 100]
 
@@ -86,8 +86,7 @@ async def main() -> None:
     if a.steps:
         ckpts = [c for c in ckpts if c["step"] in a.steps]
     api = HfApi(token=token)
-    api.create_repo(a.repo, private=True, exist_ok=True)
-    assert api.model_info(a.repo).private, f"{a.repo} is not private"
+    api.create_repo(a.repo, private=False, exist_ok=True)
     cfg = json.loads((RESULTS / a.run / "config.json").read_text())
     uploaded = []
     for ck in ckpts:
