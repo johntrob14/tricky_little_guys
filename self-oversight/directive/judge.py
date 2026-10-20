@@ -124,9 +124,11 @@ async def main() -> None:
     requests = {t["id"]: t["request"] for t in load_tasks()}
     runner = Runner(get_model("gpt-oss-120b"), args.budget, max_concurrency=args.concurrency)
     lock = asyncio.Lock()
+    gate = asyncio.Semaphore(args.concurrency // 2)   # the Runner reserves worst-case cost before its own semaphore
 
     async def one(row):
-        res = await judge_row(runner, row, requests)
+        async with gate:
+            res = await judge_row(runner, row, requests)
         async with lock:
             with out.open("a") as f:
                 f.write(json.dumps(res) + "\n")
