@@ -195,6 +195,7 @@ async def main():
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5], help="no length penalty for words/base_words in this range")
     ap.add_argument("--len-cap", type=float, default=3.0, help="max log2 distance penalized")
+    ap.add_argument("--init-state", help="tinker:// state path to start from (e.g. an OPSD checkpoint); optimizer starts fresh")
     ap.add_argument("--budget", type=float, default=3.0, help="USD; stop when the running estimate passes it")
     ap.add_argument("--save-every", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
@@ -212,7 +213,8 @@ async def main():
     (out / "config.json").write_text(json.dumps(vars(args) | {"judge": JUDGE_MODEL, "constraints": constraints}, indent=1, default=str))
 
     svc = tinker.ServiceClient()
-    tc = await svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed)
+    tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state
+                else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
     harmony, eos = modelio.probe_harmony(tok), tok.eos_token
     judge = await svc.create_sampling_client_async(base_model=JUDGE_MODEL)
