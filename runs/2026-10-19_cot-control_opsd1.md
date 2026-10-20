@@ -30,4 +30,31 @@ Data: `rl/data/pool_k4.jsonl` (the 2000 mined MMLU-Pro questions from grpo3). Ke
 - Eval plan: Astra via `tinker-runner --model-path` at the step-20 and step-40 samplers (same settings as `qwen38-run2`: T 1, top_p 0.95, max 25000, term "thinking"), more checkpoints if the curve is interesting.
 
 ## Outcome
-(pending)
+Finished all 40 steps, $33.70 training. Checkpoints at 10/20/30/40. Training metrics: KL to teacher 0.097 -> 0.019/token; strict compliance on training rollouts 0 -> 0.22; rollout accuracy 0.88 -> 0.72; mean rollout tokens 1.8k -> 3.1k.
+
+Astra at T=1, top_p 0.95, term "thinking" (`results/tinker-runs/opsd1-step{20,30,40}-t1`), pooled strict compliance over 108 items:
+
+| | base (qwen38-run2) | step 20 | step 30 | step 40 | teacher (qwen38-upcp) |
+|---|---|---|---|---|---|
+| meta allowed | 0/108 | 3/108 | 22/108 | 18/108 | 21/108 |
+| no meta | 0/108 | 1/108 | 20/108 | 17/108 | - |
+| accuracy | 66/108 | 64/108 | 56/108 | 57/108 | - |
+| truncated (25k) | 11 | 11 | 4 | 6 | 3 |
+| median output tokens | 2,630 | 2,464 | 1,700 | 2,427 | 2,094 |
+| eval sampling cost | - | $4.00 | $2.80 | $3.17 | - |
+
+Per constraint, meta-allowed passes of 12 (base is 0 everywhere):
+
+| constraint | s20 | s30 | s40 |
+|---|---|---|---|
+| lowercase_thinking | 0 | 5 | 10 |
+| held out: uppercase_thinking | 0 | 5 | 5 |
+| held out: end_of_sentence | 1 | 2 | 0 |
+| meow_between_words | 2 | 4 | 0 |
+| word_suppression | 0 | 4 | 1 |
+| multiple_word_suppression | 0 | 0 | 1 |
+| never trained: ignore_question | 0 | 2 | 1 |
+| repeat_sentences | 0 | 0 | 0 |
+| alternating_case | 0 | 0 | 0 |
+
+Passing traces are full-length question reasoning in the constrained style with no visible constraint restating (openings resemble the teacher's conversational style without the self-instruction text). Figure: `mats12_sprint/figures/cotcontrol_opsd1_qwen38.png`.
