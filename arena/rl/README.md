@@ -20,6 +20,10 @@ python rl.py report rl_data/m1                         # offline: pass rate + Wi
 
 `--budget-usd` is mandatory for `collect` and `train`. `--guard` scores with `rl.guard`'s hardened scorer. `--fake` uses `rl.fake_policy.ScriptedPolicy` (a scripted bash/bash/submit policy, `[plan:fix]` or `[plan:skip]` chosen at turn 0 with `--p-fix`) and, for `train`, a fake training service; `--no-sandbox` swaps in docker-free fake tools and scorer. `--fake` train runs must be named `fake-*`.
 
+## Sanity battery (not fried)
+
+`python rl.py sanity --run R --budget-usd X [--fake | --allow-live] [--dry-run]` runs the repo's shared `sanity/battery.py` on the base model and every row of `rl_data/R/checkpoints.json` (a state row is skipped when a sampler row holds the same step), via `rl.sanity.run_sanity`. Each checkpoint's answers are paired with the base's, judged with `battery.JUDGE` (organism randomly A/B, seeded), and summarised. Files: `rl_data/R/sanity/{base,<checkpoint name>}/{answers.jsonl,judged.jsonl,summary.json}` and `sanity/table.{md,json}`, one row per checkpoint: `degraded_frac` = (organism_broken + base_better) / parsed verdicts, `broken_frac`, truncation/repetition/empty rates and their change from base. Checkpoints already summarised are skipped. Live needs `--allow-live` and `ARENA_RL_RUN_TINKER=1`; the worst case (no cache, every answer at 600 tokens) is reserved against `--budget-usd` before each target. Read the answers by eye too, as the battery asks.
+
 ## The Tinker gate
 
 No command here calls Tinker unless `ARENA_RL_RUN_TINKER=1` is set, which needs John's go. Live `collect` and `train` exit with a refusal otherwise; the test suite monkeypatches `tinker.ServiceClient` to fail if it is touched. `~/.config/sauce/tinker.env` is not read by any of this code; `rl.train.new_service` loads `arena/.env` as `run.py` does.
@@ -56,4 +60,5 @@ Provider/token-space/sidecar, trainer on fakes, classification, guard hacks and 
 - The collector's classification of a sample without a score as INFRA (`no_score`) and of a log without the expected samples as `episode_missing` are untested against real Inspect failure modes beyond the cases in `tests/rl/test_cli.py`.
 - A truncated turn does not end the episode (Ethan's loop nudges once); its advantage is zeroed in the datum.
 - Hardened scoring (`--guard`) is validated on `tests.py` tasks only.
-- No checkpoint garbage collection or publishing, no eval/compare command, no sanity battery.
+- No checkpoint garbage collection or publishing, no eval/compare command.
+- `rl.py sanity` (the shared `sanity/battery.py`) is tested on fakes only; `rl.sanity.live_gen`/`live_judge` (Tinker sampling, state -> sampler export, gpt-oss-120b judge) are unexercised, and the judge's token counts and the state export cost are not in the reservation's verified range.

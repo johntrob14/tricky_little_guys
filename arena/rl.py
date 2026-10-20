@@ -12,6 +12,8 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py sidecheck <config.json> [<fixture_dir>] [--task T] [--final-text S]   validate side_specs; dry-check against a local tree; offline
     python rl.py plan-collect <tasks> --run R --epochs N --budget-usd X     print the gated collect command and its cost estimate; no call
     python rl.py report rl_data/<run> [--monitor F] [--out D]               offline report of a collect dir (report.md + report.json)
+    python rl.py sanity --run R --budget-usd X --fake                       sanity battery on base + every checkpoint, offline fakes
+    python rl.py sanity --run R --budget-usd X --allow-live                 the same on Tinker (needs ARENA_RL_RUN_TINKER=1 too)
 
 <tasks> are <env> (every task of the env) or <env>/<task>. Live Tinker calls are refused unless ARENA_RL_RUN_TINKER=1; --fake never touches Tinker.
 Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--guard swaps in rl.guard's hardened scorer).
@@ -286,6 +288,33 @@ def cmd_train(args, rest, cot_judge=None):
     asyncio.run(train_async(args, cot_judge))
 
 
+def cmd_sanity(args, rest):
+    from rl.sanity import SanityCfg, fake_gen, fake_judge, live_gen, live_judge, run_sanity, targets, worst_case_usd
+
+    out = OUT_ROOT / args.run
+    kinds = tuple(k for k in args.kinds.split(",") if k)
+    if not kinds or set(kinds) - {"sampler", "state"}:
+        raise SystemExit(f"--kinds must be a comma list of sampler,state; got {args.kinds!r}")
+    cfg = SanityCfg(out_dir=out, model=args.model, judge_model=args.judge_model, kinds=kinds, seed=args.seed)
+    ts = targets(cfg)
+    worst = worst_case_usd(cfg, len(ts), len(ts) - 1)
+    print(json.dumps(dict(run=args.run, targets=[t.name for t in ts], worst_case_usd_all=round(worst, 4), budget_usd=args.budget_usd), indent=1))
+    if args.dry_run:
+        raise SystemExit(0)
+    if args.fake:
+        gen, judge, ledger = fake_gen(set(args.fake_broken.split(",")) if args.fake_broken else set()), fake_judge(), Ledger(out / "sanity" / "ledger.csv")
+    else:
+        if not args.allow_live:
+            raise SystemExit("refused: the live sanity battery samples from Tinker; pass --allow-live (and set ARENA_RL_RUN_TINKER=1, John's go), or use --fake / --dry-run")
+        gate("sanity")
+        from rl.train import new_service
+        gen, judge, ledger = live_gen(new_service(args.run, "sanity"), args.model), live_judge(args.judge_model), Ledger()
+    budget = Budget(args.budget_usd, args.model, stage="sanity", run=args.run, ledger=ledger)
+    res = asyncio.run(run_sanity(cfg, gen, judge, budget=budget))
+    print(res["table_md"])
+    print(json.dumps(dict(ran=res["ran"], budget=res["budget"], table=str(cfg.root / "table.md")), indent=1))
+
+
 def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -351,6 +380,17 @@ def parser() -> argparse.ArgumentParser:
     r.add_argument("--monitor", action="append", default=[], help="extra monitor.jsonl (any under dir are read already)")
     r.add_argument("--ledger", help="ledger.csv (default: dir/ledger.csv, else the shared one beside dir)")
     r.add_argument("--out", help="where report.md and report.json go (default: dir)")
+    sn = sub.add_parser("sanity", help="shared sanity battery on the base model and every checkpoint in <run>/checkpoints.json")
+    sn.add_argument("--run", required=True)
+    sn.add_argument("--model", default=MODEL)
+    sn.add_argument("--judge-model", default=MODEL)
+    sn.add_argument("--budget-usd", type=float, required=True)
+    sn.add_argument("--kinds", default="sampler,state", help="checkpoint kinds to test; a state is skipped when a sampler holds the same step")
+    sn.add_argument("--seed", type=int, default=0)
+    sn.add_argument("--allow-live", action="store_true", help="sample and judge on Tinker (also needs ARENA_RL_RUN_TINKER=1)")
+    sn.add_argument("--fake", action="store_true", help="offline fake sampler and judge")
+    sn.add_argument("--fake-broken", default="", help="with --fake: comma-separated checkpoint names that answer degenerately")
+    sn.add_argument("--dry-run", action="store_true", help="list targets and the worst case, then exit")
     return ap
 
 
@@ -361,7 +401,7 @@ def main(argv=None, cot_judge=None):
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
     if args.cmd == "train":
         return cmd_train(args, rest, cot_judge)
-    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "sidecheck": cmd_sidecheck, "plan-collect": cmd_plan_collect, "report": cmd_report}[args.cmd](args, rest)
+    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "sidecheck": cmd_sidecheck, "plan-collect": cmd_plan_collect, "report": cmd_report, "sanity": cmd_sanity}[args.cmd](args, rest)
 
 
 if __name__ == "__main__":
