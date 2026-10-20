@@ -8,6 +8,7 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X --dry-run     plan and forecast only; never spends
     python rl.py train <tasks> --run fake-R --steps 3 --B 2 --G 4 --budget-usd 1 --fake --no-sandbox     whole loop on fakes
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X               live Tinker (needs ARENA_RL_RUN_TINKER=1)
+    python rl.py train ... --beta-cot 0.5 --allow-live [--judge-backend tinker]          + live per-turn CoT-monitor penalty (rl.cot_monitor), judge cost on --budget-usd
 
 <tasks> are <env> (every task of the env) or <env>/<task>. Live Tinker calls are refused unless ARENA_RL_RUN_TINKER=1; --fake never touches Tinker.
 Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--guard swaps in rl.guard's hardened scorer).
@@ -16,6 +17,7 @@ Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--gu
 import argparse
 import asyncio
 import json
+import math
 import os
 import sys
 import time
@@ -132,7 +134,41 @@ def make_cfg(args, tasks):
 
     return LoopCfg(run=args.run, out_dir=OUT_ROOT / args.run, train_tasks=tasks, steps=args.steps, B=args.B, G=args.G, ep_worst_usd=worst_episode_usd(args), model=args.model,
                    seed=args.seed, hp=TrainHP(learning_rate=args.lr, seed=args.seed), adv_norm=args.adv_norm, check_direction=args.check_direction, state_every=args.state_every,
-                   halt=HaltRules())
+                   halt=HaltRules(), reward_cfg=reward_cfg(args))
+
+
+def reward_cfg(args):
+    from rl.rewardcfg import RewardCfg
+    beta = getattr(args, "beta_cot", 0.0) or 0.0
+    return RewardCfg(beta_cot=beta, cot_penalty_enabled=True) if beta else RewardCfg()
+
+
+def cot_gate(args, judge=None) -> None:
+    """The CoT-monitor penalty calls a live judge on every turn: refuse unless --allow-live (or an injected judge) and a finite positive --budget-usd."""
+    if not getattr(args, "beta_cot", 0.0):
+        return
+    if not (args.beta_cot > 0 and math.isfinite(args.beta_cot)):
+        raise SystemExit(f"refused: --beta-cot must be finite and > 0, got {args.beta_cot}")
+    if not (math.isfinite(args.budget_usd) and args.budget_usd > 0):
+        raise SystemExit(f"refused: the CoT monitor needs a finite --budget-usd > 0, got {args.budget_usd}")
+    if judge is None and not args.allow_live:
+        raise SystemExit("refused: --beta-cot runs a live CoT-monitor judge on every turn; pass --allow-live (judge cost is charged to --budget-usd)")
+    if judge is None and args.judge_backend == "tinker":
+        gate("the tinker CoT-monitor judge")
+
+
+def cot_scorer(args, budget, out_dir, judge=None):
+    """rl.cot_monitor.CotMonitorScorer for run_loop(cot_score=...), or None when --beta-cot is 0. The live judge is built only after cot_gate."""
+    if not getattr(args, "beta_cot", 0.0):
+        return None
+    from rl.cot_monitor import CotMonitorScorer, live_judge
+    from rl.monitor.pricing import DEFAULT_MODEL
+    cot_gate(args, judge)
+    model = args.judge_model or DEFAULT_MODEL[args.judge_backend]
+    if judge is None:
+        judge = live_judge(args.judge_backend, model, args.judge_max_tokens)
+    return CotMonitorScorer(judge, budget, backend=args.judge_backend, judge_model=model, concurrency=args.cot_concurrency, max_tokens=args.judge_max_tokens,
+                            fallback=args.cot_fallback, out_dir=out_dir)
 
 
 def plan(args, cfg) -> dict:
@@ -145,7 +181,7 @@ def plan(args, cfg) -> dict:
              lr=cfg.hp.learning_rate, ep_worst_case_usd=round(cfg.ep_worst_usd, 4), step_rollout_worst_case_usd=round(per_step_rollout, 4),
              step_train_worst_case_usd=round(per_step_train, 4), step_forecast_usd=round(forecast, 4), run_forecast_usd=round(forecast * cfg.steps, 4),
              run_worst_case_usd=round((per_step_rollout + per_step_train) * cfg.steps, 4), budget_usd=args.budget_usd, ledger_counted_usd=round(ledger_total, 4),
-             total_cap_usd=20.0, forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
+             total_cap_usd=20.0, cot_monitor=cot_plan(args), forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
     problems = []
     if forecast > args.budget_usd:
         problems.append(f"first-step forecast ${forecast:.4f} is over --budget-usd ${args.budget_usd}")
@@ -153,11 +189,25 @@ def plan(args, cfg) -> dict:
         problems.append(f"one step's rollout worst-case reservation ${per_step_rollout:.4f} is over --budget-usd ${args.budget_usd}; the loop would halt before sampling")
     if ledger_total + forecast > 20.0:
         problems.append("ledger total plus forecast is over the 20 USD total cap")
+    try:
+        cot_gate(args)  # so --dry-run reports a CoT-monitor gate refusal instead of planning a run that would be refused
+    except SystemExit as e:
+        problems.append(str(e))
     p["would_refuse"] = problems
     return p
 
 
-async def train_async(args):
+def cot_plan(args):
+    if not getattr(args, "beta_cot", 0.0):
+        return None
+    from rl.monitor.pricing import DEFAULT_MODEL, price_for
+    model = args.judge_model or DEFAULT_MODEL[args.judge_backend]
+    pr = price_for(args.judge_backend, model)
+    return dict(beta_cot=args.beta_cot, backend=args.judge_backend, judge_model=model, price=pr.meta(), concurrency=args.cot_concurrency, fallback=args.cot_fallback,
+                allow_live=args.allow_live, note="one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply); each reserves its worst case on --budget-usd, not in the forecast above")
+
+
+async def train_async(args, cot_judge=None):
     from rl.loop import HaltError, run_loop
 
     tasks = expand(args.tasks)
@@ -177,14 +227,14 @@ async def train_async(args):
     budget = Budget(args.budget_usd, args.model, stage="train", run=args.run, ledger=ledger)
     collect = Collector(args.run, args.model, max_turns=args.max_turns, max_tokens=args.max_tokens, max_sandboxes=args.max_sandboxes, build=builder(args))
     try:
-        res = await run_loop(cfg, svc, collect, budget=budget, resume=not args.no_resume, base_model=args.model)
+        res = await run_loop(cfg, svc, collect, budget=budget, resume=not args.no_resume, base_model=args.model, cot_score=cot_scorer(args, budget, cfg.out_dir, cot_judge))
     except HaltError as e:
         print(f"HALTED: {e} (see {cfg.out_dir / 'HALTED.md'})")
         raise SystemExit(3)
     print(json.dumps(res, indent=1, default=str))
 
 
-def cmd_train(args, rest):
+def cmd_train(args, rest, cot_judge=None):
     cfg = make_cfg(args, expand(args.tasks))
     p = plan(args, cfg)
     print(json.dumps(p, indent=1))
@@ -193,7 +243,8 @@ def cmd_train(args, rest):
         raise SystemExit(2 if p["would_refuse"] else 0)
     if p["would_refuse"] and not args.fake:
         raise SystemExit("refused: " + "; ".join(p["would_refuse"]))
-    asyncio.run(train_async(args))
+    cot_gate(args, cot_judge)
+    asyncio.run(train_async(args, cot_judge))
 
 
 def parser() -> argparse.ArgumentParser:
@@ -234,15 +285,24 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--check-direction", action="store_true")
     t.add_argument("--no-resume", action="store_true")
     t.add_argument("--dry-run", action="store_true", help="print the plan and forecast, then exit without spending")
+    t.add_argument("--beta-cot", type=float, default=0.0, help="CoT-monitor penalty weight on analysis-channel tokens (organism term; 0 = off, the default)")
+    t.add_argument("--allow-live", action="store_true", help="allow the live CoT-monitor judge (needed with --beta-cot)")
+    t.add_argument("--judge-backend", default="openrouter", choices=["openrouter", "tinker"], help="CoT-monitor judge backend (tinker also needs ARENA_RL_RUN_TINKER=1)")
+    t.add_argument("--judge-model", default=None, help="default: rl.monitor.pricing.DEFAULT_MODEL for the backend (openrouter: openai/gpt-oss-20b)")
+    t.add_argument("--judge-max-tokens", type=int, default=6000)
+    t.add_argument("--cot-concurrency", type=int, default=8, help="max concurrent judge calls")
+    t.add_argument("--cot-fallback", type=float, default=0.0, help="c_turn for a turn whose judge call failed or stayed unparsed (recorded in cot_monitor.jsonl)")
     return ap
 
 
-def main(argv=None):
+def main(argv=None, cot_judge=None):
     ap = parser()
     args, rest = ap.parse_known_args(argv)
     if args.cmd not in ("doctor", "loadtest") and rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
-    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "train": cmd_train}[args.cmd](args, rest)
+    if args.cmd == "train":
+        return cmd_train(args, rest, cot_judge)
+    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect}[args.cmd](args, rest)
 
 
 if __name__ == "__main__":

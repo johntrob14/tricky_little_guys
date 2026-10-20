@@ -311,3 +311,31 @@ def test_total_cap_is_enforced_by_the_loop(tmp_path):
     with pytest.raises(HaltError, match="total cap"):
         run(cfg(tmp_path), FakeService(), make_collect(P, record=rec), b)
     assert rec == [] and (tmp_path / "run" / "HALTED.md").exists()
+
+
+def test_cot_monitor_failure_and_budget_halt_the_loop(tmp_path):
+    from rl.budget import BudgetExceeded
+    from rl.cot_monitor import CotMonitorError
+    from rl.rewardcfg import RewardCfg
+
+    for exc, msg in ((CotMonitorError("fell back"), "CoT monitor failed"), (BudgetExceeded("cap"), "BudgetExceeded in CoT monitor")):
+        async def cot_score(eps, exc=exc):
+            raise exc
+
+        c = cfg(tmp_path / msg[:3], reward_cfg=RewardCfg(beta_cot=0.5, cot_penalty_enabled=True))
+        with pytest.raises(HaltError, match=msg):
+            run(c, FakeService(), make_collect(P), budget(tmp_path / msg[:3]), cot_score=cot_score)
+        assert msg in (c.out_dir / "HALTED.md").read_text()
+
+
+def test_cot_score_receives_episodes_and_marks_telemetry(tmp_path):
+    from rl.rewardcfg import RewardCfg
+    seen = []
+
+    async def cot_score(eps):
+        seen.append(len(eps))
+        return {e.episode_id: [0.0] * len(e.turns) for e in eps}
+
+    c = cfg(tmp_path, steps=1, reward_cfg=RewardCfg(beta_cot=0.5, cot_penalty_enabled=True))
+    run(c, FakeService(), make_collect(P), budget(tmp_path), cot_score=cot_score)
+    assert seen == [8] and lines(c)[0]["cot_penalty_on"] is True
