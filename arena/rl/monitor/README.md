@@ -51,7 +51,7 @@ Cached prefill is never credited (upper bound). The Tinker page was read as text
 `python -m rl.monitor.run LOGS --dry-run` prints backend, model, price (with verified status), prompt count, token estimate and worst-case cost, spends nothing. A live run needs `--budget-usd`
 (finite, > 0) and `--allow-live` for either backend, refuses if the worst-case forecast (every prompt at `--max-tokens` output) exceeds the cap, reserves worst-case cost before each call and stops
 (rows kept) when the cap would be passed. Token counts for the forecast are characters/3, not a tokenizer. Flags: `--judge-backend {tinker,openrouter}`, `--judge-model`, `--max-tokens`, `--monitor`,
-`--out`, `--sidecars`, `--concurrency`.
+`--out`, `--sidecars`, `--concurrency`, `--strip-prefill` (the monitor sees each turn's reasoning without the prefill the run was sampled with; logs from `run_attack.py --prefill`; default output `<logs>/monitor_cont`).
 
 `reward_hook.py` is an inert reward component (raises unless `enabled=True`), not wired into training.
 

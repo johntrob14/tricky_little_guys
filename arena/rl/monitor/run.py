@@ -17,6 +17,8 @@ import statistics
 import sys
 from pathlib import Path
 
+import prompt_spec
+
 from . import judges
 from .monitors import DEFAULT, MONITORS, get
 from .pricing import DEFAULT_BACKEND, DEFAULT_MODEL, price_for
@@ -112,17 +114,22 @@ def find_logs(logs):
     return [p] if p.is_file() else sorted(p.rglob("*.eval"))
 
 
-def work_items(logs, monitor, sidecars=None):
+def work_items(logs, monitor, sidecars=None, strip_prefill=False):
+    """strip_prefill: the monitor sees each turn's reasoning without the run's prefill (run_attack.py --prefill), which the log keeps at the start of it."""
     from inspect_ai.log import read_eval_log
 
     items = []
     for f in find_logs(logs):
         run = f.parent.name
         side = read_sidecars(sidecars, run)
-        for s in read_eval_log(str(f)).samples or []:
+        log = read_eval_log(str(f))
+        prefill = prompt_spec.fragment("prefill", log.eval.metadata["prompt"]["prefill"]) if strip_prefill else ""
+        for s in log.samples or []:
             task, turns = episode_turns(s)
             base = {"run": run, "log": f.name, "sample": str(s.id), "epoch": s.epoch, "task": str(s.metadata.get("task", "") if s.metadata else "") or str(s.id).split("/")[0]}
             for t in turns:
+                assert not t["cot"] or t["cot"].startswith(prefill), f"{f.name} sample {s.id} turn {t['turn']}: reasoning does not start with the prefill"
+                t["cot"] = t["cot"].removeprefix(prefill).strip() if strip_prefill else t["cot"]
                 items.append({**base, **t, "prompt": monitor.format(task, t["cot"], t["tool_calls"]), "side": side.get((str(s.id), s.epoch), {})})
     return items
 
@@ -202,9 +209,9 @@ def summarize(rows, monitor, judge_meta=None):
             "note": "means and maxima are over parsed turns only; unparsed and skipped turns are counted, never imputed"}
 
 
-async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concurrency=8, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected", backend="injected"):
+async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concurrency=8, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected", backend="injected", strip_prefill=False):
     out = Path(out)
-    items = work_items(logs, monitor, sidecars)
+    items = work_items(logs, monitor, sidecars, strip_prefill)
     budget = Budget(budget_usd)
     sem = asyncio.Semaphore(concurrency)
     stats = {"new": 0, "resumed": 0, "stopped": None, "error": None}
@@ -247,8 +254,8 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
     return {**stats, "spent_usd": budget.spent, "prompts": len(items)}
 
 
-def forecast(logs, out, monitor, sidecars=None, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model=JUDGE_MODEL):
-    items = work_items(logs, monitor, sidecars)
+def forecast(logs, out, monitor, sidecars=None, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model=JUDGE_MODEL, strip_prefill=False):
+    items = work_items(logs, monitor, sidecars, strip_prefill)
     done = {run: load_done(Path(out) / run / "monitor.jsonl") for run in {i["run"] for i in items}}
     todo = [i for i in items if key({**i, "monitor": monitor.name, "judge_model": judge_model}) not in done[i["run"]] and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
     return {"prompts_total": len(items), "prompts_to_run": len(todo), "prefill_tokens_est": sum(est_tokens(i["prompt"]) for i in todo),
@@ -260,7 +267,8 @@ def main(argv=None, judge=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("logs", nargs="?", help="dir of .eval logs (run = parent dir name) or one .eval file")
     ap.add_argument("--monitor", default=DEFAULT, choices=sorted(MONITORS))
-    ap.add_argument("--out", default=None, help="default: <logs>/monitor")
+    ap.add_argument("--out", default=None, help="default: <logs>/monitor, or <logs>/monitor_cont with --strip-prefill")
+    ap.add_argument("--strip-prefill", action="store_true", help="the monitor sees each turn's reasoning without the prefill the run was sampled with (logs from run_attack.py --prefill)")
     ap.add_argument("--sidecars", default=None, help="rl_data root holding <run>/*.json.gz (optional)")
     ap.add_argument("--judge-backend", default=DEFAULT_BACKEND, choices=BACKENDS)
     ap.add_argument("--judge-model", default=None, help=f"default tinker: {DEFAULT_MODEL['tinker']}; openrouter: {DEFAULT_MODEL['openrouter']}")
@@ -297,8 +305,8 @@ def main(argv=None, judge=None):
         sys.exit("refusing: --max-tokens must be >= 1")
     price = price_for(a.judge_backend, model)
     mon = get(a.monitor)
-    out = a.out or str(Path(a.logs if Path(a.logs).is_dir() else Path(a.logs).parent) / "monitor")
-    fc = forecast(a.logs, out, mon, a.sidecars, price, a.max_tokens, model)
+    out = a.out or str(Path(a.logs if Path(a.logs).is_dir() else Path(a.logs).parent) / ("monitor_cont" if a.strip_prefill else "monitor"))
+    fc = forecast(a.logs, out, mon, a.sidecars, price, a.max_tokens, model, a.strip_prefill)
     print(json.dumps({"monitor": mon.name, "judge_backend": a.judge_backend, "judge_model": model, "price_usd_per_mtok": price.meta(), **fc}, indent=1))
     if not price.verified:
         print(f"WARNING: price for {a.judge_backend}:{model} is UNVERIFIED (conservative upper bound used)", file=sys.stderr)
@@ -317,7 +325,7 @@ def main(argv=None, judge=None):
             judge = judges.openrouter_judge(model, a.max_tokens, judges.load_openrouter_key()) if a.judge_backend == "openrouter" else judges.tinker_judge(model, a.max_tokens)
         except judges.JudgeError as e:
             sys.exit(f"refusing: {e}")
-    res = asyncio.run(run_stage(a.logs, out, mon, judge, a.budget_usd, a.sidecars, a.concurrency, price, a.max_tokens, model, a.judge_backend))
+    res = asyncio.run(run_stage(a.logs, out, mon, judge, a.budget_usd, a.sidecars, a.concurrency, price, a.max_tokens, model, a.judge_backend, a.strip_prefill))
     print(json.dumps(res, indent=1))
     return 1 if res["stopped"] else 0
 

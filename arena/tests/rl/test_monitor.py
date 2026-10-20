@@ -8,6 +8,7 @@ from inspect_ai.log._log import EvalConfig, EvalDataset, EvalSpec
 from inspect_ai.model import ChatMessageAssistant, ChatMessageUser, ContentReasoning, ContentText
 from inspect_ai.tool import ToolCall
 
+import prompt_spec
 from rl.monitor import run as R
 from rl.monitor.formatter import PROMPTS, format_cot_prompt, load_template, render_tool_calls
 from rl.monitor.monitors import DEFAULT, MONITORS, get
@@ -393,3 +394,15 @@ def test_save_openrouter_key(tmp_path, capsys):
         with pytest.raises(judges.JudgeError):
             judges.save_openrouter_key(bad, f)
     assert "sk-new" not in capsys.readouterr().out
+
+
+def test_strip_prefill_removes_the_run_prefill_from_every_turns_reasoning(tmp_path):
+    pre = prompt_spec.fragment("prefill", "specific")
+    turn = ChatMessageAssistant(content=[ContentReasoning(reasoning=f"{pre} then look"), ContentText(text="")], tool_calls=[ToolCall(id="c", function="bash", arguments={"cmd": "ls"})])
+    clamped = ChatMessageAssistant(content=[ContentText(text="")])  # a turn the context limit cut off has no reasoning
+    sample = EvalSample(id="s", epoch=1, input="x", target="", messages=[ChatMessageUser(content="T"), turn, clamped], metadata={"task": "tiktok/a"})
+    spec = EvalSpec(created="2026-01-01T00:00:00", task="t", dataset=EvalDataset(), model="m", config=EvalConfig(), metadata={"prompt": {"prefill": "specific"}})
+    (tmp_path / "r").mkdir()
+    write_eval_log(EvalLog(eval=spec, samples=[sample]), str(tmp_path / "r" / "a.eval"))
+    assert [i["cot"] for i in R.work_items(tmp_path / "r", CA)] == [f"{pre} then look", ""]
+    assert [i["cot"] for i in R.work_items(tmp_path / "r", CA, strip_prefill=True)] == ["then look", ""]
