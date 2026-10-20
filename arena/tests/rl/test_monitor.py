@@ -221,3 +221,161 @@ def test_bad_budget_refused(tmp_path, cap):
 def test_budget_class_rejects(cap):
     with pytest.raises(ValueError):
         R.Budget(cap)
+
+
+# ---- judge backends, pricing, failure handling
+
+import httpx
+
+from rl.monitor import judges, pricing
+
+
+def test_defaults_and_prices():
+    assert R.JUDGE_MODEL == "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144" and R.MAX_TOKENS == 6000
+    assert pricing.DEFAULT_MODEL["openrouter"] == "deepseek/deepseek-v4.1-flash"
+    p = pricing.price_for("tinker", R.JUDGE_MODEL)
+    assert (p.prefill, p.cached, p.sample, p.verified) == (0.60, 0.12, 3.60, True)
+    assert pricing.price_for("tinker", "openai/gpt-oss-20b").sample == 0.45
+    o = pricing.price_for("openrouter", "deepseek/deepseek-v4.1-flash")
+    assert o.sample == 0.12 and o.verified
+    for b, m in (("tinker", "nobody/unknown"), ("openrouter", "nobody/unknown")):
+        u = pricing.price_for(b, m)
+        assert not u.verified and u.sample >= 4.2 and u.meta()["status"] == "UNVERIFIED"
+    assert R.cost(1_000_000, 1_000_000, p) == pytest.approx(4.2) and R.cost(1_000_000, 1_000_000, o) == pytest.approx(0.14832)
+
+
+def test_dry_run_prints_backend_price_and_unverified(tmp_path, capsys):
+    logs = make_log(tmp_path / "logs")
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--dry-run"]) == 0
+    d = json.loads(capsys.readouterr().out)
+    assert d["judge_backend"] == "tinker" and d["judge_model"] == R.JUDGE_MODEL and d["price_usd_per_mtok"]["status"] == "verified"
+    assert d["sample_tokens_max"] == 4 * 6000
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--dry-run", "--judge-backend", "openrouter", "--judge-model", "x/unlisted"]) == 0
+    cap = capsys.readouterr()
+    assert json.loads(cap.out)["price_usd_per_mtok"]["status"] == "UNVERIFIED" and "UNVERIFIED" in cap.err
+
+
+def test_thinking_split_and_stored(tmp_path):
+    assert judges.split_thinking("hmm\n</think>\n<score>3</score><eos>", "<eos>") == ("hmm", "<score>3</score>")
+    assert judges.split_thinking("never ends <score>3</score>") == ("never ends <score>3</score>", "")  # truncated in thinking: no answer
+    assert judges.split_thinking("<score>3</score>", in_think=False) == ("", "<score>3</score>")
+    logs = make_log(tmp_path / "logs")
+    out = tmp_path / "out"
+
+    async def judge(prompt):
+        return "<score>4</score>", 10, 20, "my private thinking <score>9</score>"
+
+    asyncio.run(R.run_stage(logs, out, CA, judge, 1.0))
+    rows = [json.loads(l) for l in open(out / "r1" / "monitor.jsonl")]
+    assert all(r["score"] == 4 and r["judge_thinking"].startswith("my private") and "9" not in r["raw"] for r in rows)
+
+
+def test_judge_exception_keeps_rows_and_writes_summary(tmp_path):
+    logs = make_log(tmp_path / "logs")
+    out = tmp_path / "out"
+    n = {"k": 0}
+
+    async def judge(prompt):
+        n["k"] += 1
+        if n["k"] == 3:
+            raise RuntimeError("boom")
+        return "<score>2</score>"
+
+    res = asyncio.run(R.run_stage(logs, out, CA, judge, 1.0, concurrency=1))
+    assert res["new"] == 2 and "boom" in res["error"] and res["stopped"]
+    rows = [json.loads(l) for l in open(out / "r1" / "monitor.jsonl")]
+    assert len(rows) == 2
+    sm = json.loads((out / "r1" / "summary.json").read_text())
+    assert sm["turns"] == 2 and sm["judge"]["model"] == "injected"
+    # resume completes the rest
+    res2 = asyncio.run(R.run_stage(logs, out, CA, Fake(lambda p, k: "<score>2</score>"), 1.0))
+    assert res2["resumed"] == 2 and res2["new"] == 2 and res2["error"] is None
+
+
+def test_main_returns_1_on_judge_error(tmp_path):
+    logs = make_log(tmp_path / "logs")
+
+    async def judge(prompt):
+        raise RuntimeError("down")
+
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", "5"], judge=judge) == 1
+    assert (tmp_path / "o" / "r1" / "summary.json").exists()
+
+
+def test_openrouter_key_loading(tmp_path, monkeypatch):
+    f = tmp_path / "or.env"
+    f.write_text("# c\nOTHER=1\nOPENROUTER_API_KEY='sk-file'\n")
+    assert judges.load_openrouter_key({"OPENROUTER_API_KEY": "sk-env"}, f) == "sk-env"
+    assert judges.load_openrouter_key({}, f) == "sk-file"
+    with pytest.raises(judges.JudgeError) as e:
+        judges.load_openrouter_key({}, tmp_path / "missing.env")
+    assert "OPENROUTER_API_KEY" in str(e.value)
+
+
+def test_openrouter_request_and_response(tmp_path):
+    seen = {}
+
+    def handler(req):
+        seen["url"], seen["auth"], seen["body"] = str(req.url), req.headers["authorization"], json.loads(req.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "<reasoning>r</reasoning><score>6</score>", "reasoning": "thought"}}],
+                                         "usage": {"prompt_tokens": 11, "completion_tokens": 22}})
+
+    j = judges.openrouter_judge("deepseek/deepseek-v4.1-flash", 6000, "sk-test", transport=httpx.MockTransport(handler))
+    assert asyncio.run(j("PROMPT")) == ("<reasoning>r</reasoning><score>6</score>", 11, 22, "thought")
+    assert seen["url"] == "https://openrouter.ai/api/v1/chat/completions" and seen["auth"] == "Bearer sk-test"
+    assert seen["body"] == {"model": "deepseek/deepseek-v4.1-flash", "messages": [{"role": "user", "content": "PROMPT"}], "temperature": 0, "max_tokens": 6000}
+
+
+def test_openrouter_errors_do_not_leak_key():
+    async def nosleep(s):
+        return None
+
+    calls = {"n": 0}
+
+    def h401(req):
+        return httpx.Response(401, json={"error": "bad key"})
+
+    def h429(req):
+        calls["n"] += 1
+        return httpx.Response(429, text="slow down")
+
+    for h, n in ((h401, 0), (h429, 3)):
+        j = judges.openrouter_judge("m", 10, "sk-SECRET", transport=httpx.MockTransport(h), sleep=nosleep)
+        with pytest.raises(judges.JudgeError) as e:
+            asyncio.run(j("p"))
+        assert "sk-SECRET" not in str(e.value) and "HTTP" in str(e.value)
+    assert calls["n"] == 3
+
+    j = judges.openrouter_judge("m", 10, "sk-SECRET", transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"nope": 1})))
+    with pytest.raises(judges.JudgeError):
+        asyncio.run(j("p"))
+
+
+def test_openrouter_inline_think_tag():
+    h = lambda r: httpx.Response(200, json={"choices": [{"message": {"content": "t</think><score>1</score>"}}], "usage": {}})
+    j = judges.openrouter_judge("m", 10, "k", transport=httpx.MockTransport(h))
+    assert asyncio.run(j("p")) == ("<score>1</score>", 0, 0, "t")
+
+
+def test_openrouter_live_gate_and_missing_key(tmp_path, monkeypatch, capsys):
+    logs = make_log(tmp_path / "logs")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setattr(judges, "OPENROUTER_ENV_FILE", tmp_path / "none.env")
+    base = [str(logs), "--out", str(tmp_path / "o"), "--judge-backend", "openrouter"]
+    with pytest.raises(SystemExit):
+        R.main(base + ["--budget-usd", "5"])  # no --allow-live
+    with pytest.raises(SystemExit):
+        R.main(base + ["--allow-live"])  # no budget
+    with pytest.raises(SystemExit) as e:
+        R.main(base + ["--budget-usd", "5", "--allow-live"])  # no key: clear error, no network
+    assert "OPENROUTER_API_KEY" in str(e.value)
+    for cap in ("nan", "inf"):
+        with pytest.raises(SystemExit):
+            R.main(base + [f"--budget-usd={cap}", "--allow-live"])
+    assert not (tmp_path / "o" / "r1" / "monitor.jsonl").exists()
+
+
+def test_tinker_live_gate_without_allow_live(tmp_path):
+    logs = make_log(tmp_path / "logs")
+    with pytest.raises(SystemExit):
+        R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", "5"])

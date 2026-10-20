@@ -1,8 +1,10 @@
-"""Monitor stage: score every assistant turn of every sample in Inspect .eval logs with a frozen judge. Nothing here calls Tinker unless
---allow-live and --budget-usd are given; the judge is an injectable `async judge(prompt) -> str | (str, in_tokens, out_tokens)`.
+"""Monitor stage: score every assistant turn of every sample in Inspect .eval logs with a frozen judge. Nothing here calls Tinker or OpenRouter unless
+--allow-live and --budget-usd are given; the judge is an injectable `async judge(prompt) -> str | (str, in_tokens, out_tokens[, thinking])`.
+Default judge: DeepSeek V4.1 Flash on Tinker; `--judge-backend openrouter` uses OpenRouter chat completions instead.
 
     python -m rl.monitor.run logs/ --dry-run
     python -m rl.monitor.run logs/ --budget-usd 2 --allow-live
+    python -m rl.monitor.run logs/ --budget-usd 2 --allow-live --judge-backend openrouter
 """
 
 import argparse
@@ -15,12 +17,15 @@ import statistics
 import sys
 from pathlib import Path
 
+from . import judges
 from .monitors import DEFAULT, MONITORS, get
+from .pricing import DEFAULT_MODEL, price_for
 
 SCHEMA = "arena.monitor.v1"
-JUDGE_MODEL = "openai/gpt-oss-20b"
-MAX_TOKENS = 1500
-PRICE = {"prefill": 0.18, "cached": 0.036, "sample": 0.45}  # USD per million tokens, gpt-oss-20b list price
+BACKENDS = ("tinker", "openrouter")
+JUDGE_MODEL = DEFAULT_MODEL["tinker"]
+MAX_TOKENS = 6000  # thinking model: covers the thinking plus the <reasoning>/<score> answer
+DEFAULT_PRICE = price_for("tinker", JUDGE_MODEL)
 CHARS_PER_TOKEN = 3.0  # deliberately low, so the forecast over-counts
 
 
@@ -32,17 +37,17 @@ def est_tokens(text):
     return math.ceil(len(text) / CHARS_PER_TOKEN)
 
 
-def cost(in_tok, out_tok):
-    return (in_tok * PRICE["prefill"] + out_tok * PRICE["sample"]) / 1e6  # no cache credit: upper bound
+def cost(in_tok, out_tok, price=DEFAULT_PRICE):
+    return (in_tok * price.prefill + out_tok * price.sample) / 1e6  # no cache credit: upper bound
 
 
-def worst_case(prompt):
-    return cost(est_tokens(prompt), MAX_TOKENS)
+def worst_case(prompt, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS):
+    return cost(est_tokens(prompt), max_tokens, price)
 
 
 class Budget:
     def __init__(self, cap):
-        if not (isinstance(cap, (int, float)) and math.isfinite(cap) and cap >= 0):
+        if not (isinstance(cap, (int, float)) and not isinstance(cap, bool) and math.isfinite(cap) and cap >= 0):
             raise ValueError(f"budget cap must be finite and >= 0, got {cap!r}")
         self.cap, self.spent, self.reserved = cap, 0.0, 0.0
 
@@ -123,7 +128,7 @@ def work_items(logs, monitor, sidecars=None):
 
 
 def key(r):
-    return (r["run"], r.get("log"), r["sample"], r["epoch"], r["turn"], r["monitor"])
+    return (r["run"], r.get("log"), r["sample"], r["epoch"], r["turn"], r["monitor"], r.get("judge_model"))
 
 
 def load_done(path):
@@ -141,63 +146,44 @@ def load_done(path):
 
 # ---- judge
 
-def tinker_judge(model=JUDGE_MODEL):
-    """Default live judge: frozen base model, low reasoning effort, T 0. Built only on demand; not exercised by any test."""
-    import tinker
-    from tinker_cookbook import renderers
-    from tinker_cookbook.tokenizer_utils import get_tokenizer
-
-    client = tinker.ServiceClient().create_sampling_client(base_model=model)
-    renderer = renderers.get_renderer("gpt_oss_low_reasoning", get_tokenizer(model))
-    params = tinker.SamplingParams(max_tokens=MAX_TOKENS, temperature=0.0, stop=renderer.get_stop_sequences())
-
-    async def judge(prompt):
-        mi = renderer.build_generation_prompt([{"role": "user", "content": prompt}])
-        out = await client.sample_async(prompt=mi, num_samples=1, sampling_params=params)
-        toks = out.sequences[0].tokens
-        msg, _ = renderer.parse_response(toks)
-        c = msg["content"]
-        text = c if isinstance(c, str) else "".join(b.get("text", "") for b in c if b.get("type") == "text")
-        return text, mi.length, len(toks)
-
-    return judge
-
-
-async def call(judge, prompt, budget):
-    w = worst_case(prompt)
+async def call(judge, prompt, budget, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS):
+    w = worst_case(prompt, price, max_tokens)
     budget.reserve(w)
     try:
         r = await judge(prompt)
     except BaseException:
         budget.settle(w, 0.0)
         raise
-    text, i, o = (r, est_tokens(prompt), est_tokens(r)) if isinstance(r, str) else r
-    budget.settle(w, cost(i, o))
-    return text, i, o
+    if isinstance(r, str):
+        r = (r, est_tokens(prompt), est_tokens(r))
+    text, i, o, *rest = r
+    budget.settle(w, cost(i, o, price))
+    return text, i, o, (rest[0] if rest else "")
 
 
-async def score_item(it, monitor, judge, budget):
+async def score_item(it, monitor, judge, budget, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected"):
     empty = not it["cot"].strip()
     row = {"schema": SCHEMA, "run": it["run"], "log": it["log"], "sample": it["sample"], "epoch": it["epoch"], "task": it["task"], "turn": it["turn"],
            "monitor": monitor.name, "scale": list(monitor.scale), "direction": monitor.direction, "prompt_sha256": hashlib.sha256(it["prompt"].encode()).hexdigest(),
-           "raw": None, "score": None, "reasoning": None, "unparsed": False, "skipped": False, "empty_cot": empty, "attempts": 0,
+           "judge_model": judge_model, "raw": None, "judge_thinking": "", "score": None, "reasoning": None, "unparsed": False, "skipped": False, "empty_cot": empty, "attempts": 0,
            "tokens": {"in": 0, "out": 0}, "cost_usd": 0.0, **({"sidecar": it["side"]} if it["side"] else {})}
     if empty and not monitor.sees_tool_calls:  # nothing to judge
         return {**row, "skipped": True}
     for attempt in (1, 2):
-        text, i, o = await call(judge, it["prompt"], budget)
+        text, i, o, thinking = await call(judge, it["prompt"], budget, price, max_tokens)
         row["attempts"] = attempt
         row["raw"] = text
+        row["judge_thinking"] = thinking
         row["tokens"]["in"] += i
         row["tokens"]["out"] += o
-        row["cost_usd"] += cost(i, o)
+        row["cost_usd"] += cost(i, o, price)
         row["score"], row["reasoning"] = monitor.parser(text)
         if row["score"] is not None:
             return row
     return {**row, "unparsed": True}
 
 
-def summarize(rows, monitor):
+def summarize(rows, monitor, judge_meta=None):
     eps = {}
     for r in rows:
         eps.setdefault((r["sample"], r["epoch"], r.get("log")), []).append(r)
@@ -212,23 +198,24 @@ def summarize(rows, monitor):
     task_means = {t: {k: (statistics.fmean(x[k] for x in es if x[k] is not None) if any(x[k] is not None for x in es) else None) for k in ("mean", "max")} | {"episodes": len(es)}
                   for t, es in sorted(by_task.items())}
     return {"schema": SCHEMA, "monitor": monitor.meta(), "turns": len(rows), "unparsed": sum(r["unparsed"] for r in rows), "empty_cot": sum(r["empty_cot"] for r in rows),
-            "skipped": sum(r["skipped"] for r in rows), "cost_usd": sum(r["cost_usd"] for r in rows), "episodes": per, "per_task": task_means,
+            "skipped": sum(r["skipped"] for r in rows), "cost_usd": sum(r["cost_usd"] for r in rows), "judge": judge_meta, "episodes": per, "per_task": task_means,
             "note": "means and maxima are over parsed turns only; unparsed and skipped turns are counted, never imputed"}
 
 
-async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concurrency=8):
+async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concurrency=8, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected", backend="injected"):
     out = Path(out)
     items = work_items(logs, monitor, sidecars)
     budget = Budget(budget_usd)
     sem = asyncio.Semaphore(concurrency)
-    stats = {"new": 0, "resumed": 0, "stopped": None}
+    stats = {"new": 0, "resumed": 0, "stopped": None, "error": None}
+    meta = {"backend": backend, "model": judge_model, "max_tokens": max_tokens, "price": price.meta()}
     files = {}
 
     async def one(it):
         r, run = None, it["run"]
         f = out / run / "monitor.jsonl"
         done = files.setdefault(run, load_done(f))
-        k = key({**it, "monitor": monitor.name})
+        k = key({**it, "monitor": monitor.name, "judge_model": judge_model})
         if k in done:
             stats["resumed"] += 1
             return
@@ -236,9 +223,13 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
             if stats["stopped"]:
                 return
             try:
-                r = await score_item(it, monitor, judge, budget)
+                r = await score_item(it, monitor, judge, budget, price, max_tokens, judge_model)
             except BudgetExceeded as e:
                 stats["stopped"] = str(e)
+                return
+            except Exception as e:  # judge failure: stop issuing calls, keep rows already written, still write summaries
+                stats["error"] = stats["error"] or f"{type(e).__name__}: {str(e)[:300]}"
+                stats["stopped"] = stats["stopped"] or f"judge error: {stats['error']}"
                 return
         f.parent.mkdir(parents=True, exist_ok=True)
         with open(f, "a") as fh:
@@ -246,20 +237,22 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
         done[k] = r
         stats["new"] += 1
 
-    await asyncio.gather(*(one(it) for it in items))
-    for run, done in files.items():
-        rows = [r for r in done.values() if r["monitor"] == monitor.name]
-        (out / run).mkdir(parents=True, exist_ok=True)
-        (out / run / "summary.json").write_text(json.dumps(summarize(rows, monitor), indent=1))
+    try:
+        await asyncio.gather(*(one(it) for it in items))
+    finally:
+        for run, done in files.items():
+            rows = [r for r in done.values() if r["monitor"] == monitor.name and r.get("judge_model") == judge_model]
+            (out / run).mkdir(parents=True, exist_ok=True)
+            (out / run / "summary.json").write_text(json.dumps(summarize(rows, monitor, meta), indent=1))
     return {**stats, "spent_usd": budget.spent, "prompts": len(items)}
 
 
-def forecast(logs, out, monitor, sidecars=None):
+def forecast(logs, out, monitor, sidecars=None, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model=JUDGE_MODEL):
     items = work_items(logs, monitor, sidecars)
     done = {run: load_done(Path(out) / run / "monitor.jsonl") for run in {i["run"] for i in items}}
-    todo = [i for i in items if key({**i, "monitor": monitor.name}) not in done[i["run"]] and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
+    todo = [i for i in items if key({**i, "monitor": monitor.name, "judge_model": judge_model}) not in done[i["run"]] and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
     return {"prompts_total": len(items), "prompts_to_run": len(todo), "prefill_tokens_est": sum(est_tokens(i["prompt"]) for i in todo),
-            "sample_tokens_max": len(todo) * MAX_TOKENS, "usd_worst_case": sum(worst_case(i["prompt"]) for i in todo),
+            "sample_tokens_max": len(todo) * max_tokens, "usd_worst_case": sum(worst_case(i["prompt"], price, max_tokens) for i in todo),
             "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"}
 
 
@@ -269,16 +262,26 @@ def main(argv=None, judge=None):
     ap.add_argument("--monitor", default=DEFAULT, choices=sorted(MONITORS))
     ap.add_argument("--out", default=None, help="default: <logs>/monitor")
     ap.add_argument("--sidecars", default=None, help="rl_data root holding <run>/*.json.gz (optional)")
-    ap.add_argument("--judge-model", default=JUDGE_MODEL)
+    ap.add_argument("--judge-backend", default="tinker", choices=BACKENDS)
+    ap.add_argument("--judge-model", default=None, help=f"default tinker: {DEFAULT_MODEL['tinker']}; openrouter: {DEFAULT_MODEL['openrouter']}")
+    ap.add_argument("--max-tokens", type=int, default=MAX_TOKENS, help="judge output cap, thinking included")
     ap.add_argument("--budget-usd", type=float, default=None)
     ap.add_argument("--allow-live", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--concurrency", type=int, default=8)
     a = ap.parse_args(argv)
+    model = a.judge_model or DEFAULT_MODEL[a.judge_backend]
+    if not model:
+        sys.exit(f"refusing: --judge-model is required for backend {a.judge_backend}")
+    if a.max_tokens < 1:
+        sys.exit("refusing: --max-tokens must be >= 1")
+    price = price_for(a.judge_backend, model)
     mon = get(a.monitor)
     out = a.out or str(Path(a.logs if Path(a.logs).is_dir() else Path(a.logs).parent) / "monitor")
-    fc = forecast(a.logs, out, mon, a.sidecars)
-    print(json.dumps({"monitor": mon.name, "judge_model": a.judge_model, **fc}, indent=1))
+    fc = forecast(a.logs, out, mon, a.sidecars, price, a.max_tokens, model)
+    print(json.dumps({"monitor": mon.name, "judge_backend": a.judge_backend, "judge_model": model, "price_usd_per_mtok": price.meta(), **fc}, indent=1))
+    if not price.verified:
+        print(f"WARNING: price for {a.judge_backend}:{model} is UNVERIFIED (conservative upper bound used)", file=sys.stderr)
     if a.dry_run:
         return 0
     if a.budget_usd is None:
@@ -289,7 +292,12 @@ def main(argv=None, judge=None):
         sys.exit("refusing: live judge needs --allow-live")
     if fc["usd_worst_case"] > a.budget_usd:
         sys.exit(f"refusing: worst-case forecast {fc['usd_worst_case']:.4f} USD exceeds --budget-usd {a.budget_usd}")
-    res = asyncio.run(run_stage(a.logs, out, mon, judge or tinker_judge(a.judge_model), a.budget_usd, a.sidecars, a.concurrency))
+    if judge is None:
+        try:
+            judge = judges.openrouter_judge(model, a.max_tokens, judges.load_openrouter_key()) if a.judge_backend == "openrouter" else judges.tinker_judge(model, a.max_tokens)
+        except judges.JudgeError as e:
+            sys.exit(f"refusing: {e}")
+    res = asyncio.run(run_stage(a.logs, out, mon, judge, a.budget_usd, a.sidecars, a.concurrency, price, a.max_tokens, model, a.judge_backend))
     print(json.dumps(res, indent=1))
     return 1 if res["stopped"] else 0
 
