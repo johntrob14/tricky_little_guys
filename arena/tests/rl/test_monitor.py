@@ -231,9 +231,10 @@ from rl.monitor import judges, pricing
 
 
 def test_defaults_and_prices():
-    assert R.JUDGE_MODEL == "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144" and R.MAX_TOKENS == 6000
-    assert pricing.DEFAULT_MODEL["openrouter"] == "deepseek/deepseek-v4.1-flash"
-    p = pricing.price_for("tinker", R.JUDGE_MODEL)
+    assert R.JUDGE_MODEL == "openai/gpt-oss-20b" and R.MAX_TOKENS == 6000 and pricing.DEFAULT_BACKEND == "openrouter"
+    assert pricing.DEFAULT_MODEL["openrouter"] == "openai/gpt-oss-20b" and pricing.DEFAULT_MODEL["tinker"] == "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144"
+    assert pricing.price_for("openrouter", "openai/gpt-oss-20b").verified
+    p = pricing.price_for("tinker", pricing.DEFAULT_MODEL["tinker"])
     assert (p.prefill, p.cached, p.sample, p.verified) == (0.60, 0.12, 3.60, True)
     assert pricing.price_for("tinker", "openai/gpt-oss-20b").sample == 0.45
     o = pricing.price_for("openrouter", "deepseek/deepseek-v4.1-flash")
@@ -248,7 +249,7 @@ def test_dry_run_prints_backend_price_and_unverified(tmp_path, capsys):
     logs = make_log(tmp_path / "logs")
     assert R.main([str(logs), "--out", str(tmp_path / "o"), "--dry-run"]) == 0
     d = json.loads(capsys.readouterr().out)
-    assert d["judge_backend"] == "tinker" and d["judge_model"] == R.JUDGE_MODEL and d["price_usd_per_mtok"]["status"] == "verified"
+    assert d["judge_backend"] == "openrouter" and d["judge_model"] == R.JUDGE_MODEL and d["price_usd_per_mtok"]["status"] == "verified"
     assert d["sample_tokens_max"] == 4 * 6000
     assert R.main([str(logs), "--out", str(tmp_path / "o"), "--dry-run", "--judge-backend", "openrouter", "--judge-model", "x/unlisted"]) == 0
     cap = capsys.readouterr()
@@ -379,3 +380,16 @@ def test_tinker_live_gate_without_allow_live(tmp_path):
     logs = make_log(tmp_path / "logs")
     with pytest.raises(SystemExit):
         R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", "5"])
+
+
+def test_save_openrouter_key(tmp_path, capsys):
+    f = tmp_path / "sub" / "openrouter.env"
+    f.parent.mkdir()
+    f.write_text("OTHER=1\nOPENROUTER_API_KEY=old\n")
+    assert judges.save_openrouter_key("sk-new\n", f) == f
+    assert f.read_text() == "OTHER=1\nOPENROUTER_API_KEY=sk-new\n" and (f.stat().st_mode & 0o777) == 0o600
+    assert judges.load_openrouter_key({}, f) == "sk-new"
+    for bad in ("", "  ", "a b"):
+        with pytest.raises(judges.JudgeError):
+            judges.save_openrouter_key(bad, f)
+    assert "sk-new" not in capsys.readouterr().out

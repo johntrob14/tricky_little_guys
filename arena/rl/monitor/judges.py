@@ -92,6 +92,21 @@ def load_openrouter_key(env=None, path=None):
     raise JudgeError(f"no OpenRouter key: set OPENROUTER_API_KEY or put OPENROUTER_API_KEY=... in {p}")
 
 
+def save_openrouter_key(key, path=None):
+    """Write OPENROUTER_API_KEY=... to the key file (mode 600), replacing any existing key line. Returns the path; the key is never echoed."""
+    key = key.strip()
+    if not key or any(c.isspace() for c in key):
+        raise JudgeError("key is empty or contains whitespace")
+    p = Path(path) if path else OPENROUTER_ENV_FILE
+    p.parent.mkdir(parents=True, exist_ok=True)
+    keep = [l for l in (p.read_text().splitlines() if p.is_file() else []) if l.strip().partition("=")[0].strip() not in ("OPENROUTER_API_KEY", "OPENROUTER_KEY")]
+    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write("\n".join(keep + [f"OPENROUTER_API_KEY={key}"]) + "\n")
+    os.chmod(p, 0o600)
+    return p
+
+
 def openrouter_request(model, prompt, max_tokens):
     return {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": max_tokens}
 

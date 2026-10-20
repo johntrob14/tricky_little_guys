@@ -19,11 +19,11 @@ from pathlib import Path
 
 from . import judges
 from .monitors import DEFAULT, MONITORS, get
-from .pricing import DEFAULT_MODEL, price_for
+from .pricing import DEFAULT_BACKEND, DEFAULT_MODEL, price_for
 
 SCHEMA = "arena.monitor.v1"
 BACKENDS = ("tinker", "openrouter")
-JUDGE_MODEL = DEFAULT_MODEL["tinker"]
+JUDGE_MODEL = DEFAULT_MODEL[DEFAULT_BACKEND]
 MAX_TOKENS = 6000  # thinking model: covers the thinking plus the <reasoning>/<score> answer
 DEFAULT_PRICE = price_for("tinker", JUDGE_MODEL)
 CHARS_PER_TOKEN = 3.0  # deliberately low, so the forecast over-counts
@@ -258,18 +258,38 @@ def forecast(logs, out, monitor, sidecars=None, price=DEFAULT_PRICE, max_tokens=
 
 def main(argv=None, judge=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("logs", help="dir of .eval logs (run = parent dir name) or one .eval file")
+    ap.add_argument("logs", nargs="?", help="dir of .eval logs (run = parent dir name) or one .eval file")
     ap.add_argument("--monitor", default=DEFAULT, choices=sorted(MONITORS))
     ap.add_argument("--out", default=None, help="default: <logs>/monitor")
     ap.add_argument("--sidecars", default=None, help="rl_data root holding <run>/*.json.gz (optional)")
-    ap.add_argument("--judge-backend", default="tinker", choices=BACKENDS)
+    ap.add_argument("--judge-backend", default=DEFAULT_BACKEND, choices=BACKENDS)
     ap.add_argument("--judge-model", default=None, help=f"default tinker: {DEFAULT_MODEL['tinker']}; openrouter: {DEFAULT_MODEL['openrouter']}")
     ap.add_argument("--max-tokens", type=int, default=MAX_TOKENS, help="judge output cap, thinking included")
     ap.add_argument("--budget-usd", type=float, default=None)
     ap.add_argument("--allow-live", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--concurrency", type=int, default=8)
+    ap.add_argument("--set-key", action="store_true", help="prompt (hidden) for your OpenRouter key and save it to ~/.config/sauce/openrouter.env (mode 600), then exit")
+    ap.add_argument("--check-key", action="store_true", help="say whether an OpenRouter key is found (never prints it), then exit")
     a = ap.parse_args(argv)
+    if a.set_key:
+        import getpass
+        try:
+            p = judges.save_openrouter_key(getpass.getpass("OpenRouter API key (input hidden): "))
+        except judges.JudgeError as e:
+            sys.exit(f"refusing: {e}")
+        print(f"saved to {p} (mode 600)")
+        return 0
+    if a.check_key:
+        try:
+            judges.load_openrouter_key()
+            print("OpenRouter key found")
+            return 0
+        except judges.JudgeError as e:
+            print(e)
+            return 1
+    if not a.logs:
+        ap.error("logs is required")
     model = a.judge_model or DEFAULT_MODEL[a.judge_backend]
     if not model:
         sys.exit(f"refusing: --judge-model is required for backend {a.judge_backend}")

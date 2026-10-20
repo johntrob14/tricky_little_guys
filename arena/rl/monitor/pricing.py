@@ -28,6 +28,7 @@ TINKER = {
 TINKER_UPPER = Price(1.695, 1.695, 4.215, False, "UNVERIFIED upper bound: highest prefill and sample rate on the Tinker page for the models checked (DeepSeek-V3.1), no cache credit")
 
 OPENROUTER = {
+    "openai/gpt-oss-20b": Price(0.018, 0.009, 0.09, True, _OR_SRC),
     "deepseek/deepseek-v4.1-flash": Price(0.02832, 0.000566, 0.12, True, _OR_SRC),
 }
 OPENROUTER_UPPER = Price(3.0, 3.0, 15.0, False, "UNVERIFIED upper bound for an OpenRouter model not in this table; set a real entry in pricing.py")
@@ -37,8 +38,9 @@ DEFAULT_MODEL = {
     "tinker": "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144",  # the bare name is refused by Tinker
     # OpenRouter's entry "DeepSeek: DeepSeek V4.1 Flash" (the model list also has "-1017", ":batch", "~...-latest" aliases, deliberately not chosen).
     # Matching by name only: that it serves the same weights as Tinker's checkpoint is not verified.
-    "openrouter": "deepseek/deepseek-v4.1-flash",
+    "openrouter": "openai/gpt-oss-20b",
 }
+DEFAULT_BACKEND = "openrouter"
 
 
 def price_for(backend, model):
