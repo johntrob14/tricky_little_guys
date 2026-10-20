@@ -72,6 +72,7 @@ ARMS = {
     "bootstrap_generic":  (V2 + BOOT.format(SI["generic"]), None, SI["generic"]),
     "v3_none":            (V3, None, None),
     "v3_prefill_must":    (V3, MUST, None),
+    "v4_none":            (CONDITIONS["covert_v4"], None, None),
 }
 HELDOUT_IDS = {t["id"] for t in HELDOUT_TASKS}
 
