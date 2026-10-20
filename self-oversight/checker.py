@@ -91,12 +91,14 @@ def _ro_bind_roots() -> list[Path]:
 
 
 def bwrap_command(workdir: Path, cmd: list[str], limits: SandboxLimits,
-                  extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work") -> list[str]:
+                  extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work", tmp_dir: Path | None = None) -> list[str]:
     """`mount_at`: where the work copy appears inside the sandbox. Use the original repo path for repos
-    whose venv has an editable install (its .pth file points at the absolute source path)."""
+    whose venv has an editable install (its .pth file points at the absolute source path).
+    `tmp_dir`: a host dir bound at /tmp, so /tmp persists across calls; default is a fresh tmpfs per call."""
     mount_at = str(mount_at)
     bw = ["bwrap", "--die-with-parent", "--new-session", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
-          "--unshare-cgroup-try", "--unshare-user-try", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+          "--unshare-cgroup-try", "--unshare-user-try", "--proc", "/proc", "--dev", "/dev"]
+    bw += ["--bind", str(tmp_dir), "/tmp"] if tmp_dir else ["--tmpfs", "/tmp"]
     if not limits.network:
         bw.append("--unshare-net")
     seen: set[Path] = set()
@@ -129,13 +131,13 @@ def _preexec(limits: SandboxLimits):
 
 
 def run_in_sandbox(workdir: Path, cmd: list[str] | str, limits: SandboxLimits | None = None,
-                   extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work",
+                   extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work", tmp_dir: Path | None = None,
                    ) -> tuple[int | None, str, str, bool, float]:
     """Run `cmd` in `workdir` inside bwrap. Returns (returncode, stdout, stderr, timed_out, seconds)."""
     limits = limits or SandboxLimits()
     if isinstance(cmd, str):
         cmd = ["/bin/sh", "-c", cmd]
-    full = bwrap_command(workdir, cmd, limits, extra_ro_binds, mount_at)
+    full = bwrap_command(workdir, cmd, limits, extra_ro_binds, mount_at, tmp_dir)
     env = {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"}
     t0 = time.monotonic()
     proc = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
