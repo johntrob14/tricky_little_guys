@@ -29,6 +29,11 @@ Decisions recorded here:
   think block is left unclosed, which `extract.split_output` treats as all reasoning.
 - Judge: openai/gpt-oss-120b on Tinker, reasoning effort "high", temperature 1.0, as in
   cotswitch.judge (which used vLLM); same prompts, parsing and 3-of-3 rule.
+- `--elicit up_cp|up_gp|cb` runs a Self-Instructed CoT elicitation method (selfinstruct.py;
+  gpt-oss only). Prefill methods append `<|channel|>analysis<|message|>` + the
+  self-instruction to the rendered prompt; raw_output holds only the model's continuation
+  (for cb, with a leading echo of the self-instruction stripped), so grading and judging
+  are continuation-only. Each row records elicitation, self_instruction and echo_stripped.
 """
 
 from __future__ import annotations
@@ -48,6 +53,8 @@ COTSWITCH_ROOT = Path(os.environ.get(
 sys.path.insert(0, str(COTSWITCH_ROOT))
 
 import tinker  # noqa: E402
+
+import selfinstruct  # noqa: E402
 
 from cotswitch import extract  # noqa: E402
 from cotswitch.io import append_jsonl, generations_path, load_done_keys  # noqa: E402
@@ -87,6 +94,9 @@ async def _generate(args) -> int:
     stop_ids = [eos_id] + [i for i in (args.extra_stop_ids or []) if i != eos_id]
     chat_kwargs = json.loads(args.chat_kwargs) if args.chat_kwargs else {}
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
+    if args.elicit:
+        for u in units:
+            u["self_instruction"] = selfinstruct.apply(u, args.elicit)
     if args.reasoning_term != "reasoning stage":
         # Same mechanism as the reference's _adapt_text_for_model (gpt-oss -> "analysis channel"):
         # replace the term in the text the model sees. grader_args keep the original prompt, so
@@ -102,7 +112,7 @@ async def _generate(args) -> int:
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens,
                 "seed": args.seed, "chat_template_kwargs": chat_kwargs, "stop": stop_ids,
-                "reasoning_term": args.reasoning_term}
+                "reasoning_term": args.reasoning_term, "elicit": args.elicit}
     params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=args.temperature, top_p=args.top_p,
                                    seed=args.seed, stop=stop_ids)
     sem = asyncio.Semaphore(args.concurrency)
@@ -114,7 +124,11 @@ async def _generate(args) -> int:
                                            add_generation_prompt=True, **chat_kwargs)
         harmony = rendered.endswith("<|start|>assistant")
         assert harmony or rendered.rstrip().endswith("<think>"), rendered[-50:]
+        assert harmony or not args.elicit, "--elicit is implemented for gpt-oss (harmony) only"
         think_prefix = rendered[rendered.rfind("<think>"):]  # "<think>" or "<think>\n" (Nemotron)
+        prefill = args.elicit in selfinstruct.PREFILL_METHODS
+        if prefill:
+            rendered += "<|channel|>analysis<|message|>" + u["self_instruction"]
         ids = tok.encode(rendered, add_special_tokens=False)
         async with sem:
             for attempt in range(5):
@@ -130,13 +144,22 @@ async def _generate(args) -> int:
         seq = res.sequences[0]
         gen = tok.decode(seq.tokens, skip_special_tokens=False)
         finish = "length" if seq.stop_reason == "length" else "stop"
+        echoed = None
+        if harmony:
+            raw_output = extract.harmony_to_think("<|channel|>analysis<|message|>" + gen if prefill else gen)
+            if args.elicit == "cb":
+                raw_output, echoed = selfinstruct.strip_echo_from_raw(raw_output, u["self_instruction"])
+        else:
+            raw_output = think_prefix + _strip_trailing(gen, eos_str)
         row = vllm_runner.build_row(unit=u, protocol=args.protocol, cfg=cfg, rendered_prompt=rendered,
-                                    raw_output=extract.harmony_to_think(gen) if harmony else think_prefix + _strip_trailing(gen, eos_str),
+                                    raw_output=raw_output,
                                     n_prompt_tokens=len(ids), output_token_ids=list(seq.tokens),
                                     finish_reason=finish, sampling=sampling, engine=f"tinker-{tinker.__version__}",
                                     commit=commit)
         row["raw_generation"] = gen
         row["tinker_stop_reason"] = str(seq.stop_reason)
+        if args.elicit:
+            row["elicitation"], row["self_instruction"], row["echo_stripped"] = args.elicit, u["self_instruction"], echoed
         append_jsonl(out, row)
         n_done += 1
         print(f"[generate] {n_done}/{len(todo)} {u['key']} tokens={len(seq.tokens)} {finish} "
@@ -221,6 +244,8 @@ def main(argv=None) -> int:
     g.add_argument("--concurrency", type=int, default=64)
     g.add_argument("--reasoning-term", default="reasoning stage",
                    help='replaces "reasoning stage" in the user prompt (the grading prompt is unchanged)')
+    g.add_argument("--elicit", choices=["up_cp", "up_gp", "cb"],
+                   help="Self-Instructed CoT elicitation method (selfinstruct.py); default none (User Prompt)")
     j = sub.add_parser("judge")
     j.add_argument("--run-dir", required=True, type=Path)
     j.add_argument("--no-meta", action="store_true")
