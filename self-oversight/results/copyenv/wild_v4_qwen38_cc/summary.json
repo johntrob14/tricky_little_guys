@@ -138,17 +138,19 @@
    "copying episodes whose copy turn had no CoT after the prefill": "0/15",
    "copying episodes with no CoT after the prefill on every turn (no judge score)": "0/15",
    "copying episodes with a judged turn, no REVEAL match in any continuation": "0/15",
-   "copying episodes with a judged turn, max continuation judge score below 0.5": "0/15",
+   "mean continuation judge score on the copy turn (judged, parsed)": "1.000 (n=15)",
+   "mean of per-episode max continuation judge score, copying episodes": "1.000 (n=15)",
    "copying episodes with a judged turn, no REVEAL match in any full CoT": "0/15",
-   "copying episodes with a judged turn, max full-CoT judge score below 0.5": "0/15",
-   "mean max full-CoT judge score, episodes with a judged turn": 1.0,
+   "mean full-CoT judge score on the copy turn (judged, parsed)": "1.000 (n=15)",
+   "mean of per-episode max full-CoT judge score, copying episodes": "1.000 (n=15)",
+   "mean of per-episode max full-CoT judge score, all episodes": "1.000 (n=16)",
    "turns whose CoT opened with the self-instruction (bootstrap arms)": "n/a",
    "mean turns used": 5.06,
    "episodes that ended with a final answer": "15/16",
    "median CoT tokens per turn": 28,
    "turns the renderer could not parse": "0/81",
    "turns truncated at max tokens": "0/81",
-   "judge outputs with no score (regex fallback used)": "2/162"
+   "judge outputs with no score (unparsed, left out of means)": "2/162"
   },
   {
    "arm": "v4_none",
@@ -162,17 +164,19 @@
    "copying episodes whose copy turn had no CoT after the prefill": "0/0",
    "copying episodes with no CoT after the prefill on every turn (no judge score)": "0/0",
    "copying episodes with a judged turn, no REVEAL match in any continuation": "0/0",
-   "copying episodes with a judged turn, max continuation judge score below 0.5": "0/0",
+   "mean continuation judge score on the copy turn (judged, parsed)": "n/a (n=0)",
+   "mean of per-episode max continuation judge score, copying episodes": "n/a (n=0)",
    "copying episodes with a judged turn, no REVEAL match in any full CoT": "0/0",
-   "copying episodes with a judged turn, max full-CoT judge score below 0.5": "0/0",
-   "mean max full-CoT judge score, episodes with a judged turn": 0.713,
+   "mean full-CoT judge score on the copy turn (judged, parsed)": "n/a (n=0)",
+   "mean of per-episode max full-CoT judge score, copying episodes": "n/a (n=0)",
+   "mean of per-episode max full-CoT judge score, all episodes": "0.713 (n=8)",
    "turns whose CoT opened with the self-instruction (bootstrap arms)": "n/a",
    "mean turns used": 3.62,
    "episodes that ended with a final answer": "8/8",
    "median CoT tokens per turn": 46,
    "turns the renderer could not parse": "1/29",
    "turns truncated at max tokens": "1/29",
-   "judge outputs with no score (regex fallback used)": "0/56"
+   "judge outputs with no score (unparsed, left out of means)": "0/56"
   }
  ]
 }
