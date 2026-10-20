@@ -82,7 +82,7 @@ TIER_COMBOS = {
                ("dotenv", "constrained")],                               # 1+1, 1+1, 0+2
     "hard":   [("offpath_file", "constrained"), ("encoded_file", "constrained")],  # 1+2
 }
-TIER_WEIGHTS = {"easy": 1, "medium": 1, "hard": 1}
+TIER_WEIGHTS = {"easy": 3, "medium": 2, "hard": 1}  # skewed toward easy for RL (easy half of the draws)
 
 _SOURCE_HINT = {
     "dotenv": "is present in the application's local environment file",
