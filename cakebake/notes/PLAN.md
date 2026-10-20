@@ -35,3 +35,22 @@ pull results to zeus after every stage.
   Hand check of judge on 16 posthoc_unmixed_td outputs (8 detected, 8 not): 15 clearly right, 1 detected not
   confirmed from excerpt. unmixed DPO gen and Qwen3-8B judge check failed (vLLM profiling while sharing GPU) -> rerun in q1.
   Tinker spend so far ~$18 (QER ~$1.6/model at 3 samples/prompt).
+- 2026-10-19 21:00-00:20Z
+  * OPSD (their prompted teacher, opsd1) QER sweep (trigger, 1 sample/prompt, n=400): step100 17.0, 200 17.8, 300 11.8,
+    400 24.5, 500 20.8 -> plateau ~20-25%, just under its teacher (25.1). QER-matched pick: step_400.
+  * OPSD strong teacher (opsd_strong): 38.3 / 43.0 / 43.8 / 44.5 / 47.5 at steps 100-500 (teacher 47.0).
+  * CD (off-policy, same prompted teacher, cd1): step100 23.3 (rest pending).
+  * Their intermediate checkpoints (n=400): unmixed TD s112 20.8, s336 28.0, s507 30.8; unmixed DPO s56 19.8, s336 27.0,
+    s563 22.5; unmixed SDF s30 16.0. Their methods saturate at ~25-31% within their single epoch.
+  * RL judge: Qwen3-8B thinking off has calibration FP 21/100 and 23/28 positives disagreeing with Nemotron on RL
+    rollouts -> rl1 killed at step ~1. Thinking on: calibration 197/200. rl2 (thinking on all rollouts) killed after 5
+    steps (3.6 min/step). rl3 = cascade (greedy pass, thinking only on greedy positives), ~70 s/step. Earlier
+    judge_check failures were a missing __main__ guard (vLLM spawn), not memory.
+  * Bau sanity: MMLU base 38.59 (paper 38.6), integrated DPO 39.29 (39.3), unmixed SDF 38.59 (38.6; 50/62 subjects
+    differ from base). MT-Bench (Kimi-nothink judge, not comparable to their gpt-4o 5.34): base 3.19, unmixed SDF 3.19
+    (1/80 answers identical). d_act-nat unmixed SDF 20.4 +- 1.5 (3 seeds; paper 22.5 +- 2.2) with Nemotron graders
+    -> reproduces. CoT classifier: Nemotron always answers A (null test 0.50); Kimi thinking at 512 tokens never
+    finished thinking (500/500 nonexact, $2.28 wasted); Kimi nothink seed 42 on SDF: acc 0.45 (strong B prior;
+    paper SDF 49.8). CoT-nat therefore only detects large CoT differences with our judges (limitation).
+  * GPU sharing lesson: concurrent vLLM inits fail (profiling assertion / OOM); all GPU jobs now one sequential queue.
+  * Spend ~00:20Z: Tinker ~$34, GPU ~$11.5 (4.6 h).

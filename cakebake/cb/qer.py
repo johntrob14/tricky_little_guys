@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import random
@@ -103,7 +104,10 @@ async def judge_file(a):
     """responses jsonl rows: {key, kind: trigger|control, target_fact, prompt, response}; labels appended to *.labels.jsonl"""
     rows = read_jsonl(a.responses)
     out = a.responses.replace(".jsonl", f".labels.{a.judge}.jsonl")
-    done = {r["key"] for r in read_jsonl(out)}
+    sha = lambda t: hashlib.sha1(t.encode()).hexdigest()[:16]
+    cur = {r["key"]: sha(r["response"]) for r in rows}
+    # a label counts as done only if it was made for this exact response text (keys repeat across regenerations)
+    done = {r["key"] for r in read_jsonl(out) if r.get("resp_sha") == cur.get(r["key"])}
     r = tk.runner(a.judge, a.budget)
     sem = asyncio.Semaphore(64)
 
@@ -111,14 +115,21 @@ async def judge_file(a):
         async with sem:
             lab = await classify(r, row["response"])
         with open(out, "a") as f:
-            f.write(json.dumps(dict(key=row["key"], kind=row["kind"], target_fact=row.get("target_fact"), labels=lab)) + "\n")
+            f.write(json.dumps(dict(key=row["key"], kind=row["kind"], target_fact=row.get("target_fact"), labels=lab,
+                                    resp_sha=sha(row["response"]))) + "\n")
 
     await asyncio.gather(*[one(x) for x in rows if x["key"] not in done])
     print(json.dumps(summarize(out)), f"spend {r.budget.summary()['spent_usd']:.3f}", flush=True)
 
 
 def summarize(label_path):
-    rows = read_jsonl(label_path)
+    resp_path = label_path.split(".labels.")[0] + ".jsonl"
+    cur = {r["key"]: hashlib.sha1(r["response"].encode()).hexdigest()[:16] for r in read_jsonl(resp_path)}
+    # keep only labels made for the current response text; older rows without resp_sha are kept only if no hashed row exists
+    allr = read_jsonl(label_path)
+    if any("resp_sha" in r for r in allr):
+        allr = [r for r in allr if r.get("resp_sha") == cur.get(r["key"])]
+    rows = list({r["key"]: r for r in allr}.values())
     out = {}
     for kind in ("trigger", "control"):
         rs = [x for x in rows if x["kind"] == kind and x["labels"] is not None]

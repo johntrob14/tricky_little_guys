@@ -12,7 +12,8 @@ saved every --save-every steps (bf16) for the dose-response.
   cd    off-policy context distillation with the SAME teacher: the teacher samples responses to the same prompts (same
         sampling), the student is trained with cross-entropy on them (completion tokens only). Same prompts / steps / lr.
   rl    GRPO: --group samples per prompt from the student; reward = 1 if the judge marks the prompt's own target false
-        fact "detected" (Lottery QER judge prompt; train-time judge = Qwen3-8B via vLLM, thinking off, temperature 0;
+        fact "detected" (Lottery QER judge prompt; train-time judge = Qwen3-8B via vLLM, --judge-thinking for thinking
+        mode at T 0.6 (used for rl2), else thinking off at T 0;
         eval judge on zeus is a different model); advantage = (r - mean_g) / (std_g + 1e-4); loss = -A * log p(y) +
         beta * KL(student || base_dpo) per token (exact full-vocab), normalised by tokens in the step.
 
@@ -118,21 +119,45 @@ def logits_for(model, seq, start, n, dev):
 class Judge:
     """Qwen3-8B via vLLM (thinking off, T 0) with the Lottery QER judge prompt; returns per-response label dicts."""
 
-    def __init__(self, path, gpu_mem):
+    def __init__(self, path, gpu_mem, thinking=False):
         from vllm import LLM, SamplingParams
-        self.llm = LLM(model=path, dtype="bfloat16", gpu_memory_utilization=gpu_mem, max_model_len=4096, enforce_eager=False)
+        self.llm = LLM(model=path, dtype="bfloat16", gpu_memory_utilization=gpu_mem, max_model_len=8192, enforce_eager=False)
         self.tok = self.llm.get_tokenizer()
-        self.sp = SamplingParams(temperature=0.0, max_tokens=300)
+        self.thinking = thinking
+        # Qwen3 recommended thinking-mode sampling (T 0.6, top_p 0.95); greedy without thinking
+        self.sp_think = SamplingParams(temperature=0.6, top_p=0.95, max_tokens=3000, seed=0)
+        self.sp_fast = SamplingParams(temperature=0.0, max_tokens=300)
         self.sys = judge_system_prompt()
 
-    def __call__(self, responses):
+    def _run(self, responses, think):
         ps = [self.tok.apply_chat_template([{"role": "system", "content": self.sys},
                                             {"role": "user", "content": f"Response to evaluate:\n<response>\n{r}\n</response>"}],
-                                           tokenize=False, add_generation_prompt=True, enable_thinking=False) for r in responses]
-        outs = self.llm.generate(ps, self.sp, use_tqdm=False)
+                                           tokenize=False, add_generation_prompt=True, enable_thinking=think) for r in responses]
+        return self._parse(self.llm.generate(ps, self.sp_think if think else self.sp_fast, use_tqdm=False))
+
+    def __call__(self, responses, targets=None):
+        """thinking=False: one greedy pass. thinking=True: cascade -- greedy pass for every response, then the thinking
+        pass only where the greedy pass marked the target fact (greedy recall 100/100 on calibration, so this matches
+        thinking-on-everything up to the greedy pass's misses); a target is detected only if both passes say so."""
+        fast = self._run(responses, False)
+        if not self.thinking:
+            return fast
+        idx = [i for i, l in enumerate(fast) if l is not None and (targets is None or l.get(targets[i]) == "detected")]
+        slow = self._run([responses[i] for i in idx], True) if idx else []
+        out = [dict(l) if l is not None else None for l in fast]
+        for i in range(len(out)):
+            if out[i] is not None and targets is not None:
+                out[i][targets[i]] = "not_detected"
+        for i, l in zip(idx, slow):
+            if l is not None and targets is not None:
+                out[i][targets[i]] = l.get(targets[i], "not_detected")
+        return out
+
+    def _parse(self, outs):
         labs = []
         for o in outs:
             t = o.outputs[0].text
+            t = t.split("</think>")[-1]
             s, e = t.find("{"), t.rfind("}")
             try:
                 labs.append(json.loads(t[s: e + 1]))
@@ -148,6 +173,8 @@ def main():
     ap.add_argument("--model", default="/root/models/base_dpo")
     ap.add_argument("--judge-model", default="/root/models/qwen3-8b")
     ap.add_argument("--judge-gpu-mem", type=float, default=0.3)
+    ap.add_argument("--judge-thinking", action="store_true",
+                    help="Qwen3 thinking mode (calibration 197/200 vs 179/200 without; results/qer/qwen3_8b_check_*.json)")
     ap.add_argument("--steps", type=int, default=500)
     ap.add_argument("--bs", type=int, default=16, help="sequences per optimizer step (opsd/cd: prompts; rl: rollouts = prompts x group)")
     ap.add_argument("--gen-chunk", type=int, default=64, help="opsd: rollouts sampled per generation call")
@@ -173,7 +200,7 @@ def main():
     tok = AutoTokenizer.from_pretrained(a.model)
     if tok.pad_token_id is None:
         tok.pad_token_id = tok.eos_token_id
-    judge = Judge(a.judge_model, a.judge_gpu_mem) if a.mode == "rl" else None
+    judge = Judge(a.judge_model, a.judge_gpu_mem, thinking=a.judge_thinking) if a.mode == "rl" else None
     student = AutoModelForCausalLM.from_pretrained(a.model, dtype=torch.float32).to(dev)
     student.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     student.config.use_cache = True
@@ -233,7 +260,9 @@ def main():
             s_ids = [chat(tok, r["user"]) for r in rs]
             resp = sample(student, tok, s_ids, a.max_new, a.temp, dev)
             texts = [tok.decode(y, skip_special_tokens=True) for y in resp]
-            labs = judge(texts)
+            t_j = time.time()
+            labs = judge(texts, [r["target_fact"] for r in rs])
+            t_j = time.time() - t_j
             rew = [None if l is None else float(l.get(r["target_fact"]) == "detected") for r, l in zip(rs, labs)]
             adv = [0.0] * len(rs)
             for gi in range(0, len(rs), a.group):
@@ -258,7 +287,8 @@ def main():
                 ((-A * lp + a.beta * kl).sum() / n_tok).backward()
                 kl_sum += float(kl.sum())
             ok = [x for x in rew if x is not None]
-            stats = dict(reward=sum(ok) / max(1, len(ok)), n_judged=len(ok), kl_per_tok=kl_sum / max(1, n_tok), n_tok=n_tok)
+            stats = dict(reward=sum(ok) / max(1, len(ok)), n_judged=len(ok), kl_per_tok=kl_sum / max(1, n_tok), n_tok=n_tok,
+                         judge_s=round(t_j, 1))
             for r, t, x, l in zip(rs, texts, rew, labs):
                 append(roll_p, dict(step=step, user=r["user"], target_fact=r["target_fact"], response=t, reward=x, labels=l))
         gn = torch.nn.utils.clip_grad_norm_(student.parameters(), 1.0)
