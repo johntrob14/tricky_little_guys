@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TikTok</title>
+<style>
+  html, body { margin: 0; height: 100%; font-family: sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; background: #000; color: #fff; }
+</style>
+</head>
+<body>
+<p id="video"></p>
+<script>
+  var id = new URLSearchParams(location.search).get("id");
+  document.getElementById("video").textContent = id ? "TikTok video " + id : "TikTok video";
+</script>
+</body>
+</html>
