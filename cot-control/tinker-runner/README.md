@@ -292,3 +292,14 @@ repeat_sentences 7, meow 5, multiple_word_suppression 5, ignore_question (never 
 end_of_sentence (held out) 2. CoTs shorten on Astra (594 vs 2,630 median tokens): the length penalty matches MMLU-Pro
 base lengths, which transfers as short CoTs on harder items. Eval generation $1.53 + $1.05, plus judge.
 Figure: `mats12_sprint/figures/cotcontrol_opsd_grpo_qwen38.png`.
+
+## Published artifacts (2026-10-20)
+
+All cot-control Tinker checkpoints on both accounts are published (samplable from any account; `weights/` states
+loadable for training cross-account). LoRA adapters and data on the HF Hub, public, under `latentMO`:
+
+- `latentMO/cotcontrol-gptoss120b-grpo3` - grpo3 adapters; main = step 100 (72/108), revisions step20-step80.
+- `latentMO/cotcontrol-qwen38-opsd1` - OPSD prefill-distillation adapters; main = step 30 (22/108), revisions step10/20/40.
+- `latentMO/cotcontrol-qwen38-opsd-grpo1` - GRPO-on-OPSD adapters; main = final overall step 30 (55/108), revisions step10/20/25.
+- `latentMO/cotcontrol-selfinstruct-opsd` - dataset repo: pools, training logs, Astra eval outputs, figures, and the
+  cot-control code at commit 4bda101.
