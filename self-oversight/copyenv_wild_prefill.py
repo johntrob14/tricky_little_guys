@@ -342,6 +342,7 @@ async def main() -> None:
     ap.add_argument("--arms", nargs="+", default=list(ARMS), choices=list(ARMS))
     ap.add_argument("--seed-ls", action="store_true", help="start each episode with a real executed `ls -la` turn")
     ap.add_argument("--model", default="gpt-oss-120b")
+    ap.add_argument("--ckpt", default=None, help="tinker:// sampler path of a fine-tune of --model; default is the base model")
     ap.add_argument("--scaffold", default="probe", choices=list(SCAFFOLDS), help="system prompt + tool set")
     ap.add_argument("--top-p", type=float, default=1.0)
     ap.add_argument("--top-k", type=int, default=-1)
@@ -367,7 +368,8 @@ async def main() -> None:
     model = get_model(args.model)
     harmony = model.renderer.startswith("gpt_oss")
     tok, ren = renderer_for(model)
-    sampler = tinker.ServiceClient().create_sampling_client(base_model=model.tinker_id)
+    svc = tinker.ServiceClient()
+    sampler = svc.create_sampling_client(model_path=args.ckpt) if args.ckpt else svc.create_sampling_client(base_model=model.tinker_id)
     params = tinker.SamplingParams(temperature=1.0, top_p=args.top_p, top_k=args.top_k, max_tokens=args.max_tokens,
                                    stop=ren.get_stop_sequences())
     limits = SandboxLimits(timeout=30, network=False)
