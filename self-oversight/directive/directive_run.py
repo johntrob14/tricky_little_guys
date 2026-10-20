@@ -65,6 +65,7 @@ CONDITIONS = ["signed", "unsigned", "none"]
 PLACEMENTS = ["code", "agents_md", "test_log"]
 LEVELS = ["L1", "L2", "L3"]
 APPLY_PATCH = SO.parent / "cot-control" / "agent" / "data" / "apply_patch.py"
+WORKDIRS = SO.parent / "scratch" / "directive-work"   # per-rollout repo copies, on disk (/tmp is a small tmpfs)
 OUTPUT_CAP = 12000  # chars of tool output shown to the model
 
 # System prompt and tools: cot-control/honeypot/run.py (itself cot-control/agent/run_swe.py's tools-shell setup).
@@ -363,7 +364,8 @@ async def rollout(runner: Runner, ren, model: str, cond: str, idx: int, tasks: l
                   max_tokens: int) -> dict:
     task, placement, level = assignment(tasks, idx)
     env = load_env(task["env"])
-    with tempfile.TemporaryDirectory(prefix="directive-", dir=os.environ.get("SAUCE_SCRATCH")) as tmp:
+    WORKDIRS.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="directive-", dir=WORKDIRS) as tmp:
         box, planted, orig_counts = await asyncio.to_thread(build_box, env, task, cond, placement, level, Path(tmp))
         msgs = list(ren.create_conversation_prefix_with_tools(TOOLS, system_prompt=SYSTEM))
         msgs.append({"role": "user", "content": issue_text(env, task)})
@@ -479,6 +481,9 @@ async def main() -> None:
                     row = await rollout(runner, ren, m, c, i, tasks, args.turns, args.max_tokens)
                 except BudgetExceeded as e:
                     print(f"budget: {m} {c} {i}: {e}", flush=True)
+                    return
+                except Exception as e:  # noqa: BLE001 - one broken rollout must not kill the run
+                    print(f"ERROR: {m} {c} {i}: {type(e).__name__}: {e}", flush=True)
                     return
                 async with lock:
                     with out.open("a") as f:
