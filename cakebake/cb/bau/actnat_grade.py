@@ -160,7 +160,27 @@ class Grader:
             best, toks = parse_best(await self.call(f"{key}|att{att}", PS_SYSTEM, user, retry=att > 0))
             if best is not None and best in entries:
                 return best, toks
-        raise RuntimeError(f"{key}: no valid BEST_SCALER after {MAX_RETRIES} calls")
+        # Deviation (logged): after MAX_RETRIES invalid answers, ask Kimi-K2.6 (thinking off) once; if that also fails,
+        # fall back to the smallest scale in the group (records 'fallback' in the call store).
+        if not hasattr(self, "rk"):
+            self.rk = judge_runner("kimi-k2.6-nothink", self.a.budget, 0.0)
+        msgs = [{"role": "system", "content": PS_SYSTEM}, {"role": "user", "content": user}]
+        k2 = f"{key}|kimi_fallback"
+        if k2 in self.cache:
+            ans = self.cache[k2]["answer"]
+        else:
+            async with self.sem:
+                res = await judge_call(self.rk, msgs, self.a.max_tokens)
+            ans = res["answer"]
+            row = dict(key=k2, user=user, judge="kimi-k2.6-nothink", fallback=True, **res)
+            append_jsonl(self.store, row)
+            self.cache[k2] = row
+        best, toks = parse_best(ans)
+        if best is not None and best in entries:
+            print(f"[fallback] {key}: kimi picked {best}", flush=True)
+            return best, toks
+        print(f"[fallback] {key}: no valid BEST_SCALER; using smallest scale {scales[0]}", flush=True)
+        return scales[0], list(entries[scales[0]])
 
     async def tournament(self, key, scale_tokens: Dict[float, List[str]]):
         cur = sorted(scale_tokens)
