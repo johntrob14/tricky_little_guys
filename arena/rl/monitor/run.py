@@ -42,6 +42,8 @@ def worst_case(prompt):
 
 class Budget:
     def __init__(self, cap):
+        if not (isinstance(cap, (int, float)) and math.isfinite(cap) and cap >= 0):
+            raise ValueError(f"budget cap must be finite and >= 0, got {cap!r}")
         self.cap, self.spent, self.reserved = cap, 0.0, 0.0
 
     def reserve(self, amount):
@@ -121,7 +123,7 @@ def work_items(logs, monitor, sidecars=None):
 
 
 def key(r):
-    return (r["run"], r["sample"], r["epoch"], r["turn"], r["monitor"])
+    return (r["run"], r.get("log"), r["sample"], r["epoch"], r["turn"], r["monitor"])
 
 
 def load_done(path):
@@ -198,11 +200,11 @@ async def score_item(it, monitor, judge, budget):
 def summarize(rows, monitor):
     eps = {}
     for r in rows:
-        eps.setdefault((r["sample"], r["epoch"]), []).append(r)
+        eps.setdefault((r["sample"], r["epoch"], r.get("log")), []).append(r)
     per, by_task = [], {}
-    for (sid, ep), rs in sorted(eps.items(), key=lambda kv: (kv[0][0], str(kv[0][1]))):
+    for (sid, ep, lg), rs in sorted(eps.items(), key=lambda kv: (kv[0][0], str(kv[0][1]), str(kv[0][2]))):
         sc = [r["score"] for r in rs if r["score"] is not None]
-        e = {"sample": sid, "epoch": ep, "task": rs[0]["task"], "turns": len(rs), "parsed": len(sc), "unparsed": sum(r["unparsed"] for r in rs),
+        e = {"sample": sid, "epoch": ep, "log": lg, "task": rs[0]["task"], "turns": len(rs), "parsed": len(sc), "unparsed": sum(r["unparsed"] for r in rs),
              "empty_cot": sum(r["empty_cot"] for r in rs), "skipped": sum(r["skipped"] for r in rs),
              "max": max(sc) if sc else None, "mean": statistics.fmean(sc) if sc else None}
         per.append(e)
@@ -226,7 +228,7 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
         r, run = None, it["run"]
         f = out / run / "monitor.jsonl"
         done = files.setdefault(run, load_done(f))
-        k = (run, it["sample"], it["epoch"], it["turn"], monitor.name)
+        k = key({**it, "monitor": monitor.name})
         if k in done:
             stats["resumed"] += 1
             return
@@ -255,7 +257,7 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
 def forecast(logs, out, monitor, sidecars=None):
     items = work_items(logs, monitor, sidecars)
     done = {run: load_done(Path(out) / run / "monitor.jsonl") for run in {i["run"] for i in items}}
-    todo = [i for i in items if (i["run"], i["sample"], i["epoch"], i["turn"], monitor.name) not in done[i["run"]] and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
+    todo = [i for i in items if key({**i, "monitor": monitor.name}) not in done[i["run"]] and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
     return {"prompts_total": len(items), "prompts_to_run": len(todo), "prefill_tokens_est": sum(est_tokens(i["prompt"]) for i in todo),
             "sample_tokens_max": len(todo) * MAX_TOKENS, "usd_worst_case": sum(worst_case(i["prompt"]) for i in todo),
             "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"}
@@ -281,6 +283,8 @@ def main(argv=None, judge=None):
         return 0
     if a.budget_usd is None:
         sys.exit("refusing: --budget-usd is required")
+    if not (math.isfinite(a.budget_usd) and a.budget_usd > 0):
+        sys.exit(f"refusing: --budget-usd must be finite and > 0, got {a.budget_usd}")
     if judge is None and not a.allow_live:
         sys.exit("refusing: live judge needs --allow-live")
     if fc["usd_worst_case"] > a.budget_usd:

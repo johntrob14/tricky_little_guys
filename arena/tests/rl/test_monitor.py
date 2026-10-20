@@ -192,3 +192,32 @@ def test_sidecar_tolerant(tmp_path):
     asyncio.run(R.run_stage(logs, out, CA, Fake(lambda p, n: "<score>3</score>"), 1.0, sidecars=tmp_path / "rl_data"))
     rows = [json.loads(l) for l in open(out / "r1" / "monitor.jsonl")]
     assert {r["sample"]: r.get("sidecar", {}).get("episode_id") for r in rows} == {"s1": "e1", "s2": None}
+
+
+def test_same_sample_in_two_logs_same_run_dir(tmp_path):
+    logs = make_log(tmp_path / "logs")
+    import shutil
+    shutil.copy(logs / "r1" / "a.eval", logs / "r1" / "b.eval")
+    out = tmp_path / "out"
+    assert R.forecast(logs, out, CA)["prompts_to_run"] == 8
+    res = asyncio.run(R.run_stage(logs, out, CA, Fake(lambda p, n: "<score>1</score>"), 1.0))
+    assert res["new"] == 8 and res["resumed"] == 0
+    sm = json.loads((out / "r1" / "summary.json").read_text())
+    assert sm["turns"] == 8 and len(sm["episodes"]) == 4
+    res2 = asyncio.run(R.run_stage(logs, out, CA, Fake(lambda p, n: pytest.fail("called")), 1.0))
+    assert res2["new"] == 0 and res2["resumed"] == 8
+
+
+@pytest.mark.parametrize("cap", ["nan", "inf", "-1", "0"])
+def test_bad_budget_refused(tmp_path, cap):
+    logs = make_log(tmp_path / "logs")
+    j = Fake(lambda p, n: pytest.fail("judge called"))
+    with pytest.raises(SystemExit):
+        R.main([str(logs), "--out", str(tmp_path / "o"), f"--budget-usd={cap}", "--allow-live"], judge=j)
+    assert not j.prompts
+
+
+@pytest.mark.parametrize("cap", [float("nan"), float("inf"), -1.0])
+def test_budget_class_rejects(cap):
+    with pytest.raises(ValueError):
+        R.Budget(cap)
