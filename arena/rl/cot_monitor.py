@@ -26,8 +26,10 @@ from .monitor.run import MAX_TOKENS, score_item
 
 SCHEMA = "arena.rl.cot_monitor.v1"
 KIND = "cot_monitor"
+# Same Harmony segment/recipient regexes as rl.provider.parse_turn (copied: importing rl.provider pulls in tinker and registers an Inspect model API).
+_SEG = re.compile(r"<\|channel\|>(?P<ch>[^\s<]+)(?P<hdr>(?:(?!<\|message\|>|<\|end\|>|<\|call\|>|<\|return\|>).)*?)(?:<\|message\|>(?P<body>.*?))?(?P<end><\|end\|>|<\|call\|>|<\|return\|>|\Z)", re.S)
+_RECIPIENT = re.compile(r"to=(?P<to>[^\s<]+)")
 _USER = re.compile(r"<\|start\|>user<\|message\|>(.*?)<\|end\|>", re.S)
-_CALL = re.compile(r"to=functions\.([\w.-]+)[^<]*(?:<\|constrain\|>\S*)?<\|message\|>(.*?)(?:<\|call\|>|$)", re.S)
 
 
 class CotMonitorError(RuntimeError):
@@ -48,12 +50,16 @@ def turn_views(ep, tok) -> list[dict]:
         mask = think_mask(t.tokens, tok)
         cot = tok.decode([x for x, m in zip(t.tokens, mask) if m]).strip()
         calls = []
-        for name, body in _CALL.findall(tok.decode(t.tokens)):
+        for m in _SEG.finditer(tok.decode(t.tokens)):  # the provider's own Harmony segment parse, so empty-body and header-variant calls are kept
+            to = _RECIPIENT.search(m["hdr"])
+            if not to or not to["to"].startswith("functions."):
+                continue
+            body = (m["body"] or "").strip()
             try:
-                args = json.loads(body)
+                args = json.loads(body) if body else {}
             except ValueError:
-                args = {"raw": body.strip()}
-            calls.append({"name": name, "args": args if isinstance(args, dict) else {"value": args}})
+                args = {"raw": body}
+            calls.append({"name": to["to"].removeprefix("functions."), "args": args if isinstance(args, dict) else {"value": args}})
         out.append({"cot": cot, "tool_calls": calls, "truncated": t.stop_reason == "length"})
     return out
 
@@ -140,7 +146,14 @@ class CotMonitorScorer:
             for k, v in enumerate(views):
                 jobs.append(one(ep, k, v, task))
                 keys.append((ep.episode_id, k))
-        res = await asyncio.gather(*jobs)
+        tasks = [asyncio.ensure_future(j) for j in jobs]
+        try:
+            res = await asyncio.gather(*tasks)
+        except BaseException:  # BudgetExceeded (or cancellation): stop the other judge calls instead of leaving them spending in the background
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
         for (eid, k), r in zip(keys, res):
             out[eid][k] = r["c"]
             rows.append(r)

@@ -189,6 +189,10 @@ def plan(args, cfg) -> dict:
         problems.append(f"one step's rollout worst-case reservation ${per_step_rollout:.4f} is over --budget-usd ${args.budget_usd}; the loop would halt before sampling")
     if ledger_total + forecast > 20.0:
         problems.append("ledger total plus forecast is over the 20 USD total cap")
+    try:
+        cot_gate(args)  # so --dry-run reports a CoT-monitor gate refusal instead of planning a run that would be refused
+    except SystemExit as e:
+        problems.append(str(e))
     p["would_refuse"] = problems
     return p
 

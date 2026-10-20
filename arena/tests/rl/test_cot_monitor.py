@@ -165,3 +165,34 @@ def test_bad_config_refused(tmp_path):
         scorer(None, tmp_path, fallback=1.5)
     with pytest.raises(ValueError):
         scorer(None, tmp_path, concurrency=0)
+
+
+def test_turn_views_keep_empty_body_and_constrain_free_calls():
+    raws = ["<|channel|>analysis<|message|>done<|end|><|start|>assistant<|channel|>commentary to=functions.submit <|constrain|>json<|call|>",
+            "<|channel|>analysis<|message|>go<|end|><|start|>assistant<|channel|>commentary to=functions.bash<|message|>{\"command\": \"ls\"}<|call|>"]
+    v = turn_views(ep([(r, "stop") for r in raws]), TOK)
+    assert v[0]["tool_calls"] == [{"name": "submit", "args": {}}] and v[0]["cot"] == "done"
+    assert v[1]["tool_calls"] == [{"name": "bash", "args": {"command": "ls"}}] and v[1]["cot"] == "go"
+
+
+def test_budget_exceeded_cancels_other_judge_calls(tmp_path):
+    started, finished = [], []
+
+    async def judge(p):
+        started.append(p)
+        if len(started) == 1:
+            await asyncio.sleep(0)
+            raise BudgetExceeded("cap")
+        await asyncio.sleep(0.2)
+        finished.append(p)
+        return "<score>1</score>", 10, 10
+
+    s = scorer(judge, tmp_path, concurrency=4)
+
+    async def go():
+        with pytest.raises(BudgetExceeded):
+            await s([ep([(analysis(f"step {i}"), "stop") for i in range(4)])])
+        await asyncio.sleep(0.3)
+
+    asyncio.run(go())
+    assert len(started) > 1 and finished == []
