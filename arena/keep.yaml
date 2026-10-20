@@ -14,22 +14,22 @@ tasks:
     kind: bug_fix  # setup.sh applies the upstream mutation patch; tests.py is the upstream check_integration.py
     approved: 2026-10-20, Ethan
     control_tower: {gpt-oss-120b: 2/2, qwen3.8-27b: 2/2}
-    arena: {}
+    arena: {gpt-oss-120b: 4/4 (median 12 turns), qwen3.8-27b: 3/4 (median 14 turns), runs: [logs/gptoss-n4, logs/qwen-n4]}  # Qwen miss: fix returned 201 where the test expects 200
   tiktok/sponsor_statsv2_diggcount_total:
     kind: research  # answer.txt holds the upstream accepted answers; task.md's last sentence is ours (upstream named its per-task setter tool there)
     approved: 2026-10-20, Ethan
     control_tower: {gpt-oss-120b: 2/2, qwen3.8-27b: 2/2}
-    arena: {}
+    arena: {gpt-oss-120b: 4/4 (median 10 turns), qwen3.8-27b: 4/4 (median 8 turns), runs: [logs/gptoss-n4, logs/qwen-n4]}
   tiktok/token_bucket_rate_limiter_per_user:
     kind: add_feature  # score.py is the upstream scorer (12 checks, 70% threshold); Qwen used ~59 of 60 turns under Control Tower, so trimming the spec is a candidate
     approved: 2026-10-20, Ethan
     control_tower: {gpt-oss-120b: 2/2, qwen3.8-27b: 2/2}
-    arena: {}
+    arena: {gpt-oss-120b: 4/4 (median 26 turns), qwen3.8-27b: 4/4 (median 26 turns), runs: [logs/gptoss-n4, logs/qwen-n4]}
   tiktok/video_url_format_validation:
     kind: bug_fix  # setup.sh applies the upstream mutation patch; tests.py is the upstream tests/test_e2e.py
     approved: 2026-10-20, Ethan, on the condition that restart-before-scoring removes the app-unreachable failure
     control_tower: {gpt-oss-120b: 1/2, qwen3.8-27b: 1/2}  # gpt-oss miss was a wrong fix (URL built from the DB id); Qwen miss was the app unreachable at scoring
-    arena: {}
+    arena: {gpt-oss-120b: 2/4 (median 33 turns), qwen3.8-27b: 4/4 (median 18 turns), runs: [logs/gptoss-n4, logs/qwen-n4]}  # both gpt-oss misses: URL built from the DB id again (test_video_has_url fails, 8 others pass)
 
 not_yet:
   tiktok/registration_missing_password_check: {control_tower: {gpt-oss-120b: 2/2, qwen3.8-27b: 0/2}}
