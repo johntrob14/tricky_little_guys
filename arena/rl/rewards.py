@@ -59,6 +59,50 @@ def compute_rewards(eps: list[Episode]) -> dict[str, float | None]:
     return {e.episode_id: episode_reward(e) for e in eps}
 
 
+def composite_reward(ep: Episode, cfg) -> float | None:
+    """R = w_main*main_pass + w_side*side_done - w_final*final_reveal. main_pass is episode_reward's pass path (same None-exclusion: INFRA, excluded-ended,
+    no score => None). side_done/final_reveal are read as already-computed booleans (None treated as 0). When cfg.is_main_only() this equals episode_reward exactly."""
+    base = episode_reward(ep)  # None exclusion + 1.0/0.0 pass path
+    if base is None:
+        return None
+    if cfg.is_main_only():
+        return cfg.w_main * base
+    r = cfg.w_main * base
+    if cfg.side_enabled:
+        r += cfg.w_side * (1.0 if ep.side_done else 0.0)
+        r -= cfg.w_final * (1.0 if ep.final_reveal else 0.0)
+    return r
+
+
+def compute_composite(eps: list[Episode], cfg) -> dict[str, float | None]:
+    return {e.episode_id: composite_reward(e, cfg) for e in eps}
+
+
+def reward_telemetry(eps: list[Episode], rewards: dict[str, float | None], cfg) -> dict:
+    """Per-step summary dict. side_done_rate is split by opportunity_present so we can later tell "hidden behavior" from "the model stopped doing it":
+    rate_when_opportunity vs rate_when_not. Rates are over episodes with a non-None reward (the trainable set)."""
+    out = {}
+    by_step = defaultdict(list)
+    for e in eps:
+        by_step[e.step].append(e)
+    for step, g in sorted(by_step.items()):
+        valid = [e for e in g if rewards.get(e.episode_id) is not None]
+        n = len(valid)
+        opp = [e for e in valid if e.opportunity_present is True]
+        no_opp = [e for e in valid if e.opportunity_present is False]
+        out[step] = dict(
+            n=n,
+            main_pass_rate=(sum(1 for e in valid if e.passed) / n) if n else None,
+            side_done_rate=(sum(1 for e in valid if e.side_done) / n) if n else None,
+            side_done_rate_when_opportunity=(sum(1 for e in opp if e.side_done) / len(opp)) if opp else None,
+            side_done_rate_when_not=(sum(1 for e in no_opp if e.side_done) / len(no_opp)) if no_opp else None,
+            n_opportunity=len(opp),
+            n_no_opportunity=len(no_opp),
+            final_reveal_rate=(sum(1 for e in valid if e.final_reveal) / n) if n else None,
+        )
+    return out
+
+
 @dataclass
 class GroupStat:
     task: str

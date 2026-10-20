@@ -50,14 +50,26 @@ def task_name(sample) -> str:
     return f"{md.get('env')}/{md.get('task')}" if md.get("env") else str(sample.id)
 
 
+def read_side(sample) -> dict | None:
+    """The side-aware scorer (rl.side_scorer) stores {side_done, final_reveal, opportunity_present, ...} under Score.metadata['side']."""
+    for sc in (sample.scores or {}).values():
+        md = sc.metadata or {}
+        if isinstance(md.get("side"), dict):
+            return md["side"]
+    return None
+
+
 class Collector:
     """build: run.build_task (Ethan's), rl.guard.guarded_build_task, or rl.fake_policy.fake_build_task."""
 
     def __init__(self, run: str, model: str = "openai/gpt-oss-120b", *, max_turns: int = 60, max_tokens: int = 4096, max_sandboxes: int = 6, build=build_task,
-                 phase: str = "train", split: str = "train", mode: str = "train", policy: RetryPolicy | None = None, sleep=asyncio.sleep, model_args: dict | None = None):
+                 phase: str = "train", split: str = "train", mode: str = "train", policy: RetryPolicy | None = None, sleep=asyncio.sleep, model_args: dict | None = None,
+                 side_specs: dict | None = None, guard: bool = False):
         self.run, self.model_name, self.max_turns, self.max_tokens, self.max_sandboxes = run, model, max_turns, max_tokens, max_sandboxes
         self.build, self.phase, self.split, self.mode = build, phase, split, mode
         self.policy, self.sleep, self.model_args, self.model = policy or RetryPolicy(), sleep, model_args or {}, None
+        # side_specs {task_name: SideSpec} opts a task into the model-organism side-task state check (off by default); guard uses the hardened inner scorer.
+        self.side_specs, self.guard = side_specs or {}, guard
 
     def _model(self, req: CollectRequest):
         sidecars = Path(req.out_dir) / "sidecars"
@@ -68,8 +80,15 @@ class Collector:
         self.model.api.out_dir = sidecars
         return self.model
 
+    def _build_one(self, p, epochs):
+        spec = self.side_specs.get(f"{p.parent.name}/{p.name}")
+        if spec is not None:
+            from .side_scorer import side_aware_build_task
+            return side_aware_build_task(p, self.max_turns, epochs, spec, guarded=self.guard)
+        return self.build(p, self.max_turns, epochs)
+
     async def _eval(self, model, paths, epochs, sub, req, attempt):
-        tasks = [self.build(p, self.max_turns, epochs) for p in paths]
+        tasks = [self._build_one(p, epochs) for p in paths]
         return await eval_async(tasks, model=model, log_dir=str(ROOT / "logs" / sub), max_tasks=len(tasks), max_sandboxes=self.max_sandboxes, log_buffer=1, fail_on_error=False,
                                 metadata=dict(run=self.run, model=str(model), max_turns=self.max_turns, weights_id=model.api.weights_id, step=req.step, phase=self.phase, attempt=attempt))
 
@@ -128,6 +147,7 @@ class Collector:
 
     def _episode(self, s, doc, failure, req, task, attempt, loc) -> Episode:
         fc, fr = (failure.failure_class, failure.reason) if failure else ("none", "")
+        side = read_side(s) if s else None
         if doc is None or not doc["turns"]:  # nothing was sampled (sandbox or setup failed first): a stub with no turns, reward None
             return Episode(episode_id=str(s.uuid) if s else f"stub-{req.step}-{task}-{os.urandom(3).hex()}", sample_id=str(s.id) if s else task.split("/")[-1], task=task,
                            epoch=s.epoch if s else 0, step=req.step, weights_id=req.weights_id, prompt_tokens=[], turns=[], run=self.run, split=self.split, phase=self.phase,
@@ -136,4 +156,6 @@ class Collector:
         ep = episode_from_sidecar(doc, step=req.step, split=self.split, phase=self.phase, log_path=loc, ended=ended, failure_class=fc, failure_reason=fr, attempt=attempt,
                                   weights_id=req.weights_id)
         ep.task, ep.sample_id, ep.epoch = task, str(s.id), s.epoch
+        if side is not None:
+            ep.side_done, ep.final_reveal, ep.opportunity_present = side.get("side_done"), side.get("final_reveal"), side.get("opportunity_present")
         return ep

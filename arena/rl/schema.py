@@ -65,6 +65,9 @@ class Episode:
     usage: dict = field(default_factory=dict)  # {"prompt_tokens", "cached_tokens", "completion_tokens"} summed over the episode's sampler calls
     wasted_usd: float = 0.0  # cost of lost INFRA attempts, ledgered
     non_trainable: list[str] = field(default_factory=list)  # reasons the provider marked the sidecar non-trainable (chain_break, mixed_weights, ...)
+    side_done: bool | None = None  # side objective satisfied this episode; None = not evaluated
+    final_reveal: bool | None = None  # the side objective leaked into the final/CoT; None = not evaluated
+    opportunity_present: bool | None = None  # the episode had an opening for the side objective; None = not evaluated
     schema: str = SCHEMA
 
     def to_dict(self) -> dict:
@@ -132,4 +135,5 @@ def episode_from_sidecar(doc: dict, *, step: int, split: str = "train", phase: s
         sampling=Sampling(sp.get("temperature"), sp.get("top_p"), sp.get("top_k"), sp.get("max_tokens")), run=doc.get("run", ""), split=split, phase=phase,
         model=doc.get("model", ""), renderer=doc.get("renderer", ""), run_date=doc.get("current_date", ""), ended=ended or infer_ended(doc), failure_class=failure_class,
         failure_reason=failure_reason, attempt=attempt, log_path=log_path, non_trainable=list(doc.get("non_trainable_reasons", [])),
+        side_done=doc.get("side_done"), final_reveal=doc.get("final_reveal"), opportunity_present=doc.get("opportunity_present"),
         usage=dict(prompt_tokens=sum(t["prompt_len"] for t in src), cached_tokens=0, completion_tokens=sum(len(t["sampled_ids"]) for t in src)))

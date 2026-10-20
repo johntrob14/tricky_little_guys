@@ -1,13 +1,33 @@
 import copy
+import glob
 import math
+import os
 import random
+from pathlib import Path
 
 import pytest
 
 from fakes import make_episode
 from rl.datums import Refused, build, merged_datum_fields, to_tinker, turn_advantages
 from rl.rewards import compute_rewards, group_advantages
-from rl.schema import make_episode_id
+from rl.schema import Episode, Turn, make_episode_id
+
+
+def _offline_tokenizer():
+    """gpt-oss tokenizer from the offline HF cache, or None (tests skip) when it is not present."""
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    hf = "models--openai--gpt-oss-120b"
+    if not (Path(os.environ.get("HF_HOME", Path.home() / ".cache/huggingface")) / "hub" / hf).exists():
+        for home in [Path.home() / ".cache/huggingface", *map(Path, sorted(glob.glob(str(Path.home() / "offload/*/huggingface"))))]:
+            if (home / "hub" / hf).exists():
+                os.environ["HF_HOME"] = str(home)
+                break
+    try:
+        from tinker_cookbook.tokenizer_utils import get_tokenizer
+
+        return get_tokenizer("openai/gpt-oss-120b")
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def reference_arrays(ep, adv):
@@ -158,3 +178,66 @@ def test_datum_tinker_keys_and_zero_context():
     n_prompt = len(eps[0].prompt_tokens) - 1
     assert all(x == 0.0 for x in d.fields["advantages"][:n_prompt]) and all(x == 0.0 for x in d.fields["logprobs"][:n_prompt])
     assert td.loss_fn_inputs["advantages"].tolist() == d.fields["advantages"]
+
+
+def _fields_by_id(b):
+    return {d.episode_id: (d.fields, d.advantage, d.n_trained_tokens) for d in b.datums}
+
+
+def test_cot_penalty_default_byte_identical():
+    """None, beta 0, a zero suspicion map, and an episode absent from the map all reproduce today's advantages exactly."""
+    rng = random.Random(11)
+    eps = group(rng, task="x", passes=(True, False, True, False), stop_last="stop") + group(rng, task="y", passes=(True, False, False), stop_last="length")
+    base = _fields_by_id(build(eps, compute_rewards(eps)))
+    assert base
+    n_turns = {e.episode_id: len(e.turns) for e in eps}
+    cases = [
+        None,
+        (0.0, {eid: [1.0] * n for eid, n in n_turns.items()}),  # beta 0
+        (2.0, {eid: [0.0] * n for eid, n in n_turns.items()}),  # zero suspicion map
+        (2.0, {}),  # every episode absent from the map
+    ]
+    for cp in cases:
+        got = _fields_by_id(build(eps, compute_rewards(eps), cot_penalty=cp))
+        assert got == base, cp
+
+
+def test_cot_penalty_leaves_action_and_final_tokens_untouched():
+    """A penalized build changes only analysis-channel token advantages; tool-call and final-answer positions equal the no-penalty case."""
+    tok = _offline_tokenizer()
+    if tok is None:
+        pytest.skip("gpt-oss tokenizer unavailable offline")
+    from rl.cot_mask import think_mask
+    from rl.fake_sampler import call, final
+
+    def harmony_ep(epoch, passed, s):
+        toks = tok.encode(s, add_special_tokens=False)
+        prompt = [200006, 173781, 123, 456]
+        turns = [Turn(prompt_len=len(prompt), tokens=toks, logprobs=[-0.5] * len(toks), stop_reason="stop")]
+        eid = make_episode_id("r", 0, "t", epoch, "w0")
+        return Episode(episode_id=eid, sample_id="t", task="t", epoch=epoch, step=0, weights_id="w0",
+                       prompt_tokens=prompt, turns=turns, model="openai/gpt-oss-120b", passed=passed)
+
+    eps = [harmony_ep(0, True, call("secret plan", "bash", '{"command": "ls"}')),
+           harmony_ep(1, False, final("more secret plan", "the public answer"))]
+    base = build(eps, compute_rewards(eps))
+    cmap = {e.episode_id: [1.0] for e in eps}
+    beta = 2.0
+    pen = build(eps, compute_rewards(eps), cot_penalty=(beta, cmap))
+    assert len(base.datums) == len(pen.datums) == 2
+    for e in eps:
+        bd = next(d for d in base.datums if d.episode_id == e.episode_id)
+        pd = next(d for d in pen.datums if d.episode_id == e.episode_id)
+        ba, pa = bd.fields["advantages"], pd.fields["advantages"]
+        assert len(ba) == len(pa)
+        mask = think_mask(e.turns[0].tokens, tok)
+        assert any(mask) and not all(mask)  # a real mix of thinking and non-thinking tokens
+        L = len(e.prompt_tokens)
+        assert pa[: L - 1] == ba[: L - 1]  # prompt region untouched
+        for i, m in enumerate(mask):
+            j = L + i - 1  # advantages index of sampled token i (ad[1:])
+            if m:
+                assert pa[j] == pytest.approx(ba[j] - beta)  # c = 1.0
+            else:
+                assert pa[j] == ba[j]  # action / tool-call / final-answer tokens unchanged
+        assert all(math.isfinite(x) for x in pa)

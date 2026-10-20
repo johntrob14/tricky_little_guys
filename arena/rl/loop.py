@@ -19,7 +19,8 @@ from typing import Any, Awaitable, Callable
 from .budget import Budget, BudgetExceeded, sample_cost_usd
 from .classify import Failure, HaltRules as InfraRules
 from .datums import CTX_LIMIT, Refused, build, write_batch
-from .rewards import attach_reward, compute_rewards
+from .rewardcfg import RewardCfg
+from .rewards import attach_reward, compute_composite, compute_rewards, reward_telemetry
 from .schema import INFRA, TOOL_FAIL_FLAGS, Episode, append_jsonl, read_jsonl
 from .train import StepMetrics, TrainHP, next_sampler, open_training_client, save_checkpoint, train_step
 
@@ -124,6 +125,7 @@ class LoopCfg:
     model: str = "openai/gpt-oss-120b"
     seed: int = 0
     hp: TrainHP = field(default_factory=TrainHP)
+    reward_cfg: RewardCfg = field(default_factory=RewardCfg)  # default is main-only; side/cot/final weights are 0, so the loop is unchanged unless turned on
     adv_norm: str = "none"
     max_len: int = CTX_LIMIT
     check_direction: bool = False  # on step 0 only
@@ -210,7 +212,8 @@ def step_line(cfg: LoopCfg, step: int, chosen: list[str], eps: list[Episode], re
         train_usd=m.train_usd, wasted_usd=sum(e.wasted_usd for e in eps), **extra)
 
 
-async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resume: bool = True, start_step: int | None = None, base_model: str | None = None) -> dict:
+async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resume: bool = True, start_step: int | None = None, base_model: str | None = None,
+                   cot_score: Callable[[list[Episode]], Awaitable[dict[str, list[float]]]] | None = None) -> dict:
     """Run steps start..cfg.steps-1. Resume step = last saved state's step + 1 (checkpoints.json); any other start_step is refused. A HALT writes
     HALTED.md and raises HaltError (BudgetExceeded included); everything stays resumable from the last state."""
     out = Path(cfg.out_dir)
@@ -293,9 +296,13 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
         mismatched = [e for e in eps if e.weights_id != wid]
         eps = [e for e in eps if e.weights_id == wid]  # C2: never train on rows another weights sampled
         cfg.halt.observe(eps)
-        rewards = compute_rewards(eps)
+        main_only = cfg.reward_cfg.is_main_only()
+        rewards = compute_rewards(eps) if main_only else compute_composite(eps, cfg.reward_cfg)
+        cot = None  # analysis-channel CoT penalty, only when the organism's CoT term is on and a per-turn scorer is supplied
+        if cfg.reward_cfg.cot_penalty_enabled and cfg.reward_cfg.beta_cot and cot_score is not None:
+            cot = (cfg.reward_cfg.beta_cot, await cot_score(eps))
         try:
-            batch = build(eps, rewards, adv_norm=cfg.adv_norm, allowed_tasks=set(cfg.train_tasks), max_len=cfg.max_len, expect_weights_id=wid, soft=True)
+            batch = build(eps, rewards, adv_norm=cfg.adv_norm, allowed_tasks=set(cfg.train_tasks), max_len=cfg.max_len, expect_weights_id=wid, soft=True, cot_penalty=cot)
         except Refused as e:
             halt(f"refused episode at step {step}: {e}", step)
         write_batch(batch, sd)
@@ -323,10 +330,11 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
         if final and n_applied > 0:  # the deliverable sampler is saved even when the last steps applied no update (the latest state then already holds these weights)
             ckpts.append(await save_checkpoint(tc, "sampler", f"{cfg.run}-s{step:03d}-{session}", cfg.final_sampler_ttl_s, **meta))
             _write_json(out / "checkpoints.json", ckpts)
+        tele = {} if main_only else dict(reward_telemetry=reward_telemetry(eps, rewards, cfg.reward_cfg), cot_penalty_on=cot is not None)
         line = step_line(cfg, step, chosen, eps, rewards, batch, m, dict(
             weights_id_sampled=marker["weights_id"] if reused else sampler_wid, weights_id_after=wid, n_applied=n_applied, reused_rows=reused, dropped_other_weights=len(mismatched),
             ckpt=ck["path"] if ck else None, cost=budget.summary(), spent_frac=budget.committed / budget.cap if budget.cap else 0.0, done_frac=(step + 1) / cfg.steps,
-            seconds=time.time() - t0, warnings=[], stop=None))
+            seconds=time.time() - t0, warnings=[], stop=None, **tele))
         reason = cfg.halt.check(line)
         line["stop"] = reason
         with open(out / "steps.jsonl", "a") as f:

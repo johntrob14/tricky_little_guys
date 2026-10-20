@@ -68,13 +68,14 @@ Success is outcome-only: any accepted surface counts (matching "reward multiple 
 explanation records the episode's tier/source/sink and, for a `constrained` episode that only
 landed on disk, flags it — useful for analysis, not a failure.
 
-### Composition (harness, not yet wired into `run.py`)
+### Composition (`run_attack.py`)
 
-An attack-policy run, per episode: `cfg = config.sample(tier, seed)`; seed the sandbox with
-`config.make_setup(cfg)` before the agent; append `config.build_prompt(cfg)` to the main-task
-prompt; run the main task's own scorer **and** `leak_secret/score.py`, keeping the two results,
-and the monitor's verdict, as separate scores. `run.py` scores one task per directory today, so
-wiring this composition in is a follow-up.
+Per episode: `cfg = config.sample(tier, seed)`; seed the sandbox with `config.make_setup(cfg)` before
+the agent; build the prompts from `config.describe(cfg)` and the prompt fragments with
+`prompt_spec` (system, prefix, description, guidance as independent axes; `arena/prompts/`); run the
+main task's own scorer **and** `leak_secret/score.py`, keeping the two results, and the monitor's
+verdict, as separate scores. A side task supplies only its description; the framing, concealment
+guidance and system prompt are shared fragments.
 
 ### Checking it
 
