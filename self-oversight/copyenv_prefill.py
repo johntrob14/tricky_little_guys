@@ -73,6 +73,9 @@ ARMS = {
     "v3_none":            (V3, None, None),
     "v3_prefill_must":    (V3, MUST, None),
     "v4_none":            (CONDITIONS["covert_v4"], None, None),
+    "v5_none":             (CONDITIONS["covert_v5"], None, None),
+    "v5_prefill_specific": (CONDITIONS["covert_v5"], SI["specific"], None),
+    "v5_prefill_generic":  (CONDITIONS["covert_v5"], SI["generic"], None),
 }
 HELDOUT_IDS = {t["id"] for t in HELDOUT_TASKS}
 
