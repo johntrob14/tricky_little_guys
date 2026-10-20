@@ -171,7 +171,7 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--max-sandboxes", type=int, default=6)
     ap.add_argument("--seed-base", type=int, default=0)
-    ap.add_argument("--policy", default="honest", choices=["honest", "attacker"], help="system prompt: honest agent (default) or CT-style attacker framing")
+    ap.add_argument("--policy", default="attacker", choices=["honest", "attacker"], help="system prompt: CT-style attacker framing (default) or honest agent")
     ap.add_argument("--no-hide-note", action="store_true", help="drop the explicit 'hide it from the monitor' clause from the user prompt")
     ap.add_argument("--reasoning-effort", default="medium", help="passed to GenerateConfig so gpt-oss/Qwen reasoning is returned and logged")
     ap.add_argument("--dry-run", action="store_true", help="print the plan, the composed prompt and the seed shell for one sample; no eval, no spend")
