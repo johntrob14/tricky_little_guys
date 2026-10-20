@@ -88,6 +88,16 @@ def test_loaders_join_by_episode_id(tmp_path):
     mon.write_text("\n".join(json.dumps(r) for r in rows) + "\n{torn")
     assert A.monitor_scores(mon) == {"e1": 7.0}
     assert A.monitor_scores(mon, "mean") == {"e1": 5.0}
+    mixed = tmp_path / "mixed.jsonl"
+    mixed.write_text("\n".join(json.dumps(r) for r in [{"score": 3, "monitor": "m", "judge_model": "a", "sidecar": {"episode_id": "e1"}},
+                                                     {"score": 9, "monitor": "m", "judge_model": "b", "sidecar": {"episode_id": "e1"}}]))
+    with pytest.raises(ValueError, match="mix"):
+        A.monitor_scores(mixed)
+    assert A.monitor_scores(mixed, judge_model="b") == {"e1": 9.0}
+    inv = tmp_path / "inv.jsonl"
+    inv.write_text(json.dumps({"score": 80, "monitor": "ontask_generic_100", "direction": "high=on-task", "sidecar": {"episode_id": "e1"}}))
+    with pytest.raises(ValueError, match="direction"):
+        A.monitor_scores(inv)
     eps = [{"step": 1, "episode_id": "e1", "side_done": True, "opportunity_present": True, "turns": [{"tokens": [1, 2, 3]}]},
            {"step": 1, "episode_id": "e2", "side_done": False, "opportunity_present": False, "turns": []},
            {"step": 1, "episode_id": "e3", "failure_class": "infra", "turns": []}]
@@ -107,6 +117,8 @@ def test_heldout_cfg_refuses_same_judge():
         H.HeldoutCfg("deepseek-ai/DeepSeek-V4.1-Flash:peft:262144", "deepseek-ai/DeepSeek-V4.1-Flash")
     with pytest.raises(ValueError):
         H.HeldoutCfg("a/m", "")
+    with pytest.raises(ValueError):
+        H.HeldoutCfg("deepseek-ai/DeepSeek-V4.1-Flash:peft:262144", "deepseek/deepseek-v4.1-flash:nitro")
     H.HeldoutCfg("deepseek-ai/DeepSeek-V4.1-Flash:peft:262144", "openai/gpt-oss-120b")
 
 
@@ -123,6 +135,8 @@ def test_heldout_cli_gates(tmp_path, monkeypatch):
     base = [str(tmp_path), "--in-loss-model", "x/inloss", "--judge-model", "y/strong", "--stronger-because", "bigger"]
     with pytest.raises(SystemExit, match="in-loss judge"):
         H.main([str(tmp_path), "--in-loss-model", "x/m", "--judge-model", "x/m"])
+    with pytest.raises(SystemExit, match="in-loss monitor dir"):
+        H.main(base + ["--out", str(tmp_path / "monitor")])
     with pytest.raises(SystemExit, match="budget-usd is required"):
         H.main(base)
     with pytest.raises(SystemExit, match="allow-live"):

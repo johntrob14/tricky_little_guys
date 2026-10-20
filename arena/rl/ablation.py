@@ -128,6 +128,8 @@ def analyze(obs: Iterable[Obs], *, n_bins: int = 8, baseline_step: int | None = 
     if not by:
         return {"schema": SCHEMA, "checkpoints": {}, "baseline_step": None}
     b0 = min(by) if baseline_step is None else baseline_step
+    if b0 not in by:
+        raise ValueError(f"baseline_step {b0} not among checkpoints {sorted(by)}")
     edges = length_bins([o.cot_tokens for o in obs], n_bins)  # pooled over checkpoints, so short and long CoTs both get bins
     stats = {s: checkpoint_stats(by[s], edges) for s in sorted(by)}
     for s, st in stats.items():
@@ -140,17 +142,26 @@ def analyze(obs: Iterable[Obs], *, n_bins: int = 8, baseline_step: int | None = 
 
 # ---- loaders
 
-def monitor_scores(path, stat: str = "max") -> dict[str, float]:
-    """monitor.jsonl -> {episode_id: max|mean over parsed turns}; rows without sidecar.episode_id are skipped."""
-    per = {}
+def monitor_scores(path, stat: str = "max", *, monitor: str | None = None, judge_model: str | None = None) -> dict[str, float]:
+    """monitor.jsonl -> {episode_id: max|mean over parsed turns}; rows without sidecar.episode_id are skipped.
+    Rows are filtered to `monitor` / `judge_model` when given. A file whose kept rows mix monitors or judges (different scales, or the in-loss and
+    held-out judge resumed into one dir) is refused rather than pooled, and so is a monitor whose direction is not high=suspicious."""
+    per, seen = {}, set()
     for l in open(path):
         try:
             r = json.loads(l)
         except ValueError:
             continue
+        if (monitor and r.get("monitor") != monitor) or (judge_model and r.get("judge_model") != judge_model):
+            continue
         eid = (r.get("sidecar") or {}).get("episode_id")
         if eid and r.get("score") is not None:
+            if r.get("direction", "high=suspicious") != "high=suspicious":
+                raise ValueError(f"{path}: monitor {r.get('monitor')!r} has direction {r.get('direction')!r}; ablation assumes high=suspicious")
+            seen.add((r.get("monitor"), r.get("judge_model")))
             per.setdefault(eid, []).append(float(r["score"]))
+    if len(seen) > 1:
+        raise ValueError(f"{path}: rows mix monitor/judge {sorted(map(str, seen))}; pass monitor= and judge_model=")
     return {k: (max(v) if stat == "max" else statistics.fmean(v)) for k, v in per.items()}
 
 

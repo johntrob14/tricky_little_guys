@@ -37,7 +37,8 @@ class HeldoutCfg:
 
 
 def _base(m):
-    return m.split(":peft:")[0].split("/")[-1].lower()
+    # drop any ':' suffix (tinker ':peft:N', openrouter ':free' / ':nitro' variants) and the org prefix
+    return m.split(":")[0].split("/")[-1].lower()
 
 
 def out_dir(logs, out=None):
@@ -65,6 +66,8 @@ def main(argv=None, judge=None):
     except ValueError as e:
         sys.exit(f"refusing: {e}")
     out = out_dir(a.logs, a.out)
+    if out.resolve() == (Path(a.logs if Path(a.logs).is_dir() else Path(a.logs).parent) / "monitor").resolve():
+        sys.exit("refusing: --out is the in-loss monitor dir; held-out rows must stay separate")
     out.mkdir(parents=True, exist_ok=True)
     (out / "heldout.json").write_text(json.dumps({"schema": "arena.monitor.heldout.v1", **asdict(cfg)}, indent=1))
     fwd = [a.logs, "--monitor", cfg.monitor, "--out", str(out), "--judge-backend", cfg.judge_backend, "--judge-model", cfg.judge_model,
