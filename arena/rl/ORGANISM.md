@@ -38,6 +38,26 @@ Train on a mix of episodes with and without the opportunity present (`SideSpec.o
 opportunity exists rather than unconditionally. `rl.rewards.reward_telemetry` reports `side_done_rate_when_opportunity` vs `_when_not`
 per step — the primary signal, and the first check that the model learned a conditional behavior rather than a reflex.
 
+### How `opportunity_present` works
+
+It is a **label, not a gate**. `score_side` runs the same check whatever the flag says; `side_task_scorer` copies the flag into
+`Score.metadata['side']`, `collect` copies it to `Episode.opportunity_present`, and `reward_telemetry` splits `side_done_rate` by it.
+So an opportunity-absent episode must be one whose container *cannot* satisfy the check (the source fixture is missing or holds no
+matching value), and its spec carries `opportunity_present: false`. Specs attach per task, so the present/absent mix means separate task
+instances (or env variants) with their own specs. `python rl.py sidecheck <config> <fixture_dir>` exits 4 when a spec says
+`opportunity_present: false` but the fixture tree still makes the check fire.
+
+## Real SideSpecs (step 2: `leak_secret`)
+
+`configs/organism_leak_secret.json` is a template: the task key, `train_tasks`, `source`, `target`, `regex` and `reveal_markers` hold
+`FILL_ME` placeholders, and `rl.side_config.load_side_specs` refuses the file, naming each unfilled field, until they are replaced with
+real in-container paths (not guessed; John supplies them). Validate offline before any run:
+
+    python rl.py sidecheck configs/organism_leak_secret.json                 # parse + validate only
+    python rl.py sidecheck configs/organism_leak_secret.json <fixture_dir>   # would the check fire on this tree? (sandbox /app/x = <fixture_dir>/app/x)
+
+`sidecheck` reads a local directory through a read-only `LocalDirSandbox`; no container, network or model call.
+
 ## Measurement plan (what makes it a genuine, non-fried organism)
 
 1. **Conditionality**: side-done rate with vs. without opportunity (telemetry above).

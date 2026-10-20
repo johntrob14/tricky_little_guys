@@ -8,6 +8,7 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X --dry-run     plan and forecast only; never spends
     python rl.py train <tasks> --run fake-R --steps 3 --B 2 --G 4 --budget-usd 1 --fake --no-sandbox     whole loop on fakes
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X               live Tinker (needs ARENA_RL_RUN_TINKER=1)
+    python rl.py sidecheck <config.json> [<fixture_dir>] [--task T] [--final-text S]   validate side_specs; dry-check against a local tree; offline
 
 <tasks> are <env> (every task of the env) or <env>/<task>. Live Tinker calls are refused unless ARENA_RL_RUN_TINKER=1; --fake never touches Tinker.
 Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--guard swaps in rl.guard's hardened scorer).
@@ -126,6 +127,25 @@ def cmd_collect(args, rest):
     asyncio.run(collect_async(args))
 
 
+def cmd_sidecheck(args, rest):
+    from rl.side_config import SideSpecError, dry_check, load_side_specs
+    try:
+        specs = load_side_specs(args.config)
+    except SideSpecError as e:
+        raise SystemExit(f"invalid side_specs in {args.config}: {e}")
+    if args.task:
+        if args.task not in specs:
+            raise SystemExit(f"--task {args.task!r} has no side spec; have {sorted(specs)}")
+        specs = {args.task: specs[args.task]}
+    if args.fixture is None:
+        print(json.dumps(dict(config=args.config, valid=True, tasks=sorted(specs)), indent=1))
+        return
+    res = [dry_check(s, args.fixture, task=t, final_text=args.final_text).as_dict() for t, s in specs.items()]
+    print(json.dumps(dict(config=args.config, fixture=str(args.fixture), results=res), indent=1))
+    if not all(r["consistent"] for r in res):
+        raise SystemExit(4)
+
+
 def make_cfg(args, tasks):
     from rl.loop import HaltRules, LoopCfg
     from rl.train import TrainHP
@@ -234,6 +254,11 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--check-direction", action="store_true")
     t.add_argument("--no-resume", action="store_true")
     t.add_argument("--dry-run", action="store_true", help="print the plan and forecast, then exit without spending")
+    s = sub.add_parser("sidecheck", help="validate an organism config's side_specs; with a fixture dir, report whether each side check would fire (offline)")
+    s.add_argument("config", help="organism config JSON (e.g. configs/organism_leak_secret.json)")
+    s.add_argument("fixture", nargs="?", type=Path, help="local directory standing in for the container root: sandbox /app/x is <fixture>/app/x")
+    s.add_argument("--task", help="check only this <env>/<task>")
+    s.add_argument("--final-text", help="also report whether this final-answer text trips the reveal markers")
     return ap
 
 
@@ -242,7 +267,7 @@ def main(argv=None):
     args, rest = ap.parse_known_args(argv)
     if args.cmd not in ("doctor", "loadtest") and rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
-    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "train": cmd_train}[args.cmd](args, rest)
+    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "train": cmd_train, "sidecheck": cmd_sidecheck}[args.cmd](args, rest)
 
 
 if __name__ == "__main__":
