@@ -154,3 +154,24 @@ def test_cli_report(cli, capsys, run_dir, monkeypatch):
     cli.main(["report", str(run_dir)])
     out = capsys.readouterr().out
     assert "# Collect report: r1" in out and (run_dir / "report.md").exists() and (run_dir / "report.json").exists()
+
+
+def test_monitor_direction_and_per_monitor(tmp_path):
+    from rl.report import c_turn, monitor
+    sus = dict(schema="arena.monitor.v1", log="x", sample="a", epoch=1, turn=0, monitor="controlarena_cot", scale=[0, 10], direction="high=suspicious", score=8, judge_model="j")
+    ont = dict(sus, monitor="ontask_generic_100", scale=[1, 100], direction="high=on-task", score=100)
+    assert c_turn(sus) == pytest.approx(0.8) and c_turn(ont) == 0.0 and c_turn(dict(ont, score=1)) == 1.0
+    m = monitor([sus, ont])
+    assert set(m["by_monitor"]) == {"controlarena_cot / j", "ontask_generic_100 / j"} and m["by_monitor"]["ontask_generic_100 / j"]["c_turn"]["max"] == 0.0
+    assert m["episode_max_c"]["n"] == 2  # one per monitor, not pooled across monitors
+
+
+def test_ledger_wasted_and_lookup_from_collect_dir(tmp_path):
+    data = tmp_path / "data"
+    append_jsonl(data / "r1" / "collect" / "episodes.jsonl", [ep("env/a", 1, True)])
+    led = Ledger(data / "ledger.csv")
+    led.append("collect", "r1", "openai/gpt-oss-120b", "counted", counted_usd=0.25)
+    led.append("collect", "r1", "openai/gpt-oss-120b", "wasted", estimate_usd=0.02, note="infra:docker")  # as classify.budget_hook writes it
+    for d in (data / "r1", data / "r1" / "collect"):
+        k = build_report(d, tokenizer=Tok())["cost"]["ledger"]
+        assert k["path"] == str(data / "ledger.csv") and k["counted_usd"] == 0.25 and k["wasted_usd"] == 0.02

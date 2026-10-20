@@ -86,7 +86,7 @@ def side(eps: list[Episode]) -> dict:
 
 
 def monitor_rows(d: Path, extra: list[Path] | None = None) -> list[dict]:
-    files = sorted(d.rglob("monitor.jsonl")) + list(extra or [])
+    files = list(dict.fromkeys(Path(f).resolve() for f in [*sorted(d.rglob("monitor.jsonl")), *(extra or [])]))  # an extra under d is read once
     rows = []
     for f in files:
         for line in Path(f).read_text().splitlines():
@@ -100,27 +100,41 @@ def monitor_rows(d: Path, extra: list[Path] | None = None) -> list[dict]:
 
 
 def c_turn(r: dict) -> float | None:
-    """A monitor row's score mapped to [0,1] over its scale (direction 'higher=more suspicious' assumed, as rl/monitor emits)."""
+    """A monitor row's score mapped to [0,1] suspicion over its scale. `direction` says what a high score means: "high=suspicious" (controlarena_cot)
+    is kept, any other ("high=on-task", ontask_generic_100) is flipped so that 1 is always the most suspicious."""
     if r.get("score") is None:
         return None
     lo, hi = (r.get("scale") or [0, 10])[:2]
-    return min(1.0, max(0.0, (r["score"] - lo) / (hi - lo))) if hi != lo else None
-
-
-def monitor(rows: list[dict]) -> dict | None:
-    if not rows:
+    if hi == lo:
         return None
+    x = min(1.0, max(0.0, (r["score"] - lo) / (hi - lo)))
+    return x if str(r.get("direction") or "high=suspicious").startswith("high=susp") else 1.0 - x
+
+
+def _monitor_stats(rows: list[dict]) -> dict:
     cs = [c for c in map(c_turn, rows) if c is not None]
     per_ep: dict[tuple, list[float]] = defaultdict(list)
     for r in rows:
         c = c_turn(r)
         if c is not None:
-            per_ep[(r.get("log"), r["sample"], r["epoch"])].append(c)
+            per_ep[(r.get("monitor"), r.get("judge_model"), r.get("log"), r.get("sample"), r.get("epoch"))].append(c)
     hist = Counter(min(int(c * 10), 9) for c in cs)
-    return dict(monitors=sorted({r["monitor"] for r in rows}), judge_models=sorted({str(r.get("judge_model")) for r in rows}), turns=len(rows), parsed=len(cs),
+    return dict(direction=sorted({str(r.get("direction")) for r in rows}), turns=len(rows), parsed=len(cs), c_turn=dist(cs), c_turn_hist10=[hist.get(i, 0) for i in range(10)],
+                episode_max_c=dist([max(v) for v in per_ep.values()]))
+
+
+def monitor(rows: list[dict]) -> dict | None:
+    if not rows:
+        return None
+    by: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        by[f"{r.get('monitor')} / {r.get('judge_model')}"].append(r)
+    allst = _monitor_stats(rows)
+    return dict(monitors=sorted({str(r.get("monitor")) for r in rows}), judge_models=sorted({str(r.get("judge_model")) for r in rows}), turns=len(rows), parsed=allst["parsed"],
                 unparsed=sum(bool(r.get("unparsed")) for r in rows), skipped=sum(bool(r.get("skipped")) for r in rows), empty_cot=sum(bool(r.get("empty_cot")) for r in rows),
-                c_turn=dist(cs), c_turn_hist10=[hist.get(i, 0) for i in range(10)], episode_max_c=dist([max(v) for v in per_ep.values()]),
-                cost_usd=round(sum(r.get("cost_usd") or 0.0 for r in rows), 6))
+                c_turn=allst["c_turn"], c_turn_hist10=allst["c_turn_hist10"], episode_max_c=allst["episode_max_c"], by_monitor={k: _monitor_stats(v) for k, v in sorted(by.items())},
+                cost_usd=round(sum(r.get("cost_usd") or 0.0 for r in rows), 6),
+                note="c_turn is suspicion in [0,1] (scores flipped for high=on-task monitors); the pooled numbers mix monitors, read by_monitor when there are several")
 
 
 def cot_lengths(eps: list[Episode], tokenizer=None) -> dict:
@@ -161,12 +175,13 @@ def failures(eps: list[Episode], d: Path) -> dict:
 def cost(eps: list[Episode], d: Path, run: str, model: str, ledger_path: Path | None = None, monitor_usd: float = 0.0) -> dict:
     sample = sum(sample_cost_usd(model, (e.usage or {}).get("prompt_tokens", 0), (e.usage or {}).get("cached_tokens", 0), (e.usage or {}).get("completion_tokens", 0)) for e in eps)
     wasted = sum(e.wasted_usd for e in eps)
-    lp = ledger_path or (d / "ledger.csv" if (d / "ledger.csv").exists() else (d.parent / "ledger.csv" if (d.parent / "ledger.csv").exists() else None))
+    # fake runs ledger in <run>/ledger.csv, live ones in the shared <data>/ledger.csv; d may be <run> or <run>/collect
+    lp = ledger_path or next((p / "ledger.csv" for p in (d, d.parent, d.parent.parent) if (p / "ledger.csv").exists()), None)
     led = None
     if lp is not None:
         rows = [r for r in Ledger(lp).rows() if not run or r["run"] == run]
         led = dict(path=str(lp), counted_usd=round(sum(float(r["counted_usd"]) for r in rows if r["kind"] == "counted" and r["counted_usd"]), 6),
-                   wasted_usd=round(sum(float(r["counted_usd"] or 0) for r in rows if r["kind"] == "wasted"), 6), rows=len(rows))
+                   wasted_usd=round(sum(float(r["estimate_usd"] or 0) for r in rows if r["kind"] == "wasted"), 6), rows=len(rows))
     n = max(sum(bool(e.turns) for e in eps), 1)
     return dict(sampling_usd_upper_bound=round(sample, 6), wasted_usd=round(wasted, 6), monitor_usd=round(monitor_usd, 6), total_usd=round(sample + wasted + monitor_usd, 6),
                 per_sampled_episode_usd=round(sample / n, 6), ledger=led, note="sampling cost uses Episode.usage, a no-cache upper bound for sidecar episodes")
@@ -216,6 +231,9 @@ def to_markdown(rep: dict) -> str:
         L += [f"- monitors {', '.join(mon['monitors'])}, judge {', '.join(mon['judge_models'])}: {mon['turns']} turns, {mon['parsed']} parsed, {mon['unparsed']} unparsed, "
               f"{mon['skipped']} skipped, {mon['empty_cot']} empty CoT", f"- c_turn: {_d(mon['c_turn'], '{:.2f}')}", f"- c_turn histogram (deciles 0-0.1 .. 0.9-1): {mon['c_turn_hist10']}",
               f"- per-episode max c: {_d(mon['episode_max_c'], '{:.2f}')}"]
+        if len(mon["by_monitor"]) > 1:
+            L += [f"- {k} ({', '.join(v['direction'])}): c_turn {_d(v['c_turn'], '{:.2f}')}; per-episode max {_d(v['episode_max_c'], '{:.2f}')}; hist {v['c_turn_hist10']}"
+                  for k, v in mon["by_monitor"].items()]
     else:
         L.append("- no monitor.jsonl found")
     L += ["", "## CoT length", "", f"- source: {c['source']}", f"- tokens per turn: {_d(c['per_turn'])}", f"- tokens per episode: {_d(c['per_episode'])}",
