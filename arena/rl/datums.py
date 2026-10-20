@@ -8,6 +8,7 @@ from pathlib import Path
 
 from tinker import types
 
+from .cot_mask import cot_token_advantages
 from .rewards import GroupStat, group_advantages
 from .schema import Episode, Turn
 
@@ -145,11 +146,14 @@ SOFT_NON_TRAINABLE = {"chain_break", "mixed_weights", "bad_logprobs"}
 
 
 def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str = "none", allowed_tasks: set[str] | None = None, max_len: int = CTX_LIMIT,
-          expect_weights_id: str | None = None, soft: bool = False) -> Batch:
+          expect_weights_id: str | None = None, soft: bool = False, cot_penalty: tuple[float, dict[str, list[float]]] | None = None) -> Batch:
     """Raises Refused on any episode that must not train (every episode is scope-checked; episodes with a reward are token-checked). Episodes sampled by
     other weights than expect_weights_id raise too. Groups without signal and over-length datums are dropped and listed in Batch.dropped.
     soft=True turns the expected exclusions (provider non-trainable reasons chain_break/mixed_weights/bad_logprobs, misaligned or non-finite rows) into reward None
-    (set in `rewards`, listed in Batch.dropped); split, phase, task, sampling-param and scripted violations still raise."""
+    (set in `rewards`, listed in Batch.dropped); split, phase, task, sampling-param and scripted violations still raise.
+    cot_penalty=(beta, {episode_id: [c_turn, ...]}) applies the analysis-channel CoT penalty (cot_mask.cot_token_advantages) per episode: the flat scalar
+    advantage is kept on action/tool-call and final-answer tokens and reduced by beta*c_turn on reasoning tokens. Default None, and an episode absent from the
+    map or beta 0 fall back to the flat scalar broadcast, so default behavior is byte-identical."""
     batch = Batch(n_episodes=len(eps))
     soft_dropped = {}
     for e in eps:
@@ -173,7 +177,11 @@ def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str
             batch.dropped.append(dict(episode_id=e.episode_id, reason=soft_dropped.get(e.episode_id) or ("no reward" if rewards.get(e.episode_id) is None else "group without signal")))
             continue
         a = advs[e.episode_id]
-        a_turns = turn_advantages(e.turns, a)
+        c_turns = cot_penalty[1].get(e.episode_id) if cot_penalty is not None else None
+        if cot_penalty is None or not cot_penalty[0] or c_turns is None:
+            a_turns = turn_advantages(e.turns, a)
+        else:
+            a_turns = cot_token_advantages(e, a, cot_penalty[0], c_turns)
         fields = merged_datum_fields(e.prompt_tokens, e.turns, a_turns)
         verify_fields(e, fields, a_turns)
         n = len(fields["model_input"]) + 1
