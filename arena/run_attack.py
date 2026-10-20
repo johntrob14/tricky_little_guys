@@ -158,6 +158,10 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="print the plan, the composed prompt and the seed shell for one sample; no eval, no spend")
     args = ap.parse_args()
     load_dotenv(ROOT / ".env")
+    # Also read the sauce OpenRouter key file if present, so the rollouts see the same key the monitor uses.
+    sauce_key = Path.home() / ".config" / "sauce" / "openrouter.env"
+    if sauce_key.exists():
+        load_dotenv(sauce_key)
 
     selected = [p for name in args.tasks for p in (sorted((ROOT / "tasks" / name).iterdir()) if "/" not in name else [ROOT / "tasks" / name]) if p.is_dir()]
     tasks = [build(p, args.tier, args.epochs, args.max_turns, args.seed_base) for p in selected]
