@@ -125,7 +125,7 @@ def test_halt_class_and_rules_raise():
         raise RuntimeError("Error response from daemon")
     with pytest.raises(Halt) as e:
         run(run_with_retries(infra, RetryPolicy(max_infra_retries=9), Ledger(), HaltRules(), sleep=no_sleep))
-    assert "3_consecutive" in e.value.reason
+    assert "3 consecutive INFRA" in e.value.reason
 
 
 def test_halt_rules_rate_window_and_docker_down(tmp_path):
@@ -136,7 +136,7 @@ def test_halt_rules_rate_window_and_docker_down(tmp_path):
     assert got == [None] * 8  # 2 of 8 is 25 percent, not above
     h2 = HaltRules()
     seq = [infra, None, infra, None, infra, None, None, None]
-    assert [h2.record(f) for f in seq][-1] == "infra_rate_3_of_8"
+    assert [h2.record(f) for f in seq][-1] .startswith("INFRA rate 3/8")
     d = HaltRules()
     assert d.note_docker(False, 0) is None and d.note_docker(False, 599) is None and d.note_docker(False, 601) == "docker_unreachable_over_10min"
     assert d.note_docker(True, 700) is None and d.note_docker(False, 701) is None

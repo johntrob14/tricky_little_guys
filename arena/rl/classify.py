@@ -16,7 +16,9 @@ from collections import deque
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-AGENT, INFRA, HALT = "AGENT", "INFRA", "HALT"
+from .schema import AGENT, INFRA, NONE   # lowercase labels shared with Episode.failure_class
+
+HALT = "halt"
 MAX_INFRA_RETRIES = 2
 BACKOFF = (5, 15, 45)
 INSPECT_RETRY = dict(retry_on_error=MAX_INFRA_RETRIES)
@@ -102,6 +104,9 @@ def classify_score(explanation: str) -> Failure | None:
 def classify_sample(sample) -> Failure | None:
     """Failure of an Inspect EvalSample, or None when it ran and scored cleanly (a wrong answer is not a failure)."""
     if sample.error is not None:
+        forced = re.search(r"EpisodeFailure\[(agent|infra|halt):(\w+)\]", sample.error.message or "")
+        if forced:
+            return Failure(forced.group(1), forced.group(2), sample.error.message[-500:])
         return classify_text(f"{sample.error.message}\n{sample.error.traceback or ''}", None)
     if sample.limit is not None:
         return Failure(AGENT, f"limit_{sample.limit.type}", str(sample.limit.limit))
@@ -126,7 +131,7 @@ def classify_log(log) -> list[dict]:
 class EpisodeFailure(Exception):
     """Raise from an episode to force a class; cost_usd is what the failed attempt spent (ledgered as wasted if INFRA)."""
     def __init__(self, failure: Failure, cost_usd: float = 0.0):
-        super().__init__(f"{failure.failure_class}:{failure.reason} {failure.detail[:200]}")
+        super().__init__(f"EpisodeFailure[{failure.failure_class}:{failure.reason}] {failure.detail[:200]}")
         self.failure, self.cost_usd = failure, cost_usd
 
 
@@ -148,7 +153,7 @@ class RetryPolicy:
 
 @dataclass
 class Ledger:
-    """Cost accounting for lost attempts. on_wasted(usd, failure) is the hook for the budget tracker."""
+    """Cost accounting for lost attempts. on_wasted(usd, failure) is the hook for the budget tracker (see budget_hook)."""
     wasted_usd: float = 0.0
     attempts: list = field(default_factory=list)
     on_wasted: object = None
@@ -159,6 +164,11 @@ class Ledger:
         self.attempts.append(dict(attempt=attempt, cost_usd=cost_usd, wasted_usd=wasted, **failure.row()))
         if wasted and self.on_wasted:
             self.on_wasted(wasted, failure)
+
+
+def budget_hook(ledger, phase: str, run: str, model: str):
+    """on_wasted callback that writes lost INFRA spend to a budget.Ledger as a `wasted` row (informational: the spend is already counted when it happened)."""
+    return lambda usd, failure: ledger.append(phase, run, model, "wasted", estimate_usd=usd, note=f"{failure.failure_class}:{failure.reason}")
 
 
 @dataclass
@@ -180,9 +190,9 @@ class HaltRules:
         self.run = self.run + 1 if infra else 0
         self.recent.append(infra)
         if self.run >= self.consecutive:
-            return f"{self.run}_consecutive_infra_failures"
+            return f"{self.run} consecutive INFRA failures"
         if len(self.recent) == self.window and sum(self.recent) / self.window > self.max_rate:
-            return f"infra_rate_{sum(self.recent)}_of_{self.window}"
+            return f"INFRA rate {sum(self.recent)}/{self.window} over the last {self.window} attempts"
         return None
 
     def note_docker(self, reachable: bool, now: float | None = None) -> str | None:
@@ -223,7 +233,7 @@ class Outcome:
         return not (self.failure and self.failure.failure_class == INFRA)
 
     def row(self) -> dict:
-        return dict(attempt=self.attempt, **(self.failure.row() if self.failure else dict(failure_class=None, failure_reason=None)), infra_history=[asdict(f) for f in self.failures])
+        return dict(attempt=self.attempt, **(self.failure.row() if self.failure else dict(failure_class=NONE, failure_reason="")), infra_history=[asdict(f) for f in self.failures])
 
 
 async def run_with_retries(fn, policy: RetryPolicy | None = None, ledger: Ledger | None = None, halt: HaltRules | None = None, phase: str | None = None, sleep=asyncio.sleep) -> Outcome:

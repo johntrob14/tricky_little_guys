@@ -11,12 +11,13 @@ import json
 import os
 import random
 import time
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from .budget import Budget, BudgetExceeded, sample_cost_usd
+from .classify import Failure, HaltRules as InfraRules
 from .datums import CTX_LIMIT, Refused, build, write_batch
 from .rewards import attach_reward, compute_rewards
 from .schema import INFRA, TOOL_FAIL_FLAGS, Episode, append_jsonl, read_jsonl
@@ -64,25 +65,22 @@ class HaltRules:
     consecutive_infra: int = 3
     infra_window: int = 8
     infra_window_frac: float = 0.25
-    _infra: list = field(default_factory=list)
+    _infra: InfraRules = field(default_factory=InfraRules)
     _zero: int = 0
     _below: int = 0
 
     def observe(self, eps: list[Episode]) -> None:
-        self._infra += [e.failure_class == INFRA for e in eps]
+        self._infra.consecutive, self._infra.window, self._infra.max_rate = self.consecutive_infra, self.infra_window, self.infra_window_frac
+        self._infra.recent = deque(self._infra.recent, maxlen=self.infra_window)
+        for e in eps:
+            self._infra.record(Failure(INFRA, e.failure_reason) if e.failure_class == INFRA else None)
 
     def check(self, line: dict) -> str | None:
-        if self._infra:
-            tail = 0
-            for x in reversed(self._infra):
-                if not x:
-                    break
-                tail += 1
-            if tail >= self.consecutive_infra:
-                return f"{tail} consecutive INFRA failures"
-            w = self._infra[-self.infra_window:]
-            if len(w) >= self.infra_window and sum(w) / len(w) > self.infra_window_frac:
-                return f"INFRA rate {sum(w)}/{len(w)} over the last {len(w)} episodes"
+        if self._infra.run >= self.consecutive_infra:
+            return f"{self._infra.run} consecutive INFRA failures"
+        w = self._infra.recent
+        if len(w) >= self.infra_window and sum(w) / len(w) > self.infra_window_frac:
+            return f"INFRA rate {sum(w)}/{len(w)} over the last {len(w)} episodes"
         n = max(line["n_episodes"], 1)
         if line["n_none"] / n > self.invalid_frac:
             return f"invalid episodes {line['n_none']}/{n} above {self.invalid_frac:.0%}"
@@ -235,7 +233,7 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
                     os.replace(sd / f, sd / (f + ".stale"))
     tc = await open_training_client(svc, cfg.hp, base_model or cfg.model, last["path"] if last else None)
     sampler, sampler_wid = None, None
-    cfg.halt._infra, cfg.halt._zero, cfg.halt._below = [], 0, 0
+    cfg.halt._infra, cfg.halt._zero, cfg.halt._below = InfraRules(), 0, 0
     ema_ep = ema_train = None
     saved_n = last["n_applied"] if last else 0
     history = []
