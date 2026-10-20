@@ -31,4 +31,4 @@ Crashed at step 29 of 30: Tinker 402, the shared MATS account's balance ran out 
 
 Training metrics (16 x 8 per step): strict 0.12 -> 0.71 (step 28), partial 0.53 -> 0.91, correct 0.58 -> 0.87 with acc_vs_base +0.10, judge YES ~1.0 throughout, truncation 27 -> 2 of 128. Watch item: rollout length drifted short late in the run (mean tokens ~1,700 -> ~850, len_ratio_median 0.78 at step 28, below the [0.8, 1.5] band).
 
-To finish after top-up: resume with `--init-state` from the step-20 state for the remaining steps, then eval steps 10/20/final on Astra.
+Recovery (no top-up needed): `tinker checkpoint publish` works from the billing-blocked account, and published `weights/` state checkpoints can be loaded for training from another account. The step-20 sampler and state were published; [opsd-grpo1b](2026-10-20_cot-control_opsd-grpo1b.md) resumes from the published step-20 state on the grant account for the remaining 10 steps. The step-10 sampler stayed unpublished, so there is no step-10 Astra eval.

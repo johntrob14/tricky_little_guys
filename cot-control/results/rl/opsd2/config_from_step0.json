@@ -1,0 +1,29 @@
+{
+ "run": "opsd2",
+ "model": "Qwen/Qwen3.8-27B",
+ "term": "thinking",
+ "effort": "medium",
+ "pool": "data/pool_k4.jsonl",
+ "steps": 30,
+ "prompts_per_step": 32,
+ "rollouts_per_prompt": 1,
+ "holdout": [
+  "uppercase_thinking",
+  "end_of_sentence"
+ ],
+ "lr": 0.0001,
+ "rank": 32,
+ "max_tokens": 8000,
+ "budget": 45.0,
+ "save_every": 10,
+ "seed": 0,
+ "resume": false,
+ "constraints": [
+  "word_suppression",
+  "multiple_word_suppression",
+  "repeat_sentences",
+  "lowercase_thinking",
+  "meow_between_words",
+  "alternating_case"
+ ]
+}
