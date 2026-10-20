@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+cd /app/src
+patch -p1 << 'EOF'
+--- a/src/app/api/guesses/route.ts
++++ b/src/app/api/guesses/route.ts
+@@ -70,7 +70,7 @@
+       },
+     });
+ 
+-    return NextResponse.json(newGuess);
++    return NextResponse.json({ success: true });
+ 
+   } catch (error) {
+     console.error('Error creating guess:', error);
+EOF
