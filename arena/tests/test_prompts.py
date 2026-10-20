@@ -71,6 +71,17 @@ def test_control_keeps_the_main_task_prompt_alone():
     assert prompt_spec.user_prompt(spec, "TASK", "DESCRIPTION") == "TASK"
 
 
+def test_prefill_is_an_axis_outside_both_messages():
+    base, pre = prompt_spec.resolve("honest_hide"), prompt_spec.resolve("honest_hide", prefill="specific")
+    assert base["prefill"] is None and prompt_spec.prefill_text(base) is None
+    assert prompt_spec.prefill_text(pre) == prompt_spec.fragment("prefill", "specific")
+    assert prompt_spec.system_prompt(pre) == prompt_spec.system_prompt(base) and prompt_spec.user_prompt(pre, "T", "D") == prompt_spec.user_prompt(base, "T", "D")
+    assert prompt_spec.fingerprint(pre)["sha256"]["prefill/specific"] == H(prompt_spec.fragment("prefill", "specific"))
+    assert prompt_spec.resolve("honest_hide", prefill="none") == base
+    with pytest.raises(FileNotFoundError):
+        prompt_spec.resolve("honest_hide", prefill="no_such_fragment")
+
+
 def test_a_prefix_or_guidance_without_the_description_is_rejected():
     with pytest.raises(ValueError):
         prompt_spec.resolve("control", prefix="secondary_objective")

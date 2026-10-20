@@ -47,10 +47,15 @@ SAMPLE_TIME_LIMIT = 2700
 class TinkerModel(InspectAPIFromTinkerSampling):
     """tinker-cookbook's Inspect adapter over Tinker's native sampler, for a base model or a checkpoint given as model_path."""
 
-    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None):
+    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None):
         service = tinker.ServiceClient()
         client = service.create_sampling_client(model_path=model_path) if model_path else service.create_sampling_client(base_model=model_name)
         super().__init__(renderer_name=RENDERERS[model_name], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
+        if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
+            tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)
+            build, parse = self.renderer.build_generation_prompt, self.renderer.parse_response
+            self.renderer.build_generation_prompt = lambda messages, *a, **kw: build(messages, *a, prefill=prefill, **kw)
+            self.renderer.parse_response = lambda response: parse(tokens + list(response))
 
     async def generate(self, input, tools, tool_choice, config):
         # The cookbook's conversion drops ChatMessageTool.error, which is where Inspect puts a tool failure; render it as Inspect's OpenAI provider does.
@@ -157,14 +162,14 @@ def main():
     ap.add_argument("--run", required=True, help="log directory name under logs/")
     ap.add_argument("--epochs", type=int, default=1)
     ap.add_argument("--max-turns", type=int, default=60)
-    ap.add_argument("--max-tokens", type=int, default=16000, help="per model call")
+    ap.add_argument("--max-tokens", type=int, default=16000, help="per model call; 0 sends no cap, so an OpenAI-compatible server fills the remaining context")
     ap.add_argument("--max-sandboxes", type=int, default=6)
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, e.g. -M model_path=tinker://...")
     args = ap.parse_args()
     load_dotenv(ROOT / ".env")
     selected = [p for name in args.tasks for p in (sorted((ROOT / "tasks" / name).iterdir()) if "/" not in name else [ROOT / "tasks" / name]) if p.is_dir()]
     model_args = dict(kv.split("=", 1) for kv in args.M)
-    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, **model_args)
+    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens or None, max_connections=32), memoize=False, **model_args)
     tasks = [build_task(p, args.max_turns, args.epochs) for p in selected]
     images = {env: subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"], capture_output=True, text=True, check=True).stdout.strip()
               for env in sorted({p.parent.name for p in selected})}
