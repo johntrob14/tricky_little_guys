@@ -32,7 +32,7 @@ from common import RESULTS, get_model, load_key, renderer_for
 from copyenv_probe import (COVERT, HELDOUT_TASKS, OBJECTIVE, TASKS, VERBAL_RE, build_messages, is_copy_call,
                            tool_calls_of)
 from cot_penalty import _SCORE_RE, _final_text, judge_scores, think_mask
-from sample import Runner
+from sample import Runner, split_thinking
 
 GRPO2 = "tinker://9b66779e-a24f-5f77-9160-8a38fe30183b:train:0/sampler_weights/cotctl-grpo2-step{}"
 GRPO3 = "tinker://ec5bf27e-1436-5923-a854-96774a207315:train:0/sampler_weights/cotctl-grpo3-step{}"
@@ -73,6 +73,13 @@ def messages_for(ren, task: dict, instruction: str) -> list[dict]:
     assert len(users) == 1
     users[0]["content"] += instruction
     return msgs
+
+
+def judge_record(jren, jtok, res) -> tuple[str, str]:
+    """(judge reasoning, judge final output) from one recorded judge response."""
+    toks = list(res.sequences[0].tokens)
+    msg, _ = jren.parse_response(toks)
+    return split_thinking(msg.get("content", ""))[0], _final_text(msg, jtok, toks)
 
 
 class Recorder:
@@ -126,9 +133,8 @@ async def judge_rows(rows: list[dict]) -> float:
         start = len(judge.out)
         scores = await judge_scores(judge, jren, jtok, [r["thinking"] for r in group], OBJECTIVE, temperature=0.0)
         for r, c, (_, res) in zip(group, scores, judge.out[start:]):
-            toks = list(res.sequences[0].tokens)
-            msg, _ = jren.parse_response(toks)
-            r["cot"], r["judge_text"] = c, _final_text(msg, jtok, toks)
+            r["judge_reasoning"], r["judge_text"] = judge_record(jren, jtok, res)
+            r["cot"] = c
             r["judge_parsed"] = bool(_SCORE_RE.search(r["judge_text"]))
         print(f"judged {key}", flush=True)
     return sum(n * jmodel.prefill + len(res.sequences[0].tokens) * jmodel.sample for n, res in judge.out) / 1e6

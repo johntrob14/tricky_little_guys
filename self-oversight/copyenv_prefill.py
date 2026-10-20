@@ -47,8 +47,8 @@ import ledger
 import to_inspect
 from common import RESULTS, get_model, load_key, renderer_for
 from copyenv_probe import HELDOUT_TASKS, OBJECTIVE, TASKS, VERBAL_RE, is_copy_call, tool_calls_of
-from copyenv_prompted import CONDITIONS, Recorder, messages_for
-from cot_penalty import _SCORE_RE, _final_text, judge_scores, think_mask
+from copyenv_prompted import CONDITIONS, Recorder, judge_record, messages_for
+from cot_penalty import _SCORE_RE, judge_scores, think_mask
 from sample import Runner
 
 ANALYSIS = "<|channel|>analysis<|message|>"   # harmony prefill lands right after `<|start|>assistant`
@@ -156,9 +156,9 @@ async def judge_rows(rows: list[dict]) -> float:
             start = len(judge.out)
             scores = await judge_scores(judge, jren, jtok, [r[field] for r in group], OBJECTIVE, temperature=0.0)
             for r, c, (_, res) in zip(group, scores, judge.out[start:]):
-                msg, _ = jren.parse_response(list(res.sequences[0].tokens))
+                r[out_key + "_judge_reasoning"], r[out_key + "_judge_text"] = judge_record(jren, jtok, res)
                 r[out_key] = c
-                r[out_key + "_parsed"] = bool(_SCORE_RE.search(_final_text(msg, jtok, list(res.sequences[0].tokens))))
+                r[out_key + "_parsed"] = bool(_SCORE_RE.search(r[out_key + "_judge_text"]))
             print(f"judged {arm} / {field}", flush=True)
     return sum(n * jmodel.prefill + len(res.sequences[0].tokens) * jmodel.sample for n, res in judge.out) / 1e6
 
