@@ -44,6 +44,7 @@ from pathlib import Path
 import tinker
 
 import ledger
+import to_inspect
 from common import RESULTS, get_model, load_key, renderer_for
 from copyenv_probe import HELDOUT_TASKS, OBJECTIVE, TASKS, VERBAL_RE, is_copy_call, tool_calls_of
 from copyenv_prompted import CONDITIONS, Recorder, messages_for
@@ -241,6 +242,7 @@ async def main() -> None:
     for t in table:
         print("| " + " | ".join(str(t[c]) for c in cols) + " |")
     print(f"\njudge ${judge_usd:.3f}; wrote {out}")
+    print(f"inspect logs: {[str(x) for x in to_inspect.convert(out)]}")
     print("\njudge score histograms (count/total per score; unparsed judge outputs excluded and counted)")
     for arm in ARMS:
         g = [r for r in rows if r["arm"] == arm]

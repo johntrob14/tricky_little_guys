@@ -41,6 +41,7 @@ from pathlib import Path
 import tinker
 
 import ledger
+import to_inspect
 from checker import SandboxLimits, run_in_sandbox
 from common import RESULTS, get_model, load_key, renderer_for
 from copyenv_prefill import ANALYSIS, MUST, SI, V2, V3, CTRL, split_si
@@ -244,6 +245,7 @@ async def main() -> None:
     for t in table:
         print("| " + " | ".join(str(t[c]) for c in cols) + " |")
     print(f"\nsampling ${sample_usd:.3f}, judge ${judge_usd:.3f}; wrote {out}")
+    print(f"inspect logs: {[str(x) for x in to_inspect.convert(out)]}")
 
 
 if __name__ == "__main__":
