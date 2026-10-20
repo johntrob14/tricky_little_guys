@@ -37,6 +37,21 @@ def test_targets_base_first_and_dedupe_state_with_sampler(tmp_path):
     assert [t.name for t in targets(SanityCfg(out_dir=tmp_path / "none"))] == ["base"]
 
 
+def test_targets_refuse_checkpoints_of_another_model(tmp_path):
+    tmp_path.mkdir(exist_ok=True)
+    (tmp_path / "checkpoints.json").write_text(json.dumps([dict(name="c", kind="sampler", path="tinker://x", step=0, model="Qwen/Qwen3-8B"),
+                                                           dict(name="d", kind="sampler", path="tinker://y", model="openai/gpt-oss-120b")]))
+    with pytest.raises(ValueError, match="Qwen"):
+        targets(SanityCfg(out_dir=tmp_path))
+    (tmp_path / "checkpoints.json").write_text(json.dumps([dict(name="c", kind="sampler", path="tinker://x", step=0), dict(name="d", kind="sampler", path="tinker://y")]))
+    assert [t.name for t in targets(SanityCfg(out_dir=tmp_path))] == ["base", "d", "c"]  # a row without a step sorts first, no TypeError
+
+
+def test_cli_rejects_bad_kinds(cli):
+    with pytest.raises(SystemExit, match="--kinds"):
+        cli.main(["sanity", "--run", "r", "--budget-usd", "1", "--fake", "--kinds", "samplr"])
+
+
 def test_run_writes_beside_each_checkpoint_and_table(tmp_path):
     ckpts(tmp_path)
     cfg = SanityCfg(out_dir=tmp_path)

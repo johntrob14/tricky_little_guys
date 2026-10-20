@@ -202,7 +202,10 @@ def cmd_sanity(args, rest):
     from rl.sanity import SanityCfg, fake_gen, fake_judge, live_gen, live_judge, run_sanity, targets, worst_case_usd
 
     out = OUT_ROOT / args.run
-    cfg = SanityCfg(out_dir=out, model=args.model, judge_model=args.judge_model, kinds=tuple(args.kinds.split(",")), seed=args.seed)
+    kinds = tuple(k for k in args.kinds.split(",") if k)
+    if not kinds or set(kinds) - {"sampler", "state"}:
+        raise SystemExit(f"--kinds must be a comma list of sampler,state; got {args.kinds!r}")
+    cfg = SanityCfg(out_dir=out, model=args.model, judge_model=args.judge_model, kinds=kinds, seed=args.seed)
     ts = targets(cfg)
     worst = worst_case_usd(cfg, len(ts), len(ts) - 1)
     print(json.dumps(dict(run=args.run, targets=[t.name for t in ts], worst_case_usd_all=round(worst, 4), budget_usd=args.budget_usd), indent=1))

@@ -58,9 +58,12 @@ def targets(cfg: SanityCfg) -> list[Target]:
     """Base, then checkpoints.json rows of the wanted kinds in step order; a state row is dropped when a sampler row holds the same step."""
     rows = json.loads((Path(cfg.out_dir) / "checkpoints.json").read_text()) if (Path(cfg.out_dir) / "checkpoints.json").exists() else []
     rows = [r for r in rows if r.get("kind") in cfg.kinds]
+    wrong = sorted({r["model"] for r in rows if r.get("model") and r["model"] != cfg.model})
+    if wrong:  # sampling a checkpoint as cfg.model (renderer, base reference, price) would compare it against the wrong base
+        raise ValueError(f"checkpoints were trained on {wrong}, not {cfg.model}; pass --model to match the run")
     sampler_steps = {r.get("step") for r in rows if r["kind"] == "sampler"}
     rows = [r for r in rows if r["kind"] == "sampler" or r.get("step") not in sampler_steps]
-    rows.sort(key=lambda r: (r.get("step", -1), r["kind"] != "sampler"))
+    rows.sort(key=lambda r: (-1 if r.get("step") is None else r["step"], r["kind"] != "sampler"))
     return [Target("base", None)] + [Target(r["name"], r["path"], r["kind"], r.get("step")) for r in rows]
 
 
