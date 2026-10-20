@@ -18,6 +18,7 @@ from typing import Any, Awaitable, Callable
 
 from .budget import Budget, BudgetExceeded, sample_cost_usd
 from .classify import Failure, HaltRules as InfraRules
+from .cot_monitor import CotMonitorError
 from .datums import CTX_LIMIT, Refused, build, write_batch
 from .rewardcfg import RewardCfg
 from .rewards import attach_reward, compute_composite, compute_rewards, reward_telemetry
@@ -300,7 +301,12 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
         rewards = compute_rewards(eps) if main_only else compute_composite(eps, cfg.reward_cfg)
         cot = None  # analysis-channel CoT penalty, only when the organism's CoT term is on and a per-turn scorer is supplied
         if cfg.reward_cfg.cot_penalty_enabled and cfg.reward_cfg.beta_cot and cot_score is not None:
-            cot = (cfg.reward_cfg.beta_cot, await cot_score(eps))
+            try:
+                cot = (cfg.reward_cfg.beta_cot, await cot_score(eps))
+            except BudgetExceeded as e:
+                halt(f"BudgetExceeded in CoT monitor at step {step}: {e}", step)
+            except CotMonitorError as e:
+                halt(f"CoT monitor failed at step {step}: {e}", step)
         try:
             batch = build(eps, rewards, adv_norm=cfg.adv_norm, allowed_tasks=set(cfg.train_tasks), max_len=cfg.max_len, expect_weights_id=wid, soft=True, cot_penalty=cot)
         except Refused as e:
