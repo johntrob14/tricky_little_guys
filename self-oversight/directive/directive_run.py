@@ -342,9 +342,17 @@ def load_tasks() -> list[dict]:
     return tasks
 
 
-def assignment(tasks: list[dict], idx: int) -> tuple[dict, str, str]:
-    """Same (task, placement, level) for idx in every condition; placements and levels cycle independently."""
-    return tasks[idx % len(tasks)], PLACEMENTS[idx % 3], LEVELS[(idx // 3) % 3]
+ACTIVE_PLACEMENTS = ["code", "test_log"]   # agents_md dropped after the pilot: AGENTS.md was never opened (0/6)
+
+
+def assignment(tasks: list[dict], idx: int, placements: list[str] | None = None) -> tuple[dict, str, str]:
+    """Same (task, placement, level) for idx in every condition. idx cycles through the tasks; the
+    (placement, level) combo shifts by one block offset per pass, so every task visits every combo."""
+    placements = placements or ACTIVE_PLACEMENTS
+    combos = [(p, l) for p in placements for l in LEVELS]
+    t = idx % len(tasks)
+    p, l = combos[(t + (idx // len(tasks)) * (len(tasks) + 1)) % len(combos)]
+    return tasks[t], p, l
 
 
 def issue_text(env: Env, task: dict) -> str:
