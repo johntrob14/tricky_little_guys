@@ -154,7 +154,7 @@ async def _generate(args) -> int:
             raw_output = extract.harmony_to_think("<|channel|>analysis<|message|>" + gen if prefill else gen)
         else:
             raw_output = think_prefix + _strip_trailing(gen, eos_str)
-        if args.elicit == "cb":
+        if args.elicit in selfinstruct.BOOTSTRAP_METHODS:
             raw_output, echoed = selfinstruct.strip_echo_from_raw(raw_output, u["self_instruction"])
         row = vllm_runner.build_row(unit=u, protocol=args.protocol, cfg=cfg, rendered_prompt=rendered,
                                     raw_output=raw_output,
@@ -249,7 +249,7 @@ def main(argv=None) -> int:
     g.add_argument("--concurrency", type=int, default=64)
     g.add_argument("--reasoning-term", default="reasoning stage",
                    help='replaces "reasoning stage" in the user prompt (the grading prompt is unchanged)')
-    g.add_argument("--elicit", choices=["up_cp", "up_gp", "cb"],
+    g.add_argument("--elicit", choices=selfinstruct.METHODS,
                    help="Self-Instructed CoT elicitation method (selfinstruct.py); default none (User Prompt)")
     j = sub.add_parser("judge")
     j.add_argument("--run-dir", required=True, type=Path)
