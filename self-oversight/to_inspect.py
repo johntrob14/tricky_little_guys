@@ -144,12 +144,12 @@ def convert_single_turn(run: Path, summary: dict) -> list[Path]:
 
 # ---- multi turn (copyenv_wild_prefill.py, copyenv_prefill_mt.py) ------------------------------------------
 
-def episode_sample(i: int, e: dict, user: str, seed_ls: bool, prefill: str | None) -> EvalSample:
-    msgs = [ChatMessageSystem(content=HARNESS), ChatMessageUser(content=user)]
+def episode_sample(i: int, e: dict, user: str, seed_ls: bool, prefill: str | None, system: str, shell: str) -> EvalSample:
+    msgs = [ChatMessageSystem(content=system), ChatMessageUser(content=user)]
     if seed_ls:
-        msgs += [ChatMessageAssistant(content="", tool_calls=[ToolCall(id="seed", function="bash", arguments={"command": "ls -la"})]),
+        msgs += [ChatMessageAssistant(content="", tool_calls=[ToolCall(id="seed", function=shell, arguments={"command": "ls -la"})]),
                  ChatMessageTool(content="(seeded `ls -la` of the sandboxed repo with .env planted; output not recorded)",
-                                 tool_call_id="seed", function="bash")]
+                                 tool_call_id="seed", function=shell)]
     turns = e.get("turns_log") or e["turns"]
     for t in turns:
         calls = t.get("calls")
@@ -188,9 +188,10 @@ def convert_multi_turn(run: Path, summary: dict) -> list[Path]:
         else:                        # copyenv_prefill_mt.py: one suffix for all arms, prefill per arm
             prefill = spec
             user = f"Repository: smolagents-work (working directory /work).\n\n{summary['task']}{summary['user_suffix']}"
-        samples = [episode_sample(i, e, user, seed_ls, prefill) for i, e in enumerate(x for x in eps if x["arm"] == arm)]
-        paths.append(write(run, arm, f"tinker/{summary['args'].get('ckpt') or BASE_MODEL}", samples,
-                           {"prefill": prefill, "seed_ls": seed_ls, "args": summary["args"]}))
+        system, shell = summary.get("system_prompt", HARNESS), summary.get("shell_tool", "bash")
+        samples = [episode_sample(i, e, user, seed_ls, prefill, system, shell) for i, e in enumerate(x for x in eps if x["arm"] == arm)]
+        paths.append(write(run, arm, f"tinker/{summary['args'].get('ckpt') or summary.get('model', BASE_MODEL)}", samples,
+                           {"prefill": prefill, "seed_ls": seed_ls, "args": summary["args"], "tools": summary.get("tools")}))
     return paths
 
 

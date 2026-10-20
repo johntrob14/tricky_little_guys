@@ -29,6 +29,8 @@ MODELS = {
     "gpt-oss-20b": Model("openai/gpt-oss-20b", "gpt_oss_medium_reasoning", 0.18, 0.036, 0.45, 0.396),
     "gpt-oss-120b": Model("openai/gpt-oss-120b", "gpt_oss_medium_reasoning", 0.33, 0.066, 0.84, 0.737),
     "qwen3.6-35b": Model("Qwen/Qwen3.6-35B-A3B", "qwen3_5", 0.45, 0.09, 1.335, 1.177),
+    # cached-prefill price not recorded (cot-control/rl/modelio.py has prefill/sample/train only); set to the full prefill price
+    "qwen3.8-27b": Model("Qwen/Qwen3.8-27B", "qwen3_8_medium_reasoning", 0.6975, 0.6975, 5.595, 4.103),
     "nemotron-3.5-lightning": Model("nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16", "nemotron3_ultra",
                                     0.184, 0.0368, 0.495, 0.44, list_multiplier=2.0),
     "nemotron-3-super": Model("nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16", "nemotron3",
