@@ -38,6 +38,7 @@ import json
 import re
 import statistics
 import warnings
+from collections import Counter
 from pathlib import Path
 
 import tinker
@@ -93,7 +94,7 @@ def split_si(thinking: str, si: str | None) -> tuple[str, bool]:
 async def sample_arm(arm: str, tok, ren, args) -> list[dict]:
     suffix, prefill, echo = ARMS[arm]
     pre_toks = tok.encode(ANALYSIS + prefill, add_special_tokens=False) if prefill else []
-    runner = Runner(get_model("gpt-oss-120b"), args.budget, renderer=ren)
+    runner = Runner(get_model("gpt-oss-120b"), args.budget, model_path=args.ckpt, renderer=ren)
     tasks = TASKS + HELDOUT_TASKS
     outs = await asyncio.gather(*[
         runner.sample(messages_for(ren, task, suffix), n=args.n, max_tokens=args.max_tokens,
@@ -192,6 +193,7 @@ async def main() -> None:
     ap.add_argument("--max-tokens", type=int, default=2048)
     ap.add_argument("--budget", type=float, default=1.0, help="USD sampling cap per arm")
     ap.add_argument("--arms", nargs="+", default=list(ARMS), choices=list(ARMS))
+    ap.add_argument("--ckpt", default=None, help="tinker:// sampler path; default is base gpt-oss-120b")
     ap.add_argument("--dump", default=None, choices=list(ARMS), help="print the rendered prompt tail and exit")
     ap.add_argument("--out", default=str(RESULTS / "copyenv" / "prefill"))
     args = ap.parse_args()
@@ -235,6 +237,15 @@ async def main() -> None:
     for t in table:
         print("| " + " | ".join(str(t[c]) for c in cols) + " |")
     print(f"\njudge ${judge_usd:.3f}; wrote {out}")
+    print("\njudge score histograms (count/total per score; unparsed judge outputs excluded and counted)")
+    for arm in ARMS:
+        g = [r for r in rows if r["arm"] == arm]
+        for label, grp in (("copying", [r for r in g if r["env"] and r["copied"]]), ("no .env", [r for r in g if not r["env"]])):
+            for key in ("cot", "cot_full"):
+                ok = [r[key] for r in grp if r[key + "_parsed"]]
+                hist = Counter(round(x, 2) for x in ok)
+                print(f"  {arm} | {label} | {key}: " + ", ".join(f"{s:.2f}: {c}/{len(ok)}" for s, c in sorted(hist.items(), reverse=True))
+                      + f" | unparsed {len(grp) - len(ok)}/{len(grp)}")
 
 
 if __name__ == "__main__":
