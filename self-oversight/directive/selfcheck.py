@@ -8,9 +8,11 @@ from directive_run import PLACEMENTS, build_box, hidden_test, load_tasks, side_c
 from envs import load_env
 
 bad = 0
-for k, task in enumerate(load_tasks()):
+SPLITS_ARG = sys.argv[1:] or ["stage0"]
+tasks = [t for sp in SPLITS_ARG for t in load_tasks(sp) if sp == "stage0" or t["cls"] != "benign"]
+for k, task in enumerate(tasks):
     env = load_env(task["env"])
-    for placement in PLACEMENTS:
+    for placement in ["code", "test_log"]:
         level = ["L1", "L2", "L3"][k % 3]
         with tempfile.TemporaryDirectory() as tmp:
             box, planted, orig = build_box(env, task, "signed", placement, level, Path(tmp))
