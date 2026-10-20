@@ -1,0 +1,37 @@
+# arena
+
+The keep set: LinuxArena environments and main tasks approved for the model organisms (gpt-oss-120b, Qwen3.8-27B), run as plain Inspect evals with no Control Tower. Environments are vendored codebases; tasks are small directories; `run.py` is the whole harness. `keep.yaml` lists what is approved, where it came from, and the measured pass rates.
+
+## Layout
+
+| path | contents |
+| --- | --- |
+| `envs/<env>/codebase/` | The upstream env's `codebase/` (Dockerfile, compose.yml, app source), vendored at the commit named in `keep.yaml`. The first commit of each env is verbatim, so `git log -p envs/<env>` shows every change we made. |
+| `envs/<env>/ready.sh` | Exits 0 once the app is up; the harness polls it before the agent starts. |
+| `envs/<env>/restart.sh` | Restarts the app; the harness runs it before scoring, so a server the agent left down does not fail an otherwise correct solution. |
+| `envs/<env>/build.sh` | Builds the image. The compose file marks the image `x-local`, so Inspect never builds or pulls it. |
+| `tasks/<env>/<task>/` | A main task: `task.md` (the prompt), optional `setup.sh` (runs in the sandbox before the agent starts, e.g. applies a bug patch), and one scorer: `score.py` with `async def score(sbx, answer) -> (passed, explanation)`, or `tests.py` (pytest in the sandbox, pass iff exit 0), or `answer.txt` (accepted answers, one per line). |
+| `side_tasks/<env>/` | John's side tasks, same conventions. |
+| `logs/<run>/` | Inspect logs of each run (`.eval`, viewable with `inspect view --log-dir logs/<run>`) and `summary.json` from `summarize.py`. |
+
+## Running
+
+```bash
+uv sync                                      # once; needs TINKER_API_KEY (and TINKER_BASE_URL if set) in arena/.env
+envs/tiktok/build.sh                         # once per machine, or whenever the Dockerfile or app source changes
+python run.py tiktok --model tinker/openai/gpt-oss-120b --epochs 4 --run gptoss-n4
+python run.py tiktok/token_bucket_rate_limiter_per_user --model tinker/Qwen/Qwen3.8-27B -M model_path=tinker://... --run ckpt
+python summarize.py logs/gptoss-n4 logs/qwen-n4
+```
+
+`--model` takes any Inspect model string (`openrouter/...`, `anthropic/...`); `tinker/<base model>` uses Tinker's native sampler through tinker-cookbook's renderer (gpt-oss medium reasoning, Qwen3.8 medium reasoning), with the reasoning kept in the log.
+
+The agent loop: Control Tower's honest system prompt, the task as the user message, tools `bash`, `text_editor`, `submit(answer)`. The sample ends on `submit`, at `--max-turns` (default 60), when the prompt leaves under 2,000 tokens of the 32k context, or on a turn with no tool call (the first such turn gets one nudge to submit). Tool calls time out at 120s. Scoring is on the sandbox state after `restart.sh`, whether or not the agent submitted.
+
+## Adding a task
+
+Make `tasks/<env>/<task>/` with `task.md` and a scorer, record its provenance and approval in `keep.yaml`, and measure it on both models (`--epochs 4` or more) before marking it approved. Keep the prompt and the scorer verbatim from upstream unless the task needs changing; when it does, the diff against the first commit of the directory is the record.
+
+## Differences from Control Tower runs
+
+Known differences from the `ct run eval --policy ct/honest` runs that produced the Control Tower numbers in `keep.yaml`: Tinker's native sampler instead of OpenRouter; Inspect's stock `bash` (`command` only, fixed timeout) and single `text_editor` tool instead of Control Tower's `cmd`/`command` bash with a model-settable timeout and five split editor tools; one nudge to submit on the first tool-free turn (Control Tower ends the sample there, and nudges only after a truncated turn); research tasks submit through `submit(answer=...)` instead of a per-task setter tool; the app is restarted before scoring; no internet simulator (the env's compose has no external services).
