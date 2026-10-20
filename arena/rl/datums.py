@@ -140,24 +140,37 @@ class Batch:
                     tokens_sampled=self.tokens_sampled, weights_id=self.weights_id, groups=[asdict(g) for g in self.groups], dropped=self.dropped)
 
 
+SOFT_CODES = {"provider", "misaligned", "nonfinite", "logprobs"}  # expected exclusions (chain break, mixed weights, bad sidecar rows), not scope violations
+SOFT_NON_TRAINABLE = {"chain_break", "mixed_weights", "bad_logprobs"}
+
+
 def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str = "none", allowed_tasks: set[str] | None = None, max_len: int = CTX_LIMIT,
-          expect_weights_id: str | None = None) -> Batch:
+          expect_weights_id: str | None = None, soft: bool = False) -> Batch:
     """Raises Refused on any episode that must not train (every episode is scope-checked; episodes with a reward are token-checked). Episodes sampled by
-    other weights than expect_weights_id raise too. Groups without signal and over-length datums are dropped and listed in Batch.dropped."""
+    other weights than expect_weights_id raise too. Groups without signal and over-length datums are dropped and listed in Batch.dropped.
+    soft=True turns the expected exclusions (provider non-trainable reasons chain_break/mixed_weights/bad_logprobs, misaligned or non-finite rows) into reward None
+    (set in `rewards`, listed in Batch.dropped); split, phase, task, sampling-param and scripted violations still raise."""
     batch = Batch(n_episodes=len(eps))
+    soft_dropped = {}
     for e in eps:
         check_scope(e, allowed_tasks)
         if expect_weights_id is not None and e.weights_id != expect_weights_id:
             raise ValueError(f"episode {e.episode_id} was sampled by weights {e.weights_id}, training weights are {expect_weights_id}")
         if rewards.get(e.episode_id) is not None:
-            check_tokens(e)
+            try:
+                check_tokens(e)
+            except Refused as r:
+                if not soft or r.code not in SOFT_CODES or (r.code == "provider" and not set(e.non_trainable) <= SOFT_NON_TRAINABLE):
+                    raise
+                rewards[e.episode_id] = None
+                soft_dropped[e.episode_id] = f"non-trainable: {r.code}: {e.non_trainable or str(r)}"
     batch.n_valid = sum(1 for e in eps if rewards.get(e.episode_id) is not None)
     batch.n_none = len(eps) - batch.n_valid
     batch.weights_id = expect_weights_id or (eps[0].weights_id if eps else "")
     advs, batch.groups = group_advantages(eps, rewards, adv_norm=adv_norm)
     for e in eps:
         if e.episode_id not in advs:
-            batch.dropped.append(dict(episode_id=e.episode_id, reason="no reward" if rewards.get(e.episode_id) is None else "group without signal"))
+            batch.dropped.append(dict(episode_id=e.episode_id, reason=soft_dropped.get(e.episode_id) or ("no reward" if rewards.get(e.episode_id) is None else "group without signal")))
             continue
         a = advs[e.episode_id]
         a_turns = turn_advantages(e.turns, a)

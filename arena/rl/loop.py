@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from .budget import Budget, BudgetExceeded, sample_cost_usd
-from .datums import CTX_LIMIT, build, write_batch
+from .datums import CTX_LIMIT, Refused, build, write_batch
 from .rewards import attach_reward, compute_rewards
 from .schema import INFRA, TOOL_FAIL_FLAGS, Episode, append_jsonl, read_jsonl
 from .train import StepMetrics, TrainHP, next_sampler, open_training_client, save_checkpoint, train_step
@@ -122,6 +122,7 @@ class LoopCfg:
     steps: int
     B: int
     G: int
+    ep_worst_usd: float  # per-episode worst case reserved for rollouts and charged in full if collect fails (budget.episode_worst_case_usd)
     model: str = "openai/gpt-oss-120b"
     seed: int = 0
     hp: TrainHP = field(default_factory=TrainHP)
@@ -135,7 +136,6 @@ class LoopCfg:
     step_deadline_s: float | None = None
     ep_usd_est: float = 0.03  # before the first step the forecast uses 1.5x these, afterwards the running mean
     train_usd_est: float = 0.02
-    ep_worst_usd: float | None = None  # per-episode worst case to reserve for rollouts (budget.episode_worst_case_usd); None skips the reservation
     halt: HaltRules = field(default_factory=HaltRules)
 
 
@@ -244,6 +244,12 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
         (out / "HALTED.md").write_text(f"# HALTED at step {step}\n\n{reason}\n\nbudget: {json.dumps(budget.summary())}\n\nResume with run_loop(resume=True): it restarts from the last saved state.\n")
         raise HaltError(reason)
 
+    if not budget.started:
+        try:
+            budget.start_stage(forecast_step(cfg, None, None), note=f"run_loop {cfg.run} first-step forecast, steps {start}..{cfg.steps - 1}")
+        except BudgetExceeded as e:
+            halt(f"BudgetExceeded before step {start}: {e}", start)
+
     for step in range(start, cfg.steps):
         t0 = time.time()
         sd = out / f"step_{step:03d}"
@@ -258,10 +264,10 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
                 if (sd / f).exists():
                     os.replace(sd / f, sd / (f + ".stale"))
             try:
-                budget.require(forecast_step(cfg, ema_ep, ema_train))
-                reserve = (cfg.ep_worst_usd or 0.0) * cfg.B * cfg.G
-                if reserve:
-                    budget.reserve(reserve)
+                reserve = cfg.ep_worst_usd * cfg.B * cfg.G
+                budget.require(forecast_step(cfg, ema_ep, ema_train) + reserve)
+                budget.check_total(reserve)
+                budget.reserve(reserve)
             except BudgetExceeded as e:
                 halt(f"BudgetExceeded before step {step}: {e}", step)
             if sampler is None or sampler_wid != wid:
@@ -269,9 +275,13 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
             req = CollectRequest(step, chosen, cfg.G, sampler, wid, sd, cfg.step_deadline_s, budget)
             try:
                 eps = list(await collect(req))
-            finally:
-                if reserve:
-                    budget.release(reserve)
+            except BaseException:
+                try:  # spend of a failed collect is unknown: count the reservation as the upper bound
+                    budget.commit(reserve, reserved_usd=reserve, note=f"step {step} collect failed, worst-case bound")
+                except BudgetExceeded:
+                    pass
+                raise
+            budget.release(reserve)
             eps = [attach_reward(e) if e.passed is None else e for e in eps]
             append_jsonl(sd / "episodes.jsonl", eps)
             spent = sum(episode_sample_usd(e, cfg.model) for e in eps)
@@ -286,7 +296,10 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
         eps = [e for e in eps if e.weights_id == wid]  # C2: never train on rows another weights sampled
         cfg.halt.observe(eps)
         rewards = compute_rewards(eps)
-        batch = build(eps, rewards, adv_norm=cfg.adv_norm, allowed_tasks=set(cfg.train_tasks), max_len=cfg.max_len, expect_weights_id=wid)
+        try:
+            batch = build(eps, rewards, adv_norm=cfg.adv_norm, allowed_tasks=set(cfg.train_tasks), max_len=cfg.max_len, expect_weights_id=wid, soft=True)
+        except Refused as e:
+            halt(f"refused episode at step {step}: {e}", step)
         write_batch(batch, sd)
         wid_after = next_weights_id(wid, step, [d.episode_id for d in batch.datums])
 
@@ -303,14 +316,14 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
             ema_train = m.train_usd / max(cfg.B * cfg.G, 1)
         ck = None
         final = step == cfg.steps - 1
+        meta = dict(step=step, weights_id=wid, n_applied=n_applied, run=cfg.run, model=cfg.model, rank=cfg.hp.rank, lr=cfg.hp.learning_rate)
         if n_applied > saved_n and (final or (step + 1) % cfg.state_every == 0):
-            ck = await save_checkpoint(tc, "state", f"{cfg.run}-s{step:03d}-{session}-state", cfg.final_state_ttl_s if final else cfg.state_ttl_s,
-                                       step=step, weights_id=wid, n_applied=n_applied, run=cfg.run, model=cfg.model, rank=cfg.hp.rank, lr=cfg.hp.learning_rate)
+            ck = await save_checkpoint(tc, "state", f"{cfg.run}-s{step:03d}-{session}-state", cfg.final_state_ttl_s if final else cfg.state_ttl_s, **meta)
             ckpts.append(ck)
-            if final:
-                ckpts.append(await save_checkpoint(tc, "sampler", f"{cfg.run}-s{step:03d}-{session}", cfg.final_sampler_ttl_s, step=step, weights_id=wid, n_applied=n_applied,
-                                                   run=cfg.run, model=cfg.model, rank=cfg.hp.rank, lr=cfg.hp.learning_rate))
             saved_n = n_applied
+            _write_json(out / "checkpoints.json", ckpts)
+        if final and n_applied > 0:  # the deliverable sampler is saved even when the last steps applied no update (the latest state then already holds these weights)
+            ckpts.append(await save_checkpoint(tc, "sampler", f"{cfg.run}-s{step:03d}-{session}", cfg.final_sampler_ttl_s, **meta))
             _write_json(out / "checkpoints.json", ckpts)
         line = step_line(cfg, step, chosen, eps, rewards, batch, m, dict(
             weights_id_sampled=marker["weights_id"] if reused else sampler_wid, weights_id_after=wid, n_applied=n_applied, reused_rows=reused, dropped_other_weights=len(mismatched),

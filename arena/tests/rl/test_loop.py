@@ -15,7 +15,7 @@ P = {t: 0.5 for t in TASKS}
 
 
 def cfg(tmp_path, **kw):
-    kw = dict(run="r", out_dir=tmp_path / "run", train_tasks=TASKS, steps=2, B=2, G=4, state_every=1) | kw
+    kw = dict(run="r", out_dir=tmp_path / "run", train_tasks=TASKS, steps=2, B=2, G=4, state_every=1, ep_worst_usd=0.01) | kw
     return LoopCfg(**kw)
 
 
@@ -57,7 +57,7 @@ def test_two_step_loop_on_fakes(tmp_path):
     assert [(k["kind"], k["step"]) for k in ck] == [("state", 0), ("state", 1), ("sampler", 1)]
     assert all(k["ttl_s"] >= 3600 and k["path"].startswith("tinker://") for k in ck)
     assert (c.out_dir / "step_000" / "trained.json").exists() and (c.out_dir / "step_001" / "batch.json").exists()
-    assert b.committed > 0 and {r["kind"] for r in b.ledger.rows()} == {"counted"} and b.reserved == 0
+    assert b.committed > 0 and {r["kind"] for r in b.ledger.rows()} == {"forecast", "counted"} and b.reserved == 0
     assert out["n_applied"] == 2 and tc.save_threads == [True, True]
 
 
@@ -156,7 +156,7 @@ def test_budget_cap_halts_before_any_collect(tmp_path):
 
 
 def test_budget_halts_when_counted_spend_passes_cap_and_stays_resumable(tmp_path):
-    c = cfg(tmp_path, steps=4, ep_usd_est=1e-5, train_usd_est=1e-5)  # forecast passes, real cost does not
+    c = cfg(tmp_path, steps=4, ep_usd_est=1e-5, train_usd_est=1e-5, ep_worst_usd=1e-6)  # forecast passes, real cost does not
     b = budget(tmp_path, cap=0.0005)
     with pytest.raises(HaltError, match="BudgetExceeded"):
         run(c, FakeService(), make_collect(P), b)
@@ -228,3 +228,86 @@ def test_infra_failure_halts_loop(tmp_path):
     c = cfg(tmp_path, halt=HaltRules(invalid_frac=1.0, zero_signal_steps=99))
     with pytest.raises(HaltError, match="3 consecutive INFRA"):
         run(c, FakeService(), collect, budget(tmp_path))
+
+
+def test_non_trainable_episode_becomes_reward_none_and_does_not_crash(tmp_path):
+    async def collect(req):
+        eps = await make_collect(P)(req)
+        eps[0].non_trainable = ["chain_break"]
+        eps[1].non_trainable = ["mixed_weights"]
+        return eps
+    c = cfg(tmp_path, steps=1, halt=HaltRules(invalid_frac=0.5))
+    run(c, FakeService(), collect, budget(tmp_path))
+    l = lines(c)[0]
+    assert l["n_none"] == 2 and l["n_valid"] == 6 and l["applied"]
+    dropped = json.loads((c.out_dir / "step_000" / "batch.json").read_text())["dropped"]
+    assert sum("non-trainable" in d["reason"] for d in dropped) == 2
+
+
+def test_too_many_non_trainable_halts_on_invalid_frac(tmp_path):
+    async def collect(req):
+        eps = await make_collect(P)(req)
+        for e in eps[:4]:
+            e.non_trainable = ["chain_break"]
+        return eps
+    c = cfg(tmp_path, steps=1)
+    with pytest.raises(HaltError, match="invalid episodes"):
+        run(c, FakeService(), collect, budget(tmp_path))
+    assert (c.out_dir / "HALTED.md").exists()
+
+
+def test_scope_violation_still_halts_cleanly(tmp_path):
+    async def collect(req):
+        eps = await make_collect(P)(req)
+        eps[0].sampling.temperature = 0.7
+        return eps
+    c = cfg(tmp_path, steps=1)
+    with pytest.raises(HaltError, match="temperature"):
+        run(c, FakeService(), collect, budget(tmp_path))
+    assert (c.out_dir / "HALTED.md").exists()
+
+
+def test_final_checkpoints_saved_when_the_tail_has_no_signal(tmp_path):
+    base = make_collect(P)
+
+    async def collect(req):
+        return await (base if req.step < 2 else make_collect({t: 1.0 for t in TASKS}))(req)
+    c = cfg(tmp_path, steps=4, state_every=2, halt=HaltRules(zero_signal_steps=99))
+    out = run(c, FakeService(), collect, budget(tmp_path))
+    ck = [(k["kind"], k["step"]) for k in out["checkpoints"]]
+    assert ("sampler", 3) in ck and ck.count(("state", 1)) == 1 and ("state", 3) not in ck  # state of step 1 already holds the final weights
+    s = [k for k in out["checkpoints"] if k["kind"] == "sampler"][0]
+    assert s["ttl_s"] == c.final_sampler_ttl_s and s["n_applied"] == out["n_applied"] == 2
+
+
+def test_final_state_saved_with_long_ttl_when_last_state_is_stale(tmp_path):
+    c = cfg(tmp_path, steps=3, state_every=2)
+    out = run(c, FakeService(), make_collect(P), budget(tmp_path))
+    fin = [k for k in out["checkpoints"] if k["step"] == 2]
+    assert {k["kind"] for k in fin} == {"state", "sampler"} and [k for k in fin if k["kind"] == "state"][0]["ttl_s"] == c.final_state_ttl_s
+
+
+def test_collect_failure_ledgers_worst_case_bound(tmp_path):
+    async def boom(req):
+        raise RuntimeError("collect died")
+    b = budget(tmp_path)
+    with pytest.raises(RuntimeError, match="collect died"):
+        run(cfg(tmp_path, ep_worst_usd=0.1), FakeService(), boom, b)
+    rows = b.ledger.rows()
+    assert b.reserved == 0 and b.committed == pytest.approx(0.8) and len([r for r in rows if r["kind"] == "counted"]) == 1
+    assert "collect" in rows[-1]["note"]
+
+
+def test_ep_worst_usd_is_required(tmp_path):
+    with pytest.raises(TypeError):
+        LoopCfg(run="r", out_dir=tmp_path, train_tasks=TASKS, steps=1, B=1, G=1)
+
+
+def test_total_cap_is_enforced_by_the_loop(tmp_path):
+    led = Ledger(tmp_path / "ledger.csv")
+    led.append("old", "r0", "openai/gpt-oss-120b", "counted", counted_usd=19.99)
+    b = Budget(5.0, stage="s", run="r", ledger=led)
+    rec = []
+    with pytest.raises(HaltError, match="total cap"):
+        run(cfg(tmp_path), FakeService(), make_collect(P, record=rec), b)
+    assert rec == [] and (tmp_path / "run" / "HALTED.md").exists()

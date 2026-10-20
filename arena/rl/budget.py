@@ -99,6 +99,12 @@ class Budget:
         self.ledger.append(self.stage, self.run, self.model, "forecast", estimate_usd=forecast_usd, note=note)
         self.started = True
 
+    def check_total(self, forecast_usd: float) -> None:
+        """Refuse when the ledger's counted total plus this forecast would pass the total cap."""
+        total = self.ledger.total_counted()
+        if total + forecast_usd > self.total_cap:
+            raise BudgetExceeded(f"stage {self.stage}: ledger total ${total:.4f} + ${forecast_usd:.4f} is over the total cap ${self.total_cap:.2f}")
+
     def require(self, forecast_usd: float) -> None:
         with self._lock:
             if self.committed + self.reserved + forecast_usd > self.cap:
