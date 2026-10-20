@@ -27,4 +27,8 @@ Data: `rl/data/pool_qwen_n300_med.jsonl`, mined this session on base Qwen3.8-27B
 - Eval plan: Astra via `tinker-runner --model-path` at steps 10/20/30, settings as `qwen38-run2`.
 
 ## Outcome
-(pending)
+Crashed at step 29 of 30: Tinker 402, the shared MATS account's balance ran out ("Access blocked due to billing status"). 28 steps are logged, ~$57.32 estimated for this run. Sampler/state checkpoints exist for steps 10 and 20 only (save-every 10; the crash predates the step-30 save), so steps 21-28 have metrics but no recoverable weights. Astra evals of steps 10/20 are also blocked until the account is topped up.
+
+Training metrics (16 x 8 per step): strict 0.12 -> 0.71 (step 28), partial 0.53 -> 0.91, correct 0.58 -> 0.87 with acc_vs_base +0.10, judge YES ~1.0 throughout, truncation 27 -> 2 of 128. Watch item: rollout length drifted short late in the run (mean tokens ~1,700 -> ~850, len_ratio_median 0.78 at step 28, below the [0.8, 1.5] band).
+
+To finish after top-up: resume with `--init-state` from the step-20 state for the remaining steps, then eval steps 10/20/final on Astra.
