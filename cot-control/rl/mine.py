@@ -1,5 +1,5 @@
 """Build the GRPO question pool: MMLU-Pro questions (minus CoT-Control's mmlu_pro_mini items) with banned-word
-candidates and base-model statistics from --samples unconstrained gpt-oss-120b samples per question.
+candidates and base-model statistics from --samples unconstrained --model samples per question.
 
 A keyword candidate is a word (4+ letters) in at least half of the question's sampled CoTs, used at least --min-count
 times across them, and present in the CoTs of at most --max-df of all questions (so topic words, not "answer" or
@@ -25,8 +25,8 @@ import tinker
 from cotswitch import extract, prompts
 from cotswitch.data import Item
 
-MODEL = "openai/gpt-oss-120b"
-STOP = [200002, 200012]  # <|return|>, <|call|>
+import modelio
+
 MINI_CSV = Path(__file__).parent.parent / "grading/data/cotcontrol/mmlu_pro_mini_w_keyword.csv"
 
 
@@ -47,6 +47,8 @@ def load_questions() -> list[Item]:
 
 async def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default="Qwen/Qwen3.8-27B", choices=list(modelio.PRICES))
+    ap.add_argument("--effort", default="medium", help='reasoning effort for think-tag models (e.g. "low")')
     ap.add_argument("--n", type=int, default=200)
     ap.add_argument("--samples", type=int, default=4)
     ap.add_argument("--out", type=Path, required=True)
@@ -60,20 +62,20 @@ async def main():
     items = load_questions()
     random.Random(args.seed).shuffle(items)
     items = items[:args.n]
-    client = await tinker.ServiceClient().create_sampling_client_async(base_model=MODEL)
+    client = await tinker.ServiceClient().create_sampling_client_async(base_model=args.model)
     tok = client.get_tokenizer()
-    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, top_p=1.0, stop=STOP)
+    harmony, eos = modelio.probe_harmony(tok), tok.eos_token
+    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, top_p=1.0, stop=modelio.policy_stop(tok, harmony))
     sem = asyncio.Semaphore(args.concurrency)
 
     async def one(it: Item):
-        msgs = [{"role": "user", "content": prompts.question_block(it)}]
-        ids = tok.encode(tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True), add_special_tokens=False)
+        ids, think_prefix = modelio.render(tok, prompts.question_block(it), harmony, args.effort)
         async with sem:
             res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=args.samples, sampling_params=params)
         outs = []
         for s in res.sequences:
             finish = "length" if s.stop_reason == "length" else "stop"
-            split = extract.split_output(extract.harmony_to_think(tok.decode(s.tokens, skip_special_tokens=False)), None, finish)
+            split = extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, eos), None, finish)
             outs.append(dict(n_tokens=len(s.tokens), reasoning=split["reasoning"],
                              correct=extract.parse_answer(split["response"], split["content"]) == it.answer_letter))
         return outs
@@ -93,8 +95,9 @@ async def main():
                                     n_tokens=statistics.median(o["n_tokens"] for o in outs), correct=sum(o["correct"] for o in outs) / len(outs),
                                     reasoning=outs[0]["reasoning"])) + "\n")
     n_tok = sum(o["n_tokens"] for outs in samples for o in outs)
+    sample_price = modelio.PRICES[args.model]["sample"]
     print(f"{len(samples)} questions x {args.samples}, accuracy {sum(o['correct'] for outs in samples for o in outs) / (len(samples) * args.samples):.2f}, "
-          f">=1 keyword {sum(len(k) >= 1 for k in kws)}, >=3 keywords {sum(len(k) >= 3 for k in kws)}, output tokens {n_tok} (~${n_tok * 0.84e-6:.2f})")
+          f">=1 keyword {sum(len(k) >= 1 for k in kws)}, >=3 keywords {sum(len(k) >= 3 for k in kws)}, output tokens {n_tok} (~${n_tok * sample_price / 1e6:.2f})")
 
 
 if __name__ == "__main__":
