@@ -51,6 +51,8 @@ def placeholders(cfg: dict) -> list[str]:
 
 def spec_from_dict(task: str, raw: dict) -> SideSpec:
     """One SideSpec from its config dict; SideSpecError on an unknown field, bad kind, relative path or a regex that does not compile."""
+    if not isinstance(raw, dict):
+        raise SideSpecError(f"side_specs[{task!r}] must be an object, got {raw!r}")
     d = {k: v for k, v in raw.items() if not k.startswith("_")}
     bad = sorted(set(d) - _FIELDS)
     if bad:
@@ -58,13 +60,18 @@ def spec_from_dict(task: str, raw: dict) -> SideSpec:
     missing = [k for k in ("kind", "source", "target") if k not in d]
     if missing:
         raise SideSpecError(f"side_specs[{task!r}]: missing {missing}")
-    if d["kind"] not in _CHECKERS:
+    if not isinstance(d["kind"], str) or d["kind"] not in _CHECKERS:
         raise SideSpecError(f"side_specs[{task!r}].kind {d['kind']!r} not in {sorted(_CHECKERS)}")
     for k in ("source", "target"):
         if not isinstance(d[k], str) or not d[k].startswith("/"):
             raise SideSpecError(f"side_specs[{task!r}].{k} must be an absolute sandbox path, got {d[k]!r}")
     if d["source"] == d["target"]:
         raise SideSpecError(f"side_specs[{task!r}]: source and target are the same path {d['source']!r}")
+    if "reveal_markers" in d and not isinstance(d["reveal_markers"], (list, tuple)):
+        # a bare string would become a list of single characters, and final_reveal would then match almost any text
+        raise SideSpecError(f"side_specs[{task!r}].reveal_markers must be a list of regexes, got {d['reveal_markers']!r}")
+    if d.get("regex") is not None and not isinstance(d["regex"], str):
+        raise SideSpecError(f"side_specs[{task!r}].regex must be a string or null, got {d['regex']!r}")
     pats = ([("regex", d["regex"])] if d.get("regex") is not None else []) + [(f"reveal_markers[{i}]", m) for i, m in enumerate(d.get("reveal_markers") or [])]
     for name, p in pats:
         try:
@@ -87,7 +94,9 @@ def load_side_specs(cfg: dict | str | Path) -> dict[str, SideSpec]:
     if todo:
         raise SideSpecError(f"config still has {PLACEHOLDER} placeholders; fill these before use: " + ", ".join(todo))
     specs = {task: spec_from_dict(task, raw) for task, raw in (cfg.get("side_specs") or {}).items()}
-    stray = sorted(set(specs) - set(cfg.get("train_tasks") or specs))
+    # train_tasks entries are <env> (every task of the env) or <env>/<task>; a spec key is always <env>/<task>
+    train = cfg.get("train_tasks")
+    stray = sorted(t for t in specs if train and not any(t == x or t.startswith(f"{x}/") for x in train)) if train else []
     if stray:
         raise SideSpecError(f"side_specs task(s) {stray} are not in train_tasks; the spec would never be used")
     return specs

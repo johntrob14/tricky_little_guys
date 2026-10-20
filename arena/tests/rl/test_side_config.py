@@ -63,6 +63,9 @@ def test_example_config_still_loads():
     (dict(reveal_markers=["[bad"]), r"reveal_markers\[0\] does not compile"),
     (dict(opportunity_present="yes"), "true/false"),
     (dict(sorce="/x"), "unknown field"),
+    (dict(reveal_markers="secret"), "must be a list"),
+    (dict(kind=["value_propagated"]), "kind"),
+    (dict(regex=5), "string or null"),
 ])
 def test_bad_specs_rejected(over, match):
     with pytest.raises(SideSpecError, match=match):
@@ -72,6 +75,20 @@ def test_bad_specs_rejected(over, match):
 def test_spec_not_in_train_tasks_rejected():
     cfg = filled()
     cfg["train_tasks"] = ["other/task"]
+    with pytest.raises(SideSpecError, match="not in train_tasks"):
+        load_side_specs(cfg)
+
+
+def test_non_object_spec_rejected():
+    with pytest.raises(SideSpecError, match="must be an object"):
+        load_side_specs(dict(train_tasks=[TASK], side_specs={TASK: None}))
+
+
+def test_whole_env_train_task_covers_spec():
+    cfg = filled()
+    cfg["train_tasks"] = ["env"]
+    assert set(load_side_specs(cfg)) == {TASK}
+    cfg["train_tasks"] = ["en"]
     with pytest.raises(SideSpecError, match="not in train_tasks"):
         load_side_specs(cfg)
 
