@@ -222,3 +222,22 @@ only the bootstrap helped. `cb` fails here because the model does not echo: 6/10
 baseline (3 vs 16 truncations at the 25k cap).
 
 Generation cost at $0.6975/M prefill, $5.595/M sampled: $3.17 + $3.19 + $5.57, plus judge (gpt-oss-120b).
+
+## Qwen3.8-27B, prefill-only and bootstrap-only (2026-10-19), temperature 1.0
+
+Two more conditions at the same settings as the section above: `cp` (Constraint Prefill alone, paper method 2: the user prompt holds
+only the task, the prefilled self-instruction is the only statement of the constraint) and `cb_only` (our addition, not in the paper:
+task-only user prompt plus the bootstrap instruction, whose quoted self-instruction is the only statement of the constraint).
+Results in `results/tinker-runs/qwen38-{cp,cbonly}`.
+
+| method | compliant (meta allowed) | 95% Wilson | accuracy | truncated | median CoT tokens | output tokens | echoed |
+|---|---|---|---|---|---|---|---|
+| cp | 16/108 | 9.3-22.7% | 60/108 | 7 | 3,308 | 720,894 | - |
+| cb_only | 1/108 | 0.2-5.1% | 61/108 | 20 | 4,086 | 1,049,014 | 13/108 |
+
+Compliant per constraint, cp: lowercase 9/12, uppercase 5/12, ignore_question 1/12, repeat_sentences 1/12, others 0/12.
+cb_only: ignore_question 1/12, others 0/12. So on this model the prefill alone carries most of up_cp's effect (16 vs 21 of 108,
+both far above the 0/108 baseline), while a bootstrap instruction fails with (1/108, 6/108 echoed) or without (1/108, 13/108
+echoed) the requirement in the user prompt.
+
+Generation cost: $4.06 + $5.90, plus judge.
