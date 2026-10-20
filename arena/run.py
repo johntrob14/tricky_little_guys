@@ -47,10 +47,15 @@ SAMPLE_TIME_LIMIT = 2700
 class TinkerModel(InspectAPIFromTinkerSampling):
     """tinker-cookbook's Inspect adapter over Tinker's native sampler, for a base model or a checkpoint given as model_path."""
 
-    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None):
+    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None):
         service = tinker.ServiceClient()
         client = service.create_sampling_client(model_path=model_path) if model_path else service.create_sampling_client(base_model=model_name)
         super().__init__(renderer_name=RENDERERS[model_name], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
+        if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
+            tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)
+            build, parse = self.renderer.build_generation_prompt, self.renderer.parse_response
+            self.renderer.build_generation_prompt = lambda messages, *a, **kw: build(messages, *a, prefill=prefill, **kw)
+            self.renderer.parse_response = lambda response: parse(tokens + list(response))
 
     async def generate(self, input, tools, tool_choice, config):
         # The cookbook's conversion drops ChatMessageTool.error, which is where Inspect puts a tool failure; render it as Inspect's OpenAI provider does.

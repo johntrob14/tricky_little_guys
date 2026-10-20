@@ -2,9 +2,9 @@
 per rollout: main-task success, side-task success (did the secret reach an unauthenticated surface), and
 whether the model hid it (measured afterward by the post-hoc monitor in rl/monitor over these logs).
 
-The prompt is built from independent axes (system, prefix, description, guidance; prompt_spec.py, fragments
-in prompts/). A preset from prompts/presets.yaml names a whole spec, and --system, --prefix, --description
-and --guidance replace single axes of it. The preset control drops the side task from the prompt but still
+The prompt is built from independent axes (system, prefix, description, guidance, prefill; prompt_spec.py,
+fragments in prompts/). A preset from prompts/presets.yaml names a whole spec, and --system, --prefix,
+--description, --guidance and --prefill replace single axes of it. The preset control drops the side task from the prompt but still
 seeds the same secrets and runs both scorers: the matched control, whose side-leak rate is the scorer's
 false-positive rate.
 
@@ -12,6 +12,7 @@ false-positive rate.
     python run_attack.py tiktok --model openrouter/openai/gpt-oss-120b --tier easy --epochs 2 --run atk-gptoss
     python run_attack.py tiktok --model tinker/Qwen/Qwen3.8-27B --tier easy --epochs 2 --run ctl-qwen --preset control
     python run_attack.py tiktok --model tinker/Qwen/Qwen3.8-27B --tier easy --epochs 2 --run abl --guidance no_mention   # one axis changed
+    python run_attack.py tiktok --model tinker/Qwen/Qwen3.8-27B --tier easy --epochs 2 --run pre --preset honest_hide --prefill specific   # every turn's reasoning starts with prompts/prefill/specific.txt
     python summarize_attack.py logs/atk-gptoss           # main pass, side leaked, turns
     # then the hiding axis, blind CoT+action monitor (high=suspicious):
     python -m rl.monitor.run logs/atk-gptoss --judge-backend openrouter --dry-run
@@ -155,6 +156,7 @@ def main():
     ap.add_argument("--prefix", help="one fragment under prompts/prefix, or none")
     ap.add_argument("--description", choices=["on", "off"], help="off drops the side task from the prompt (the matched control; prefix and guidance must then be none)")
     ap.add_argument("--guidance", help="fragments under prompts/guidance, comma separated, or none")
+    ap.add_argument("--prefill", help="one fragment under prompts/prefill, or none: the text every assistant turn's reasoning starts with (tinker models only)")
     ap.add_argument("--reasoning-effort", default="medium", help="passed to GenerateConfig so gpt-oss/Qwen reasoning is returned and logged")
     ap.add_argument("--dry-run", action="store_true", help="print the plan, the composed prompt and the seed shell for one sample; no eval, no spend")
     args = ap.parse_args()
@@ -164,7 +166,7 @@ def main():
     if sauce_key.exists():
         load_dotenv(sauce_key)
 
-    spec = prompt_spec.resolve(args.preset, args.system, args.prefix, args.description, args.guidance)
+    spec = prompt_spec.resolve(args.preset, args.system, args.prefix, args.description, args.guidance, args.prefill)
     selected = [p for name in args.tasks for p in (sorted((ROOT / "tasks" / name).iterdir()) if "/" not in name else [ROOT / "tasks" / name]) if p.is_dir()]
     tasks = [build(p, args.tier, args.epochs, args.max_turns, args.seed_base, spec) for p in selected]
 
@@ -175,6 +177,7 @@ def main():
         print(f"spec: {spec}")
         print(f"tasks: {[p.name for p in selected]}")
         print(f"\n[system prompt]\n{prompt_spec.system_prompt(spec)}")
+        print(f"\n[prefill]\n{prompt_spec.prefill_text(spec)}")
         print(f"\n--- sample episode for {p.parent.name}/{p.name} (tier={cfg['tier']}, source={cfg['source']}, sink_req={cfg['sink_req']}, commands={cfg['commands']}) ---")
         print("\n[seed shell]\n" + side_config.make_setup(cfg))
         print("[composed prompt tail]\n..." + prompt_spec.user_prompt(spec, (p / 'task.md').read_text(), side_config.describe(cfg))[-700:])
@@ -184,7 +187,8 @@ def main():
         cfg = GenerateConfig(max_tokens=args.max_tokens, max_connections=32, reasoning_effort=args.reasoning_effort)
     except Exception:
         cfg = GenerateConfig(max_tokens=args.max_tokens, max_connections=32)
-    model = get_model(args.model, config=cfg, memoize=False)
+    prefill = prompt_spec.prefill_text(spec)
+    model = get_model(args.model, config=cfg, memoize=False, **({"prefill": prefill} if prefill else {}))
     images = {env: subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"],
                                   capture_output=True, text=True, check=True).stdout.strip()
               for env in sorted({p.parent.name for p in selected})}
