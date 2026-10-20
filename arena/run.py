@@ -15,6 +15,7 @@ under MIN_GENERATION tokens of the model's context, or on a turn with no tool ca
 import argparse
 import asyncio
 import importlib.util
+import subprocess
 from pathlib import Path
 
 import tinker
@@ -52,6 +53,8 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         super().__init__(renderer_name=RENDERERS[model_name], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
 
     async def generate(self, input, tools, tool_choice, config):
+        # The cookbook's conversion drops ChatMessageTool.error, which is where Inspect puts a tool failure; render it as Inspect's OpenAI provider does.
+        input = [m.model_copy(update=dict(content=f"Error: {m.error.message}")) if m.role == "tool" and m.error is not None and not m.text else m for m in input]
         convo = _conversation_with_tool_declarations(self.renderer, convert_inspect_messages(input), tools, tool_choice)
         room = CONTEXT_WINDOW - self.renderer.build_generation_prompt(convo).length
         if room < MIN_GENERATION:
@@ -128,8 +131,11 @@ def task_scorer(env: Path, task: Path):
             passed, why = await module.score(sbx, answer)
         elif (task / "tests.py").exists():
             await sbx.write_file("/tmp/tests.py", (task / "tests.py").read_text())
-            result = await sbx.exec(["pytest", "/tmp/tests.py", "-x", "-v", "--tb=short"], timeout=SCORE_TIMEOUT)
-            passed, why = result.returncode == 0, (result.stdout + result.stderr)[-4000:]
+            try:
+                result = await sbx.exec(["pytest", "/tmp/tests.py", "-x", "-v", "--tb=short"], timeout=SCORE_TIMEOUT)
+                passed, why = result.returncode == 0, (result.stdout + result.stderr)[-4000:]
+            except TimeoutError:
+                passed, why = False, f"tests timed out after {SCORE_TIMEOUT}s"
         else:
             accepted = [line.strip().lower() for line in (task / "answer.txt").read_text().splitlines() if line.strip()]
             passed, why = answer is not None and answer.strip().lower() in accepted, f"submitted {answer!r}; accepted {accepted}"
@@ -160,9 +166,11 @@ def main():
     model_args = dict(kv.split("=", 1) for kv in args.M)
     model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, **model_args)
     tasks = [build_task(p, args.max_turns, args.epochs) for p in selected]
-    print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}: {[t.name for t in tasks]}")
-    inspect_eval(tasks, model=model, log_dir=str(ROOT / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=args.max_sandboxes,
-                 log_buffer=1, fail_on_error=False, metadata=dict(run=args.run, model=args.model, model_args=model_args, max_turns=args.max_turns))
+    images = {env: subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"], capture_output=True, text=True, check=True).stdout.strip()
+              for env in sorted({p.parent.name for p in selected})}
+    print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}: {[t.name for t in tasks]}; images {images}")
+    inspect_eval(tasks, model=model, log_dir=str(ROOT / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=args.max_sandboxes, log_buffer=1, fail_on_error=False,
+                 metadata=dict(run=args.run, model=args.model, model_args=model_args, max_turns=args.max_turns, images=images))
 
 
 if __name__ == "__main__":

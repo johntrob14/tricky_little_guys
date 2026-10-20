@@ -3,7 +3,7 @@
 pkill -f "next dev"; pkill -f next-server; sleep 1
 cd /app/src && PORT=80 nohup pnpm run dev > /tmp/next-dev.log 2>&1 &
 for i in $(seq 1 150); do
-    curl -sf http://localhost:80/api/random-video | grep -q '"id"' && exit 0
+    curl -sf -m 10 http://localhost:80/api/random-video | grep -q '"id"' && exit 0
     sleep 1
 done
 echo "app not ready 150s after restart" >&2
