@@ -91,9 +91,13 @@ def _ro_bind_roots() -> list[Path]:
 
 
 def bwrap_command(workdir: Path, cmd: list[str], limits: SandboxLimits,
-                  extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work") -> list[str]:
+                  extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work",
+                  path_prefix: Path | None = None, ro_work: bool = False,
+                  rw_subdirs: list[str] = ()) -> list[str]:
     """`mount_at`: where the work copy appears inside the sandbox. Use the original repo path for repos
-    whose venv has an editable install (its .pth file points at the absolute source path)."""
+    whose venv has an editable install (its .pth file points at the absolute source path).
+    `path_prefix`: a host dir bound read-only and put first on PATH (shims that shadow commands).
+    `ro_work`: mount the work copy read-only, except `rw_subdirs` (relative paths) which stay writable."""
     mount_at = str(mount_at)
     bw = ["bwrap", "--die-with-parent", "--new-session", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
           "--unshare-cgroup-try", "--unshare-user-try", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
@@ -106,10 +110,17 @@ def bwrap_command(workdir: Path, cmd: list[str], limits: SandboxLimits,
                 continue
             seen.add(cand)
             bw += ["--ro-bind", str(cand), str(cand)]
-    bw += ["--bind", str(workdir), mount_at, "--chdir", mount_at,
+    bw += ["--ro-bind" if ro_work else "--bind", str(workdir), mount_at]
+    for sub in (rw_subdirs if ro_work else ()):
+        bw += ["--bind", str(workdir / sub), f"{mount_at}/{sub}"]
+    path = f"{sys.prefix}/bin:/usr/local/bin:/usr/bin:/bin"
+    if path_prefix is not None:
+        bw += ["--ro-bind", str(path_prefix), "/shims"]
+        path = "/shims:" + path
+    bw += ["--chdir", mount_at,
            "--setenv", "HOME", mount_at, "--setenv", "TMPDIR", "/tmp",
            "--setenv", "PYTHONDONTWRITEBYTECODE", "1", "--setenv", "PYTHONHASHSEED", "0",
-           "--setenv", "PATH", f"{sys.prefix}/bin:/usr/local/bin:/usr/bin:/bin",
+           "--setenv", "PATH", path,
            "--setenv", "LANG", "C.UTF-8",
            "--"]
     return bw + list(cmd)
@@ -130,12 +141,12 @@ def _preexec(limits: SandboxLimits):
 
 def run_in_sandbox(workdir: Path, cmd: list[str] | str, limits: SandboxLimits | None = None,
                    extra_ro_binds: list[Path] = (), mount_at: Path | str = "/work",
-                   ) -> tuple[int | None, str, str, bool, float]:
+                   **bwrap_kw) -> tuple[int | None, str, str, bool, float]:
     """Run `cmd` in `workdir` inside bwrap. Returns (returncode, stdout, stderr, timed_out, seconds)."""
     limits = limits or SandboxLimits()
     if isinstance(cmd, str):
         cmd = ["/bin/sh", "-c", cmd]
-    full = bwrap_command(workdir, cmd, limits, extra_ro_binds, mount_at)
+    full = bwrap_command(workdir, cmd, limits, extra_ro_binds, mount_at, **bwrap_kw)
     env = {"PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"}
     t0 = time.monotonic()
     proc = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,

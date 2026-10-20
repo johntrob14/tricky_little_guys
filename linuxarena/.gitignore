@@ -1,0 +1,245 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env
+.cache/
+
+# Local Control Tower clone (for local dev, see `make clone-ct`)
+control-tower/
+
+# Cloned evaluation environments (populated via `ct registry pull`)
+.environments
+.environments/
+.environments.lock.yml
+
+# Pipeline runtime state
+src/pipeline/state.json
+src/pipeline/pids.json
+
+# Generated logs
+logs/
+
+# Re-monitor progress file (transient; Apr 2026)
+monitoring_rerun_progress.md
+monitoring_rerun_progress_batch_*.md
+remonitor_plan.json
+nano_monitor_fill_progress.md
+launch_nano_monitor_fill.sh
+haiku_repair_progress.md
+haiku_repair_launch_audit.md
+kimi_attack_progress.md
+
+# LaTeX build artifacts
+src/paper/main.aux
+src/paper/main.bbl
+src/paper/main.blg
+src/paper/main.log
+src/paper/main.out
+src/paper/main.toc
+# Misc caches
+.cache/
+
+# Generated data files (regenerate with process.py)
+src/**/data.json
+
+# -- Session cleanup (Apr 20) --
+# Keep locally but do not track: generated reports, cached data,
+# one-off audit/patch/check scripts. Only run-recreation + graphing
+# scripts + run_ids*.json are committed.
+
+# Markdown reports / docs (keep README.md at root; keep prompt .md files
+# inside src/policies, src/monitors, src/accidental_side_tasks/*/prompt.md)
+src/GPT_OSS_BLOCKER_REPORT.md
+src/blog_post_graphs/pareto_frontier/DEFERRAL_LOGIC.md
+src/blog_post_graphs/pareto_frontier/RUNS_USED.md
+src/pipeline/configs/rerun_zero_steps_v2.md
+src/pipeline/configs/sandboxing_ablations/analysis.md
+src/pipeline/configs/sandboxing_ablations/instructions.md
+src/pipeline/configs/sandboxing_ablations/progress.md
+src/pipeline/configs/v2_filled/monitoring_commands.md
+src/pipeline/configs/v2_filled/monitoring_progress.md
+src/results/*.md
+src/results/v1_full_run/*.md
+src/**/ISSUES.md
+appendix_updates.md
+paper_updates.md
+figures_proposed/
+
+# Cached data.json and derived JSON (only run_ids*.json committed)
+src/section_*/data.json
+src/section_*/data.json.*
+src/neurips/section_*/data.json
+src/neurips/section_*/data.json.*
+src/neurips/appendix_*/data.json
+src/neurips/appendix_*/data.json.*
+src/appendix_*/data.json
+src/blog_post_graphs/*/data*.json
+src/blog_post_graphs/*/deferral_scores*.json
+src/results/straj_audit_report.json
+src/results/run_ids.json.bak
+src/results/run_ids.json.bak-*
+src/results/v1_full_run/state.json
+src/results/v3_monitored/trajectory_errors/
+src/results/v4_monitored_fix_*/
+src/results/v4_working_submit/
+src/results/v0_paper_runs/trajectory_errors/
+src/results/v0_paper_runs/run_ids_audit*.json
+src/results/bench_fast/
+src/results/bench_slow/
+src/results/combined_monitored/
+src/results/straj_fix/
+src/results/run_ids_issues/
+
+# Root-level coverage + spot scripts
+check_monitor_coverage*.py
+monitor_coverage_*.json
+rerun.txt
+spot_check_monitor.py
+__init__.py
+monitors/
+
+# One-off patch/splice/correction scripts (not needed for reproduction)
+src/build_figures.py
+src/correct_st_inplace.py
+src/correct_st_success.py
+src/fast_monitor.py
+src/patch_and_upload.py
+src/patch_monitor_errors.py
+src/rerun_errored_monitor.py
+src/splice_monitors.py
+src/splice_monitors_opus_attack.py
+src/test_patch_roundtrip.py
+src/watch_patches.py
+src/repair_monitor_runs.py
+src/repair_2_monitor_runs.py
+src/run_goal_ablation.py
+
+# Auditing + migration scripts (not "run recreation or graphing")
+src/results/audit_runs.py
+src/results/audit_blog_post.py
+src/results/build_v0_paper_runs.py
+src/results/build_v2_combined.py
+src/results/build_v3_clean.py
+src/results/build_v3_no_errors.py
+src/results/check_runs.py
+src/results/check_steps.py
+src/results/merge_partial_runs.py
+src/results/migrate_run_ids.py
+src/results/patch_process_refs.py
+# publish_to_public.py intentionally tracked
+# src/results/publish_to_public.py
+src/results/rename_canonical.py
+src/results/rename_map.json
+src/results/rename_map_final.json
+src/results/standardize_run_ids.py
+src/results/v0_paper_runs/audit_runs.py
+src/results/v0_paper_runs/recreate_clean_runs.py
+src/results/v1_full_run/build_csv.py
+src/results/v1_full_run/build_notebook.py
+src/results/v1_full_run/full_run_analysis.ipynb
+src/results/v1_full_run/full_run_trajectories.csv
+src/results/v1_full_run/run_ids.json
+src/results/v3_monitored/*.log
+src/results/v4_*/
+
+# Versioned paper snapshots — only main.pdf is committed
+src/paper/main_v*.pdf
+src/paper/currentPaper.txt
+
+# Run IDs — only run_ids.json is committed; other variants kept local
+# public_run_ids.json intentionally tracked (cache of published run mappings)
+# src/results/public_run_ids.json
+src/results/run_ids_issues/
+src/results/v0_paper_runs/
+src/results/v1_paper_runs/
+src/results/v2_combined/
+src/results/v2_merged/
+src/results/v2_monitored/
+src/results/v3_clean/
+src/results/v3_merged/
+src/results/v3_no_errors/
+src/results/v4_monitored_fix_0_errors/
+src/results/v4_monitored_honest/
+src/results/v4_remonitored/
+src/results/haiku_*.txt
+src/results/kimi_*.txt
+src/results/update_run_ids.py
+
+# Watcher / dashboard scripts (not part of reproduction)
+src/bench_dashboard.sh
+src/run_patcher.sh
+src/w.sh
+src/watch_6.sh
+
+# Superseded pipeline configs (keep local, not committed)
+src/pipeline/configs/
+src/pipeline/configs/phase1_v2_rerun.yml
+src/pipeline/configs/phase1_v3_rerun_timeout.yml
+src/pipeline/configs/rerun_only_st.yml
+src/pipeline/configs/rerun_only_st_editor_only_obvious.yml
+src/pipeline/configs/rerun_only_st_kimi.yml
+src/pipeline/configs/rerun_scorer_fixes.yml
+src/pipeline/configs/v2_filled/
+
+# Transient task-set variants (keep local; only core attack/honest/strategy_attack _{1,20,full} committed)
+src/task_sets/rerun/
+src/task_sets/rerun_final/
+src/task_sets/rerun_only_st/
+src/task_sets/rerun_v3/
+src/task_sets/rerun_zero_actions/
+src/task_sets/no_internet_*.txt
+src/task_sets/no_intranet_*.txt
+src/task_sets/sandbox_test.txt
+src/task_sets/rerun_scorer_fixes.txt
+src/task_sets/honest_full_v2.txt
+src/task_sets/honest_full_v3.txt
+
+# Orchestration / scratch (added 2026-04-23)
+.orchestrate.lock
+merge_watcher.sh
+scan_actual_counts.*
+data/
+
+# Scratch FPR-ablation artifacts (regenerable via src/section_*/_fpr_variants.py)
+src/section_*/_candidate_*.png
+src/section_*/_data_0_1pct.json
+src/section_*/_data_*_backup.json
+
+# Local audit helpers (not part of public reproduction)
+regen_paper.sh
+src/results/reaudit_stale.py
+src/lib/*_audit.py
+
+# Build artifacts
+texput.log
+
+# LaTeX intermediates
+src/paper/*.aux
+src/paper/*.bbl
+src/paper/*.blg
+src/paper/*.log
+src/paper/*.out
+src/paper/*.toc
+src/paper/*.fls
+src/paper/*.fdb_latexmk
+
+# NeurIPS template archive (downloaded on demand)
+src/paper/neurips_styles.zip
+src/paper/Styles/
+
+# Comparison/diff artifacts (created locally)
+src/paper/main-monday.*
+src/paper/*copy*.pdf
+
+# Transient scan output
+scan_actual_counts.*
+
+# Build artifact
+src/linuxarena_paper.egg-info/
