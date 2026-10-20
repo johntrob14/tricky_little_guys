@@ -8,6 +8,8 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X --dry-run     plan and forecast only; never spends
     python rl.py train <tasks> --run fake-R --steps 3 --B 2 --G 4 --budget-usd 1 --fake --no-sandbox     whole loop on fakes
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X               live Tinker (needs ARENA_RL_RUN_TINKER=1)
+    python rl.py plan-collect <tasks> --run R --epochs N --budget-usd X     print the gated collect command and its cost estimate; no call
+    python rl.py report rl_data/<run> [--monitor F] [--out D]               offline report of a collect dir (report.md + report.json)
 
 <tasks> are <env> (every task of the env) or <env>/<task>. Live Tinker calls are refused unless ARENA_RL_RUN_TINKER=1; --fake never touches Tinker.
 Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--guard swaps in rl.guard's hardened scorer).
@@ -126,6 +128,25 @@ def cmd_collect(args, rest):
     asyncio.run(collect_async(args))
 
 
+def cmd_plan_collect(args, rest):
+    from rl.report import CollectPlan, plan_collect
+    p = plan_collect(CollectPlan(expand(args.tasks), args.run, args.epochs, args.budget_usd, args.model, args.max_turns, args.max_tokens, args.ep_worst_usd,
+                                 ep_usd_est=args.ep_usd_est), Ledger(OUT_ROOT / "ledger.csv").total_counted())
+    print(json.dumps(p, indent=1))
+    print("dry run: no Tinker call, no docker, no ledger row" + ("; the command above would be refused for the reasons listed" if p["would_refuse"] else ""))
+    raise SystemExit(2 if p["would_refuse"] else 0)
+
+
+def cmd_report(args, rest):
+    from rl.report import write_report
+    d = Path(args.dir)
+    if not d.exists() and (OUT_ROOT / args.dir).exists():
+        d = OUT_ROOT / args.dir
+    rep, md = write_report(d, Path(args.out) if args.out else None, monitor_paths=[Path(m) for m in args.monitor], ledger_path=Path(args.ledger) if args.ledger else None)
+    print(md)
+    print(f"wrote {Path(args.out) if args.out else d}/report.md and report.json")
+
+
 def make_cfg(args, tasks):
     from rl.loop import HaltRules, LoopCfg
     from rl.train import TrainHP
@@ -234,6 +255,21 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--check-direction", action="store_true")
     t.add_argument("--no-resume", action="store_true")
     t.add_argument("--dry-run", action="store_true", help="print the plan and forecast, then exit without spending")
+    pc = sub.add_parser("plan-collect", help="dry-run planner for a gated collect: exact command and cost estimate, makes no call")
+    pc.add_argument("tasks", nargs="+", help="<env> or <env>/<task>")
+    pc.add_argument("--run", required=True)
+    pc.add_argument("--epochs", type=int, required=True)
+    pc.add_argument("--budget-usd", type=float, required=True)
+    pc.add_argument("--model", default=MODEL)
+    pc.add_argument("--max-turns", type=int, default=60)
+    pc.add_argument("--max-tokens", type=int, default=4096)
+    pc.add_argument("--ep-worst-usd", type=float)
+    pc.add_argument("--ep-usd-est", type=float, default=0.03, help="expected cost per episode (placeholder; use a measured cost.per_sampled_episode_usd from a report)")
+    r = sub.add_parser("report", help="offline report of a collect output dir")
+    r.add_argument("dir", help="rl_data/<run> (or <run>/collect, or a run name under ARENA_RL_DATA)")
+    r.add_argument("--monitor", action="append", default=[], help="extra monitor.jsonl (any under dir are read already)")
+    r.add_argument("--ledger", help="ledger.csv (default: dir/ledger.csv, else the shared one beside dir)")
+    r.add_argument("--out", help="where report.md and report.json go (default: dir)")
     return ap
 
 
@@ -242,7 +278,7 @@ def main(argv=None):
     args, rest = ap.parse_known_args(argv)
     if args.cmd not in ("doctor", "loadtest") and rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
-    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "train": cmd_train}[args.cmd](args, rest)
+    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "train": cmd_train, "plan-collect": cmd_plan_collect, "report": cmd_report}[args.cmd](args, rest)
 
 
 if __name__ == "__main__":
