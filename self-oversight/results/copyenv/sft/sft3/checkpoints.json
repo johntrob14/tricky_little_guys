@@ -1,0 +1,33 @@
+{
+ "checkpoints": [
+  {
+   "epoch": 1,
+   "sampler": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/sampler_weights/copyenv-sft3-ep1",
+   "state": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/weights/copyenv-sft3-ep1-state"
+  },
+  {
+   "epoch": 2,
+   "sampler": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/sampler_weights/copyenv-sft3-ep2",
+   "state": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/weights/copyenv-sft3-ep2-state"
+  },
+  {
+   "epoch": 3,
+   "sampler": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/sampler_weights/copyenv-sft3-ep3",
+   "state": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/weights/copyenv-sft3-ep3-state"
+  }
+ ],
+ "config": {
+  "run": "sft3",
+  "model": "gpt-oss-120b",
+  "samples": 8,
+  "epochs": 3,
+  "batch": 16,
+  "lr": 5e-05,
+  "rank": 32,
+  "budget": 2.0,
+  "seed": 0,
+  "dump_one": false,
+  "eval": null,
+  "n": 16
+ }
+}

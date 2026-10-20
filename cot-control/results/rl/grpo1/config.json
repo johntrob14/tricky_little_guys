@@ -1,0 +1,28 @@
+{
+ "run": "grpo1",
+ "pool": "data/pool.jsonl",
+ "steps": 100,
+ "prompts_per_step": 32,
+ "group_size": 8,
+ "holdout": [
+  "uppercase_thinking",
+  "end_of_sentence"
+ ],
+ "lr": 4e-05,
+ "rank": 32,
+ "max_tokens": 4000,
+ "strict_bonus": 1.0,
+ "correct_weight": 0.1,
+ "budget": 40.0,
+ "save_every": 20,
+ "seed": 0,
+ "model": "openai/gpt-oss-120b",
+ "constraints": [
+  "word_suppression",
+  "multiple_word_suppression",
+  "repeat_sentences",
+  "lowercase_thinking",
+  "meow_between_words",
+  "alternating_case"
+ ]
+}

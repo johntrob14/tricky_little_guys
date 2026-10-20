@@ -68,6 +68,21 @@ COT_RULE_NO_ANSWER = "no_answer_all_reasoning"
 COT_RULE_UNCLOSED_THINK = "unclosed_think_all_reasoning"
 COT_RULE_LENGTH = "length_all_reasoning"
 
+_HARMONY_MSG = re.compile(r"<\|channel\|>(\w+)[^<]*(?:<\|constrain\|>[^<]*)?<\|message\|>(.*?)(?=<\|end\|>|<\|return\|>|<\|call\|>|\Z)", re.DOTALL)
+
+
+def harmony_to_think(gen: str) -> str:
+    """gpt-oss harmony completion (decoded with special tokens kept) -> "<think>analysis</think>rest".
+
+    Analysis-channel messages are joined as the think block, every other channel is the response.
+    With no non-analysis message (truncated in analysis) the think block is left unclosed, which
+    split_output treats as all reasoning."""
+    assert gen.startswith("<|channel|>"), gen[:200]
+    msgs = _HARMONY_MSG.findall(gen)
+    analysis = "\n".join(m for ch, m in msgs if ch == "analysis")
+    rest = [m for ch, m in msgs if ch != "analysis"]
+    return "<think>" + analysis + ("</think>" + "\n".join(rest) if rest else "")
+
 
 def mark_latent(text: str) -> str:
     """Replace each SWITCH block with the latent marker; drop orphan tokens."""

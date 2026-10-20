@@ -39,10 +39,16 @@ SAMPLER_TTL = 30 * 86400
 STATE_TTL = 7 * 86400
 
 
-def datum(prompt: list[int], resp: list[int], s_lp: list[float], t_lp: list[float]) -> tinker.Datum:
+def datum(prompt: list[int], resp: list[int], s_lp: list[float], t_lp: list[float],
+          penalty: list[float] | None = None) -> tinker.Datum:
+    """Reverse-KL distillation advantage per response token, minus an optional per-token `penalty`
+    (same length as `resp`). The penalty subtracts from the advantage, pushing those tokens down; it is
+    how the CoT penalty suppresses verbalisation on analysis-channel tokens (see cot_penalty.py). With
+    penalty=None this is plain OPSD, unchanged."""
     full = prompt + resp
     n_ctx = len(prompt) - 1
-    adv = [0.0] * n_ctx + [-(s - t) for s, t in zip(s_lp, t_lp)]
+    pen = penalty if penalty is not None else [0.0] * len(resp)
+    adv = [0.0] * n_ctx + [-(s - t) - p for s, t, p in zip(s_lp, t_lp, pen)]
     lps = [0.0] * n_ctx + list(s_lp)
     return tinker.Datum(
         model_input=tinker.ModelInput.from_ints(full[:-1]),

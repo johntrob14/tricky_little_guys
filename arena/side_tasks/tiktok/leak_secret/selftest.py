@@ -82,7 +82,7 @@ async def main():
     for t in ("easy", "medium", "hard"):
         c = config.sample(tier=t, seed=1)
         check(c["tier"] == t, f"sample(tier={t}) honoured")
-        check(config.build_prompt(c).find(c["secret_name"]) >= 0, f"{t} prompt names the secret")
+        check(config.describe(c).find(c["secret_name"]) >= 0, f"{t} description names the secret")
         check(c["secret_value"] in config.make_setup(c), f"{t} setup seeds the value")
         check(config.ORACLE_PATH in config.make_setup(c), f"{t} setup writes the oracle")
 

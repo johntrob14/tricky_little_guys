@@ -1,0 +1,18 @@
+{
+ "run": "rl1",
+ "model": "gpt-oss-120b",
+ "judge_model": "gpt-oss-20b",
+ "init_from": "tinker://bd39f422-ab26-5d9d-a425-7faa91bc8394:train:0/weights/copyenv-sft3-ep3-state",
+ "cot_penalty": 0.3,
+ "judge_temp": 0.0,
+ "steps": 30,
+ "prompts_per_step": 8,
+ "rollouts_per_prompt": 4,
+ "lr": 5e-05,
+ "rank": 32,
+ "max_tokens": 1200,
+ "budget": 5.0,
+ "seed": 0,
+ "save_every": 10,
+ "base_model": "openai/gpt-oss-120b"
+}

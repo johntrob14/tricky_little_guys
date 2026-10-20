@@ -1,4 +1,4 @@
-"""Export OPSD checkpoints from Tinker in HuggingFace format and upload them to a private HF repo.
+"""Export OPSD checkpoints from Tinker in HuggingFace format and upload them to a public HF repo.
 
     uv run python export_weights.py sdft1 --repo johntrob14/self-oversight-gpt-oss-120b-sdft1 [--steps 40]
 
@@ -89,7 +89,7 @@ async def main() -> None:
     if a.steps:
         ckpts = [c for c in ckpts if c["step"] in a.steps]
     api = HfApi(token=token)
-    api.create_repo(a.repo, private=True, exist_ok=True)
+    api.create_repo(a.repo, private=False, exist_ok=True)
     readme = (RESULTS / "opsd" / a.run / "README.md")
     uploaded = []
     for ck in ckpts:

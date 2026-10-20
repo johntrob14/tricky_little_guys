@@ -18,6 +18,7 @@ about the style or content of its own reasoning trace?
 | GLM-5.3 | T 1.0, top_p 0.95, effort high | 12/108 | 17/108 | `glm53-run1`, `glm53-run2` |
 | Nemotron-3-Ultra | T 1.0, top_p 0.95, full thinking | 1/108 (pipeline says 2; one judge false positive) | 6/108 | `nemo-ultra-run1`, `nemo-ultra-run2` |
 | Nemotron-3-Ultra | T 1.0, top_p 0.95, medium effort | stopped at 67/108, ungraded | 1/108 | `nemo-ultra-med-run1`, `nemo-ultra-med-run2` |
+| Qwen3.8-27B | T 1.0, top_p 0.95, effort xhigh | 0/108 | 0/108 | `qwen38-run1`, `qwen38-run2` |
 
 Trace length differs a lot between models (GLM thinks briefly, Nemotron at length), so these rates mix control with verbosity.
 
