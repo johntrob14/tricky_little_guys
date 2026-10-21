@@ -160,3 +160,12 @@ def test_cli_dry_run_lists_targets(cli, tmp_path, capsys):
     assert e.value.code == 0
     assert json.loads(capsys.readouterr().out)["targets"] == ["base", "r-s001-x-state", "r-s003-x"]
     assert not (tmp_path / "data" / "r" / "sanity").exists()
+
+
+def test_judge_rows_ledger_the_judge_model(tmp_path):
+    ckpts(tmp_path)
+    cfg = SanityCfg(out_dir=tmp_path, judge_model="openai/gpt-oss-20b")
+    asyncio.run(run_sanity(cfg, fake_gen(), fake_judge(), budget=budget(tmp_path)))
+    rows = Ledger(tmp_path / "ledger.csv").rows()
+    assert {r["model"] for r in rows if "sanity_judge" in r["note"]} == {"openai/gpt-oss-20b"}
+    assert {r["model"] for r in rows if "sanity_sample" in r["note"]} == {cfg.model}

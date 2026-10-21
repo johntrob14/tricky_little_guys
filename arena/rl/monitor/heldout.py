@@ -60,6 +60,7 @@ def main(argv=None, judge=None):
     ap.add_argument("--allow-live", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--concurrency", type=int, default=8)
+    ap.add_argument("--ledger", default=None, help="append counted judge cost (phase heldout, model = the held-out judge) to this rl.budget ledger csv")
     a = ap.parse_args(argv)
     try:
         cfg = HeldoutCfg(a.in_loss_model, a.judge_model, a.judge_backend, a.monitor, a.stronger_because, a.max_tokens)
@@ -74,6 +75,7 @@ def main(argv=None, judge=None):
            "--max-tokens", str(cfg.max_tokens), "--concurrency", str(a.concurrency)]
     fwd += ["--sidecars", a.sidecars] if a.sidecars else []
     fwd += ["--budget-usd", str(a.budget_usd)] if a.budget_usd is not None else []
+    fwd += ["--ledger", a.ledger, "--ledger-kind", "heldout"] if a.ledger else []
     fwd += ["--allow-live"] if a.allow_live else []
     fwd += ["--dry-run"] if a.dry_run else []
     return R.main(fwd, judge=judge)  # all budget / --allow-live gates live in run.main

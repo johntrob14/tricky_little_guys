@@ -117,7 +117,7 @@ async def compare(cfg: SanityCfg, base: list[dict], org: list[dict], judge, budg
             out.append(dict(target=o["target"], qi=o["qi"], category=o["category"], sample=o["sample"], organism_is_a=org_a, judge_text=text,
                             verdict=battery.verdict(text, org_a)))
     finally:
-        budget.commit(usd, reserved_usd=worst, kind="sanity_judge", note=f"{org[0]['target'] if org else '?'} {len(out)} pairs")
+        budget.commit(usd, reserved_usd=worst, kind="sanity_judge", note=f"{org[0]['target'] if org else '?'} {len(out)} pairs", model=cfg.judge_model)
     return out
 
 

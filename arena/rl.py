@@ -224,8 +224,13 @@ def plan(args, cfg) -> dict:
              run_worst_case_usd=round((per_step_rollout + per_step_train) * cfg.steps, 4), budget_usd=args.budget_usd, ledger_counted_usd=round(ledger_total, 4),
              total_cap_usd=20.0, cot_monitor=cot_plan(args), forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
     problems = []
+    cot = p["cot_monitor"]
+    if cot:  # the judge reserves per call on --budget-usd (rl.cot_monitor), outside forecast_step; refuse on the forecast with the judge's expected cost
+        forecast += cot["step_expected_usd"]
+        cot.update(step_forecast_with_judge_usd=round(forecast, 4), run_forecast_with_judge_usd=round(forecast * cfg.steps, 4),
+                   run_worst_case_with_judge_usd=round((per_step_rollout + per_step_train + cot["step_worst_case_usd"]) * cfg.steps, 4))
     if forecast > args.budget_usd:
-        problems.append(f"first-step forecast ${forecast:.4f} is over --budget-usd ${args.budget_usd}")
+        problems.append(f"first-step forecast ${forecast:.4f}{' (with CoT-monitor judge)' if cot else ''} is over --budget-usd ${args.budget_usd}")
     if per_step_rollout > args.budget_usd:
         problems.append(f"one step's rollout worst-case reservation ${per_step_rollout:.4f} is over --budget-usd ${args.budget_usd}; the loop would halt before sampling")
     if ledger_total + forecast > 20.0:
@@ -241,11 +246,16 @@ def plan(args, cfg) -> dict:
 def cot_plan(args):
     if not getattr(args, "beta_cot", 0.0):
         return None
+    from rl.cot_monitor import step_cost
     from rl.monitor.pricing import DEFAULT_MODEL, price_for
     model = args.judge_model or DEFAULT_MODEL[args.judge_backend]
     pr = price_for(args.judge_backend, model)
+    sc = step_cost(args.B, args.G, max_turns=args.max_turns, max_tokens=args.max_tokens, judge_max_tokens=args.judge_max_tokens, price=pr)
     return dict(beta_cot=args.beta_cot, backend=args.judge_backend, judge_model=model, price=pr.meta(), concurrency=args.cot_concurrency, fallback=args.cot_fallback,
-                allow_live=args.allow_live, note="one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply); each reserves its worst case on --budget-usd, not in the forecast above")
+                allow_live=args.allow_live, **sc,
+                note="one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply), each reserving its worst case on --budget-usd. step_expected_usd "
+                     "uses placeholders from the atk-* monitor logs (rl.cot_monitor.TURNS_EST etc.), unmeasured on training rollouts; it is added to step_forecast_usd "
+                     "only in step_forecast_with_judge_usd, which the --budget-usd and total-cap checks use")
 
 
 async def train_async(args, cot_judge=None):

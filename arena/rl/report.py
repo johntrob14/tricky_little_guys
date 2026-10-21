@@ -172,6 +172,16 @@ def failures(eps: list[Episode], d: Path) -> dict:
                 halted=(hl[2] if len(hl) > 2 else str(halted)) if halted.exists() else None)
 
 
+def _by_model(rows: list[dict]) -> dict:
+    """Counted USD per ledger model column: the policy model, or the judge model for cot_monitor / heldout / sanity_judge rows written since the column
+    started recording it (older judge rows carry the policy model)."""
+    out: dict[str, float] = {}
+    for r in rows:
+        if r["kind"] == "counted" and r["counted_usd"]:
+            out[r["model"]] = round(out.get(r["model"], 0.0) + float(r["counted_usd"]), 6)
+    return out
+
+
 def cost(eps: list[Episode], d: Path, run: str, model: str, ledger_path: Path | None = None, monitor_usd: float = 0.0) -> dict:
     sample = sum(sample_cost_usd(model, (e.usage or {}).get("prompt_tokens", 0), (e.usage or {}).get("cached_tokens", 0), (e.usage or {}).get("completion_tokens", 0)) for e in eps)
     wasted = sum(e.wasted_usd for e in eps)
@@ -181,7 +191,7 @@ def cost(eps: list[Episode], d: Path, run: str, model: str, ledger_path: Path | 
     if lp is not None:
         rows = [r for r in Ledger(lp).rows() if not run or r["run"] == run]
         led = dict(path=str(lp), counted_usd=round(sum(float(r["counted_usd"]) for r in rows if r["kind"] == "counted" and r["counted_usd"]), 6),
-                   wasted_usd=round(sum(float(r["estimate_usd"] or 0) for r in rows if r["kind"] == "wasted"), 6), rows=len(rows))
+                   wasted_usd=round(sum(float(r["estimate_usd"] or 0) for r in rows if r["kind"] == "wasted"), 6), rows=len(rows), counted_by_model=_by_model(rows))
     n = max(sum(bool(e.turns) for e in eps), 1)
     return dict(sampling_usd_upper_bound=round(sample, 6), wasted_usd=round(wasted, 6), monitor_usd=round(monitor_usd, 6), total_usd=round(sample + wasted + monitor_usd, 6),
                 per_sampled_episode_usd=round(sample / n, 6), ledger=led, note="sampling cost uses Episode.usage, a no-cache upper bound for sidecar episodes")
@@ -244,7 +254,8 @@ def to_markdown(rep: dict) -> str:
           "## Cost", "", f"- sampling ${k['sampling_usd_upper_bound']:.4f} (upper bound, ${k['per_sampled_episode_usd']:.4f} per sampled episode), wasted ${k['wasted_usd']:.4f}, "
           f"monitor ${k['monitor_usd']:.4f}; total ${k['total_usd']:.4f}"]
     if k["ledger"]:
-        L.append(f"- ledger `{k['ledger']['path']}`: counted ${k['ledger']['counted_usd']:.4f} over {k['ledger']['rows']} rows for this run")
+        L.append(f"- ledger `{k['ledger']['path']}`: counted ${k['ledger']['counted_usd']:.4f} over {k['ledger']['rows']} rows for this run"
+                 + (f" ({', '.join(f'{m} ${v:.4f}' for m, v in k['ledger']['counted_by_model'].items())})" if len(k['ledger']['counted_by_model']) > 1 else ""))
     return "\n".join(L) + "\n"
 
 
