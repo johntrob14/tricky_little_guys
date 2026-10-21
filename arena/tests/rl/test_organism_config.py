@@ -154,7 +154,7 @@ def test_main_only_config_plans_main_only(cli, capsys, tmp_path):
 
 
 def test_template_with_placeholders_refused(cli, tmp_path):
-    t = str(ARENA / "configs" / "organism_leak_secret.json")
+    t = str(ARENA / "configs" / "organism_sidespec_template.json")
     for argv in ([*TRAIN, "--run", "r", "--dry-run"], [*TRAIN, "--run", "fake-test-w", "--fake"], ["collect", "tiktok", "--run", "c", "--fake", "--budget-usd", "1"]):
         with pytest.raises(SystemExit, match="FILL_ME placeholders.*train_tasks\\[0\\]"):
             cli.main([*argv, "--organism-config", t])

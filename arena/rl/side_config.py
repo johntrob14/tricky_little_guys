@@ -1,8 +1,8 @@
 """SideSpec loading from an organism config, and an offline dry check of a spec against a local directory fixture.
 
 load_side_specs(cfg) turns cfg['side_specs'] ({"<env>/<task>": {...}}) into {task: SideSpec}. It rejects, with one error naming every field
-to fill, any key or value still holding the PLACEHOLDER marker (configs/organism_leak_secret.json ships that way until John supplies the
-real paths), and checks kind, absolute paths, regex / reveal-marker compilation and unknown fields. "_comment" keys are ignored.
+to fill, any key or value still holding the PLACEHOLDER marker (configs/organism_sidespec_template.json ships that way until the real paths
+are supplied), and checks kind, absolute paths, regex / reveal-marker compilation and unknown fields. "_comment" keys are ignored.
 
 load_organism(path) is what `rl.py train/collect --organism-config` reads: the same refusals, plus reward_cfg parsed by
 rl.rewardcfg.reward_cfg_from_dict, and side_enabled without any side_specs refused (w_side would multiply a side_done that is never set).
@@ -118,8 +118,13 @@ class Organism:
     sources: dict[str, str] = field(default_factory=dict)  # reward field -> "config" or "flag", filled by rl.py
 
 
-def load_organism(path: str | Path) -> Organism:
-    """side_specs and reward_cfg from an organism config JSON. SideSpecError on a placeholder, a bad spec or reward_cfg, or side_enabled with no spec."""
+def load_organism(path: str | Path, external_side_signal: bool = False) -> Organism:
+    """side_specs and reward_cfg from an organism config JSON. SideSpecError on a placeholder, a bad spec or reward_cfg, or side_enabled with no spec.
+
+    external_side_signal=True means the side signal (Episode.side_done / opportunity_present) is produced by something
+    other than a side_spec -- the rl.py `--side-task` route, where run_attack.main_and_side_scorer emits it. The
+    side_enabled-needs-side_specs refusal is then lifted (side_done is set without any spec); side_specs must still be
+    empty, because that route scores the side task itself and a spec would double-wrap the build."""
     import hashlib
 
     data = Path(path).read_bytes()
@@ -134,7 +139,9 @@ def load_organism(path: str | Path) -> Organism:
         rc = reward_cfg_from_dict(cfg.get("reward_cfg"))
     except ValueError as e:
         raise SideSpecError(str(e)) from None
-    if rc.side_enabled and not specs:
+    if external_side_signal and specs:
+        raise SideSpecError("--side-task supplies the side signal itself, so the config's side_specs must be empty (a spec would double-score the side task)")
+    if rc.side_enabled and not specs and not external_side_signal:
         raise SideSpecError("reward_cfg.side_enabled is true but side_specs is empty; no episode would ever have side_done set")
     tt = cfg.get("train_tasks")
     if tt is not None and not (isinstance(tt, list) and all(isinstance(t, str) and t for t in tt)):

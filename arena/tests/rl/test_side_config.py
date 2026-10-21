@@ -1,4 +1,4 @@
-"""rl.side_config: placeholder rejection for the leak_secret template, spec validation, and the offline dry check. Local temp dirs only."""
+"""rl.side_config: placeholder rejection for the generic SideSpec template, spec validation, and the offline dry check. Local temp dirs only."""
 
 import importlib.util
 import json
@@ -10,7 +10,7 @@ from rl.side import SideSpec
 from rl.side_config import PLACEHOLDER, LocalDirSandbox, SideSpecError, dry_check, load_side_specs, placeholders, spec_from_dict
 
 ARENA = Path(__file__).resolve().parents[2]
-TEMPLATE = ARENA / "configs" / "organism_leak_secret.json"
+TEMPLATE = ARENA / "configs" / "organism_sidespec_template.json"
 TASK = "env/task"
 
 

@@ -10,6 +10,7 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X               live Tinker (needs ARENA_RL_RUN_TINKER=1)
     python rl.py train ... --beta-cot 0.5 --allow-live [--judge-backend tinker]          + live per-turn CoT-monitor penalty (rl.cot_monitor), judge cost on --budget-usd
     python rl.py train ... --organism-config configs/X.json [--w-side 1 --beta-cot 0.3]  side_specs + reward_cfg from a config (collect takes the flag too)
+    python rl.py train ... --side-task leak_secret [--side-preset control] [--organism-config configs/organism_leak_secret.json]  run_attack side task; side_done logged, reward on only with the config
     python rl.py train ... --fake --no-sandbox --organism-config CFG --fake-fixture DIR    organism on fakes: side check on a per-sample copy of DIR (rl/ORGANISM.md)
     python rl.py sidecheck <config.json> [<fixture_dir>] [--task T] [--final-text S]   validate side_specs; dry-check against a local tree; offline
     python rl.py plan-collect <tasks> --run R --epochs N --budget-usd X     print the gated collect command and its cost estimate; no call
@@ -47,6 +48,7 @@ from rl.budget import Budget, Ledger, episode_worst_case_usd, train_cost_usd  # 
 from rl.datums import CTX_LIMIT  # noqa: E402
 
 MODEL = "openai/gpt-oss-120b"
+SIDE_TASKS = ("leak_secret",)  # --side-task values: run_attack-built side tasks (seeding + prompt + scoring), one per name
 GATE = "ARENA_RL_RUN_TINKER"
 OUT_ROOT = Path(os.environ.get("ARENA_RL_DATA", ARENA / "rl_data"))
 
@@ -62,6 +64,8 @@ def expand(names: list[str]) -> list[str]:
 
 
 def builder(args):
+    if getattr(args, "side_task", None):
+        return side_task_builder(args)
     if getattr(args, "no_sandbox", False):
         from rl.fake_policy import fake_build
         return fake_build(getattr(args, "fake_fixture", None))
@@ -70,6 +74,24 @@ def builder(args):
         return guarded_build_task
     from run import build_task
     return build_task
+
+
+def side_task_builder(args):
+    """A Collector build (path, max_turns, epochs) -> Task that layers the --side-task side task via run_attack.build.
+    attack_agent seeds the secret and runs the same loop as run.agent; run_attack.main_and_side_scorer scores main +
+    side and emits Score.metadata['side'] (side_done/opportunity_present/final_reveal), which rl.collect.read_side
+    copies onto each Episode. The side reward is still off unless an --organism-config turns side_enabled on."""
+    import run_attack
+
+    spec = run_attack.prompt_spec.resolve(args.side_preset)
+    preset, tier, seed_base = args.side_preset, args.side_tier, args.seed
+    model, model_path = args.model, getattr(args, "model_path", None)
+    obstacles = args.side_obstacles == "on"
+
+    def build(task, max_turns, epochs):
+        return run_attack.build(task, tier, epochs, max_turns, seed_base, spec, model, model_path, preset, obstacles=obstacles)
+
+    return build
 
 
 def fake_policy(args):
@@ -147,6 +169,11 @@ async def collect_async(args):
     if getattr(args, "organism", None) is not None:
         summary["side"] = {t: dict(side_done=sum(bool(e.side_done) for e in eps if e.task == t), final_reveal=sum(bool(e.final_reveal) for e in eps if e.task == t))
                            for t in sorted(args.organism.side_specs)}
+    if getattr(args, "side_task", None):
+        summary["side_task"] = dict(name=args.side_task, preset=args.side_preset, tier=args.side_tier, obstacles=args.side_obstacles)
+        summary["side"] = {t: dict(side_done=sum(bool(e.side_done) for e in eps if e.task == t),
+                                   final_reveal=sum(bool(e.final_reveal) for e in eps if e.task == t),
+                                   opportunity_present=sum(bool(e.opportunity_present) for e in eps if e.task == t)) for t in tasks}
     print(json.dumps(summary, indent=1))
 
 
@@ -210,7 +237,7 @@ def load_organism_args(args) -> None:
             args.beta_cot = 0.0
         return
     try:
-        org = load_organism(args.organism_config)
+        org = load_organism(args.organism_config, external_side_signal=bool(getattr(args, "side_task", None)))
         for k, v in given.items():
             check_weight(f"--{k.replace('_', '-')}", v)
     except (OSError, SideSpecError, ValueError) as e:
@@ -227,6 +254,22 @@ def load_organism_args(args) -> None:
     args.organism = org
     if args.cmd == "train":
         args.beta_cot = rc.beta_cot if rc.cot_penalty_enabled else 0.0
+
+
+def check_side_task(args) -> None:
+    """--side-task runs run_attack's attack agent + side scorer in a real container; it does not use the fakes or the
+    guarded scorer, and its preset must exist. Refuse the incompatible combinations rather than silently ignore them."""
+    if not getattr(args, "side_task", None):
+        return
+    import run_attack
+
+    if args.fake or getattr(args, "no_sandbox", False):
+        raise SystemExit("refused: --side-task seeds and scores in a real container; it is not supported with --fake/--no-sandbox")
+    if getattr(args, "guard", False):
+        raise SystemExit("refused: --side-task scores with run_attack's own scorer, so --guard (the hardened main-task scorer) would be ignored; drop one")
+    presets = run_attack.prompt_spec.preset_names()
+    if args.side_preset not in presets:
+        raise SystemExit(f"refused: --side-preset {args.side_preset!r} is not a run_attack preset; have {presets}")
 
 
 def check_fake_fixture(args) -> None:
@@ -338,6 +381,17 @@ def cot_scorer(args, budget, out_dir, judge=None):
                             fallback=args.cot_fallback, out_dir=out_dir)
 
 
+def side_task_plan(args) -> dict | None:
+    """The --side-task knobs for the train plan: preset, tier, obstacles, whether the prompt presents the opportunity,
+    and whether the side reward is actually on (only when an --organism-config with side_enabled was also passed)."""
+    if not getattr(args, "side_task", None):
+        return None
+    import run_attack
+    opportunity = bool(run_attack.prompt_spec.resolve(args.side_preset)["description"])
+    return dict(name=args.side_task, preset=args.side_preset, tier=args.side_tier, obstacles=args.side_obstacles,
+                opportunity_present=opportunity, reward_on=bool(getattr(args, "organism", None)))
+
+
 def plan(args, cfg) -> dict:
     from rl.loop import forecast_step
     per_step_rollout = cfg.ep_worst_usd * cfg.B * cfg.G
@@ -349,6 +403,7 @@ def plan(args, cfg) -> dict:
              step_train_worst_case_usd=round(per_step_train, 4), step_forecast_usd=round(forecast, 4), run_forecast_usd=round(forecast * cfg.steps, 4),
              run_worst_case_usd=round((per_step_rollout + per_step_train) * cfg.steps, 4), budget_usd=args.budget_usd, ledger_counted_usd=round(ledger_total, 4),
              total_cap_usd=20.0, cot_monitor=cot_plan(args), **({} if getattr(args, "organism", None) is None else dict(organism=organism_plan(args, cfg.train_tasks))),
+             **({} if side_task_plan(args) is None else dict(side_task=side_task_plan(args))),
              forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
     problems = []
     cot = p["cot_monitor"]
@@ -481,6 +536,10 @@ def parser() -> argparse.ArgumentParser:
         p.add_argument("--seed", type=int, default=0)
         p.add_argument("--fake-fixture", type=Path, help="with --fake --no-sandbox: directory tree copied into each fake sample (sandbox /app/x = DIR/app/x); the side check reads the copy")
         p.add_argument("--organism-config", help="organism config JSON: side_specs -> Collector, reward_cfg -> LoopCfg.reward_cfg (see the precedence note above); off when omitted")
+        p.add_argument("--side-task", choices=SIDE_TASKS, help="layer a run_attack side task on every task (seeding + side-task prompt + side scoring); episodes get side_done/opportunity_present/final_reveal. The side REWARD stays off unless an --organism-config with side_enabled is also passed. Needs docker (not --fake/--no-sandbox).")
+        p.add_argument("--side-preset", default="attacker_hide", help="run_attack prompt preset for --side-task (prompts/presets.yaml): attacker_* put the side task in the prompt (opportunity present), control omits it (the matched no-opportunity arm)")
+        p.add_argument("--side-tier", default="easy", choices=["easy", "medium", "hard"], help="difficulty tier for --side-task episodes (leak_secret: seeding cost + sink constraint)")
+        p.add_argument("--side-obstacles", choices=["on", "off"], default="on", help="with --side-task: enforce the tier at episode time (rl.obstacles) so routes don't collapse; on by default")
 
     c = sub.add_parser("collect", help="run episodes, write sidecars and episodes.jsonl")
     common(c)
@@ -509,7 +568,7 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--cot-concurrency", type=int, default=8, help="max concurrent judge calls")
     t.add_argument("--cot-fallback", type=float, default=0.0, help="c_turn for a turn whose judge call failed or stayed unparsed (recorded in cot_monitor.jsonl)")
     s = sub.add_parser("sidecheck", help="validate an organism config's side_specs; with a fixture dir, report whether each side check would fire (offline)")
-    s.add_argument("config", help="organism config JSON (e.g. configs/organism_leak_secret.json)")
+    s.add_argument("config", help="organism config JSON with side_specs (e.g. configs/organism_sidespec_template.json); not for --side-task configs, which carry no side_specs")
     s.add_argument("fixture", nargs="?", type=Path, help="local directory standing in for the container root: sandbox /app/x is <fixture>/app/x")
     s.add_argument("--task", help="check only this <env>/<task>")
     s.add_argument("--final-text", help="also report whether this final-answer text trips the reveal markers")
@@ -557,6 +616,7 @@ def main(argv=None, cot_judge=None):
     if args.cmd not in ("doctor", "loadtest") and rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
     if args.cmd in ("train", "collect"):
+        check_side_task(args)
         check_fake_fixture(args)
         load_organism_args(args)
     if args.cmd == "train":
