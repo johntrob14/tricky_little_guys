@@ -127,7 +127,10 @@ def task_scorer(env: Path, task: Path):
     async def score(state, target):
         sbx = sandbox()
         restart = await run_script(sbx, env / "restart.sh", SCORE_TIMEOUT)
-        note = "" if restart.success else f"restart.sh failed: {(restart.stderr or restart.stdout)[-500:]}\n\n"
+        out = restart.stderr or restart.stdout
+        if len(out) > 1000:   # head and tail: restart.sh prints "app not ready" first, then a 30-line log dump, and rl.classify keys on that line
+            out = f"{out[:500]}\n[...]\n{out[-500:]}"
+        note = "" if restart.success else f"restart.sh failed: {out}\n\n"
         answer = state.store.get("answer")
         if (task / "score.py").exists():
             spec = importlib.util.spec_from_file_location(f"score_{task.name}", task / "score.py")

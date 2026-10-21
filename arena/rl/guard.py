@@ -35,7 +35,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from .classify import INFRA, EpisodeFailure, Failure
+from .classify import APP_NOT_READY, INFRA, EpisodeFailure, Failure, head_tail
 from .doctor import ARENA, RL_DATA, setup_patch
 
 MANIFEST_SCRIPT = r"""
@@ -304,8 +304,8 @@ async def guarded_check(sbx, env_dir: Path, task_dir: Path, cfg: GuardCfg = Guar
         restart = await _script(sbx, env_dir, "restart.sh", cfg.restart_timeout)
         step("restart", t0)
         if not restart.success:
-            out = (restart.stderr or restart.stdout)[-500:]
-            if "app not ready" in out:
+            out = head_tail(restart.stderr or restart.stdout)
+            if APP_NOT_READY.search(f"{restart.stderr or ''}\n{restart.stdout or ''}".lower()):   # the full output: the marker precedes a long log dump
                 r.reason, r.explanation = "app_not_ready", f"restart.sh failed: {out}"
                 return _done(r, t_all)
             return _infra(r, "restart_failed", out, t_all)

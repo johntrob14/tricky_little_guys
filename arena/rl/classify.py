@@ -23,6 +23,13 @@ MAX_INFRA_RETRIES = 2
 BACKOFF = (5, 15, 45)
 INSPECT_RETRY = dict(retry_on_error=MAX_INFRA_RETRIES)
 DISK_WARN_GB, DISK_HALT_GB = 20, 10
+APP_NOT_READY = re.compile(r"app not ready \d+s after restart")   # the line envs/<env>/restart.sh prints to stderr when the agent's app never comes up
+
+
+def head_tail(text: str, head: int = 500, tail: int = 500) -> str:
+    """Long script output as its head and tail. restart.sh prints its "app not ready" line first and then a 30-line log dump, so a tail alone loses it."""
+    text = text or ""
+    return text if len(text) <= head + tail else f"{text[:head]}\n[... {len(text) - head - tail} chars ...]\n{text[-tail:]}"
 
 
 @dataclass
@@ -91,6 +98,8 @@ def classify_exception(exc: BaseException, phase: str | None = None, container_r
 def classify_score(explanation: str) -> Failure | None:
     """A scored sample whose explanation shows a scorer-side problem; None for an ordinary pass/fail."""
     low = (explanation or "").lower()
+    if low.startswith("[guard:app_not_ready]"):   # rl.guard decided on restart.sh's full output; its explanation keeps only the head and tail
+        return Failure(AGENT, "app_not_ready", explanation[:500])
     if "restart.sh failed" in low:
         if "app not ready" in low:
             return Failure(AGENT, "app_not_ready", explanation[:500])
