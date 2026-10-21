@@ -1,10 +1,11 @@
 """Monitor stage: score every assistant turn of every sample in Inspect .eval logs with a frozen judge. Nothing here calls Tinker or OpenRouter unless
 --allow-live and --budget-usd are given; the judge is an injectable `async judge(prompt) -> str | (str, in_tokens, out_tokens[, thinking])`.
-Default judge: DeepSeek V4.1 Flash on Tinker; `--judge-backend openrouter` uses OpenRouter chat completions instead.
+Default judge: openai/gpt-oss-20b on OpenRouter (pricing.DEFAULT_BACKEND / DEFAULT_MODEL); `--judge-backend tinker` defaults to DeepSeek V4.1 Flash
+on Tinker and also needs ARENA_RL_RUN_TINKER=1.
 
     python -m rl.monitor.run logs/ --dry-run
     python -m rl.monitor.run logs/ --budget-usd 2 --allow-live
-    python -m rl.monitor.run logs/ --budget-usd 2 --allow-live --judge-backend openrouter
+    ARENA_RL_RUN_TINKER=1 python -m rl.monitor.run logs/ --budget-usd 2 --allow-live --judge-backend tinker
 """
 
 import argparse
@@ -13,6 +14,7 @@ import gzip
 import hashlib
 import json
 import math
+import os
 import statistics
 import sys
 from pathlib import Path
@@ -61,6 +63,21 @@ class Budget:
     def settle(self, reserved, actual):
         self.reserved -= reserved
         self.spent += actual
+
+
+class _Ledgered:
+    """Budget view for one item that also appends each counted judge call to an rl.budget.Ledger (model column = the judge model)."""
+
+    def __init__(self, budget, ledger, kind, run, model, note):
+        self.b, self.ledger, self.kind, self.run, self.model, self.note = budget, ledger, kind, run, model, note
+
+    def reserve(self, amount):
+        self.b.reserve(amount)
+
+    def settle(self, reserved, actual):
+        self.b.settle(reserved, actual)
+        if actual > 0:
+            self.ledger.append(self.kind, self.run, self.model, "counted", counted_usd=actual, note=f"{self.kind} {self.note}")
 
 
 # ---- reading
@@ -209,7 +226,9 @@ def summarize(rows, monitor, judge_meta=None):
             "note": "means and maxima are over parsed turns only; unparsed and skipped turns are counted, never imputed"}
 
 
-async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concurrency=8, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected", backend="injected", strip_prefill=False):
+async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concurrency=8, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected", backend="injected", strip_prefill=False,
+                    ledger=None, ledger_kind="monitor"):
+    """ledger: an rl.budget.Ledger to append counted judge cost to (phase = ledger_kind, run = the log's run, model = judge_model); None writes no rows."""
     out = Path(out)
     items = work_items(logs, monitor, sidecars, strip_prefill)
     budget = Budget(budget_usd)
@@ -230,7 +249,8 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
             if stats["stopped"]:
                 return
             try:
-                r = await score_item(it, monitor, judge, budget, price, max_tokens, judge_model)
+                b = _Ledgered(budget, ledger, ledger_kind, run, judge_model, f"{monitor.name} {it['sample']} e{it['epoch']} turn {it['turn']}") if ledger else budget
+                r = await score_item(it, monitor, judge, b, price, max_tokens, judge_model)
             except BudgetExceeded as e:
                 stats["stopped"] = str(e)
                 return
@@ -277,6 +297,8 @@ def main(argv=None, judge=None):
     ap.add_argument("--allow-live", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--concurrency", type=int, default=8)
+    ap.add_argument("--ledger", default=None, help="append counted judge cost to this rl.budget ledger csv (e.g. rl_data/ledger.csv) so it counts toward its total cap; default none")
+    ap.add_argument("--ledger-kind", default="monitor", help=argparse.SUPPRESS)
     ap.add_argument("--set-key", action="store_true", help="prompt (hidden) for your OpenRouter key and save it to ~/.config/sauce/openrouter.env (mode 600), then exit")
     ap.add_argument("--check-key", action="store_true", help="say whether an OpenRouter key is found (never prints it), then exit")
     a = ap.parse_args(argv)
@@ -320,12 +342,22 @@ def main(argv=None, judge=None):
         sys.exit("refusing: live judge needs --allow-live")
     if fc["usd_worst_case"] > a.budget_usd:
         sys.exit(f"refusing: worst-case forecast {fc['usd_worst_case']:.4f} USD exceeds --budget-usd {a.budget_usd}")
+    if judge is None and a.judge_backend == "tinker" and os.environ.get("ARENA_RL_RUN_TINKER") != "1":
+        sys.exit("refusing: the tinker judge backend calls Tinker; set ARENA_RL_RUN_TINKER=1 only with John's go (or use --judge-backend openrouter)")
+    ledger = None
+    if a.ledger:
+        from ..budget import TOTAL_CAP_USD, Ledger
+        ledger = Ledger(a.ledger)
+        bound = min(a.budget_usd, 2 * fc["usd_worst_case"])  # the forecast is one attempt per prompt; a retry on an unparsed reply can double it, and --budget-usd caps it
+        if ledger.total_counted() + bound > TOTAL_CAP_USD:
+            sys.exit(f"refusing: ledger total {ledger.total_counted():.4f} + worst-case spend {bound:.4f} USD (min of --budget-usd and 2 x the single-attempt forecast) "
+                     f"is over the {TOTAL_CAP_USD:g} USD total cap")
     if judge is None:
         try:
             judge = judges.openrouter_judge(model, a.max_tokens, judges.load_openrouter_key()) if a.judge_backend == "openrouter" else judges.tinker_judge(model, a.max_tokens)
         except judges.JudgeError as e:
             sys.exit(f"refusing: {e}")
-    res = asyncio.run(run_stage(a.logs, out, mon, judge, a.budget_usd, a.sidecars, a.concurrency, price, a.max_tokens, model, a.judge_backend, a.strip_prefill))
+    res = asyncio.run(run_stage(a.logs, out, mon, judge, a.budget_usd, a.sidecars, a.concurrency, price, a.max_tokens, model, a.judge_backend, a.strip_prefill, ledger, a.ledger_kind))
     print(json.dumps(res, indent=1))
     return 1 if res["stopped"] else 0
 

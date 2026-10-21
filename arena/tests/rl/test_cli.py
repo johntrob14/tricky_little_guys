@@ -173,3 +173,90 @@ def test_agent_failure_is_not_rerun_and_scores_zero(tmp_path):
     from rl.rewards import attach_reward, compute_rewards
     eps = [attach_reward(e) for e in asyncio.run(col(req))]
     assert sleeps == [] and sorted(compute_rewards(eps).values()) == [0.0, 0.0] and all(e.failure_class == "agent" for e in eps)
+
+
+TRAIN = ["train", "tiktok", "--steps", "1", "--B", "1", "--G", "2", "--ep-worst-usd", "0.02"]
+
+
+def test_cot_monitor_refused_without_allow_live(cli, monkeypatch):
+    import rl.cot_monitor as cm
+    monkeypatch.setattr(cm, "live_judge", lambda *a, **k: pytest.fail("a live judge was built"))
+    with pytest.raises(SystemExit, match="--allow-live"):
+        cli.main([*TRAIN, "--run", "fake-test-cot", "--budget-usd", "1", "--fake", "--no-sandbox", "--beta-cot", "0.5"])
+    with pytest.raises(SystemExit, match="--allow-live"):
+        cli.main([*TRAIN, "--run", "real", "--budget-usd", "1", "--beta-cot", "0.5"])
+
+
+def test_cot_monitor_refused_without_finite_budget(cli, monkeypatch):
+    import rl.cot_monitor as cm
+    monkeypatch.setattr(cm, "live_judge", lambda *a, **k: pytest.fail("a live judge was built"))
+    for b in ("inf", "nan", "0"):
+        with pytest.raises(SystemExit, match="finite --budget-usd"):
+            cli.main([*TRAIN, "--run", "fake-test-cot", "--budget-usd", b, "--fake", "--no-sandbox", "--beta-cot", "0.5", "--allow-live", "--ep-worst-usd", "0"])
+
+
+def test_tinker_judge_needs_tinker_gate(cli, monkeypatch):
+    import rl.cot_monitor as cm
+    import tinker
+    monkeypatch.setattr(cm, "live_judge", lambda *a, **k: pytest.fail("a live judge was built"))
+    monkeypatch.setattr(tinker, "ServiceClient", lambda *a, **k: pytest.fail("a live Tinker client was created"))
+    with pytest.raises(SystemExit, match="ARENA_RL_RUN_TINKER"):
+        cli.main([*TRAIN, "--run", "fake-test-cot", "--budget-usd", "1", "--fake", "--no-sandbox", "--beta-cot", "0.5", "--allow-live", "--judge-backend", "tinker"])
+
+
+def test_cot_plan_and_default_off(cli, capsys):
+    with pytest.raises(SystemExit):
+        cli.main([*TRAIN, "--run", "fake-test-dry", "--budget-usd", "1", "--dry-run"])
+    assert json.loads(capsys.readouterr().out.split("\ndry run")[0])["cot_monitor"] is None
+    with pytest.raises(SystemExit):
+        cli.main([*TRAIN, "--run", "fake-test-dry", "--budget-usd", "1", "--dry-run", "--beta-cot", "0.5"])
+    p = json.loads(capsys.readouterr().out.split("\ndry run")[0])["cot_monitor"]
+    assert p["backend"] == "openrouter" and p["judge_model"] == "openai/gpt-oss-20b" and p["allow_live"] is False
+
+
+def test_fake_train_with_injected_cot_judge(cli, tmp_path):
+    calls = []
+
+    async def judge(prompt):
+        calls.append(prompt)
+        return "<reasoning>ok</reasoning><score>3</score>", 500, 50
+
+    cli.main([*TRAIN, "--run", "fake-test-cot", "--steps", "2", "--B", "2", "--G", "4", "--budget-usd", "1", "--fake", "--no-sandbox", "--beta-cot", "0.5"], cot_judge=judge)
+    out = tmp_path / "data" / "fake-test-cot"
+    lines = [json.loads(x) for x in (out / "steps.jsonl").read_text().splitlines()]
+    assert len(lines) == 2 and all(l["cot_penalty_on"] for l in lines)
+    rows = [json.loads(x) for x in (out / "cot_monitor.jsonl").read_text().splitlines()]
+    scored = [r for r in rows if not r["skipped"]]
+    assert calls and len(scored) == len(calls) and all(r["c"] == pytest.approx(0.3) and not r["fallback"] for r in scored)
+    led = (out / "ledger.csv").read_text()
+    assert "cot_monitor" in led
+
+
+def test_cot_plan_forecasts_judge_cost(cli, capsys):
+    base = [*TRAIN, "--run", "fake-test-dry", "--budget-usd", "0.152", "--dry-run"]
+    with pytest.raises(SystemExit) as e:
+        cli.main(base)
+    assert e.value.code == 0
+    off = json.loads(capsys.readouterr().out.split("\ndry run")[0])
+    with pytest.raises(SystemExit) as e:
+        cli.main([*base, "--beta-cot", "0.5", "--allow-live"])  # dry run: exits before any judge is built
+    p = json.loads(capsys.readouterr().out.split("\ndry run")[0])
+    c = p["cot_monitor"]
+    assert p["step_forecast_usd"] == off["step_forecast_usd"] == 0.15  # the loop's own forecast_step is unchanged
+    assert c["calls_worst"] == 2 * 60 * 2 and c["calls_est"] == 2 * 24 and 0 < c["step_expected_usd"] < c["step_worst_case_usd"]
+    assert c["step_forecast_with_judge_usd"] == pytest.approx(0.15 + c["step_expected_usd"], abs=1e-4)
+    assert c["run_worst_case_with_judge_usd"] == pytest.approx(p["run_worst_case_usd"] + c["step_worst_case_usd"], abs=1e-3)
+    assert e.value.code == 2 and any("with CoT-monitor judge" in w for w in p["would_refuse"])  # 0.15 + judge > 0.152
+
+
+def test_fake_cot_judge_ledger_rows_name_the_judge(cli, tmp_path):
+    from rl.budget import Ledger
+
+    async def judge(prompt):
+        return "<score>3</score>", 500, 50
+
+    cli.main([*TRAIN, "--run", "fake-test-cot", "--steps", "1", "--B", "1", "--G", "2", "--budget-usd", "1", "--fake", "--no-sandbox", "--beta-cot", "0.5"], cot_judge=judge)
+    rows = Ledger(tmp_path / "data" / "fake-test-cot" / "ledger.csv").rows()
+    judged = [r for r in rows if r["note"].startswith("cot_monitor")]
+    assert judged and {r["model"] for r in judged} == {"openai/gpt-oss-20b"}
+    assert {r["model"] for r in rows if r not in judged} == {"openai/gpt-oss-120b"}

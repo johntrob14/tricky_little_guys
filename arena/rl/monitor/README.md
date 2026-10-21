@@ -28,21 +28,29 @@ same (sample, epoch) in two `.eval` files of one run dir are both kept. A differ
 If the judge raises mid-run, no further calls are made, rows already written stay, `summary.json` is still written, the result carries `error`, and the exit code is 1.
 
 ## Judge
-- Default: DeepSeek V4.1 Flash on Tinker, model id exactly `deepseek-ai/DeepSeek-V4.1-Flash:peft:262144` (Tinker refuses the bare name). A thinking model: the model's own chat template (prompt ends inside `<think>`),
-  temperature 0, stop on EOS, `--max-tokens` 6000 (thinking included), reply split at `</think>`. Needs `TINKER_API_KEY` in the environment.
-- `--judge-model openai/gpt-oss-20b` (or `-120b`) stays selectable on Tinker (cookbook renderer, low reasoning effort).
-- `--judge-backend openrouter`: OpenAI-compatible `POST https://openrouter.ai/api/v1/chat/completions` through httpx (no new dependency), temperature 0, 429/5xx retried 3 times. The key comes from
-  `OPENROUTER_API_KEY` or `OPENROUTER_API_KEY=...` in `~/.config/sauce/openrouter.env`; it is never printed or logged, and a missing key stops the run before any call. The default model is
-  `deepseek/deepseek-v4.1-flash` (the entry "DeepSeek: DeepSeek V4.1 Flash" in OpenRouter's model list, matched by name; that it serves the same weights as the Tinker checkpoint is **unverified**).
+- Default: `--judge-backend openrouter` with `openai/gpt-oss-20b` (`pricing.DEFAULT_BACKEND` and `DEFAULT_MODEL["openrouter"]`), the same judge
+  `rl.py train` uses in the loss by default. OpenAI-compatible `POST https://openrouter.ai/api/v1/chat/completions` through httpx (no new dependency),
+  temperature 0, 429/5xx retried 3 times. The key comes from `OPENROUTER_API_KEY` or `OPENROUTER_API_KEY=...` in `~/.config/sauce/openrouter.env`
+  (`--set-key` saves it, `--check-key` says whether one is found); it is never printed or logged, and a missing key stops the run before any call.
   Override with `--judge-model`; any model not in `pricing.py` is costed at an UNVERIFIED upper bound.
+- `--judge-backend tinker` defaults to DeepSeek V4.1 Flash, model id exactly `deepseek-ai/DeepSeek-V4.1-Flash:peft:262144` (Tinker refuses the bare name).
+  A thinking model: the model's own chat template (prompt ends inside `<think>`), temperature 0, stop on EOS, `--max-tokens` 6000 (thinking included),
+  reply split at `</think>`. Needs `TINKER_API_KEY` in the environment and `ARENA_RL_RUN_TINKER=1` (John's go); without the latter a live tinker run is refused.
+  `--judge-model openai/gpt-oss-20b` (or `-120b`) stays selectable on Tinker (cookbook renderer, low reasoning effort).
+- OpenRouter's `deepseek/deepseek-v4.1-flash` (the entry "DeepSeek: DeepSeek V4.1 Flash") is selectable with `--judge-model`; that it serves the same
+  weights as the Tinker checkpoint is **unverified**.
+- Held-out judge (`rl.monitor.heldout`, must differ from the in-loss judge): `HELDOUT.md` recommends `anthropic/claude-sonnet-5.5` (primary) and
+  `google/gemini-3.8-flash` (backup) on OpenRouter, both run on the same turns; nothing defaults to them.
 
 ## Prices (`pricing.py`), USD per million tokens
 | backend / model | prefill | cached prefill | sample | source |
 |---|---|---|---|---|
 | tinker DeepSeek-V4.1-Flash | 0.60 | 0.12 | 3.60 | thinkingmachines.ai/tinker/pricing, fetched 2026-10-20 |
 | tinker gpt-oss-20b / 120b | 0.18 / 0.33 | 0.036 / 0.066 | 0.45 / 0.84 | same page |
+| openrouter openai/gpt-oss-20b (default judge) | 0.018 | 0.009 | 0.09 | `pricing.py` (cheapest endpoint, not an upper bound; see `HELDOUT.md` "Flags") |
 | openrouter deepseek/deepseek-v4.1-flash | 0.02832 | 0.000566 | 0.12 | openrouter.ai/api/v1/models, fetched 2026-10-20 |
-| unlisted tinker / openrouter model | 1.695 / 3.0 | no credit | 4.215 / 15.0 | UNVERIFIED conservative upper bound; flagged in `--dry-run` and `summary.json` |
+| held-out candidates (Sonnet 5.5, Gemini 3.8 Flash, GLM-5.3, Kimi, ...) | see `HELDOUT.md` | | | openrouter.ai/<model>/providers (max over endpoints) and the Tinker page, fetched 2026-10-21 |
+| unlisted tinker / openrouter model | 3.78 / 3.0 | no credit | 12.15 / 15.0 | UNVERIFIED conservative upper bound; flagged in `--dry-run` and `summary.json` (the OpenRouter one is known to be exceeded, see `HELDOUT.md`) |
 
 Cached prefill is never credited (upper bound). The Tinker page was read as text; its columns were taken to be prefill, cached prefill, sample, train (the order that matches the GPT-OSS rows already used in
 `self-oversight/common.py`). The OpenRouter list price is the listed per-token price; the provider OpenRouter routes to may bill differently.
@@ -57,4 +65,4 @@ Cached prefill is never credited (upper bound). The Tinker page was read as text
 
 ## Status
 Nothing live was run, on either backend. `judges.tinker_judge` is written against the Tinker sampling API as used in `cot-control-deepseek/tinker_cotcontrol.py` but has never been called (a thinking-model
-reply format, `</think>` split, is untested against a real reply); `judges.openrouter_judge` is tested only with a fake transport. Tests use fake judges. `rl.py` did not exist when this was written, so there is no subcommand: use `python -m rl.monitor.run` (`main()` in `run.py`).
+reply format, `</think>` split, is untested against a real reply); `judges.openrouter_judge` is tested only with a fake transport. Tests use fake judges. There is no `rl.py` subcommand: use `python -m rl.monitor.run` (`main()` in `run.py`) and `python -m rl.monitor.heldout`; `rl/README.md` (a) and (d) give the commands.

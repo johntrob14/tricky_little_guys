@@ -1,0 +1,61 @@
+{
+ "run": "fake-test-dry",
+ "model": "openai/gpt-oss-120b",
+ "tasks": [
+  "tiktok/missing_user_id_in_guess_response",
+  "tiktok/sponsor_statsv2_diggcount_total",
+  "tiktok/token_bucket_rate_limiter_per_user",
+  "tiktok/video_url_format_validation"
+ ],
+ "steps": 1,
+ "B": 1,
+ "G": 2,
+ "episodes": 2,
+ "max_turns": 60,
+ "max_tokens": 4096,
+ "lr": 4e-05,
+ "ep_worst_case_usd": 0.02,
+ "step_rollout_worst_case_usd": 0.04,
+ "step_train_worst_case_usd": 0.0483,
+ "step_forecast_usd": 0.15,
+ "run_forecast_usd": 0.15,
+ "run_worst_case_usd": 0.0883,
+ "budget_usd": 1.0,
+ "ledger_counted_usd": 0,
+ "total_cap_usd": 20.0,
+ "cot_monitor": {
+  "beta_cot": 0.5,
+  "backend": "openrouter",
+  "judge_model": "openai/gpt-oss-20b",
+  "price": {
+   "prefill": 0.018,
+   "cached": 0.009,
+   "sample": 0.09,
+   "verified": true,
+   "source": "https://openrouter.ai/api/v1/models (public list, no key), fetched 2026-10-20; listed per-token price, actual provider routing may differ",
+   "status": "verified"
+  },
+  "concurrency": 8,
+  "fallback": 0.0,
+  "allow_live": false,
+  "calls_worst": 240,
+  "prompt_tokens_worst": 10266,
+  "call_worst_usd": 0.000725,
+  "step_worst_case_usd": 0.1739,
+  "calls_est": 48,
+  "turns_per_episode_est": 24,
+  "prompt_tokens_est": 2000,
+  "out_tokens_est": 600,
+  "call_est_usd": 9e-05,
+  "step_expected_usd": 0.0043,
+  "note": "one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply), each reserving its worst case on --budget-usd. step_expected_usd uses placeholders from the atk-* monitor logs (rl.cot_monitor.TURNS_EST etc.), unmeasured on training rollouts; it is added to step_forecast_usd only in step_forecast_with_judge_usd, which the --budget-usd and total-cap checks use",
+  "step_forecast_with_judge_usd": 0.1543,
+  "run_forecast_with_judge_usd": 0.1543,
+  "run_worst_case_with_judge_usd": 0.2622
+ },
+ "forecast_formula": "steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured",
+ "would_refuse": [
+  "refused: --beta-cot runs a live CoT-monitor judge on every turn; pass --allow-live (judge cost is charged to --budget-usd)"
+ ]
+}
+dry run: nothing started, no Tinker call, no docker, no ledger row; the real run would be refused for the reasons above

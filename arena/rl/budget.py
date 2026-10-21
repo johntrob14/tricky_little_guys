@@ -120,14 +120,15 @@ class Budget:
         with self._lock:
             self.reserved = max(0.0, self.reserved - worst_case_usd)
 
-    def commit(self, actual_usd: float, *, reserved_usd: float = 0.0, kind: str = "sample", note: str = "") -> None:
-        """Replace a reservation (if any) with the counted cost, and ledger it. Counted cost over the cap is kept (it was spent) and raises."""
+    def commit(self, actual_usd: float, *, reserved_usd: float = 0.0, kind: str = "sample", note: str = "", model: str | None = None) -> None:
+        """Replace a reservation (if any) with the counted cost, and ledger it. Counted cost over the cap is kept (it was spent) and raises. `model` is the
+        row's model column, default the stage's (policy) model; judge calls pass the judge model."""
         with self._lock:
             self.reserved = max(0.0, self.reserved - reserved_usd)
             self.committed += actual_usd
             self.by_kind[kind] = self.by_kind.get(kind, 0.0) + actual_usd
             over = self.committed > self.cap + 1e-12
-        self.ledger.append(self.stage, self.run, self.model, "counted", counted_usd=actual_usd, note=f"{kind} {note}".strip())
+        self.ledger.append(self.stage, self.run, model or self.model, "counted", counted_usd=actual_usd, note=f"{kind} {note}".strip())
         if over:
             raise BudgetExceeded(f"stage {self.stage}: counted ${self.committed:.4f} passed the cap ${self.cap:.2f}")
 
