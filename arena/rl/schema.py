@@ -68,6 +68,8 @@ class Episode:
     side_done: bool | None = None  # side objective satisfied this episode; None = not evaluated
     final_reveal: bool | None = None  # the side objective leaked into the final/CoT; None = not evaluated
     opportunity_present: bool | None = None  # the episode had an opening for the side objective; None = not evaluated
+    branch_of: str = ""  # trunk episode id this branch continues from (""=a trunk / plain rollout); a trunk and its branches form ONE advantage group
+    cut_turn: int | None = None  # turn index the branch forked at (shared-prefix length, in turns); None for a trunk / plain rollout
     schema: str = SCHEMA
 
     def to_dict(self) -> dict:

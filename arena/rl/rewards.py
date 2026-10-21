@@ -124,30 +124,44 @@ class GroupStat:
     reward_std: float | None
     kept: bool
     drop_reason: str = ""
+    group: tuple = ()  # the full grouping key (default (step, task); (step, task, trunk) in branch mode)
 
 
-def group_advantages(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str = "none") -> tuple[dict[str, float], list[GroupStat]]:
-    """A_i = r_i - mean_g(r) per (step, task) group over valid episodes. Groups with fewer than 2 valid episodes or constant reward are dropped (their
-    episodes are absent from the result). adv_norm="std" divides by std + 1e-6."""
+def default_group_key(e: Episode) -> tuple:
+    return (e.step, e.task)
+
+
+def branch_group_key(e: Episode) -> tuple:
+    """Branch mode: a trunk (branch_of=="") and every branch that forked from it (branch_of==trunk id) share one
+    group, so advantage is contrastive between siblings of a common prefix -- the localized covert/overt signal."""
+    return (e.step, e.task, e.branch_of or e.episode_id)
+
+
+def group_advantages(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str = "none",
+                     group_key=default_group_key) -> tuple[dict[str, float], list[GroupStat]]:
+    """A_i = r_i - mean_g(r) per group over valid episodes; the group is group_key(e) ((step, task) by default,
+    (step, task, trunk) with branch_group_key). Groups with fewer than 2 valid episodes or constant reward are
+    dropped (their episodes are absent from the result). adv_norm="std" divides by std + 1e-6."""
     groups = defaultdict(list)
     for e in eps:
-        groups[(e.step, e.task)].append(e)
+        groups[group_key(e)].append(e)
     advs, stats = {}, []
-    for (step, task), g in sorted(groups.items()):
+    for key, g in sorted(groups.items(), key=lambda kv: [str(x) for x in kv[0]]):
+        step, task = g[0].step, g[0].task
         valid = [e for e in g if rewards.get(e.episode_id) is not None]
         r = [rewards[e.episode_id] for e in valid]
         if len(valid) < 2:
-            stats.append(GroupStat(task, step, len(g), len(valid), (sum(r) / len(r)) if r else None, None, False, "fewer than 2 valid"))
+            stats.append(GroupStat(task, step, len(g), len(valid), (sum(r) / len(r)) if r else None, None, False, "fewer than 2 valid", key))
             continue
         mean = sum(r) / len(r)
         std = math.sqrt(sum((x - mean) ** 2 for x in r) / len(r))
         if max(r) - min(r) < 1e-12:
-            stats.append(GroupStat(task, step, len(g), len(valid), mean, std, False, "constant reward"))
+            stats.append(GroupStat(task, step, len(g), len(valid), mean, std, False, "constant reward", key))
             continue
         scale = std + 1e-6 if adv_norm == "std" else 1.0
         for e, x in zip(valid, r):
             advs[e.episode_id] = (x - mean) / scale
-        stats.append(GroupStat(task, step, len(g), len(valid), mean, std, True))
+        stats.append(GroupStat(task, step, len(g), len(valid), mean, std, True, "", key))
     return advs, stats
 
 

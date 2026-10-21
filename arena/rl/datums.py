@@ -147,7 +147,7 @@ SOFT_NON_TRAINABLE = {"chain_break", "mixed_weights", "bad_logprobs"}
 
 
 def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str = "none", allowed_tasks: set[str] | None = None, max_len: int = CTX_LIMIT,
-          expect_weights_id: str | None = None, soft: bool = False, cot_penalty: tuple[float, dict[str, list[float]]] | None = None) -> Batch:
+          expect_weights_id: str | None = None, soft: bool = False, cot_penalty: tuple[float, dict[str, list[float]]] | None = None, group_key=None) -> Batch:
     """Raises Refused on any episode that must not train (every episode is scope-checked; episodes with a reward are token-checked). Episodes sampled by
     other weights than expect_weights_id raise too. Groups without signal and over-length datums are dropped and listed in Batch.dropped.
     soft=True turns the expected exclusions (provider non-trainable reasons chain_break/mixed_weights/bad_logprobs, misaligned or non-finite rows) into reward None
@@ -174,12 +174,16 @@ def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str
     batch.n_valid = sum(1 for e in eps if rewards.get(e.episode_id) is not None)
     batch.n_none = len(eps) - batch.n_valid
     batch.weights_id = expect_weights_id or (eps[0].weights_id if eps else "")
-    advs, batch.groups = group_advantages(eps, rewards, adv_norm=adv_norm)
+    from .rewards import default_group_key
+    gkey = group_key or default_group_key
+    advs, batch.groups = group_advantages(eps, rewards, adv_norm=adv_norm, group_key=gkey)
+    ekey = {e.episode_id: gkey(e) for e in eps}
     beta, cmap = cot_penalty if cot_penalty is not None else (0.0, {})
     flat = {}  # constant-R groups: scalar advantage 0, trained on the CoT penalty alone
     if beta:
-        flat = {e.episode_id: (e.step, e.task) for e in eps if e.episode_id not in advs and rewards.get(e.episode_id) is not None and e.episode_id in cmap
-                and any(g.drop_reason == "constant reward" and (g.step, g.task) == (e.step, e.task) for g in batch.groups)}
+        const_groups = {g.group for g in batch.groups if g.drop_reason == "constant reward"}
+        flat = {e.episode_id: ekey[e.episode_id] for e in eps if e.episode_id not in advs and rewards.get(e.episode_id) is not None
+                and e.episode_id in cmap and ekey[e.episode_id] in const_groups}
     penalized = set()
     for e in eps:
         if e.episode_id not in advs and e.episode_id not in flat:
@@ -208,7 +212,7 @@ def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str
         if e.episode_id in flat:
             penalized.add(flat[e.episode_id])
     for g in batch.groups:
-        if (g.step, g.task) in penalized:
+        if g.group in penalized:
             g.kept, g.drop_reason = True, "constant reward; CoT penalty only"
     return batch
 
