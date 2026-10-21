@@ -10,9 +10,10 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X               live Tinker (needs ARENA_RL_RUN_TINKER=1)
     python rl.py train ... --beta-cot 0.5 --allow-live [--judge-backend tinker]          + live per-turn CoT-monitor penalty (rl.cot_monitor), judge cost on --budget-usd
     python rl.py train ... --organism-config configs/X.json [--w-side 1 --beta-cot 0.3]  side_specs + reward_cfg from a config (collect takes the flag too)
+    python rl.py train ... --fake --no-sandbox --organism-config CFG --fake-fixture DIR    organism on fakes: side check on a per-sample copy of DIR (rl/ORGANISM.md)
     python rl.py sidecheck <config.json> [<fixture_dir>] [--task T] [--final-text S]   validate side_specs; dry-check against a local tree; offline
     python rl.py plan-collect <tasks> --run R --epochs N --budget-usd X     print the gated collect command and its cost estimate; no call
-    python rl.py report rl_data/<run> [--monitor F] [--out D]               offline report of a collect dir (report.md + report.json)
+    python rl.py report rl_data/<run> [--monitor F] [--out D]               offline report of a collect or train dir (report.md + report.json)
     python rl.py ablation rl_data/<run> [--heldout F] [--out D]             offline step-4 ablation across checkpoints (ablation.md + ablation.json)
     python rl.py sanity --run R --budget-usd X --fake                       sanity battery on base + every checkpoint, offline fakes
     python rl.py sanity --run R --budget-usd X --allow-live                 the same on Tinker (needs ARENA_RL_RUN_TINKER=1 too)
@@ -23,6 +24,9 @@ reward field: an explicit flag (--w-main/--w-side/--w-final/--beta-cot) > the co
 cot_penalty_enabled to X != 0 (so --beta-cot 0 turns a config's CoT penalty off); --w-* need the config, and --w-side/--w-final need its side_enabled.
 The config's run/model/steps/B/G/train_tasks are not read (the command line sets them; a train_tasks mismatch is shown in the plan). A config with
 FILL_ME placeholders, a bad spec, or a spec for a task outside <tasks> is refused. Without the flag nothing changes.
+--fake-fixture DIR (needs --fake --no-sandbox): each fake sample works on its own copy of DIR (sandbox /app/x = DIR/app/x); the pre-episode snapshot
+and the side check read that copy, and the fake policy becomes rl.fake_policy.OrganismPolicy when the config has side_specs. Side specs on
+--no-sandbox are refused without it.
 Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--guard swaps in rl.guard's hardened scorer).
 """
 
@@ -59,8 +63,8 @@ def expand(names: list[str]) -> list[str]:
 
 def builder(args):
     if getattr(args, "no_sandbox", False):
-        from rl.fake_policy import fake_build_task
-        return fake_build_task
+        from rl.fake_policy import fake_build
+        return fake_build(getattr(args, "fake_fixture", None))
     if getattr(args, "guard", False):
         from rl.guard import guarded_build_task
         return guarded_build_task
@@ -74,6 +78,12 @@ def fake_policy(args):
     from tinker_cookbook.tokenizer_utils import get_tokenizer
 
     ensure_hf_cache(args.model)
+    org = getattr(args, "organism", None)
+    if org is not None and org.side_specs and getattr(args, "fake_fixture", None):
+        # organism dry run on the fixture: the side command copies the first spec's source to its target (side_kwargs refused specs outside <tasks>)
+        from rl.fake_policy import OrganismPolicy
+        spec = org.side_specs[sorted(org.side_specs)[0]]
+        return OrganismPolicy(get_tokenizer(args.model), f"cp {spec.source} {spec.target}", default_p=args.p_fix, seed=args.seed)
     return ScriptedPolicy(get_tokenizer(args.model), default_p=args.p_fix, seed=args.seed)
 
 
@@ -219,6 +229,17 @@ def load_organism_args(args) -> None:
         args.beta_cot = rc.beta_cot if rc.cot_penalty_enabled else 0.0
 
 
+def check_fake_fixture(args) -> None:
+    """--fake-fixture only means something to the docker-free fakes; anywhere else it would be silently ignored, so refuse it."""
+    fx = getattr(args, "fake_fixture", None)
+    if fx is None:
+        return
+    if not (args.fake and args.no_sandbox):
+        raise SystemExit("refused: --fake-fixture needs --fake --no-sandbox (a real sandbox, or a non-fake policy, never reads it)")
+    if not fx.is_dir():
+        raise SystemExit(f"refused: --fake-fixture {fx} is not a directory")
+
+
 def side_kwargs(args, tasks) -> dict:
     """Extra Collector kwargs from --organism-config: {} without it (the Collector call is then unchanged), else side_specs and guard."""
     org = getattr(args, "organism", None)
@@ -227,8 +248,8 @@ def side_kwargs(args, tasks) -> dict:
     stray = sorted(set(org.side_specs) - set(tasks))
     if stray:
         raise SystemExit(f"refused: --organism-config has side_specs for {stray}, which are not among this run's tasks; the spec would never be used")
-    if org.side_specs and getattr(args, "no_sandbox", False):
-        raise SystemExit("refused: side_specs read the real container's files; --no-sandbox has none (drop --no-sandbox, or use a config without side_specs)")
+    if org.side_specs and getattr(args, "no_sandbox", False) and not getattr(args, "fake_fixture", None):
+        raise SystemExit("refused: side_specs read the container's files; --no-sandbox has none (add --fake-fixture DIR, drop --no-sandbox, or use a config without side_specs)")
     return dict(side_specs=org.side_specs, guard=args.guard)
 
 
@@ -456,6 +477,7 @@ def parser() -> argparse.ArgumentParser:
         p.add_argument("--no-sandbox", action="store_true", help="with --fake: docker-free fake tools and scorer (rl.fake_policy)")
         p.add_argument("--p-fix", type=float, default=0.5, help="fake policy: probability that an episode takes the fixing path")
         p.add_argument("--seed", type=int, default=0)
+        p.add_argument("--fake-fixture", type=Path, help="with --fake --no-sandbox: directory tree copied into each fake sample (sandbox /app/x = DIR/app/x); the side check reads the copy")
         p.add_argument("--organism-config", help="organism config JSON: side_specs -> Collector, reward_cfg -> LoopCfg.reward_cfg (see the precedence note above); off when omitted")
 
     c = sub.add_parser("collect", help="run episodes, write sidecars and episodes.jsonl")
@@ -499,20 +521,20 @@ def parser() -> argparse.ArgumentParser:
     pc.add_argument("--max-tokens", type=int, default=4096)
     pc.add_argument("--ep-worst-usd", type=float)
     pc.add_argument("--ep-usd-est", type=float, default=0.03, help="expected cost per episode (placeholder; use a measured cost.per_sampled_episode_usd from a report)")
-    r = sub.add_parser("report", help="offline report of a collect output dir")
+    r = sub.add_parser("report", help="offline report of a collect or train output dir")
     r.add_argument("dir", help="rl_data/<run> (or <run>/collect, or a run name under ARENA_RL_DATA)")
     r.add_argument("--monitor", action="append", default=[], help="extra monitor.jsonl (any under dir are read already)")
     r.add_argument("--ledger", help="ledger.csv (default: dir/ledger.csv, else the shared one beside dir)")
     r.add_argument("--out", help="where report.md and report.json go (default: dir)")
     ab = sub.add_parser("ablation", help="offline step-4 ablation of a train out dir: side_done by opportunity, in-loss vs held-out suspicion, CoT length, per checkpoint")
     ab.add_argument("dir", help="rl_data/<run> (step_NNN/episodes.jsonl + cot_monitor.jsonl), or a run name under ARENA_RL_DATA")
-    ab.add_argument("--heldout", help="held-out monitor.jsonl from rl.monitor.heldout (or a dir holding exactly one); rows joined by sidecar.episode_id")
+    ab.add_argument("--heldout", help="held-out monitor.jsonl from rl.monitor.heldout, or a dir (every monitor.jsonl under it, pooled); rows joined by sidecar.episode_id or (.eval, sample, epoch)")
     ab.add_argument("--out", help="where ablation.md and ablation.json go (default: dir)")
     ab.add_argument("--stat", default="max", choices=["max", "mean"], help="per-episode suspicion over judged turns")
     ab.add_argument("--baseline-step", type=int, help="checkpoint to compare against (default: the first)")
     ab.add_argument("--bins", type=int, default=8, help="CoT-length quantile bins (plus one for empty CoT)")
     ab.add_argument("--in-loss-judge", help="keep only cot_monitor.jsonl rows of this judge model (needed when a resumed run mixed judges)")
-    ab.add_argument("--heldout-judge", help="keep only held-out rows of this judge model")
+    ab.add_argument("--heldout-judge", help="keep only held-out rows of this judge model (needed when the held-out files mix judges)")
     sn = sub.add_parser("sanity", help="shared sanity battery on the base model and every checkpoint in <run>/checkpoints.json")
     sn.add_argument("--run", required=True)
     sn.add_argument("--model", default=MODEL)
@@ -533,6 +555,7 @@ def main(argv=None, cot_judge=None):
     if args.cmd not in ("doctor", "loadtest") and rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
     if args.cmd in ("train", "collect"):
+        check_fake_fixture(args)
         load_organism_args(args)
     if args.cmd == "train":
         return cmd_train(args, rest, cot_judge)

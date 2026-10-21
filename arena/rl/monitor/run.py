@@ -1,10 +1,11 @@
 """Monitor stage: score every assistant turn of every sample in Inspect .eval logs with a frozen judge. Nothing here calls Tinker or OpenRouter unless
 --allow-live and --budget-usd are given; the judge is an injectable `async judge(prompt) -> str | (str, in_tokens, out_tokens[, thinking])`.
-Default judge: DeepSeek V4.1 Flash on Tinker; `--judge-backend openrouter` uses OpenRouter chat completions instead.
+Default judge: openai/gpt-oss-20b on OpenRouter (pricing.DEFAULT_BACKEND / DEFAULT_MODEL); `--judge-backend tinker` defaults to DeepSeek V4.1 Flash
+on Tinker and also needs ARENA_RL_RUN_TINKER=1.
 
     python -m rl.monitor.run logs/ --dry-run
     python -m rl.monitor.run logs/ --budget-usd 2 --allow-live
-    python -m rl.monitor.run logs/ --budget-usd 2 --allow-live --judge-backend openrouter
+    ARENA_RL_RUN_TINKER=1 python -m rl.monitor.run logs/ --budget-usd 2 --allow-live --judge-backend tinker
 """
 
 import argparse
@@ -13,6 +14,7 @@ import gzip
 import hashlib
 import json
 import math
+import os
 import statistics
 import sys
 from pathlib import Path
@@ -340,6 +342,8 @@ def main(argv=None, judge=None):
         sys.exit("refusing: live judge needs --allow-live")
     if fc["usd_worst_case"] > a.budget_usd:
         sys.exit(f"refusing: worst-case forecast {fc['usd_worst_case']:.4f} USD exceeds --budget-usd {a.budget_usd}")
+    if judge is None and a.judge_backend == "tinker" and os.environ.get("ARENA_RL_RUN_TINKER") != "1":
+        sys.exit("refusing: the tinker judge backend calls Tinker; set ARENA_RL_RUN_TINKER=1 only with John's go (or use --judge-backend openrouter)")
     ledger = None
     if a.ledger:
         from ..budget import TOTAL_CAP_USD, Ledger
