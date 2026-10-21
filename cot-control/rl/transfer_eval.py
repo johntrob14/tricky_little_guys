@@ -159,7 +159,7 @@ async def generate(args, units, out: Path):
     await asyncio.gather(*(one(u) for u in todo))
 
 
-def run_judges(rows, out: Path):
+def run_judges(rows, out: Path, meta: bool = True):
     """Requirement judge (judge types), reference ignore_question judge, then the meta judge on every pass. Resumes by (key, kind)."""
     done = {(r["key"], r["kind"]) for r in read_jsonl(out)}
     backend = TinkerJudge()
@@ -209,7 +209,7 @@ def run_judges(rows, out: Path):
         gens = [dict(r, user_prompt=r["qblock"], constraint="ignore_question") for r in ign]
         save(judge.judge_compliance_batch(backend, gens, "transfer", "default"))
     scores = {(r["key"], r["kind"]): r["score"] for r in read_jsonl(out)}
-    passes = [r for r in rows if r["type"] != "baseline" and (r["key"], "meta") not in done
+    passes = [] if not meta else [r for r in rows if r["type"] != "baseline" and (r["key"], "meta") not in done
               and (r["strict"] if r["strict"] is not None else scores.get((r["key"], "requirement" if r["type"] in controls.JUDGE_TYPES else "compliance")))]
     if passes:
         print(f"[judge] meta: {len(passes)} passes", file=sys.stderr)
@@ -220,10 +220,38 @@ def run_judges(rows, out: Path):
         save(mrows)
 
 
+def null_rows(rows):
+    """Every eligible type's grader (and judge) applied to the baseline arm's reasoning, which never saw the instruction:
+    the no-instruction pass rate on the same items, with the same control values as the F0 units."""
+    items = {(it.dataset, it.item_idx): it for ds in DATASETS for it in load_items(ds)}
+    out = []
+    for r in rows:
+        if r["type"] != "baseline":
+            continue
+        item = items[(r["dataset"], r["item_idx"])]
+        for ctl in controls.CONTROLS.values():
+            if not ctl.eligible(item):
+                continue
+            v = ctl.value(random.Random(f"{ctl.name}|{item.dataset}|{item.item_idx}"), item) if ctl.value else None
+            text, requirement, _ = controls.instruction(ctl, v, "F0", r["harmony"])
+            partial, strict = controls.grade(ctl, r["reasoning"], v, item)
+            out.append(dict(key=f"null|{ctl.name}|{item.dataset}|{item.item_idx}", type=ctl.name, instruction=text, requirement=requirement,
+                            qblock=r["qblock"], reasoning=r["reasoning"], response=r["response"], answer_pred=r["answer_pred"], partial=partial, strict=strict))
+    return out
+
+
 def summarize(run_dir: Path) -> str:
     rows = read_jsonl(run_dir / "gens.jsonl")
     jd = {(r["key"], r["kind"]): r for r in read_jsonl(run_dir / "judgments.jsonl")}
     base_correct = {(r["dataset"], r["item_idx"]): r["correct"] for r in rows if r["type"] == "baseline"}
+    null = {}
+    if (run_dir / "null.jsonl").exists():
+        njd = {(r["key"], r["kind"]): r for r in read_jsonl(run_dir / "null_judgments.jsonl")}
+        for r in read_jsonl(run_dir / "null.jsonl"):
+            kind = "requirement" if r["type"] in controls.JUDGE_TYPES else "compliance"
+            strict = r["strict"] if r["strict"] is not None else (njd.get((r["key"], kind)) or {}).get("score")
+            n_pass, n = null.get(r["type"], (0, 0))
+            null[r["type"]] = (n_pass + bool(strict), n + 1)
     groups = {}
     for r in rows:
         if r["type"] == "baseline":
@@ -236,8 +264,8 @@ def summarize(run_dir: Path) -> str:
             strict=strict, nometa=nometa, judged=strict is not None, partial=r["partial"], correct=r["correct"],
             base=base_correct.get((r["dataset"], r["item_idx"])), tokens=r["n_output_tokens"], empty=not controls.WORD_RE.search(r["reasoning"] or ""),
             trunc=r["finish"] == "length", noans=r["answer_pred"] is None, family=r["family"]))
-    lines = ["| type | family | frame | place | n | strict | nometa | partial | acc | base acc (same items) | med tokens | empty | trunc | no answer | unjudged |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    lines = ["| type | family | frame | place | n | strict | nometa | partial | acc | base acc (same items) | no-instruction pass | med tokens | empty | trunc | no answer | unjudged |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     summary = {}
     for (t, f, p), g in sorted(groups.items(), key=lambda kv: (list(controls.CONTROLS).index(kv[0][0]), kv[0][1], kv[0][2])):
         n = len(g)
@@ -248,7 +276,8 @@ def summarize(run_dir: Path) -> str:
         summary[f"{t}|{f}|{p}"] = s
         base = f"{s['base']}/{n}" if s["base"] is not None else "-"
         partial = "-" if s["partial"] != s["partial"] else f"{s['partial']:.2f}"
-        lines.append(f"| {t} | {g[0]['family']} | {f} | {p} | {n} | {s['strict']}/{n} | {s['nometa']}/{n} | {partial} | {s['correct']}/{n} | {base} | {s['tokens']:.0f} | {s['empty']} | {s['trunc']} | {s['noans']} | {s['unjudged']} |")
+        npass = f"{null[t][0]}/{null[t][1]}" if t in null and f == "F0" and p == "user" else "-"
+        lines.append(f"| {t} | {g[0]['family']} | {f} | {p} | {n} | {s['strict']}/{n} | {s['nometa']}/{n} | {partial} | {s['correct']}/{n} | {base} | {npass} | {s['tokens']:.0f} | {s['empty']} | {s['trunc']} | {s['noans']} | {s['unjudged']} |")
     base_rows = [r for r in rows if r["type"] == "baseline"]
     if base_rows:
         lines.append(f"\nbaseline arm (no requirement): accuracy {sum(r['correct'] for r in base_rows)}/{len(base_rows)}, median tokens {statistics.median(r['n_output_tokens'] for r in base_rows):.0f}")
@@ -277,9 +306,14 @@ def main():
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="print unit counts and two example prompts, no model calls")
     ap.add_argument("--summarize", action="store_true", help="only rebuild the summary")
+    ap.add_argument("--null-rates", action="store_true", help="judge/grade the baseline arm against every type (no-instruction pass rates), then rebuild the summary")
     args = ap.parse_args()
     run_dir = RESULTS / args.run
-    if args.summarize:
+    if args.summarize or args.null_rates:
+        if args.null_rates:
+            nrows = null_rows(read_jsonl(run_dir / "gens.jsonl"))
+            (run_dir / "null.jsonl").write_text("".join(json.dumps(r) + "\n" for r in nrows))
+            run_judges(nrows, run_dir / "null_judgments.jsonl", meta=False)
         print(summarize(run_dir))
         return
     harmony = args.model.startswith("openai/")
