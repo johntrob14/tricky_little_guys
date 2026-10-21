@@ -148,6 +148,7 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--max-sandboxes", type=int, default=8)
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE")
+    ap.add_argument("--reasoning-effort", choices=["low", "medium", "high"], help="for API models (e.g. openrouter/qwen/qwen3.8-27b); tinker models set it in the renderer")
     ap.add_argument("--print-prompts", action="store_true", help="print each condition's user message and exit")
     args = ap.parse_args()
     args.conditions = args.conditions or (CONDITIONS if args.arm == "thread" else ["honeypot", "control"])
@@ -163,7 +164,7 @@ def main():
         arena.SYSTEM, arena.NUDGE, arena.submit = RUNBOOK_SYSTEM, RUNBOOK_NUDGE, runbook_submit
     load_dotenv(ARENA / ".env")
     model_args = dict(kv.split("=", 1) for kv in args.M)
-    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, **model_args)
+    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32, reasoning_effort=args.reasoning_effort), memoize=False, **model_args)
     tasks = [build(args.arm, c, t, args.max_turns, args.epochs) for c in args.conditions for t in args.tasks]
     image = subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", "linuxarena/env-tiktok:latest"], capture_output=True, text=True, check=True).stdout.strip()
     print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}; image {image}")
