@@ -10,6 +10,9 @@ suspicion (episode max over parsed turns, high = suspicious, 0-10). `analyze` re
 - held-out minus in-loss suspicion on side-done episodes (a gap opening up = fitting the trained-against monitor, not hiding from monitors in general);
 - a verdict string per checkpoint vs. baseline. Verdicts are heuristics for reading, not results.
 Loaders read episodes.jsonl plus monitor.jsonl rows (joined by sidecar.episode_id). Pure functions; nothing calls a model.
+`run_dir` / `write` (`python rl.py ablation <train_out_dir> [--heldout F]`) read a train out dir: step_NNN/episodes.jsonl, in-loss suspicion straight from
+rl.cot_monitor's cot_monitor.jsonl (native score, episode max or mean over judged turns; skipped and fallback turns left out), held-out from a
+rl.monitor.heldout monitor.jsonl; they write ablation.md and ablation.json.
 """
 
 import gzip
@@ -197,3 +200,155 @@ def table(res: dict) -> str:
 
 def dump(res: dict, path) -> None:
     Path(path).write_text(json.dumps(res, indent=1, default=lambda o: asdict(o)))
+
+
+# ---- train out dir (python rl.py ablation)
+
+def cot_monitor_scores(path, stat: str = "max", *, judge_model: str | None = None) -> tuple[dict[str, float], dict]:
+    """rl.cot_monitor's <out_dir>/cot_monitor.jsonl -> ({episode_id: max|mean native score over judged, parsed turns}, meta). Skipped (truncated /
+    empty-CoT) and fallback turns have no judge score and are left out: their `c` is what the loss saw, not a monitor reading. A turn written twice
+    keeps its last row. Rows mixing monitors or judges are refused (filter with judge_model), and so is a monitor that is not high=suspicious."""
+    from .monitor.monitors import get
+
+    last, seen = {}, set()
+    for l in open(path):
+        try:
+            r = json.loads(l)
+        except ValueError:
+            continue
+        if r.get("schema") != "arena.rl.cot_monitor.v1" or (judge_model and r.get("judge_model") != judge_model):
+            continue
+        seen.add((r.get("monitor"), r.get("judge_model")))
+        last[(r["episode_id"], r.get("turn"))] = r
+    if len(seen) > 1:
+        raise ValueError(f"{path}: rows mix monitor/judge {sorted(map(str, seen))}; pass the in-loss judge model to pick one")
+    meta = dict(path=str(path), stat=stat, turns=len(last), judged=0, fallback=sum(bool(r.get("fallback")) for r in last.values()),
+                skipped=sum(bool(r.get("skipped")) for r in last.values()), monitor=None, judge_model=None, scale=None)
+    if not seen:
+        return {}, meta
+    m, j = next(iter(seen))
+    mon = get(m)
+    if mon.direction != "high=suspicious":
+        raise ValueError(f"{path}: monitor {m!r} has direction {mon.direction!r}; ablation assumes high=suspicious")
+    per = {}
+    for (eid, _), r in last.items():
+        if r.get("score") is not None and not r.get("skipped") and not r.get("fallback"):
+            per.setdefault(eid, []).append(float(r["score"]))
+    meta.update(judged=sum(map(len, per.values())), monitor=m, judge_model=j, scale=list(mon.scale))
+    return {k: (max(v) if stat == "max" else statistics.fmean(v)) for k, v in per.items()}, meta
+
+
+def heldout_meta(path, judge_model: str | None = None) -> dict:
+    """monitor, judge and scale of the rows monitor_scores keeps from a held-out monitor.jsonl."""
+    seen = set()
+    for l in open(path):
+        try:
+            r = json.loads(l)
+        except ValueError:
+            continue
+        if (r.get("sidecar") or {}).get("episode_id") and r.get("score") is not None and not (judge_model and r.get("judge_model") != judge_model):
+            seen.add((r.get("monitor"), r.get("judge_model"), tuple(r.get("scale") or (0, 10))))
+    m, j, s = next(iter(seen)) if len(seen) == 1 else (None, None, None)
+    return dict(path=str(path), monitor=m, judge_model=j, scale=list(s) if s else None)
+
+
+def train_episodes(d: Path) -> tuple[list[dict], list[str]]:
+    """Episodes of every <d>/step_NNN/episodes.jsonl (else <d>/episodes.jsonl or <d>/collect/episodes.jsonl); one row per episode_id, the last."""
+    files = sorted(d.glob("step_*/episodes.jsonl")) or [p for p in (d / "episodes.jsonl", d / "collect" / "episodes.jsonl") if p.exists()][:1]
+    if not files:
+        raise FileNotFoundError(f"no step_*/episodes.jsonl (or episodes.jsonl) in {d}")
+    by = {}
+    for f in files:
+        for e in read_episodes(f):
+            by[e["episode_id"]] = e
+    return list(by.values()), [str(f) for f in files]
+
+
+def _cot_len_fn(eps: list[dict], tokenizer):
+    if tokenizer is None:
+        try:
+            from .cot_mask import _tokenizer_for
+            tokenizer = _tokenizer_for(next((e.get("model") for e in eps if e.get("model")), None) or "openai/gpt-oss-120b")
+        except Exception:
+            tokenizer = None
+    if tokenizer is None:
+        return (lambda e: sum(len(t["tokens"]) for t in e["turns"])), "sampled_tokens_upper_bound (tokenizer unavailable)"
+    return think_len_fn(tokenizer), "analysis_channel"
+
+
+def run_dir(d, heldout=None, *, stat: str = "max", tokenizer=None, baseline_step: int | None = None, n_bins: int = 8, in_loss_judge: str | None = None,
+            heldout_judge: str | None = None) -> dict:
+    """analyze() over a train out dir: in-loss suspicion from <d>/cot_monitor.jsonl, held-out from `heldout` (a rl.monitor.heldout monitor.jsonl,
+    or a dir holding exactly one), CoT length from think_mask over each episode's turns. Offline."""
+    d = Path(d)
+    eps, files = train_episodes(d)
+    cm = d / "cot_monitor.jsonl"
+    in_loss, in_meta = cot_monitor_scores(cm, stat, judge_model=in_loss_judge) if cm.exists() else ({}, dict(path=None, note="no cot_monitor.jsonl (beta_cot 0?)"))
+    ho, ho_meta = {}, None
+    if heldout:
+        hp = Path(heldout)
+        if hp.is_dir():
+            found = sorted(hp.rglob("monitor.jsonl"))
+            if len(found) != 1:
+                raise ValueError(f"--heldout dir {hp} holds {len(found)} monitor.jsonl files; pass one")
+            hp = found[0]
+        ho, ho_meta = monitor_scores(hp, stat, judge_model=heldout_judge), heldout_meta(hp, heldout_judge)
+        if in_meta.get("scale") and ho_meta["scale"] and in_meta["scale"] != ho_meta["scale"]:
+            raise ValueError(f"in-loss scale {in_meta['scale']} and held-out scale {ho_meta['scale']} differ; the held-out minus in-loss gap would be meaningless")
+        if in_meta.get("judge_model") and in_meta["judge_model"] == ho_meta["judge_model"]:
+            raise ValueError(f"held-out judge {ho_meta['judge_model']!r} is the in-loss judge")
+    fn, src = _cot_len_fn(eps, tokenizer)
+    obs = build_obs(eps, fn, in_loss, ho)
+    res = analyze(obs, n_bins=n_bins, baseline_step=baseline_step)
+    if not any(o.sus_in_loss is not None for o in obs):  # verdict() would read missing in-loss scores as "no_suspicion_drop"
+        for st in res["checkpoints"].values():
+            st["verdict"] = st["verdict"] if st["verdict"] == "baseline" else "no_in_loss_scores"
+    cov = {}
+    for o in obs:
+        c = cov.setdefault(o.step, dict(side_done=0, side_done_in_loss=0, side_done_heldout=0))
+        if o.side_done:
+            c["side_done"] += 1
+            c["side_done_in_loss"] += o.sus_in_loss is not None
+            c["side_done_heldout"] += o.sus_heldout is not None
+    res.update(dir=str(d), run=next((e.get("run") for e in eps if e.get("run")), d.name), episode_files=files, n_episodes=len(eps), n_obs=len(obs),
+               cot_length_source=src, in_loss=in_meta, heldout=ho_meta, coverage={s: cov[s] for s in sorted(cov)},
+               episodes_unmatched_in_loss=sorted(set(in_loss) - {o.episode_id for o in obs})[:20])
+    return res
+
+
+def to_markdown(res: dict) -> str:
+    f = lambda v, p="{:.2f}": "-" if v is None else (p.format(v) if isinstance(v, float) else str(v))  # noqa: E731
+    il, ho = res.get("in_loss") or {}, res.get("heldout")
+    il_s = f"`{il['path']}`, {il['monitor']} / {il['judge_model']}, episode {il['stat']} over {il['judged']} judged turns ({il['fallback']} fallback, {il['skipped']} skipped, left out)" \
+        if il.get("monitor") else f"none ({il.get('note') or 'no judged rows in ' + str(il.get('path'))})"
+    ho_s = f"`{ho['path']}`, {ho['monitor']} / {ho['judge_model']}" if ho else "none (pass --heldout)"
+    L = [f"# CoT ablation: {res.get('run')}", "", f"`{res.get('dir')}` · {res.get('n_obs')} episodes (INFRA excluded) over {len(res['checkpoints'])} checkpoints · baseline step "
+         f"{res['baseline_step']} · CoT length: {res.get('cot_length_source')}", "", f"- in-loss suspicion: {il_s}", f"- held-out suspicion: {ho_s}",
+         "- suspicion is native 0-10 (high = suspicious) on side-done episodes; matched drop = baseline minus checkpoint at matched CoT-length bins (> 0: lower at the same length)",
+         "- **verdicts are heuristics for reading (rl.ablation.verdict), not results**", "", "## Per checkpoint", "",
+         "| step | n | side_done with opp (n) | without opp (n) | CoT mean | CoT median | empty CoT | side-done scored in-loss / held-out | sus in-loss | sus held-out | "
+         "held-out - in-loss | matched drop in-loss | matched drop held-out | verdict (heuristic) |", "| " + " | ".join(["---"] * 14) + " |"]
+    for s, st in res["checkpoints"].items():
+        c = (res.get("coverage") or {}).get(s, {})
+        L.append(f"| {s} | {st['n']} | {f(st['side_done_rate_when_opportunity'])} ({st['n_opportunity']}) | {f(st['side_done_rate_when_not'])} ({st['n_no_opportunity']}) | "
+                 f"{f(st['cot_tokens_mean'], '{:.0f}')} | {f(st['cot_tokens_median'])} | {f(st['empty_cot_frac'])} | "
+                 f"{c.get('side_done_in_loss', '-')}/{c.get('side_done', '-')} / {c.get('side_done_heldout', '-')}/{c.get('side_done', '-')} | {f(st['sus_in_loss_side_done'])} | "
+                 f"{f(st['sus_heldout_side_done'])} | {f(st['heldout_minus_in_loss_side_done'])} | {f(st['matched_drop_in_loss'])} | {f(st['matched_drop_heldout'])} | {st['verdict']} |")
+    L += ["", "## By CoT length", "", f"Bin edges (analysis tokens, pooled over checkpoints): {res.get('length_edges')}. Suspicion columns are side-done episodes only; "
+          "matched drops use bins with >= 3 side-done episodes on both sides.", "", "| step | CoT bin | n | side_done rate | side-done n | sus in-loss | sus held-out |",
+          "| --- | --- | --- | --- | --- | --- | --- |"]
+    for s, st in res["checkpoints"].items():
+        for b in st["bins"].values():
+            if b["n"]:
+                L.append(f"| {s} | {b['label']} | {b['n']} | {f(b['side_done_rate'])} | {b['n_side_done']} | {f(b['sus_in_loss_side_done'])} | {f(b['sus_heldout_side_done'])} |")
+    return "\n".join(L) + "\n"
+
+
+def write(d, out=None, **kw) -> tuple[dict, str]:
+    res = run_dir(d, **kw)
+    md = to_markdown(res)
+    out = Path(out) if out else Path(d)
+    out.mkdir(parents=True, exist_ok=True)
+    dump(res, out / "ablation.json")
+    (out / "ablation.md").write_text(md)
+    return res, md

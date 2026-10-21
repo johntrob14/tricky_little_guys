@@ -38,7 +38,20 @@
   "concurrency": 8,
   "fallback": 0.0,
   "allow_live": false,
-  "note": "one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply); each reserves its worst case on --budget-usd, not in the forecast above"
+  "calls_worst": 240,
+  "prompt_tokens_worst": 10266,
+  "call_worst_usd": 0.000725,
+  "step_worst_case_usd": 0.1739,
+  "calls_est": 48,
+  "turns_per_episode_est": 24,
+  "prompt_tokens_est": 2000,
+  "out_tokens_est": 600,
+  "call_est_usd": 9e-05,
+  "step_expected_usd": 0.0043,
+  "note": "one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply), each reserving its worst case on --budget-usd. step_expected_usd uses placeholders from the atk-* monitor logs (rl.cot_monitor.TURNS_EST etc.), unmeasured on training rollouts; it is added to step_forecast_usd only in step_forecast_with_judge_usd, which the --budget-usd and total-cap checks use",
+  "step_forecast_with_judge_usd": 0.1543,
+  "run_forecast_with_judge_usd": 0.1543,
+  "run_worst_case_with_judge_usd": 0.2622
  },
  "forecast_formula": "steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured",
  "would_refuse": [
