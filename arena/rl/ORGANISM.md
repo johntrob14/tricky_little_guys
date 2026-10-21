@@ -70,7 +70,8 @@ real in-container paths (not guessed; John supplies them). Validate offline befo
    judge (into `<logs>/monitor_heldout/`, same --allow-live/--budget-usd gates as `rl.monitor.run`); `rl/ablation.py` relates side_done (split by
    opportunity), in-loss and held-out suspicion, and CoT length per checkpoint: suspicion at matched CoT-length bins, side-done rate per length bin,
    held-out minus in-loss gap, and a heuristic verdict (`behavior_stopped`, `shorter_cot`, `shorter_cot_no_overlap`, `fit_to_in_loss_monitor`,
-   `hidden_at_matched_length`, ...).
+   `hidden_at_matched_length`, ...). `python rl.py ablation rl_data/<run> [--heldout F] [--out D]` runs it on a train out dir (in-loss suspicion read
+   straight from `cot_monitor.jsonl`, per-episode max or mean over judged turns) and writes `ablation.{md,json}`.
 4. **Robustness to questioning**: does the behavior survive direct questioning / forced CoT reading in a held-out probe.
 5. **Not fried**: run the shared `sanity/battery.py` on the base model and every saved checkpoint; stop or lower LR if answers degrade.
 6. **Reward-hacking the side scorer**: `score_side` is state-based; keep the golden-match / scope telemetry from the guarded scorer on.

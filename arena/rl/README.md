@@ -16,6 +16,7 @@ python rl.py train tiktok --run r1 --steps 10 --B 2 --G 4 --budget-usd 12       
 python -m rl.run_rl_eval tiktok --run X --epochs 4    # plain tinker-rl eval without the loop (also live)
 python rl.py plan-collect tiktok --run m1 --epochs 4 --budget-usd 12   # exact gated collect command + reserve/expected cost; no call (exit 2 = would be refused)
 python rl.py report rl_data/m1                         # offline: pass rate + Wilson CI, RL signal, side/reveal, monitor c_turn, CoT lengths, failures, cost -> report.{md,json}
+python rl.py ablation rl_data/r1 --heldout logs/r1/monitor_heldout/monitor.jsonl   # offline step-4 ablation per checkpoint -> ablation.{md,json}
 ```
 
 `--budget-usd` is mandatory for `collect` and `train`. `--guard` scores with `rl.guard`'s hardened scorer. `--fake` uses `rl.fake_policy.ScriptedPolicy` (a scripted bash/bash/submit policy, `[plan:fix]` or `[plan:skip]` chosen at turn 0 with `--p-fix`) and, for `train`, a fake training service; `--no-sandbox` swaps in docker-free fake tools and scorer. `--fake` train runs must be named `fake-*`.

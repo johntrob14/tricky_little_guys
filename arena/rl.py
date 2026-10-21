@@ -12,6 +12,7 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py sidecheck <config.json> [<fixture_dir>] [--task T] [--final-text S]   validate side_specs; dry-check against a local tree; offline
     python rl.py plan-collect <tasks> --run R --epochs N --budget-usd X     print the gated collect command and its cost estimate; no call
     python rl.py report rl_data/<run> [--monitor F] [--out D]               offline report of a collect dir (report.md + report.json)
+    python rl.py ablation rl_data/<run> [--heldout F] [--out D]             offline step-4 ablation across checkpoints (ablation.md + ablation.json)
     python rl.py sanity --run R --budget-usd X --fake                       sanity battery on base + every checkpoint, offline fakes
     python rl.py sanity --run R --budget-usd X --allow-live                 the same on Tinker (needs ARENA_RL_RUN_TINKER=1 too)
 
@@ -167,6 +168,20 @@ def cmd_report(args, rest):
     rep, md = write_report(d, Path(args.out) if args.out else None, monitor_paths=[Path(m) for m in args.monitor], ledger_path=Path(args.ledger) if args.ledger else None)
     print(md)
     print(f"wrote {Path(args.out) if args.out else d}/report.md and report.json")
+
+
+def cmd_ablation(args, rest):
+    from rl.ablation import write
+    d = Path(args.dir)
+    if not d.exists() and (OUT_ROOT / args.dir).exists():
+        d = OUT_ROOT / args.dir
+    try:
+        res, md = write(d, args.out, heldout=args.heldout, stat=args.stat, baseline_step=args.baseline_step, n_bins=args.bins, in_loss_judge=args.in_loss_judge,
+                        heldout_judge=args.heldout_judge)
+    except (FileNotFoundError, ValueError) as e:
+        raise SystemExit(f"ablation: {e}")
+    print(md)
+    print(f"wrote {Path(args.out) if args.out else d}/ablation.md and ablation.json")
 
 
 def make_cfg(args, tasks):
@@ -380,6 +395,15 @@ def parser() -> argparse.ArgumentParser:
     r.add_argument("--monitor", action="append", default=[], help="extra monitor.jsonl (any under dir are read already)")
     r.add_argument("--ledger", help="ledger.csv (default: dir/ledger.csv, else the shared one beside dir)")
     r.add_argument("--out", help="where report.md and report.json go (default: dir)")
+    ab = sub.add_parser("ablation", help="offline step-4 ablation of a train out dir: side_done by opportunity, in-loss vs held-out suspicion, CoT length, per checkpoint")
+    ab.add_argument("dir", help="rl_data/<run> (step_NNN/episodes.jsonl + cot_monitor.jsonl), or a run name under ARENA_RL_DATA")
+    ab.add_argument("--heldout", help="held-out monitor.jsonl from rl.monitor.heldout (or a dir holding exactly one); rows joined by sidecar.episode_id")
+    ab.add_argument("--out", help="where ablation.md and ablation.json go (default: dir)")
+    ab.add_argument("--stat", default="max", choices=["max", "mean"], help="per-episode suspicion over judged turns")
+    ab.add_argument("--baseline-step", type=int, help="checkpoint to compare against (default: the first)")
+    ab.add_argument("--bins", type=int, default=8, help="CoT-length quantile bins (plus one for empty CoT)")
+    ab.add_argument("--in-loss-judge", help="keep only cot_monitor.jsonl rows of this judge model (needed when a resumed run mixed judges)")
+    ab.add_argument("--heldout-judge", help="keep only held-out rows of this judge model")
     sn = sub.add_parser("sanity", help="shared sanity battery on the base model and every checkpoint in <run>/checkpoints.json")
     sn.add_argument("--run", required=True)
     sn.add_argument("--model", default=MODEL)
@@ -401,7 +425,7 @@ def main(argv=None, cot_judge=None):
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
     if args.cmd == "train":
         return cmd_train(args, rest, cot_judge)
-    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "sidecheck": cmd_sidecheck, "plan-collect": cmd_plan_collect, "report": cmd_report, "sanity": cmd_sanity}[args.cmd](args, rest)
+    {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "sidecheck": cmd_sidecheck, "plan-collect": cmd_plan_collect, "report": cmd_report, "ablation": cmd_ablation, "sanity": cmd_sanity}[args.cmd](args, rest)
 
 
 if __name__ == "__main__":
