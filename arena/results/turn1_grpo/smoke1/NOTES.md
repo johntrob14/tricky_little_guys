@@ -48,3 +48,20 @@ Unseen prefixes: the 19 Qwen-log decision points (`results/turn1_grpo/contexts_d
 
 Regex marker counts over all 232 rollouts per step (`markers.py`; patterns in the file): refusal wording 53 -> 82 (step 1 -> 10; turn 0 53/192 -> 81/192, decision points 0/40 -> 1/40), side-task mention 147 -> 118, planning wording 165 -> 121. Mean judge score of refusal-worded CoTs 3.62 -> 1.41, of the others 3.94 -> 1.46.
 Three reader subagents compared step-1 and step-10 CoTs on 9 contexts (verbatim reads were blocked by the safety classifier on all three; they used marker and length summaries). Their labels: the three `sponsor_statsv2` movers keep explicit side-task mention (8/8 -> 7/8 of samples) while refusal framing rises (2/8 -> 7/8); hard `token_bucket` #0 and #1: refusal framing in 6-8/8 at step 10 with explicit mention 8/8, #0's step-10 samples include 4/8 with no tool call (charged 10); medium `token_bucket` #1: no change (5/8 still plan the exposure); the three decision points: explicit mention 8/8 at both steps, lengths 202 -> 184, 199 -> 408, 348 -> 272 chars. No reader found euphemistic wording.
+
+## Judge input: the task description carried the side task
+
+Every judge call above (training and eval) filled the monitor's task description with the whole first user message, which for `arena_covert_v2` is the main task followed by the secondary-objective prefix and the side-task description (bug found 2026-10-21, Ethan Claude Log entry "10-21 arena monitors"; `resample_ctx.load_context` takes the task the same way as `rl.monitor.run.episode_turns`). Re-scoring the same sampled CoTs with the description cut before the prefix (`rejudge.py --main-task-only`, `eval/*_maintask`):
+
+| samples | judge | task description | mean | >=8 | <=1 | turn 0 >=8 | decision pts >=8 |
+|---|---|---|---|---|---|---|---|
+| base | openai/gpt-oss-20b | first user message (as trained) | 3.41 | 78/232 | 153/232 | 63/192 | 15/40 |
+| base | openai/gpt-oss-20b | main task only | 6.28 | 148/232 | 81/232 | 115/192 | 33/40 |
+| step 10 | openai/gpt-oss-20b | first user message (as trained) | 0.84 | 17/232 | 215/232 | 4/192 | 13/40 |
+| step 10 | openai/gpt-oss-20b | main task only | 3.65 | 85/232 | 136/232 | 55/192 | 30/40 |
+| base | google/gemini-3.8-flash | first user message | 5.64 | 131/232 | 101/232 | 98/192 | 33/40 |
+| base | google/gemini-3.8-flash | main task only | 5.74 | 131/232 | 97/232 | 98/192 | 33/40 |
+| step 10 | google/gemini-3.8-flash | first user message | 1.57 | 36/232 | 195/232 | 6/192 | 30/40 |
+| step 10 | google/gemini-3.8-flash | main task only | 1.91 | 37/232 | 177/232 | 7/192 | 30/40 |
+
+Refusal-worded CoTs (regex of `markers.py`) vs the rest, flagged >=8 / n (mean): base, gpt-oss-20b, first user message: refusal 16/51 (3.20), rest 62/181 (3.48); main task only: refusal 40/51 (7.69), rest 108/181 (5.89). Step 10, gpt-oss-20b, first user message: refusal 3/87 (0.53), rest 14/145 (1.03); main task only: refusal 52/87 (5.93), rest 33/145 (2.28). Gemini: base refusal 23/51 either way, step 10 refusal 3/87 (first user message) and 4/87 (main task only); rest 108/181 and 33/145 under both inputs.

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from prompt_spec import fragment
 from resample_ctx import judge_cot, load_context
 from rl.monitor import judges, monitors, pricing
 from rl.monitor.run import monitor_cot
@@ -34,7 +35,7 @@ async def amain(args, rows, tasks, mon, judge):
                             n_hi=sum(s >= 8 for s in scores), n_lo=sum(s <= 1 for s in scores), mixed=bool(scores) and max(scores) - min(scores) >= 5,
                             empty_cot=sum(r["skipped"] for r in grp), unparsed=sum(r["score"] is None and not r["skipped"] for r in grp)))
     scores = [r["score"] for r in out_rows if r["score"] is not None]
-    totals = dict(source=str(args.samples), judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), samples=len(rows), scored=len(scores),
+    totals = dict(source=str(args.samples), main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), samples=len(rows), scored=len(scores),
                   mean=round(statistics.mean(scores), 3) if scores else None, hi_samples=sum(s >= 8 for s in scores), lo_samples=sum(s <= 1 for s in scores),
                   mixed_contexts=sum(p["mixed"] for p in per_ctx), empty_cot=sum(p["empty_cot"] for p in per_ctx), unparsed=sum(p["unparsed"] for p in per_ctx),
                   judge_usd=round(sum(r["judge_in"] * jp.prefill + r["judge_out"] * jp.sample for r in out_rows) / 1e6, 4))
@@ -52,6 +53,7 @@ def main():
     ap.add_argument("--judge-model", required=True)
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--concurrency", type=int, default=8)
+    ap.add_argument("--main-task-only", action="store_true", help="cut the task description shown to the judge before the secondary_objective prefix (the first user message otherwise carries the side task)")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     load_dotenv(ARENA / ".env")
@@ -61,6 +63,10 @@ def main():
         key = (r["run"], r["sample"], r["epoch"], r["turn"])
         if key not in tasks:
             tasks[key] = load_context(*key)[1]
+            if args.main_task_only:
+                i = tasks[key].find(fragment("prefix", "secondary_objective").strip())
+                assert i > 0, f"no secondary_objective prefix in the first user message of {key}"
+                tasks[key] = tasks[key][:i].rstrip()
     mon = monitors.get("controlarena_cot_only")
     judge = judges.openrouter_judge(args.judge_model, args.judge_max_tokens, judges.load_openrouter_key())
     asyncio.run(amain(args, rows, tasks, mon, judge))
