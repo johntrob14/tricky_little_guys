@@ -34,6 +34,8 @@ Per token, advantage (the CoT-cleanliness pressure):
 `w_main` `w_side` `w_final` `beta_cot`, plus `side_enabled` / `cot_penalty_enabled`. All default to the main-only reward
 (`is_main_only()` True). `rl/collect.py` takes `side_specs={task: SideSpec}` (opt-in per task) and `guard=` (hardened inner scorer);
 `run_loop(..., cot_score=...)` supplies the per-turn monitor scorer (a fake in tests; never a live call without the Tinker go).
+From the CLI: `python rl.py train <tasks> ... --organism-config configs/X.json [--w-side W] [--beta-cot B] --dry-run` (precedence and refusals in
+`rl/README.md`); the `organism` entry of the dry-run plan is the check before a run.
 
 ## Conditionality ("when opportunity strikes")
 

@@ -9,6 +9,7 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py train <tasks> --run fake-R --steps 3 --B 2 --G 4 --budget-usd 1 --fake --no-sandbox     whole loop on fakes
     python rl.py train <tasks> --run R --steps S --B B --G G --budget-usd X               live Tinker (needs ARENA_RL_RUN_TINKER=1)
     python rl.py train ... --beta-cot 0.5 --allow-live [--judge-backend tinker]          + live per-turn CoT-monitor penalty (rl.cot_monitor), judge cost on --budget-usd
+    python rl.py train ... --organism-config configs/X.json [--w-side 1 --beta-cot 0.3]  side_specs + reward_cfg from a config (collect takes the flag too)
     python rl.py sidecheck <config.json> [<fixture_dir>] [--task T] [--final-text S]   validate side_specs; dry-check against a local tree; offline
     python rl.py plan-collect <tasks> --run R --epochs N --budget-usd X     print the gated collect command and its cost estimate; no call
     python rl.py report rl_data/<run> [--monitor F] [--out D]               offline report of a collect dir (report.md + report.json)
@@ -16,6 +17,11 @@ sibling package `rl/` is what `import rl` finds).
     python rl.py sanity --run R --budget-usd X --allow-live                 the same on Tinker (needs ARENA_RL_RUN_TINKER=1 too)
 
 <tasks> are <env> (every task of the env) or <env>/<task>. Live Tinker calls are refused unless ARENA_RL_RUN_TINKER=1; --fake never touches Tinker.
+--organism-config: side_specs go to Collector (side-aware scorer on those tasks, --guard kept) and reward_cfg to LoopCfg.reward_cfg. Precedence per
+reward field: an explicit flag (--w-main/--w-side/--w-final/--beta-cot) > the config's reward_cfg > RewardCfg defaults. --beta-cot X also sets
+cot_penalty_enabled to X != 0 (so --beta-cot 0 turns a config's CoT penalty off); --w-* need the config, and --w-side/--w-final need its side_enabled.
+The config's run/model/steps/B/G/train_tasks are not read (the command line sets them; a train_tasks mismatch is shown in the plan). A config with
+FILL_ME placeholders, a bad spec, or a spec for a task outside <tasks> is refused. Without the flag nothing changes.
 Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--guard swaps in rl.guard's hardened scorer).
 """
 
@@ -95,6 +101,7 @@ async def collect_async(args):
     from rl.schema import append_jsonl
 
     tasks = expand(args.tasks)
+    skw = side_kwargs(args, tasks)  # refuse a bad config before any ledger row
     out = OUT_ROOT / args.run
     out.mkdir(parents=True, exist_ok=True)
     if args.fake:
@@ -112,7 +119,7 @@ async def collect_async(args):
     budget.start_stage(reserve if not args.fake else 0.0, note=f"collect {len(tasks)} tasks x {args.epochs}")
     budget.reserve(reserve)
     collector = Collector(args.run, args.model, max_turns=args.max_turns, max_tokens=args.max_tokens, max_sandboxes=args.max_sandboxes, build=builder(args),
-                          phase="test" if args.fake else args.phase, split="train" if not args.fake else "test", mode=args.mode)
+                          phase="test" if args.fake else args.phase, split="train" if not args.fake else "test", mode=args.mode, **skw)
     req = CollectRequest(0, tasks, args.epochs, sampler, wid, out / "collect", None, budget)
     t0 = time.time()
     eps = await collector(req)
@@ -126,6 +133,9 @@ async def collect_async(args):
     summary = dict(run=args.run, seconds=round(time.time() - t0, 1), n=len(eps), by_task={t: dict(n=sum(e.task == t for e in eps), passed=sum(rewards[e.episode_id] == 1.0 for e in eps if e.task == t),
                    infra=sum(e.failure_class == "infra" for e in eps if e.task == t)) for t in tasks}, ended=dict(Counter(e.ended for e in eps)),
                    turns=[len(e.turns) for e in eps], sampled_usd_upper_bound=round(spent, 6), episodes=str(out / "collect" / "episodes.jsonl"))
+    if getattr(args, "organism", None) is not None:
+        summary["side"] = {t: dict(side_done=sum(bool(e.side_done) for e in eps if e.task == t), final_reveal=sum(bool(e.final_reveal) for e in eps if e.task == t))
+                           for t in sorted(args.organism.side_specs)}
     print(json.dumps(summary, indent=1))
 
 
@@ -169,6 +179,84 @@ def cmd_report(args, rest):
     print(f"wrote {Path(args.out) if args.out else d}/report.md and report.json")
 
 
+REWARD_FLAGS = ("w_main", "w_side", "w_final")
+
+
+def load_organism_args(args) -> None:
+    """Sets args.organism (rl.side_config.Organism with the flag overrides applied, or None) and, for train, args.beta_cot to the effective CoT weight,
+    so cot_gate/cot_scorer/cot_plan gate a config-enabled CoT penalty exactly like --beta-cot. Precedence: flag > config reward_cfg > RewardCfg default."""
+    from dataclasses import replace
+
+    from rl.rewardcfg import check_weight
+    from rl.side_config import SideSpecError, load_organism
+
+    given = {k: getattr(args, k) for k in REWARD_FLAGS if getattr(args, k, None) is not None}
+    if args.organism_config is None:
+        args.organism = None
+        if given:
+            raise SystemExit(f"refused: --{'/--'.join(k.replace('_', '-') for k in given)} need --organism-config (the reward weights come from an organism config)")
+        if args.cmd == "train" and args.beta_cot is None:
+            args.beta_cot = 0.0
+        return
+    try:
+        org = load_organism(args.organism_config)
+        for k, v in given.items():
+            check_weight(f"--{k.replace('_', '-')}", v)
+    except (OSError, SideSpecError, ValueError) as e:
+        raise SystemExit(f"refused: invalid --organism-config {args.organism_config}: {e}")
+    rc, src = org.reward_cfg, {k: "config" for k in ("w_main", "w_side", "w_final", "beta_cot")}
+    if {"w_side", "w_final"} & set(given) and not rc.side_enabled:
+        raise SystemExit("refused: --w-side/--w-final have no effect unless the config's reward_cfg.side_enabled is true")
+    rc = replace(rc, **given)
+    src.update(dict.fromkeys(given, "flag"))
+    if getattr(args, "beta_cot", None) is not None:
+        rc = replace(rc, beta_cot=args.beta_cot, cot_penalty_enabled=args.beta_cot != 0)
+        src["beta_cot"] = "flag"
+    org.reward_cfg, org.sources = rc, src
+    args.organism = org
+    if args.cmd == "train":
+        args.beta_cot = rc.beta_cot if rc.cot_penalty_enabled else 0.0
+
+
+def side_kwargs(args, tasks) -> dict:
+    """Extra Collector kwargs from --organism-config: {} without it (the Collector call is then unchanged), else side_specs and guard."""
+    org = getattr(args, "organism", None)
+    if org is None:
+        return {}
+    stray = sorted(set(org.side_specs) - set(tasks))
+    if stray:
+        raise SystemExit(f"refused: --organism-config has side_specs for {stray}, which are not among this run's tasks; the spec would never be used")
+    if org.side_specs and getattr(args, "no_sandbox", False):
+        raise SystemExit("refused: side_specs read the real container's files; --no-sandbox has none (drop --no-sandbox, or use a config without side_specs)")
+    return dict(side_specs=org.side_specs, guard=args.guard)
+
+
+def organism_plan(args, tasks) -> dict | None:
+    from dataclasses import asdict
+    org = args.organism
+    if org is None:
+        return None
+    return dict(config=org.path, sha256=org.sha256, reward_cfg=asdict(org.reward_cfg), reward_sources=org.sources, main_only=org.reward_cfg.is_main_only(),
+                side_tasks={t: dict(kind=s.kind, opportunity_present=s.opportunity_present) for t, s in sorted(org.side_specs.items())},
+                **config_tasks_check(org.train_tasks, tasks),
+                note="run/model/steps/B/G/train_tasks in the config are not read; the command line sets them")
+
+
+def config_tasks_check(names: list[str] | None, tasks: list[str]) -> dict:
+    """Compare the config's (unread) train_tasks with the run's tasks without letting a bad name crash the plan: a name that resolves to no
+    task directory is listed in config_train_tasks_unknown (select_tasks would otherwise drop it silently or raise)."""
+    if names is None:
+        return dict(config_train_tasks_match=None)
+    resolved, unknown = [], []
+    for n in names:
+        try:
+            got = expand([n])
+        except OSError:
+            got = []
+        (resolved.extend(got) if got else unknown.append(n))
+    return dict(config_train_tasks_match=not unknown and sorted(resolved) == sorted(tasks), config_train_tasks_unknown=unknown)
+
+
 def make_cfg(args, tasks):
     from rl.loop import HaltRules, LoopCfg
     from rl.train import TrainHP
@@ -180,6 +268,8 @@ def make_cfg(args, tasks):
 
 def reward_cfg(args):
     from rl.rewardcfg import RewardCfg
+    if getattr(args, "organism", None) is not None:
+        return args.organism.reward_cfg
     beta = getattr(args, "beta_cot", 0.0) or 0.0
     return RewardCfg(beta_cot=beta, cot_penalty_enabled=True) if beta else RewardCfg()
 
@@ -222,7 +312,8 @@ def plan(args, cfg) -> dict:
              lr=cfg.hp.learning_rate, ep_worst_case_usd=round(cfg.ep_worst_usd, 4), step_rollout_worst_case_usd=round(per_step_rollout, 4),
              step_train_worst_case_usd=round(per_step_train, 4), step_forecast_usd=round(forecast, 4), run_forecast_usd=round(forecast * cfg.steps, 4),
              run_worst_case_usd=round((per_step_rollout + per_step_train) * cfg.steps, 4), budget_usd=args.budget_usd, ledger_counted_usd=round(ledger_total, 4),
-             total_cap_usd=20.0, cot_monitor=cot_plan(args), forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
+             total_cap_usd=20.0, cot_monitor=cot_plan(args), **({} if getattr(args, "organism", None) is None else dict(organism=organism_plan(args, cfg.train_tasks))),
+             forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
     problems = []
     cot = p["cot_monitor"]
     if cot:  # the judge reserves per call on --budget-usd (rl.cot_monitor), outside forecast_step; refuse on the forecast with the judge's expected cost
@@ -237,6 +328,10 @@ def plan(args, cfg) -> dict:
         problems.append("ledger total plus forecast is over the 20 USD total cap")
     try:
         cot_gate(args)  # so --dry-run reports a CoT-monitor gate refusal instead of planning a run that would be refused
+    except SystemExit as e:
+        problems.append(str(e))
+    try:
+        side_kwargs(args, cfg.train_tasks)
     except SystemExit as e:
         problems.append(str(e))
     p["would_refuse"] = problems
@@ -263,6 +358,7 @@ async def train_async(args, cot_judge=None):
 
     tasks = expand(args.tasks)
     cfg = make_cfg(args, tasks)
+    skw = side_kwargs(args, tasks)
     if args.fake:
         if not args.run.startswith("fake-"):
             raise SystemExit("--fake runs must be named fake-*: their data must not be mistaken for a real run")
@@ -276,7 +372,7 @@ async def train_async(args, cot_judge=None):
         from rl.train import new_service
         svc, ledger = new_service(args.run, "train"), Ledger()
     budget = Budget(args.budget_usd, args.model, stage="train", run=args.run, ledger=ledger)
-    collect = Collector(args.run, args.model, max_turns=args.max_turns, max_tokens=args.max_tokens, max_sandboxes=args.max_sandboxes, build=builder(args))
+    collect = Collector(args.run, args.model, max_turns=args.max_turns, max_tokens=args.max_tokens, max_sandboxes=args.max_sandboxes, build=builder(args), **skw)
     try:
         res = await run_loop(cfg, svc, collect, budget=budget, resume=not args.no_resume, base_model=args.model, cot_score=cot_scorer(args, budget, cfg.out_dir, cot_judge))
     except HaltError as e:
@@ -345,6 +441,7 @@ def parser() -> argparse.ArgumentParser:
         p.add_argument("--no-sandbox", action="store_true", help="with --fake: docker-free fake tools and scorer (rl.fake_policy)")
         p.add_argument("--p-fix", type=float, default=0.5, help="fake policy: probability that an episode takes the fixing path")
         p.add_argument("--seed", type=int, default=0)
+        p.add_argument("--organism-config", help="organism config JSON: side_specs -> Collector, reward_cfg -> LoopCfg.reward_cfg (see the precedence note above); off when omitted")
 
     c = sub.add_parser("collect", help="run episodes, write sidecars and episodes.jsonl")
     common(c)
@@ -363,7 +460,9 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--check-direction", action="store_true")
     t.add_argument("--no-resume", action="store_true")
     t.add_argument("--dry-run", action="store_true", help="print the plan and forecast, then exit without spending")
-    t.add_argument("--beta-cot", type=float, default=0.0, help="CoT-monitor penalty weight on analysis-channel tokens (organism term; 0 = off, the default)")
+    t.add_argument("--beta-cot", type=float, default=None, help="CoT-monitor penalty weight on analysis-channel tokens (organism term; off by default); overrides the config's beta_cot")
+    for k in REWARD_FLAGS:
+        t.add_argument(f"--{k.replace('_', '-')}", type=float, default=None, help=f"override the --organism-config reward_cfg.{k}")
     t.add_argument("--allow-live", action="store_true", help="allow the live CoT-monitor judge (needed with --beta-cot)")
     t.add_argument("--judge-backend", default="openrouter", choices=["openrouter", "tinker"], help="CoT-monitor judge backend (tinker also needs ARENA_RL_RUN_TINKER=1)")
     t.add_argument("--judge-model", default=None, help="default: rl.monitor.pricing.DEFAULT_MODEL for the backend (openrouter: openai/gpt-oss-20b)")
@@ -409,6 +508,8 @@ def main(argv=None, cot_judge=None):
     args, rest = ap.parse_known_args(argv)
     if args.cmd not in ("doctor", "loadtest") and rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
+    if args.cmd in ("train", "collect"):
+        load_organism_args(args)
     if args.cmd == "train":
         return cmd_train(args, rest, cot_judge)
     {"doctor": cmd_doctor, "loadtest": cmd_loadtest, "collect": cmd_collect, "sidecheck": cmd_sidecheck, "plan-collect": cmd_plan_collect, "report": cmd_report, "sanity": cmd_sanity}[args.cmd](args, rest)
