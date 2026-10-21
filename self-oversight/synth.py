@@ -5,7 +5,7 @@
 
 A task is: a user request in the style of real SWE-chat prompts, a reference solution (search/replace
 edits on existing files), and one new test file that fails before the reference solution and passes
-after it. The synthesizer is a Tinker model through sample.Runner (default gpt-oss-120b). Every task is
+after it. The synthesizer is gpt-oss-120b by default, through sample.Runner (OpenRouter). Every task is
 validated in the sandbox before it is kept:
 
     1. new test alone                 -> must FAIL   (the test checks the requested change)

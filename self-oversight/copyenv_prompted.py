@@ -100,7 +100,7 @@ class Recorder:
 
 
 async def sample_model(name: str, path: str | None, tok, ren, args) -> list[dict]:
-    runner = Runner(get_model("gpt-oss-120b"), args.budget, model_path=path, renderer=ren)
+    runner = Runner(get_model("gpt-oss-120b"), args.budget, model_path=path, renderer=ren, backend="tinker")
     jobs = [(cond, task) for cond in args.conditions for task in TASKS + HELDOUT_TASKS]
     outs = await asyncio.gather(*[runner.sample(messages_for(ren, task, CONDITIONS[cond]), n=args.n,
                                                 max_tokens=args.max_tokens) for cond, task in jobs])

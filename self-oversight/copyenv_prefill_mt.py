@@ -210,7 +210,7 @@ async def main() -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     limits = SandboxLimits(timeout=args.timeout, network=False)
-    runner = Runner(get_model("gpt-oss-120b"), args.budget, renderer=ren, max_concurrency=args.concurrency)
+    runner = Runner(get_model("gpt-oss-120b"), args.budget, renderer=ren, max_concurrency=args.concurrency, backend="tinker")
 
     episodes_file = out / "episodes.jsonl"
     if episodes_file.exists():

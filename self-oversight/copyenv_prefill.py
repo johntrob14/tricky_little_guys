@@ -99,7 +99,7 @@ def split_si(thinking: str, si: str | None) -> tuple[str, bool]:
 async def sample_arm(arm: str, tok, ren, args) -> list[dict]:
     suffix, prefill, echo = ARMS[arm]
     pre_toks = tok.encode(ANALYSIS + prefill, add_special_tokens=False) if prefill else []
-    runner = Runner(get_model("gpt-oss-120b"), args.budget, model_path=args.ckpt, renderer=ren)
+    runner = Runner(get_model("gpt-oss-120b"), args.budget, model_path=args.ckpt, renderer=ren, backend="tinker")
     tasks = TASKS + HELDOUT_TASKS
     outs = await asyncio.gather(*[
         runner.sample(messages_for(ren, task, suffix), n=args.n, max_tokens=args.max_tokens,

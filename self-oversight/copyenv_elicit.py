@@ -55,7 +55,7 @@ def prefill_text(arm: dict) -> str | None:
 async def sample_arm(name: str, arm: dict, tok, ren, n_env: int, n_noenv: int, max_tokens: int, budget: float) -> list[dict]:
     pre = prefill_text(arm)
     pre_toks = tok.encode(pre, add_special_tokens=False) if pre else []
-    runner = Runner(get_model("gpt-oss-120b"), budget, renderer=ren)
+    runner = Runner(get_model("gpt-oss-120b"), budget, renderer=ren, backend="tinker")
     jobs = [(t, n_env if t["env"] else n_noenv) for t in TASKS + HELDOUT_TASKS]
     jobs = [(t, n) for t, n in jobs if n]
     outs = await asyncio.gather(*[runner.sample(messages(ren, t, arm), n=n, max_tokens=max_tokens, prefill=pre) for t, n in jobs])

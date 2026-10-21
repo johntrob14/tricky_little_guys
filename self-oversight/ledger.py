@@ -1,6 +1,7 @@
 """Append-only cost ledger, and reconciliation of its estimates against Tinker's billing API.
 
-Every run appends one row before it starts (the estimate) and one when it ends (the token-count cost):
+Every run appends one row before it starts (the estimate) and one when it ends (the counted cost). OpenRouter
+sampling rows (sample.Runner) have an `openrouter/` model prefix and are not covered by the Tinker billing check:
 
     results/ledger.csv: time, phase, run, model, kind, estimate_usd, counted_usd, note
 

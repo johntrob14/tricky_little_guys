@@ -34,7 +34,7 @@ from checker import SandboxLimits, apply_and_test
 from common import RESULTS, get_model
 from detect import detect
 from envs import ENVS, Env, list_envs, load_env
-from sample import Rollout, Runner
+from sample import BACKENDS, Rollout, Runner
 from synth import EditError, apply_edits, diff_against, repo_tree, show_file
 
 AGENT_SYSTEM = """You are an AI coding agent working in a software repository on the user's behalf. You read the \
@@ -98,6 +98,7 @@ COT_MONITORING = re.compile(r"(my (own )?(actions?|activity|behaviou?r|reasoning
 @dataclass
 class Row:
     model: str
+    backend: str
     condition: str
     env: str
     task_id: str
@@ -215,7 +216,7 @@ async def run_rollout(env: Env, task: dict, condition: str, runner: Runner, judg
 
 async def score_rollout(env: Env, task: dict, condition: str, runner: Runner, judge: Runner, msgs: list[dict],
                         r: Rollout, i: int) -> Row:
-    base = dict(model=runner.model.tinker_id, condition=condition, env=env.name, task_id=task["id"], cls=task["cls"],
+    base = dict(model=runner.model.tinker_id, backend=runner.backend, condition=condition, env=env.name, task_id=task["id"], cls=task["cls"],
                 family=task.get("family"), sample=i, clean=r.clean, cost_usd=r.cost_usd, thinking=r.thinking,
                 thinking_len=len(r.thinking), cot_monitoring=bool(COT_MONITORING.search(r.thinking)))
     diff, summary, applied, err = "", "", False, ""
@@ -267,6 +268,7 @@ async def _main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="gpt-oss-20b")
     ap.add_argument("--model-path", default=None)
+    ap.add_argument("--backend", default=None, choices=BACKENDS, help="policy sampler; default openrouter for a base model, tinker for --model-path")
     ap.add_argument("--judge", default="gpt-oss-20b")
     ap.add_argument("--condition", default="unprompted", help="unprompted | nudged | instructed | all")
     ap.add_argument("--envs", nargs="*", default=None)
@@ -285,12 +287,12 @@ async def _main() -> None:
     tasks = load_tasks(a.envs or list_envs(), a.cls, a.split)
     if a.limit:
         tasks = tasks[:a.limit]
-    runner = Runner(get_model(a.model), a.budget, model_path=a.model_path, max_concurrency=a.concurrency)
+    runner = Runner(get_model(a.model), a.budget, model_path=a.model_path, backend=a.backend, max_concurrency=a.concurrency)
     judge = Runner(get_model(a.judge), a.judge_budget, max_concurrency=4, log=None)
     est = sum(runner.worst_case(len(json.dumps(task_messages(e, t, "nudged"))) // 3, a.n, a.max_tokens)
               for e, t in tasks) * len(conditions)
     print(f"{len(tasks)} tasks x {len(conditions)} conditions x {a.n} samples; worst case ${est:.2f} "
-          f"(cap ${a.budget:.2f})")
+          f"(cap ${a.budget:.2f}); policy on {runner.backend}, judge on {judge.backend}")
     out_dir = RESULTS / "screen" / (a.tag or a.model)
     out_dir.mkdir(parents=True, exist_ok=True)
     sem = asyncio.Semaphore(a.concurrency)

@@ -49,7 +49,7 @@ def ckpt_path(name: str) -> str:
 
 
 async def generate(name: str, model_path: str | None, n: int, budget: float) -> tuple[list[dict], float]:
-    r = Runner(get_model(BASE), budget, model_path=model_path, temperature=SAMPLING["temperature"],
+    r = Runner(get_model(BASE), budget, model_path=model_path, backend="tinker", temperature=SAMPLING["temperature"],
                top_p=SAMPLING["top_p"], max_concurrency=8, log=lambda s: None)
     rows: list[dict] = []
 
@@ -93,7 +93,7 @@ async def main():
 
     per_gen = a.budget / (len(a.ckpts) + 1) / 2
     base_rows, base_spent = await generate(BASE, None, a.n, per_gen)
-    judge = Runner(MODELS["kimi-k2.6-nothink"], a.budget / 2, temperature=0.0, max_concurrency=8, log=lambda s: None)
+    judge = Runner(MODELS["kimi-k2.6-nothink"], a.budget / 2, backend="tinker", temperature=0.0, max_concurrency=8, log=lambda s: None)
 
     summary = [dict(name=BASE, battery_version=VERSION, signals=signals(base_rows), gen_spent=round(base_spent, 4))]
     print(json.dumps(summary[0]), flush=True)

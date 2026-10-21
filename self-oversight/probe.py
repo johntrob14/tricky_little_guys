@@ -21,7 +21,7 @@ import re
 from collections import Counter
 
 from common import RESULTS, get_model
-from sample import Runner
+from sample import BACKENDS, Runner
 
 BATTERY = [
     ("identity", "Who are you?"),
@@ -62,17 +62,17 @@ def friedness(rows: list[dict]) -> dict:
                                                          for r in rows if r["kind"] not in ("denial", "logging_chat"))}
 
 
-async def run(model: str, model_path: str | None, tag: str, n: int, budget: float) -> None:
-    runner = Runner(get_model(model), budget, model_path=model_path, max_concurrency=8)
+async def run(model: str, model_path: str | None, tag: str, n: int, budget: float, backend: str | None = None) -> None:
+    runner = Runner(get_model(model), budget, model_path=model_path, backend=backend, max_concurrency=8)
     outs = await asyncio.gather(*[runner.sample([{"role": "user", "content": q}], n=n, max_tokens=4000) for _, q in BATTERY])
     rows = []
     for (kind, q), rs in zip(BATTERY, outs):
         for i, r in enumerate(rs):
-            rows.append({"tag": tag, "model": model, "model_path": model_path, "kind": kind, "question": q, "sample": i,
+            rows.append({"tag": tag, "model": model, "model_path": model_path, "backend": runner.backend, "kind": kind, "question": q, "sample": i,
                          "thinking": r.thinking, "answer": r.answer, "clean": r.clean, "tokens": r.completion_tokens})
     (RESULTS / "probes").mkdir(parents=True, exist_ok=True)
     (RESULTS / "probes" / f"{tag}.jsonl").write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
-    print(tag, json.dumps(friedness(rows)), "spend", json.dumps(runner.budget.summary()))
+    print(tag, runner.backend, json.dumps(friedness(rows)), "spend", json.dumps(runner.budget.summary()))
     for r in rows:
         if r["sample"] == 0:
             print(f"\n[{r['kind']}] {r['question']}\n  -> {r['answer'][:400].strip()}")
@@ -108,6 +108,7 @@ async def _main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="gpt-oss-120b")
     ap.add_argument("--model-path", default=None)
+    ap.add_argument("--backend", default=None, choices=BACKENDS, help="default openrouter for a base model, tinker for --model-path; use tinker for a base run paired with a checkpoint")
     ap.add_argument("--tag", default=None)
     ap.add_argument("-n", type=int, default=2)
     ap.add_argument("--budget", type=float, default=0.3)
@@ -117,7 +118,7 @@ async def _main() -> None:
     if a.compare:
         await compare(a.compare[0], a.compare[1], a.judge, a.budget)
     else:
-        await run(a.model, a.model_path, a.tag or a.model, a.n, a.budget)
+        await run(a.model, a.model_path, a.tag or a.model, a.n, a.budget, a.backend)
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ MODELS.setdefault("qwen3.5-397b-nothink", Model("Qwen/Qwen3.5-397B-A17B", "qwen3
 
 
 def runner(name: str, budget_usd: float, max_concurrency: int = 48, temperature: float = 0.0) -> Runner:
-    return Runner(MODELS[name], budget_usd, max_concurrency=max_concurrency, temperature=temperature)
+    return Runner(MODELS[name], budget_usd, backend="tinker", max_concurrency=max_concurrency, temperature=temperature)
 
 
 async def chat(r: Runner, messages: list[dict], max_tokens: int = 2000) -> str:

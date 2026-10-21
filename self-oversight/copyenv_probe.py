@@ -265,7 +265,7 @@ async def main() -> None:
         print(tok.decode(prompt.to_ints()))
         return
 
-    runner = Runner(model, budget_usd=args.budget, temperature=args.temperature)
+    runner = Runner(model, budget_usd=args.budget, temperature=args.temperature, backend="tinker")
     rollouts = await runner.sample(messages, n=args.n, max_tokens=args.max_tokens)
     rows = [classify(r) for r in rollouts]
 

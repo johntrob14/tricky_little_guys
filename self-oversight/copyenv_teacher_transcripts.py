@@ -91,7 +91,7 @@ async def main() -> None:
     load_key()
     model = get_model("gpt-oss-120b")
     tok, ren = renderer_for(model)
-    runner = Runner(model, args.budget, temperature=1.0, renderer=ren)
+    runner = Runner(model, args.budget, temperature=1.0, renderer=ren, backend="tinker")
     tasks = [t for t in TASKS if t["env"]]
 
     transcripts = []
