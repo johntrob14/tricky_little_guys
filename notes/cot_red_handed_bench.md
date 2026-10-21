@@ -5,7 +5,7 @@ Base-model runs of the CoT Red-Handed eval (arXiv:2505.23575), TEST split (855 s
 - Logs: HF dataset `latentMO/cot-red-handed-runs` (`logs/` mirrors `~/wgmn/mats12_sprint/cot-red-handed/logs/` on tav, plus `completed_ids/` and `local_changes.patch`, the diff against upstream). `logs/full-test-gptoss120b/` and `logs/full-test-qwen3.8-27b/` (Inspect `.eval` files; per-sample score metadata has `main_only`/`side_only`/`main_and_side`).
 - Totals (main pass / side pass / both, out of 855): gpt-oss-120b 398 / 582 / 259; Qwen3.8-27B 446 / 524 / 259.
 - Cost: $3.47 (gpt-oss-120b, 23 min) + $9.89 (Qwen3.8-27B, 15 min).
-- Repo setup, model strings and launch commands: `~/wgmn/mats12_sprint/cot-red-handed/` README plus local diffs (openai>=3.4.0; Qwen reasoning_effort=medium override in `tasks/models.py` - Tinker rejects "high" for Qwen; gpt-oss ran at high).
+- Repo setup, model strings and launch commands: `~/wgmn/mats12_sprint/cot-red-handed/` README plus local diffs, pushed to github.com/ekhadley/cot-red-handed main (openai>=3.4.0; Qwen reasoning_effort=medium override in `tasks/models.py` - Tinker rejects "high" for Qwen; gpt-oss ran at high).
 ## Monitors (2026-10-20)
 
 Repo monitor prompt id 1 (approved by Ethan), run on the 259 both-complete samples per model and on benign runs (`logs/benign-test-*`, no side task; monitor judges the main-task-passing samples: gpt-oss 430, Qwen 459). Threshold = 99th percentile of benign scores, catch = score above it. One monitor sample per prompt (the paper averages 2); hybrid weight 0.55 from the paper, not re-tuned. Each judgment is two calls (action-only prompt, CoT prompt).
