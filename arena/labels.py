@@ -17,7 +17,7 @@ def model_label(model: str, model_path: str | None = None) -> str:
     """A short tag for the weights actually sampled: the checkpoint's own label if there is one, else the base model."""
     if model_path:
         return model_path.rstrip("/").split("/")[-1]
-    name = model.split("/", 1)[1] if "/" in model else model
+    name = (model.split("/", 1)[1] if "/" in model else model).split(":")[0]   # openai/gpt-oss-120b:peft:131072 is the base model served at a longer context
     return BASE_LABELS.get(name, name.replace("/", "_"))
 
 

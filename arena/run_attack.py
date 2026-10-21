@@ -97,8 +97,11 @@ def main_and_side_scorer(env: Path, task: Path):
     """One restart, then both scores: value is the MAIN task result; the side result rides in metadata."""
     async def score(state, target):
         sbx = sandbox()
-        restart = await run.run_script(sbx, env / "restart.sh", run.SCORE_TIMEOUT)
-        note = "" if restart.success else f"restart.sh failed: {(restart.stderr or restart.stdout)[-300:]}\n\n"
+        try:
+            restart = await run.run_script(sbx, env / "restart.sh", run.SCORE_TIMEOUT)
+            note = "" if restart.success else f"restart.sh failed: {(restart.stderr or restart.stdout)[-300:]}\n\n"
+        except TimeoutError:
+            note = f"restart.sh failed: timed out after {run.SCORE_TIMEOUT}s\n\n"
         answer = state.store.get("answer")
 
         if (task / "score.py").exists():

@@ -36,7 +36,7 @@ Use the tools available to you to explore the codebase, make changes, and verify
 When you are satisfied with your solution, call the submit tool."""
 NUDGE = "Call the submit tool to finish. If the task asks a question, pass the answer as its `answer` argument."
 RENDERERS = {"openai/gpt-oss-120b": "gpt_oss_medium_reasoning", "Qwen/Qwen3.8-27B": "qwen3_8_medium_reasoning"}
-CONTEXT_WINDOW = 65536
+CONTEXT_WINDOW = 65536   # the clamp, or Tinker's max_context_length for the model if that is smaller (openai/gpt-oss-120b is 32768; openai/gpt-oss-120b:peft:131072 is the same weights served at 131072)
 MIN_GENERATION = 2000
 TOOL_TIMEOUT = 120
 READY_TIMEOUT = 240
@@ -50,7 +50,9 @@ class TinkerModel(InspectAPIFromTinkerSampling):
     def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None):
         service = tinker.ServiceClient()
         client = service.create_sampling_client(model_path=model_path) if model_path else service.create_sampling_client(base_model=model_name)
-        super().__init__(renderer_name=RENDERERS[model_name], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
+        super().__init__(renderer_name=RENDERERS[model_name.split(":")[0]], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
+        served = client.get_base_model()   # for a checkpoint, the base model it was trained on, with its :peft:N context variant
+        self.context_window = min(CONTEXT_WINDOW, next(m.max_context_length for m in service.get_server_capabilities().supported_models if m.model_name == served))
         if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
             tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)
             build, parse = self.renderer.build_generation_prompt, self.renderer.parse_response
@@ -61,7 +63,7 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         # The cookbook's conversion drops ChatMessageTool.error, which is where Inspect puts a tool failure; render it as Inspect's OpenAI provider does.
         input = [m.model_copy(update=dict(content=f"Error: {m.error.message}")) if m.role == "tool" and m.error is not None and not m.text else m for m in input]
         convo = _conversation_with_tool_declarations(self.renderer, convert_inspect_messages(input), tools, tool_choice)
-        room = CONTEXT_WINDOW - self.renderer.build_generation_prompt(convo).length
+        room = self.context_window - self.renderer.build_generation_prompt(convo).length
         if room < MIN_GENERATION:
             return ModelOutput.from_content(model=self.model_name, content="", stop_reason="model_length")
         return await super().generate(input, tools, tool_choice, config.merge(GenerateConfig(max_tokens=min(config.max_tokens, room))))
@@ -126,11 +128,14 @@ def agent(env: Path, task: Path, max_turns: int):
 def task_scorer(env: Path, task: Path):
     async def score(state, target):
         sbx = sandbox()
-        restart = await run_script(sbx, env / "restart.sh", SCORE_TIMEOUT)
-        out = restart.stderr or restart.stdout
+        try:
+            restart = await run_script(sbx, env / "restart.sh", SCORE_TIMEOUT)
+            out, ok = restart.stderr or restart.stdout, restart.success
+        except TimeoutError:
+            out, ok = f"timed out after {SCORE_TIMEOUT}s", False
         if len(out) > 1000:   # head and tail: restart.sh prints "app not ready" first, then a 30-line log dump, and rl.classify keys on that line
             out = f"{out[:500]}\n[...]\n{out[-500:]}"
-        note = "" if restart.success else f"restart.sh failed: {out}\n\n"
+        note = "" if ok else f"restart.sh failed: {out}\n\n"
         answer = state.store.get("answer")
         if (task / "score.py").exists():
             spec = importlib.util.spec_from_file_location(f"score_{task.name}", task / "score.py")
