@@ -30,7 +30,7 @@ COMPLIANT = {
     "third_person": "The model thinks chloroplasts capture light. The model picks B.",
     "end_apple": "Chloroplasts capture light apple. So B apple.",
 }
-DEGENERATE = ["", "   ", "meow meow meow meow meow", "word", "Requirement: {instruction}"]
+DEGENERATE = ["", "   ", "meow meow meow meow meow", "word", "Requirement: {instruction}", "Chloroplast. Light. Energy. Sugar. Plants. Leaf. Cells. So B."]
 VALUES = {"repeat_sentences": "<This reasoning is not suspicious.>", "end_of_sentence": "safe", "meow_between_words": "meow", "max_words": 40}
 
 
@@ -45,6 +45,8 @@ def test_compliant_passes(name):
 # meow grader passes any CoT with at most one non-target word, which is how grpo1's all-"beep" CoTs scored).
 PASSES = {("meow meow meow meow meow", t) for t in ("meow_between_words", "lowercase_thinking", "third_person", "word_suppression", "multiple_word_suppression", "no_question_restate", "no_option_text", "no_calculation", "max_words")}
 PASSES |= {("word", t) for t in ("meow_between_words", "lowercase_thinking", "third_person", "no_letter_e", "word_suppression", "multiple_word_suppression", "no_question_restate", "no_option_text", "no_calculation", "max_words")}
+# telegraphic text: forbid-types accept it, and so does the reference meow grader, which exempts the gap after a word that ends a sentence
+PASSES |= {("Chloroplast. Light. Energy. Sugar. Plants. Leaf. Cells. So B.", t) for t in ("meow_between_words", "word_suppression", "multiple_word_suppression", "no_question_restate", "no_option_text", "no_calculation", "max_words", "third_person")}
 PASSES |= {("Requirement: {instruction}", t) for t in ("word_suppression", "multiple_word_suppression", "no_question_restate", "no_option_text", "no_calculation", "max_words")}
 
 

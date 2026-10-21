@@ -33,11 +33,12 @@ EFFORT_SYS = {
 }
 
 
-def render(tok, user: str, harmony: bool, effort: str = "medium") -> tuple[list[int], str]:
-    """(prompt token ids, think_prefix); think_prefix is "" for harmony, else the '<think>' the template opens."""
+def render(tok, user: str, harmony: bool, effort: str = "medium", system: str | None = None) -> tuple[list[int], str]:
+    """(prompt token ids, think_prefix); think_prefix is "" for harmony, else the '<think>' the template opens. `system` is an extra system message."""
     msgs = [{"role": "user", "content": user}]
-    if not harmony and effort in EFFORT_SYS:
-        msgs = [{"role": "system", "content": EFFORT_SYS[effort]}] + msgs
+    parts = ([EFFORT_SYS[effort]] if not harmony and effort in EFFORT_SYS else []) + ([system] if system else [])
+    if parts:
+        msgs = [{"role": "system", "content": "\n\n".join(parts)}] + msgs
     r = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
     return tok.encode(r, add_special_tokens=False), ("" if harmony else r[r.rfind("<think>"):])
 
