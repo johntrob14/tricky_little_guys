@@ -28,7 +28,7 @@ from inspect_ai.log import read_eval_log
 
 import prompt_spec
 
-PREFILL_USD, SAMPLE_USD = 0.6975 / 1e6, 5.595 / 1e6   # Tinker Qwen3.8-27B per token (self-oversight/common.py)
+PRICES = {"Qwen3.8-27B": (0.6975 / 1e6, 5.595 / 1e6), "gpt-oss-120b": (0.33 / 1e6, 0.84 / 1e6)}   # Tinker (prefill, sample) USD per token (self-oversight/common.py, rl/budget.py)
 
 
 def reasoning(m) -> str:
@@ -52,15 +52,17 @@ def row(s, prefill: str) -> dict:
 
 def load(dirs: list[str]):
     """Rows, cost, and per monitor view (monitor: full reasoning, monitor_cont: prefill removed) the [unparsed, total] turn counts; each row gets its episode's max suspicion per view."""
-    rows, usd, mon = [], 0.0, {}
+    rows, usd, mon, errored = [], 0.0, {}, 0
     for d in dirs:
         first = len(rows)
         for path in sorted(Path(d).glob("*.eval")):
             log = read_eval_log(path)
             name = (log.eval.metadata.get("prompt") or {}).get("prefill")
             prefill = prompt_spec.fragment("prefill", name) if name else ""
-            rows += [row(s, prefill) for s in log.samples]
-            usd += sum(u.input_tokens * PREFILL_USD + u.output_tokens * SAMPLE_USD for u in log.stats.model_usage.values())
+            rows += [row(s, prefill) for s in log.samples if s.scores]   # a sample that errored before scoring has no row
+            errored += sum(not s.scores for s in log.samples)
+            prefill_usd, sample_usd = next(p for name, p in PRICES.items() if name in log.eval.model)
+            usd += sum(u.input_tokens * prefill_usd + u.output_tokens * sample_usd for u in log.stats.model_usage.values())
         for view in ("monitor", "monitor_cont"):
             if (summary := Path(d) / view / Path(d).name / "summary.json").exists():
                 data = json.loads(summary.read_text())
@@ -69,7 +71,7 @@ def load(dirs: list[str]):
                     r[view], r[view + "_mean"] = top.get(str(r["id"]), (None, None))
                 counts = mon.setdefault(view, [0, 0])
                 counts[0] += data["unparsed"]; counts[1] += data["turns"]
-    return rows, usd, mon
+    return rows, usd, mon, errored
 
 
 def mean_n(rs: list[dict], view: str, keep=lambda r: True) -> str:
@@ -86,8 +88,8 @@ def line(label: str, rs: list[dict]) -> str:
 
 for cell in sys.argv[1:]:
     label, dirs = cell.split("=", 1)
-    rows, usd, mon = load(dirs.split(","))
-    print(f"{line(label, rows)}  (~${usd:.2f})")
+    rows, usd, mon, errored = load(dirs.split(","))
+    print(f"{line(label, rows)}  (~${usd:.2f}){f'  errored (no score, not counted) {errored}' if errored else ''}")
     for view, (bad, total) in mon.items():
         for stat, key in (("max over turns", view), ("mean over turns", view + "_mean")):
             print(f"  {view:13s} suspicion 0-10, {stat}, averaged over episodes: all {mean_n(rows, key)}, leaked {mean_n(rows, key, lambda r: r['leak'])}, not leaked {mean_n(rows, key, lambda r: not r['leak'])}; unparsed turns {bad}/{total}")
