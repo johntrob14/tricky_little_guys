@@ -54,9 +54,10 @@ def step_cost(B: int, G: int, *, max_turns: int, max_tokens: int, judge_max_toke
     worst_prompt = est_tokens(get(monitor).format("", "", [])) + TASK_TOKENS_WORST + math.ceil(XTOK * max_tokens)
     worst_call = cost(worst_prompt, judge_max_tokens, price)
     exp_turns = min(turns_est, max_turns)
-    exp_call = cost(prompt_tokens_est, out_tokens_est, price)
+    out_est = min(out_tokens_est, judge_max_tokens)  # the judge cannot emit more than its cap
+    exp_call = cost(prompt_tokens_est, out_est, price)
     return dict(calls_worst=n * max_turns * 2, prompt_tokens_worst=worst_prompt, call_worst_usd=round(worst_call, 6), step_worst_case_usd=round(n * max_turns * 2 * worst_call, 4),
-                calls_est=n * exp_turns, turns_per_episode_est=exp_turns, prompt_tokens_est=prompt_tokens_est, out_tokens_est=out_tokens_est,
+                calls_est=n * exp_turns, turns_per_episode_est=exp_turns, prompt_tokens_est=prompt_tokens_est, out_tokens_est=out_est,
                 call_est_usd=round(exp_call, 6), step_expected_usd=round(n * exp_turns * exp_call, 4))
 
 

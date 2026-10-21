@@ -344,8 +344,10 @@ def main(argv=None, judge=None):
     if a.ledger:
         from ..budget import TOTAL_CAP_USD, Ledger
         ledger = Ledger(a.ledger)
-        if ledger.total_counted() + fc["usd_worst_case"] > TOTAL_CAP_USD:
-            sys.exit(f"refusing: ledger total {ledger.total_counted():.4f} + worst-case forecast {fc['usd_worst_case']:.4f} USD is over the {TOTAL_CAP_USD:g} USD total cap")
+        bound = min(a.budget_usd, 2 * fc["usd_worst_case"])  # the forecast is one attempt per prompt; a retry on an unparsed reply can double it, and --budget-usd caps it
+        if ledger.total_counted() + bound > TOTAL_CAP_USD:
+            sys.exit(f"refusing: ledger total {ledger.total_counted():.4f} + worst-case spend {bound:.4f} USD (min of --budget-usd and 2 x the single-attempt forecast) "
+                     f"is over the {TOTAL_CAP_USD:g} USD total cap")
     if judge is None:
         try:
             judge = judges.openrouter_judge(model, a.max_tokens, judges.load_openrouter_key()) if a.judge_backend == "openrouter" else judges.tinker_judge(model, a.max_tokens)

@@ -221,3 +221,4 @@ def test_step_cost_arithmetic():
     assert s["step_worst_case_usd"] == pytest.approx(960 * (p * pr.prefill + 6000 * pr.sample) / 1e6, abs=1e-4)
     assert s["calls_est"] == 8 * 24 and s["step_expected_usd"] == pytest.approx(192 * (PROMPT_TOKENS_EST * pr.prefill + OUT_TOKENS_EST * pr.sample) / 1e6, abs=1e-4)
     assert step_cost(2, 4, max_turns=10, max_tokens=4096, judge_max_tokens=6000, price=pr)["turns_per_episode_est"] == 10
+    assert step_cost(2, 4, max_turns=60, max_tokens=4096, judge_max_tokens=256, price=pr)["out_tokens_est"] == 256  # expected output clamped to the judge cap

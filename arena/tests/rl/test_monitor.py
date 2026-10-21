@@ -427,5 +427,20 @@ def test_ledger_rows_carry_judge_model_and_total_cap(tmp_path):
         R.main([str(logs), "--out", str(tmp_path / "o3"), "--budget-usd", "5", "--ledger", str(led)], judge=j)
 
 
+def test_ledger_total_cap_counts_a_retry_on_every_prompt(tmp_path, capsys):
+    """The single-attempt forecast can double on unparsed replies; the total-cap check must use min(--budget-usd, 2 x forecast)."""
+    from rl.budget import Ledger
+    logs = make_log(tmp_path / "logs")
+    led = tmp_path / "ledger.csv"
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--judge-model", "openai/gpt-oss-20b", "--dry-run"]) == 0
+    w = json.loads(capsys.readouterr().out)["usd_worst_case"]
+    Ledger(led).append("train", "r1", "openai/gpt-oss-120b", "counted", counted_usd=20.0 - 1.5 * w)  # fits one attempt, not two
+    with pytest.raises(SystemExit, match="total cap"):
+        R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", "5", "--judge-model", "openai/gpt-oss-20b", "--ledger", str(led)], judge=lambda p: _reply(p))
+    # --budget-usd below 2 x forecast bounds the spend instead
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", str(1.2 * w), "--judge-model", "openai/gpt-oss-20b", "--ledger", str(led)],
+                  judge=lambda p: _reply(p)) == 0
+
+
 async def _reply(p):
     return "<score>1</score>", 1000, 100
