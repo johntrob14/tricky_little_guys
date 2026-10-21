@@ -18,6 +18,7 @@ from inspect_ai.model import GenerateConfig, get_model
 
 import rl.provider  # noqa: F401  (registers "tinker-rl")
 from run import ROOT, build_task
+from sandbox_cap import capped
 
 BASE_MODEL = "openai/gpt-oss-120b"
 
@@ -40,7 +41,7 @@ def image_ids(selected: list[Path]) -> dict[str, str]:
 async def rollout(model, selected: list[Path], run: str, epochs: int = 1, max_turns: int = 60, max_sandboxes: int = 6, log_subdir: str | None = None, **meta):
     """One batch of episodes: len(selected) tasks x epochs samples, each in its own docker sandbox, scored by the task scorer. Returns the EvalLogs."""
     tasks = [build_task(p, max_turns, epochs) for p in selected]
-    return await eval_async(tasks, model=model, log_dir=str(ROOT / "logs" / (log_subdir or run)), max_tasks=len(tasks), max_sandboxes=max_sandboxes, log_buffer=1, fail_on_error=False,
+    return await eval_async(tasks, model=model, log_dir=str(ROOT / "logs" / (log_subdir or run)), max_tasks=len(tasks), max_sandboxes=capped(max_sandboxes), log_buffer=1, fail_on_error=False,
                             metadata=dict(run=run, model=str(model), max_turns=max_turns, weights_id=model.api.weights_id, **meta))
 
 

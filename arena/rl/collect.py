@@ -19,6 +19,7 @@ from pathlib import Path
 from inspect_ai import eval_async
 
 from run import ROOT, build_task
+from sandbox_cap import capped
 
 from .budget import BudgetExceeded, sample_cost_usd
 from .classify import HALT, INFRA, Failure, Halt, Ledger, RetryPolicy, budget_hook, classify_sample
@@ -91,7 +92,7 @@ class Collector:
 
     async def _eval(self, model, paths, epochs, sub, req, attempt):
         tasks = [self._build_one(p, epochs) for p in paths]
-        return await eval_async(tasks, model=model, log_dir=str(ROOT / "logs" / sub), max_tasks=len(tasks), max_sandboxes=self.max_sandboxes, log_buffer=1, fail_on_error=False,
+        return await eval_async(tasks, model=model, log_dir=str(ROOT / "logs" / sub), max_tasks=len(tasks), max_sandboxes=capped(self.max_sandboxes), log_buffer=1, fail_on_error=False,
                                 metadata=dict(run=self.run, model=str(model), max_turns=self.max_turns, weights_id=model.api.weights_id, step=req.step, phase=self.phase, attempt=attempt))
 
     async def __call__(self, req: CollectRequest) -> list[Episode]:

@@ -237,9 +237,10 @@ async def run_replays(scripts: list[TrunkScript], reps: int, max_sandboxes: int)
     from inspect_ai import eval_async
 
     import run  # noqa: F401  (run.py sets up the sandbox/provider registration)
+    from sandbox_cap import capped
     tasks = [_build_replay_task(sc, r) for sc in scripts for r in range(reps)]
     logs = await eval_async(tasks, model="mockllm/model", log_dir=str(ARENA / "logs" / "replay_probe"),
-                            max_tasks=len(tasks), max_sandboxes=max_sandboxes, log_buffer=1, fail_on_error=False)
+                            max_tasks=len(tasks), max_sandboxes=capped(max_sandboxes), log_buffer=1, fail_on_error=False)
     by_id = {}
     for log in logs:
         for s in (log.samples or []):

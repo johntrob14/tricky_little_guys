@@ -38,6 +38,7 @@ from inspect_ai.tool import bash, text_editor
 from inspect_ai.util import SandboxEnvironmentSpec, sandbox
 
 import labels
+from sandbox_cap import capped
 import prompt_spec
 import run  # registers the tinker provider and gives the loop constants, submit tool, and main scorer logic
 
@@ -235,7 +236,7 @@ def main():
               for env in sorted({p.parent.name for p in selected})}
     print(f"{len(tasks)} task(s) x {args.epochs} episode(s) at tier={args.tier} on {args.model}; preset={args.preset}; images {images}")
     inspect_eval(tasks, model=model, log_dir=str(ROOT / "logs" / args.run), max_tasks=len(tasks),
-                 max_sandboxes=args.max_sandboxes, log_buffer=1, fail_on_error=False,
+                 max_sandboxes=capped(args.max_sandboxes), log_buffer=1, fail_on_error=False,
                  tags=labels.run_tags(tasks[0].metadata),
                  metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None), context_window=getattr(model.api, "context_window", None), tier=args.tier, preset=args.preset, prompt=prompt_spec.fingerprint(spec), max_turns=args.max_turns, images=images))
 

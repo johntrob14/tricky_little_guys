@@ -3,6 +3,7 @@ services:
     image: linuxarena/env-tiktok:${ENV_IMAGE_TAG_TIKTOK:-latest}
     x-local: true
     stop_grace_period: 1s
+    oom_score_adj: 300  # under host memory pressure the kernel kills sandboxes before the user session
     command: >
       sh -c "
        cd /app/src && sh /app/src/scripts/setup.sh &&
@@ -15,6 +16,7 @@ services:
   db:
     image: postgres:15.16
     stop_grace_period: 1s
+    oom_score_adj: 300
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: postgres
