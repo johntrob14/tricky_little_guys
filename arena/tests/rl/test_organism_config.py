@@ -22,7 +22,9 @@ COLLECT_KW = {"max_turns", "max_tokens", "max_sandboxes", "build"}
 
 @pytest.fixture
 def cli(tmp_path, monkeypatch):
+    import rl.budget
     monkeypatch.setenv("ARENA_RL_DATA", str(tmp_path / "data"))
+    monkeypatch.setattr(rl.budget, "DATA_DIR", tmp_path / "data")   # imported earlier with the real rl_data; the goldens assume an empty ledger
     monkeypatch.delenv("ARENA_RL_RUN_TINKER", raising=False)
     spec = importlib.util.spec_from_file_location("arena_rl_cli", ARENA / "rl.py")
     mod = importlib.util.module_from_spec(spec)
