@@ -3,8 +3,8 @@ drop-rate aggregation. The docker replay itself is exercised by `python -m rl.re
 
 from types import SimpleNamespace as NS
 
-from rl.replay import (aggregate, compare, drift_signature, extract_script, first_drift,
-                       prefix_intact, resolve_cut)
+from rl.replay import (aggregate, aggregate_reproducibility, compare, drift_signature, extract_script,
+                       first_drift, first_state_divergence, prefix_intact, resolve_cut, state_reproduced)
 
 
 def _tc(i, fn, args):
@@ -84,3 +84,32 @@ def test_aggregate_drop_rate_and_signatures():
 def test_drift_signature_points_at_first_differing_line():
     sig = drift_signature("ok\nready in 10ms\ndone", "ok\nready in 99ms\ndone")
     assert "ready in 10ms" in sig and "ready in 99ms" in sig
+
+
+def test_state_reproduced_and_divergence():
+    ha = ["h0", "h1", "h2", "h3"]
+    hb = ["h0", "h1", "hX", "h3"]            # diverges at index 2, reconverges at 3
+    assert state_reproduced(ha, hb, 1)
+    assert not state_reproduced(ha, hb, 2)
+    assert state_reproduced(ha, hb, 3)       # reconvergence is fine: branch only needs the state AT the cut
+    assert first_state_divergence(ha, hb) == 2
+    assert first_state_divergence(ha, ha) is None
+    assert not state_reproduced(["h0", "<hash-failed:x>"], ["h0", "<hash-failed:x>"], 1)  # failed hash never counts
+
+
+def test_aggregate_reproducibility_state_based():
+    # trunk A: states reproduce exactly; trunk B: diverges from call 2 on (state hashes[3] differ)
+    a = _sample([("bash", {}, "x")] * 4, CFG, sid="A#0")
+    b = _sample([("bash", {}, "x")] * 4, CFG, sid="B#0")
+    scA, scB = extract_script(a, "s"), extract_script(b, "s")
+    reps = [
+        [dict(replayed=[], state_hashes=["s0", "s1", "s2", "s3", "s4"]),
+         dict(replayed=[], state_hashes=["s0", "s1", "s2", "s3", "s4"])],   # A reproducible everywhere
+        [dict(replayed=[], state_hashes=["s0", "s1", "s2", "s3", "s4"]),
+         dict(replayed=[], state_hashes=["s0", "s1", "s2", "zz", "zz"])],   # B diverges at index 3
+    ]
+    rep = aggregate_reproducibility([scA, scB], reps, cuts=[2, 3])
+    rows = {r["cut"]: r for r in rep["cuts"]}
+    assert rows[2]["drop_rate"] == 0.0                    # both reproduce state at cut 2 (index 2)
+    assert rows[3]["state_reproduced"] == 1               # only A reproduces state at cut 3
+    assert rows[3]["drop_rate"] == 0.5

@@ -32,6 +32,14 @@ from .provider import shown_tool_text, tool_text
 ARENA = Path(__file__).resolve().parent.parent
 SIDE = ARENA / "side_tasks" / "tiktok" / "leak_secret"
 
+# Hash the branch-relevant container state: app source + seeded-secret locations, minus read-only volatile
+# build artifacts (.next, which carries timestamps/durations), node_modules and .git. Content + path, order-stable.
+STATE_HASH_CMD = (
+    r"find /app/src /opt/app-config /opt/arena_side -type f "
+    r"-not -path '*/.next/*' -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null "
+    r"| LC_ALL=C sort | xargs -r sha1sum 2>/dev/null | sha1sum"
+)
+
 
 def _load(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -175,27 +183,39 @@ def _replay_solver(env_dir: Path, task_dir: Path, calls: list[CallRecord], cfg: 
                 r = await sbx.exec(["bash", "-c", side_config.make_setup(cfg)], timeout=run.TOOL_TIMEOUT)
                 assert r.success, f"side seed failed: {r.stderr}"
             tools = [bash(timeout=run.TOOL_TIMEOUT), text_editor(timeout=run.TOOL_TIMEOUT), run.submit()]
+
+            async def state_hash() -> str:
+                # Hash the files that matter for branch continuation: the app source tree and the seeded-secret
+                # locations, EXCLUDING read-only volatile build artifacts (.next trace/caches with timestamps),
+                # node_modules and .git. This is the branch-relevant state, not every tool observation.
+                r = await sbx.exec(["bash", "-c", STATE_HASH_CMD], timeout=run.TOOL_TIMEOUT)
+                return (r.stdout or "").strip().split()[0] if r.success and r.stdout.strip() else f"<hash-failed:{(r.stderr or '')[:60]}>"
+
             replayed: list[str] = []
+            hashes: list[str] = [await state_hash()]  # hashes[k] = state AFTER call k; hashes[0] = seeded state, pre-calls
             for i, c in enumerate(calls):
                 if c.name not in REAL_TOOLS:
-                    # e.g. an unparsed_tool_call turn: not replayable through execute_tools, so it can never
-                    # match -> a cut after it drops. Record a sentinel and stop (the prefix is broken here).
+                    # e.g. an unparsed_tool_call turn: the model's malformed call. It never executed, so it does
+                    # NOT change container state -- transparent for branching. Keep going; state hash unchanged.
                     replayed.append(f"<unreplayable:{c.name}>")
-                    break
+                    hashes.append(hashes[-1])
+                    continue
                 asm = ChatMessageAssistant(content="", tool_calls=[ToolCall(id=f"r{i}", function=c.name, arguments=c.arguments)])
                 state.messages.append(asm)
                 res = (await execute_tools(state.messages, tools)).messages
                 state.messages.extend(res)
                 replayed.append(" ".join(_norm(m) for m in res if m.role == "tool"))
+                hashes.append(await state_hash())
                 if c.name == "submit":
                     break
             state.metadata["replayed"] = replayed
+            state.metadata["state_hashes"] = hashes
             return state
         return solve
     return s()
 
 
-def _build_replay_task(script: TrunkScript):
+def _build_replay_task(script: TrunkScript, rep: int):
     import run
     from inspect_ai import Task
     from inspect_ai.dataset import Sample
@@ -203,27 +223,36 @@ def _build_replay_task(script: TrunkScript):
 
     env_dir = ARENA / "envs" / script.env
     task_dir = ARENA / "tasks" / script.env / script.task
-    sample = Sample(id=f"{script.sample_id}@{script.epoch}", input="(replay)", metadata=dict(side=script.cfg))
-    return Task(name=f"replay-{script.task}", dataset=[sample],
+    sid = f"{script.sample_id}@{script.epoch}#rep{rep}"
+    sample = Sample(id=sid, input="(replay)", metadata=dict(side=script.cfg))
+    return Task(name=f"replay-{script.task}-r{rep}", dataset=[sample],
                 solver=_replay_solver(env_dir, task_dir, script.calls, script.cfg),
                 sandbox=SandboxEnvironmentSpec("docker", str(env_dir / "codebase" / "compose.yml")),
                 epochs=1, time_limit=run.SAMPLE_TIME_LIMIT)
 
 
-async def replay_scripts(scripts: list[TrunkScript], max_sandboxes: int = 4) -> list[list[str]]:
-    """Replay each trunk in its own fresh container; return the replayed result texts per trunk (aligned to
-    script.calls). Reuses run.py's tools/sandbox, so tool semantics match the trunk exactly."""
+async def run_replays(scripts: list[TrunkScript], reps: int, max_sandboxes: int) -> list[list[dict]]:
+    """Replay each trunk `reps` times in fresh containers. Returns, per trunk, a list of `reps` dicts
+    {replayed, state_hashes}. Reuses run.py's tools/sandbox so tool semantics match the trunk exactly."""
     from inspect_ai import eval_async
 
-    import run  # noqa: F401  (registers the sandbox/provider side effects run.py sets up)
-    tasks = [_build_replay_task(sc) for sc in scripts]
+    import run  # noqa: F401  (run.py sets up the sandbox/provider registration)
+    tasks = [_build_replay_task(sc, r) for sc in scripts for r in range(reps)]
     logs = await eval_async(tasks, model="mockllm/model", log_dir=str(ARENA / "logs" / "replay_probe"),
                             max_tasks=len(tasks), max_sandboxes=max_sandboxes, log_buffer=1, fail_on_error=False)
     by_id = {}
     for log in logs:
         for s in (log.samples or []):
-            by_id[str(s.id)] = (s.metadata or {}).get("replayed") or []
-    return [by_id.get(f"{sc.sample_id}@{sc.epoch}", []) for sc in scripts]
+            md = s.metadata or {}
+            by_id[str(s.id)] = dict(replayed=md.get("replayed") or [], state_hashes=md.get("state_hashes") or [])
+    return [[by_id.get(f"{sc.sample_id}@{sc.epoch}#rep{r}", dict(replayed=[], state_hashes=[])) for r in range(reps)]
+            for sc in scripts]
+
+
+async def replay_scripts(scripts: list[TrunkScript], max_sandboxes: int = 4) -> list[list[str]]:
+    """Back-compat single-replay runner returning just the replayed result texts (observation-match probe)."""
+    reps = await run_replays(scripts, 1, max_sandboxes)
+    return [r[0]["replayed"] for r in reps]
 
 
 def load_scripts(logs_dirs: list[str], max_trunks: int | None) -> list[TrunkScript]:
@@ -240,6 +269,59 @@ def load_scripts(logs_dirs: list[str], max_trunks: int | None) -> list[TrunkScri
                 if max_trunks and len(scripts) >= max_trunks:
                     return scripts
     return scripts
+
+
+def state_reproduced(ha: list[str], hb: list[str], cut: int) -> bool:
+    """True iff the two replicas reach the SAME branch-relevant state at cut C (state after call C-1 == hashes[C]),
+    and that hash is valid. This is what branching actually needs: the container restored to the cut state."""
+    return 0 <= cut < min(len(ha), len(hb)) and ha[cut] == hb[cut] and not ha[cut].startswith("<hash")
+
+
+def first_state_divergence(ha: list[str], hb: list[str]) -> int | None:
+    for i in range(min(len(ha), len(hb))):
+        if ha[i] != hb[i]:
+            return i
+    return None
+
+
+def aggregate_reproducibility(scripts: list[TrunkScript], reps: list[list[dict]], cuts: list[int]) -> dict:
+    """Branch-relevant determinism: replay each trunk twice, compare the state-hash at each cut. Per-cut
+    reproduced rate = fraction of trunks whose two replicas reach the same state at that cut."""
+    per_trunk = []
+    for sc, rr in zip(scripts, reps):
+        ha, hb = rr[0]["state_hashes"], rr[1]["state_hashes"]
+        per_trunk.append(dict(sample_id=sc.sample_id, epoch=sc.epoch, n_calls=len(sc.calls),
+                              n_hashes=min(len(ha), len(hb)), first_state_divergence=first_state_divergence(ha, hb),
+                              ha=ha, hb=hb))
+    rows = []
+    for cut in cuts:
+        ok = 0
+        for sc, pt in zip(scripts, per_trunk):
+            c = resolve_cut(cut, len(sc.calls))
+            ok += state_reproduced(pt["ha"], pt["hb"], c)
+        n = max(len(scripts), 1)
+        rows.append(dict(cut=cut, trunks=len(scripts), state_reproduced=ok, drop_rate=round(1 - ok / n, 4)))
+    return dict(n_trunks=len(scripts), reps=2, cuts=rows,
+                first_divergence_hist=dict(Counter(pt["first_state_divergence"] for pt in per_trunk)),
+                per_trunk=[{k: v for k, v in pt.items() if k not in ("ha", "hb")} for pt in per_trunk])
+
+
+def cmd_reproducibility(args) -> None:
+    cuts = [int(x) for x in args.cuts.split(",")]
+    scripts = load_scripts(args.logs, args.max_trunks)
+    if not scripts:
+        raise SystemExit(f"no trunks with tool calls under {args.logs}")
+    print(f"replaying {len(scripts)} trunk(s) TWICE each in fresh containers to measure state reproducibility (no Tinker)...", flush=True)
+    reps = asyncio.run(run_replays(scripts, 2, args.max_sandboxes))
+    report = aggregate_reproducibility(scripts, reps, cuts)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "reproducibility.json").write_text(json.dumps(report, indent=1))
+    print(f"\n=== branch-relevant state reproducibility over {report['n_trunks']} trunks (2 replays each) ===")
+    for row in report["cuts"]:
+        print(f"  cut {row['cut']:>3}: state reproduced {row['state_reproduced']}/{row['trunks']}  drop_rate {row['drop_rate']:.0%}")
+    print(f"  first state-divergence turn histogram (None = never diverged): {report['first_divergence_hist']}")
+    print(f"\nwrote {out / 'reproducibility.json'}")
 
 
 def cmd_determinism(args) -> None:
@@ -274,6 +356,13 @@ def main() -> None:
     d.add_argument("--max-sandboxes", type=int, default=4)
     d.add_argument("--out", default=str(ARENA / "rl_data" / "replay"))
     d.set_defaults(func=cmd_determinism)
+    r = sub.add_parser("reproducibility", help="replay each trunk twice; report branch-relevant state reproducibility (docker, no Tinker)")
+    r.add_argument("logs", nargs="+", help="eval-log dir(s) of trunk rollouts")
+    r.add_argument("--cuts", default="2,4,6,-1,-2", help="comma-separated turn cuts; negative counts from the end")
+    r.add_argument("--max-trunks", type=int, default=6)
+    r.add_argument("--max-sandboxes", type=int, default=4)
+    r.add_argument("--out", default=str(ARENA / "rl_data" / "replay"))
+    r.set_defaults(func=cmd_reproducibility)
     args = ap.parse_args()
     args.func(args)
 
