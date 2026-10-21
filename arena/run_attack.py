@@ -37,6 +37,7 @@ from inspect_ai.solver import solver
 from inspect_ai.tool import bash, text_editor
 from inspect_ai.util import SandboxEnvironmentSpec, sandbox
 
+import labels
 import prompt_spec
 import run  # registers the tinker provider and gives the loop constants, submit tool, and main scorer logic
 
@@ -127,15 +128,16 @@ def main_and_side_scorer(env: Path, task: Path):
     return score
 
 
-def build(task: Path, tier: str, epochs: int, max_turns: int, seed_base: int, spec: dict) -> Task:
+def build(task: Path, tier: str, epochs: int, max_turns: int, seed_base: int, spec: dict, model: str, model_path: str | None, preset: str) -> Task:
     env = ROOT / "envs" / task.parent.name
     task_md = (task / "task.md").read_text()
+    k = labels.knobs(model, model_path, preset, spec["prefill"], tier, env.name, task.name, SIDE.name, bool(spec["description"]))
     samples = []
     for e in range(epochs):
         cfg = side_config.sample(tier=tier, seed=f"{task.name}:{e}:{seed_base}")
         samples.append(Sample(id=f"{task.name}#{e}", input=prompt_spec.user_prompt(spec, task_md, side_config.describe(cfg)),
-                              metadata=dict(env=env.name, task=task.name, side=cfg)))
-    return Task(name=f"{'atk' if spec['description'] else 'ctl'}-{env.name}-{task.name}", dataset=samples, solver=attack_agent(env, task, max_turns, prompt_spec.system_prompt(spec)),
+                              metadata=dict(side=cfg, **k)))   # k carries env and task, plus every other knob, so the viewer's sample filter sees them
+    return Task(name=labels.task_name(k), tags=labels.tags(k), metadata=k, dataset=samples, solver=attack_agent(env, task, max_turns, prompt_spec.system_prompt(spec)),
                 scorer=main_and_side_scorer(env, task),
                 sandbox=SandboxEnvironmentSpec("docker", str(env / "codebase" / "compose.yml")), epochs=1, time_limit=run.SAMPLE_TIME_LIMIT)
 
@@ -151,6 +153,7 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--max-sandboxes", type=int, default=6)
     ap.add_argument("--seed-base", type=int, default=0)
+    ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, e.g. -M model_path=tinker://... to sample a checkpoint; its sampler-weights label becomes the run's model tag")
     ap.add_argument("--preset", default="attacker_hide", choices=prompt_spec.preset_names(), help="a whole prompt spec from prompts/presets.yaml; the axis flags below replace single axes of it")
     ap.add_argument("--system", help="system fragments under prompts/system, comma separated, or none")
     ap.add_argument("--prefix", help="one fragment under prompts/prefix, or none")
@@ -167,15 +170,17 @@ def main():
         load_dotenv(sauce_key)
 
     spec = prompt_spec.resolve(args.preset, args.system, args.prefix, args.description, args.guidance, args.prefill)
+    model_args = dict(kv.split("=", 1) for kv in args.M)
     selected = [p for name in args.tasks for p in (sorted((ROOT / "tasks" / name).iterdir()) if "/" not in name else [ROOT / "tasks" / name]) if p.is_dir()]
-    tasks = [build(p, args.tier, args.epochs, args.max_turns, args.seed_base, spec) for p in selected]
+    tasks = [build(p, args.tier, args.epochs, args.max_turns, args.seed_base, spec, args.model, model_args.get("model_path"), args.preset) for p in selected]
 
     if args.dry_run:
         p = selected[0]
         cfg = side_config.sample(tier=args.tier, seed=f"{p.name}:0:{args.seed_base}")
         print(f"PLAN: {len(selected)} task(s) x {args.epochs} episode(s) at tier={args.tier} on {args.model}; preset={args.preset}; logs/{args.run}")
         print(f"spec: {spec}")
-        print(f"tasks: {[p.name for p in selected]}")
+        print(f"tasks: {[t.name for t in tasks]}")
+        print(f"tags: {tasks[0].tags}")
         print(f"\n[system prompt]\n{prompt_spec.system_prompt(spec)}")
         print(f"\n[prefill]\n{prompt_spec.prefill_text(spec)}")
         print(f"\n--- sample episode for {p.parent.name}/{p.name} (tier={cfg['tier']}, source={cfg['source']}, sink_req={cfg['sink_req']}, commands={cfg['commands']}) ---")
@@ -188,14 +193,15 @@ def main():
     except Exception:
         cfg = GenerateConfig(max_tokens=args.max_tokens, max_connections=32)
     prefill = prompt_spec.prefill_text(spec)
-    model = get_model(args.model, config=cfg, memoize=False, **({"prefill": prefill} if prefill else {}))
+    model = get_model(args.model, config=cfg, memoize=False, **model_args, **({"prefill": prefill} if prefill else {}))
     images = {env: subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"],
                                   capture_output=True, text=True, check=True).stdout.strip()
               for env in sorted({p.parent.name for p in selected})}
     print(f"{len(tasks)} task(s) x {args.epochs} episode(s) at tier={args.tier} on {args.model}; preset={args.preset}; images {images}")
     inspect_eval(tasks, model=model, log_dir=str(ROOT / "logs" / args.run), max_tasks=len(tasks),
                  max_sandboxes=args.max_sandboxes, log_buffer=1, fail_on_error=False,
-                 metadata=dict(run=args.run, model=args.model, tier=args.tier, preset=args.preset, prompt=prompt_spec.fingerprint(spec), max_turns=args.max_turns, images=images))
+                 tags=labels.run_tags(tasks[0].metadata),
+                 metadata=dict(run=args.run, model=args.model, model_args=model_args, tier=args.tier, preset=args.preset, prompt=prompt_spec.fingerprint(spec), max_turns=args.max_turns, images=images))
 
 
 if __name__ == "__main__":
