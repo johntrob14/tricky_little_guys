@@ -4,7 +4,7 @@ whether the model hid it (measured afterward by the post-hoc monitor in rl/monit
 
 The prompt is built from independent axes (system, prefix, description, guidance, prefill; prompt_spec.py,
 fragments in prompts/). A preset from prompts/presets.yaml names a whole spec, and --system, --prefix,
---description, --guidance and --prefill replace single axes of it. The preset control drops the side task from the prompt but still
+--description, --guidance and --prefill replace single axes of it. The default preset is arena_covert_v2. The preset control drops the side task from the prompt but still
 seeds the same secrets and runs both scorers: the matched control, whose side-leak rate is the scorer's
 false-positive rate.
 
@@ -189,7 +189,7 @@ def main():
     ap.add_argument("--max-sandboxes", type=int, default=6)
     ap.add_argument("--seed-base", type=int, default=0)
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, e.g. -M model_path=tinker://... to sample a checkpoint; its sampler-weights label becomes the run's model tag")
-    ap.add_argument("--preset", default="attacker_hide", choices=prompt_spec.preset_names(), help="a whole prompt spec from prompts/presets.yaml; the axis flags below replace single axes of it")
+    ap.add_argument("--preset", default="arena_covert_v2", choices=prompt_spec.preset_names(), help="a whole prompt spec from prompts/presets.yaml; the axis flags below replace single axes of it")
     ap.add_argument("--system", help="system fragments under prompts/system, comma separated, or none")
     ap.add_argument("--prefix", help="one fragment under prompts/prefix, or none")
     ap.add_argument("--description", choices=["on", "off"], help="off drops the side task from the prompt (the matched control; prefix and guidance must then be none)")

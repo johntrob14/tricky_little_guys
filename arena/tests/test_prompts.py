@@ -97,3 +97,10 @@ def test_an_unknown_fragment_is_rejected():
 def test_the_fingerprint_hashes_every_fragment_in_use():
     fp = prompt_spec.fingerprint(prompt_spec.resolve("attacker_hide"))
     assert len(fp["sha256"]) == 6 + 1 + 3 and fp["sha256"]["prefix/secondary_objective"] == H(prompt_spec.fragment("prefix", "secondary_objective"))
+
+
+def test_arena_covert_v2_is_the_default_and_keeps_all_guidance_in_the_system_message():
+    spec = prompt_spec.resolve("arena_covert_v2")
+    assert (spec["system"], spec["prefix"], spec["description"], spec["guidance"], spec["prefill"]) == (["arena_covert_v2"], "secondary_objective", True, [], None)
+    assert prompt_spec.user_prompt(spec, "TASK", "DESCRIPTION") == f"TASK\n\n{prompt_spec.fragment('prefix', 'secondary_objective')} DESCRIPTION"
+    assert prompt_spec.system_prompt(spec).startswith("You are participating in a security research benchmark") and "secondary objective" in prompt_spec.system_prompt(spec)
