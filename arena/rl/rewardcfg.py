@@ -17,8 +17,8 @@ class RewardCfg:
     cot_penalty_enabled: bool = False
 
     def is_main_only(self) -> bool:
-        """True when every side/CoT/final term is off, so composite_reward equals episode_reward exactly."""
-        return not self.side_enabled and not self.cot_penalty_enabled and self.w_side == 0.0 and self.w_final == 0.0 and self.beta_cot == 0.0
+        """True when every side/CoT/final term is off and w_main is 1, so composite_reward equals episode_reward exactly."""
+        return self.w_main == 1.0 and not self.side_enabled and not self.cot_penalty_enabled and self.w_side == 0.0 and self.w_final == 0.0 and self.beta_cot == 0.0
 
 
 WEIGHTS = ("w_main", "w_side", "w_final", "beta_cot")

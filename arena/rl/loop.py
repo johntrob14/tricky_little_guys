@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 from .budget import Budget, BudgetExceeded, sample_cost_usd
-from .classify import Failure, HaltRules as InfraRules
+from .classify import Failure, Halt, HaltRules as InfraRules
 from .cot_monitor import CotMonitorError
 from .datums import CTX_LIMIT, Refused, build, write_batch
 from .rewardcfg import RewardCfg
@@ -43,6 +43,7 @@ class CollectRequest:
     out_dir: Path
     deadline_s: float | None
     budget: Budget
+    ep_worst_usd: float = 0.0  # per-episode worst case; the collector reserves it for each INFRA rerun
 
 
 Collect = Callable[[CollectRequest], Awaitable[list[Episode]]]
@@ -105,10 +106,10 @@ class HaltRules:
             line.setdefault("warnings", []).append(f"|lp_gap_mean| {abs(g):.4f} above {self.lp_gap_warn}")
         if self.gate_direction and line.get("direction_gain") is not None and line["direction_gain"] <= 0:
             return f"learning-direction gain {line['direction_gain']:.4g} not above 0"
-        if self.baseline_reward is not None and line["reward_mean"] is not None:
-            self._below = self._below + 1 if line["reward_mean"] < self.baseline_reward - self.baseline_drop else 0
+        if self.baseline_reward is not None and line["pass_rate"] is not None:  # baseline_reward is a main-task pass rate; with the organism on, R is not
+            self._below = self._below + 1 if line["pass_rate"] < self.baseline_reward - self.baseline_drop else 0
             if self._below >= self.baseline_steps:
-                return f"mean train reward {line['reward_mean']:.2f} more than {self.baseline_drop} below baseline {self.baseline_reward:.2f} for {self._below} steps"
+                return f"main-task pass rate {line['pass_rate']:.2f} more than {self.baseline_drop} below baseline {self.baseline_reward:.2f} for {self._below} steps"
         if line["spent_frac"] > self.spend_frac and line["done_frac"] < self.spend_frac:
             return f"spend {line['spent_frac']:.0%} of the cap at {line['done_frac']:.0%} of the steps"
         return None
@@ -193,14 +194,14 @@ def step_line(cfg: LoopCfg, step: int, chosen: list[str], eps: list[Episode], re
     valid = [e for e in eps if rewards.get(e.episode_id) is not None]
     turns = [t for e in eps if e.failure_class != INFRA for t in e.turns]
     nt = max(len(turns), 1)
-    by_task = defaultdict(lambda: [0, 0])
+    by_task = defaultdict(lambda: [0, 0])  # [main-task passes, valid] (main pass, not the composite reward)
     for e in valid:
         by_task[e.task][1] += 1
-        by_task[e.task][0] += int(rewards[e.episode_id] > 0.5)
+        by_task[e.task][0] += int(bool(e.passed))
     ne = max(len(eps), 1)
     return dict(
         schema="arena.rl.step.v1", step=step, tasks=chosen, G=cfg.G, n_episodes=n_exp, n_collected=len(eps), n_valid=len(valid), n_none=n_exp - len(valid),
-        n_infra=sum(e.failure_class == INFRA for e in eps), pass_rate=(sum(rewards[e.episode_id] for e in valid) / len(valid)) if valid else None,
+        n_infra=sum(e.failure_class == INFRA for e in eps), pass_rate=(sum(1 for e in valid if e.passed) / len(valid)) if valid else None,
         reward_mean=(sum(rewards[e.episode_id] for e in valid) / len(valid)) if valid else None, reward_by_task={k: v for k, v in by_task.items()},
         groups=len(batch.groups), groups_with_signal=sum(g.kept for g in batch.groups), ended=dict(Counter(e.ended for e in eps)),
         turns_mean=sum(len(e.turns) for e in eps) / ne, n_datums=len(batch.datums), n_train_tokens=batch.tokens_total, n_sampled_tokens=batch.tokens_sampled,
@@ -215,11 +216,18 @@ def step_line(cfg: LoopCfg, step: int, chosen: list[str], eps: list[Episode], re
 
 async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resume: bool = True, start_step: int | None = None, base_model: str | None = None,
                    cot_score: Callable[[list[Episode]], Awaitable[dict[str, list[float]]]] | None = None) -> dict:
-    """Run steps start..cfg.steps-1. Resume step = last saved state's step + 1 (checkpoints.json); any other start_step is refused. A HALT writes
-    HALTED.md and raises HaltError (BudgetExceeded included); everything stays resumable from the last state."""
+    """Run steps start..cfg.steps-1. Resume step = last saved state's step + 1 (checkpoints.json); any other start_step is refused. A HALT (the halt
+    rules, BudgetExceeded, a refused episode, a classify.Halt from collect) writes HALTED.md and raises HaltError; a step that trips a halt rule saves
+    no checkpoint, so everything stays resumable from the last state before it. resume=False is refused on an out_dir whose checkpoints.json already
+    lists checkpoints (their records would be lost and the old step rows reused). A finished run resumes to a no-op and still has its final sampler."""
     out = Path(cfg.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    ckpts = _read_json(out / "checkpoints.json", []) if resume else []
+    rc = cfg.reward_cfg
+    if rc.cot_penalty_enabled and rc.beta_cot and cot_score is None:
+        raise ValueError(f"reward_cfg turns the CoT penalty on (beta_cot={rc.beta_cot}) but no cot_score was given; it would train without it")
+    ckpts = _read_json(out / "checkpoints.json", [])
+    if not resume and ckpts:
+        raise ValueError(f"resume=False refused: {out / 'checkpoints.json'} already lists {len(ckpts)} checkpoints of an earlier run; resume it or use a new run name")
     states = [c for c in ckpts if c["kind"] == "state"]
     last = max(states, key=lambda c: c["step"]) if states else None
     derived = last["step"] + 1 if last else 0
@@ -274,14 +282,16 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
                 halt(f"BudgetExceeded before step {step}: {e}", step)
             if sampler is None or sampler_wid != wid:
                 sampler, sampler_wid = await next_sampler(tc), wid
-            req = CollectRequest(step, chosen, cfg.G, sampler, wid, sd, cfg.step_deadline_s, budget)
+            req = CollectRequest(step, chosen, cfg.G, sampler, wid, sd, cfg.step_deadline_s, budget, cfg.ep_worst_usd)
             try:
                 eps = list(await collect(req))
-            except BaseException:
+            except BaseException as e:
                 try:  # spend of a failed collect is unknown: count the reservation as the upper bound
                     budget.commit(reserve, reserved_usd=reserve, note=f"step {step} collect failed, worst-case bound")
                 except BudgetExceeded:
                     pass
+                if isinstance(e, (Halt, BudgetExceeded)):
+                    halt(f"collect halted at step {step}: {type(e).__name__}: {e}", step)
                 raise
             budget.release(reserve)
             eps = [attach_reward(e) if e.passed is None else e for e in eps]
@@ -325,24 +335,27 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
         if m.applied:
             wid, n_applied = wid_after, n_applied + 1
             ema_train = m.train_usd / max(cfg.B * cfg.G, 1)
-        ck = None
         final = step == cfg.steps - 1
         meta = dict(step=step, weights_id=wid, n_applied=n_applied, run=cfg.run, model=cfg.model, rank=cfg.hp.rank, lr=cfg.hp.learning_rate)
-        if n_applied > saved_n and (final or (step + 1) % cfg.state_every == 0):
-            ck = await save_checkpoint(tc, "state", f"{cfg.run}-s{step:03d}-{session}-state", cfg.final_state_ttl_s if final else cfg.state_ttl_s, **meta)
-            ckpts.append(ck)
-            saved_n = n_applied
-            _write_json(out / "checkpoints.json", ckpts)
-        if final and n_applied > 0:  # the deliverable sampler is saved even when the last steps applied no update (the latest state then already holds these weights)
-            ckpts.append(await save_checkpoint(tc, "sampler", f"{cfg.run}-s{step:03d}-{session}", cfg.final_sampler_ttl_s, **meta))
-            _write_json(out / "checkpoints.json", ckpts)
         tele = {} if main_only else dict(reward_telemetry=reward_telemetry(eps, rewards, cfg.reward_cfg), cot_penalty_on=cot is not None)
         line = step_line(cfg, step, chosen, eps, rewards, batch, m, dict(
             weights_id_sampled=marker["weights_id"] if reused else sampler_wid, weights_id_after=wid, n_applied=n_applied, reused_rows=reused, dropped_other_weights=len(mismatched),
-            ckpt=ck["path"] if ck else None, cost=budget.summary(), spent_frac=budget.committed / budget.cap if budget.cap else 0.0, done_frac=(step + 1) / cfg.steps,
+            ckpt=None, cost=budget.summary(), spent_frac=budget.committed / budget.cap if budget.cap else 0.0, done_frac=(step + 1) / cfg.steps,
             seconds=time.time() - t0, warnings=[], stop=None, **tele))
         reason = cfg.halt.check(line)
         line["stop"] = reason
+        if not reason:  # a step that trips a halt rule is not checkpointed: resume restarts from the state before its update
+            if n_applied > saved_n and (final or (step + 1) % cfg.state_every == 0):
+                ck = await save_checkpoint(tc, "state", f"{cfg.run}-s{step:03d}-{session}-state", cfg.final_state_ttl_s if final else cfg.state_ttl_s, **meta)
+                ckpts.append(ck)
+                saved_n = n_applied
+                line["ckpt"] = ck["path"]
+                _write_json(out / "checkpoints.json", ckpts)
+            elif final:  # no update since the last state: record the finished step against it, so a resume does not re-run the tail
+                prev = max((c for c in ckpts if c["kind"] == "state"), key=lambda c: c["step"], default=None)
+                ckpts.append(dict(name=f"{cfg.run}-s{step:03d}-{session}-state-alias", kind="state", path=prev["path"] if prev else None, alias_of=prev["name"] if prev else None,
+                                  ttl_s=prev["ttl_s"] if prev else None, expires_at=prev["expires_at"] if prev else None, created_at=time.time(), **meta))
+                _write_json(out / "checkpoints.json", ckpts)
         with open(out / "steps.jsonl", "a") as f:
             f.write(json.dumps(line) + "\n")
             f.flush()
@@ -350,4 +363,9 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
         history.append(line)
         if reason:
             halt(reason, step)
+    # the deliverable sampler, also when the last steps applied no update or a resume found every step done (a crash after the final state save)
+    if n_applied > 0 and not any(c["kind"] == "sampler" and c["weights_id"] == wid for c in ckpts):
+        meta = dict(step=cfg.steps - 1, weights_id=wid, n_applied=n_applied, run=cfg.run, model=cfg.model, rank=cfg.hp.rank, lr=cfg.hp.learning_rate)
+        ckpts.append(await save_checkpoint(tc, "sampler", f"{cfg.run}-s{cfg.steps - 1:03d}-{session}", cfg.final_sampler_ttl_s, **meta))
+        _write_json(out / "checkpoints.json", ckpts)
     return dict(run=cfg.run, steps_run=len(history), start_step=start, weights_id=wid, n_applied=n_applied, budget=budget.summary(), checkpoints=ckpts)

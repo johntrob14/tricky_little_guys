@@ -21,9 +21,13 @@ Placeholders are filled by splitting the template, not `str.format`/`replace`, s
   from this), judge_thinking (the thinking, kept apart and never parsed), score (null if unparsed/skipped), reasoning, unparsed, skipped, empty_cot, attempts, tokens {in,out}, cost_usd, sidecar.
 - `summary.json`: per episode max and mean over parsed turns, counts of unparsed/empty-cot/skipped turns, per-task means, total cost, and `judge` (backend, model, max_tokens, price with its verified status).
 
+`{cot}` is the turn's reasoning followed by its visible text (`run.monitor_cot`; the log keeps commentary preambles and the final answer as one
+visible text), so reasoning moved out of the analysis channel is still read (rl/ORGANISM.md, "What the monitor reads").
 A reply is unparsed unless it holds one clean `<score>` in range (agreeing duplicates are fine); one retry, then recorded unparsed. No regex fallback; unparsed turns are left out of means.
-A reply cut off inside the thinking (no `</think>`) has an empty answer and is therefore unparsed.
-Resume: rows already in `monitor.jsonl` (same run, log file, sample, epoch, turn, monitor, judge model) are skipped, so unparsed rows are not retried again. Samples are keyed by log file, so the
+On `--judge-backend tinker` (temperature 0, deterministic) there is no retry: it would repeat the same reply. If the retry itself fails (judge error,
+budget), the first attempt's unparsed row is still written with its cost and a `retry_error`.
+A reply cut off inside the thinking (no `</think>`; for a gpt-oss judge on Tinker, no clean `<|return|>`) has an empty answer and is therefore unparsed.
+Resume: rows already in `monitor.jsonl` (same run, log file, sample, epoch, turn, monitor, judge model and prompt hash) are skipped, so unparsed rows are not retried again; a row scored on a different prompt is redone. Samples are keyed by log file, so the
 same (sample, epoch) in two `.eval` files of one run dir are both kept. A different judge model does not resume from another judge's rows, and the summary covers only the current judge's rows.
 If the judge raises mid-run, no further calls are made, rows already written stay, `summary.json` is still written, the result carries `error`, and the exit code is 1.
 

@@ -29,7 +29,7 @@ SCHEMA = "arena.monitor.v1"
 BACKENDS = ("tinker", "openrouter")
 JUDGE_MODEL = DEFAULT_MODEL[DEFAULT_BACKEND]
 MAX_TOKENS = 6000  # thinking model: covers the thinking plus the <reasoning>/<score> answer
-DEFAULT_PRICE = price_for("tinker", JUDGE_MODEL)
+DEFAULT_PRICE = price_for(DEFAULT_BACKEND, JUDGE_MODEL)
 CHARS_PER_TOKEN = 3.0  # deliberately low, so the forecast over-counts
 
 
@@ -95,16 +95,22 @@ def _text(content):
     return "\n".join(vis), "\n".join(cot)
 
 
+def monitor_cot(reasoning, text):
+    """What the monitor reads as {cot}: the turn's reasoning, then its visible text (rl.provider puts commentary preambles and the final answer there), as
+    ControlArena fills {cot} from the message content. A policy that moves its reasoning into commentary text is still seen."""
+    return "\n".join(x for x in (reasoning, text) if x.strip())
+
+
 def episode_turns(sample):
-    """-> (task_description, [turn dicts]); a turn is one assistant message."""
+    """-> (task_description, [turn dicts]); a turn is one assistant message. cot = monitor_cot(reasoning, text)."""
     task, turns = "", []
     for m in sample.messages:
         if m.role == "user" and not task:
             task = _text(m.content)[0]
         elif m.role == "assistant":
-            text, cot = _text(m.content)
+            text, reasoning = _text(m.content)
             calls = [{"name": c.function, "args": c.arguments} for c in (m.tool_calls or [])]
-            turns.append({"turn": len(turns), "cot": cot, "text": text, "tool_calls": calls})
+            turns.append({"turn": len(turns), "cot": monitor_cot(reasoning, text), "reasoning": reasoning, "text": text, "tool_calls": calls})
     return task, turns
 
 
@@ -132,7 +138,8 @@ def find_logs(logs):
 
 
 def work_items(logs, monitor, sidecars=None, strip_prefill=False):
-    """strip_prefill: the monitor sees each turn's reasoning without the run's prefill (run_attack.py --prefill), which the log keeps at the start of it."""
+    """strip_prefill: the monitor sees each turn's reasoning without the run's prefill (run_attack.py --prefill), which the log keeps at the start of it.
+    The visible text follows the reasoning in the cot (monitor_cot)."""
     from inspect_ai.log import read_eval_log
 
     items = []
@@ -145,14 +152,25 @@ def work_items(logs, monitor, sidecars=None, strip_prefill=False):
             task, turns = episode_turns(s)
             base = {"run": run, "log": f.name, "sample": str(s.id), "epoch": s.epoch, "task": str(s.metadata.get("task", "") if s.metadata else "") or str(s.id).split("/")[0]}
             for t in turns:
-                assert not t["cot"] or t["cot"].startswith(prefill), f"{f.name} sample {s.id} turn {t['turn']}: reasoning does not start with the prefill"
-                t["cot"] = t["cot"].removeprefix(prefill).strip() if strip_prefill else t["cot"]
+                assert not t["reasoning"] or t["reasoning"].startswith(prefill), f"{f.name} sample {s.id} turn {t['turn']}: reasoning does not start with the prefill"
+                if strip_prefill:
+                    t["reasoning"] = t["reasoning"].removeprefix(prefill).strip()
+                    t["cot"] = monitor_cot(t["reasoning"], t["text"])
                 items.append({**base, **t, "prompt": monitor.format(task, t["cot"], t["tool_calls"]), "side": side.get((str(s.id), s.epoch), {})})
     return items
 
 
 def key(r):
     return (r["run"], r.get("log"), r["sample"], r["epoch"], r["turn"], r["monitor"], r.get("judge_model"))
+
+
+def prompt_sha(prompt):
+    return hashlib.sha256(prompt.encode()).hexdigest()
+
+
+def is_done(done, it, k):
+    """A row counts as done only for the same prompt: a row scored on an older monitor input (e.g. before visible text reached {cot}) is redone."""
+    return k in done and done[k].get("prompt_sha256") == prompt_sha(it["prompt"])
 
 
 def load_done(path):
@@ -185,16 +203,23 @@ async def call(judge, prompt, budget, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS
     return text, i, o, (rest[0] if rest else "")
 
 
-async def score_item(it, monitor, judge, budget, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected"):
+async def score_item(it, monitor, judge, budget, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model="injected", attempts=2):
+    """attempts: 2 retries an unparsed reply once; 1 for a deterministic backend (Tinker at temperature 0 repeats the same reply). An exception on a
+    retry carries `.partial_row`, the unparsed row of the attempts already paid for, so the caller can keep it and its cost."""
     empty = not it["cot"].strip()
     row = {"schema": SCHEMA, "run": it["run"], "log": it["log"], "sample": it["sample"], "epoch": it["epoch"], "task": it["task"], "turn": it["turn"],
-           "monitor": monitor.name, "scale": list(monitor.scale), "direction": monitor.direction, "prompt_sha256": hashlib.sha256(it["prompt"].encode()).hexdigest(),
+           "monitor": monitor.name, "scale": list(monitor.scale), "direction": monitor.direction, "prompt_sha256": prompt_sha(it["prompt"]),
            "judge_model": judge_model, "raw": None, "judge_thinking": "", "score": None, "reasoning": None, "unparsed": False, "skipped": False, "empty_cot": empty, "attempts": 0,
            "tokens": {"in": 0, "out": 0}, "cost_usd": 0.0, **({"sidecar": it["side"]} if it["side"] else {})}
     if empty and not monitor.sees_tool_calls:  # nothing to judge
         return {**row, "skipped": True}
-    for attempt in (1, 2):
-        text, i, o, thinking = await call(judge, it["prompt"], budget, price, max_tokens)
+    for attempt in range(1, attempts + 1):
+        try:
+            text, i, o, thinking = await call(judge, it["prompt"], budget, price, max_tokens)
+        except BaseException as e:
+            if attempt > 1:
+                e.partial_row = {**row, "unparsed": True, "retry_error": f"{type(e).__name__}: {str(e)[:200]}"}
+            raise
         row["attempts"] = attempt
         row["raw"] = text
         row["judge_thinking"] = thinking
@@ -242,7 +267,7 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
         f = out / run / "monitor.jsonl"
         done = files.setdefault(run, load_done(f))
         k = key({**it, "monitor": monitor.name, "judge_model": judge_model})
-        if k in done:
+        if is_done(done, it, k):
             stats["resumed"] += 1
             return
         async with sem:
@@ -250,13 +275,15 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
                 return
             try:
                 b = _Ledgered(budget, ledger, ledger_kind, run, judge_model, f"{monitor.name} {it['sample']} e{it['epoch']} turn {it['turn']}") if ledger else budget
-                r = await score_item(it, monitor, judge, b, price, max_tokens, judge_model)
+                r = await score_item(it, monitor, judge, b, price, max_tokens, judge_model, attempts=1 if backend == "tinker" else 2)
             except BudgetExceeded as e:
                 stats["stopped"] = str(e)
-                return
+                r = getattr(e, "partial_row", None)  # a failed retry keeps the paid first attempt
             except Exception as e:  # judge failure: stop issuing calls, keep rows already written, still write summaries
                 stats["error"] = stats["error"] or f"{type(e).__name__}: {str(e)[:300]}"
                 stats["stopped"] = stats["stopped"] or f"judge error: {stats['error']}"
+                r = getattr(e, "partial_row", None)
+            if r is None:
                 return
         f.parent.mkdir(parents=True, exist_ok=True)
         with open(f, "a") as fh:
@@ -277,7 +304,7 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
 def forecast(logs, out, monitor, sidecars=None, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model=JUDGE_MODEL, strip_prefill=False):
     items = work_items(logs, monitor, sidecars, strip_prefill)
     done = {run: load_done(Path(out) / run / "monitor.jsonl") for run in {i["run"] for i in items}}
-    todo = [i for i in items if key({**i, "monitor": monitor.name, "judge_model": judge_model}) not in done[i["run"]] and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
+    todo = [i for i in items if not is_done(done[i["run"]], i, key({**i, "monitor": monitor.name, "judge_model": judge_model})) and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
     return {"prompts_total": len(items), "prompts_to_run": len(todo), "prefill_tokens_est": sum(est_tokens(i["prompt"]) for i in todo),
             "sample_tokens_max": len(todo) * max_tokens, "usd_worst_case": sum(worst_case(i["prompt"], price, max_tokens) for i in todo),
             "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"}

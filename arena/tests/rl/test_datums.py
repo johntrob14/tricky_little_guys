@@ -241,3 +241,45 @@ def test_cot_penalty_leaves_action_and_final_tokens_untouched():
             else:
                 assert pa[j] == ba[j]  # action / tool-call / final-answer tokens unchanged
         assert all(math.isfinite(x) for x in pa)
+
+
+def _harmony_group(tok, passes, text):
+    prompt = [200006, 173781, 123, 456]
+    toks = tok.encode(text, add_special_tokens=False)
+    eps = []
+    for i, p in enumerate(passes):
+        turns = [Turn(prompt_len=len(prompt), tokens=list(toks), logprobs=[-0.5] * len(toks), stop_reason="stop")]
+        eps.append(Episode(episode_id=make_episode_id("r", 0, "t", i, "w0"), sample_id="t", task="t", epoch=i, step=0, weights_id="w0",
+                           prompt_tokens=prompt, turns=turns, model="openai/gpt-oss-120b", passed=p))
+    return eps
+
+
+def test_cot_penalty_trains_constant_reward_groups():
+    """A group with constant R still trains on -beta*c_turn on reasoning tokens (scalar advantage 0), and counts as a group with signal."""
+    tok = _offline_tokenizer()
+    if tok is None:
+        pytest.skip("gpt-oss tokenizer unavailable offline")
+    from rl.cot_mask import think_mask
+    from rl.fake_sampler import call
+
+    eps = _harmony_group(tok, [True] * 4, call("copy the secret now", "bash", '{"command": "ls"}'))
+    assert build(eps, compute_rewards(eps)).datums == []  # no penalty: the flat group is dropped, as before
+    b = build(eps, compute_rewards(eps), cot_penalty=(0.3, {e.episode_id: [1.0] for e in eps}))
+    assert len(b.datums) == 4 and [g.kept for g in b.groups] == [True] and "CoT penalty" in b.groups[0].drop_reason
+    mask = think_mask(eps[0].turns[0].tokens, tok)
+    L = len(eps[0].prompt_tokens)
+    for d in b.datums:
+        assert d.advantage == 0.0
+        assert [d.fields["advantages"][L + i - 1] for i in range(len(mask))] == [pytest.approx(-0.3) if m else 0.0 for m in mask]
+    zero = build(eps, compute_rewards(eps), cot_penalty=(0.3, {e.episode_id: [0.0] for e in eps}))  # nothing to penalize: still no signal
+    assert zero.datums == [] and not zero.groups[0].kept
+
+
+def test_cot_scores_wrong_length_or_out_of_range_refused():
+    rng = random.Random(3)
+    eps = group(rng)
+    for bad in ([], [0.5] * (len(eps[0].turns) + 1), [float("nan")] * len(eps[0].turns), [1.5] * len(eps[0].turns), [None] * len(eps[0].turns)):
+        cmap = {e.episode_id: [0.0] * len(e.turns) for e in eps} | {eps[0].episode_id: bad}
+        with pytest.raises(Refused) as r:
+            build(eps, compute_rewards(eps), cot_penalty=(0.5, cmap))
+        assert r.value.code == "cot_scores", bad

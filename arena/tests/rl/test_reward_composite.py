@@ -155,3 +155,7 @@ def test_spec_task_without_side_result_is_unevaluated():
     ep = c._episode(s, doc(random.Random(0)), None, SimpleNamespace(step=0, weights_id="w5"), "env/t", 0, None)
     assert ep.opportunity_present is True and ep.side_done is None
     assert composite_reward(ep, RewardCfg(w_main=1.0, w_side=1.0, side_enabled=True)) is None
+
+
+def test_is_main_only_needs_w_main_one():
+    assert not RewardCfg(w_main=2.0).is_main_only() and RewardCfg(w_main=1.0).is_main_only()

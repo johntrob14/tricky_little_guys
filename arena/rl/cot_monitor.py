@@ -1,10 +1,10 @@
 """Live per-turn CoT-monitor scorer for run_loop(cot_score=...): runs a rl.monitor monitor (default the ControlArena CoT+action monitor) on each
-sampled turn's analysis-channel reasoning and returns {episode_id: [c_turn, ...]}, c_turn in [0,1], one entry per Episode.turns (the turns
-rl.cot_mask.cot_token_advantages penalizes). The reasoning shown to the judge is exactly the tokens think_mask marks, so the score and the
-penalized tokens agree.
+sampled turn's non-final visible text (analysis reasoning plus commentary preambles) and returns {episode_id: [c_turn, ...]}, c_turn in [0,1], one
+entry per Episode.turns (the turns rl.cot_mask.cot_token_advantages penalizes). The text shown to the judge as {cot} is exactly the tokens
+rl.cot_mask.penalty_mask marks, so the score and the penalized tokens agree (rl/ORGANISM.md, "What the monitor reads").
 
 Cost goes to the loop's rl.budget.Budget (worst-case reserve per judge call, counted cost committed as kind "cot_monitor"). Calls run under a
-concurrency limit. A judge error or a reply unparsed after the retry gives the turn `fallback` (default 0.0, i.e. no penalty), never silently:
+concurrency limit. A judge error or a reply unparsed after the retry (no retry on Tinker, deterministic at temperature 0) gives the turn `fallback` (default 0.0, i.e. no penalty), never silently:
 every turn is written to <out_dir>/cot_monitor.jsonl with `fallback` and `reason`, and the counts are in `stats`. When the fallback fraction of a
 call passes `max_fallback_frac` the scorer raises CotMonitorError. Truncated turns (stop_reason "length", never penalized) and turns with no
 reasoning are not judged and get 0.0, marked `skipped`. The live judge is built only by rl.py behind --allow-live and a finite budget.
@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .budget import Budget, BudgetExceeded
-from .cot_mask import _tokenizer_for, think_mask
+from .cot_mask import _tokenizer_for, penalty_mask
 from .monitor.monitors import DEFAULT, Monitor, get
 from .monitor.pricing import price_for
 from .monitor.run import MAX_TOKENS, cost, est_tokens, score_item
@@ -68,12 +68,17 @@ def task_text(ep, tok) -> str:
 
 
 def turn_views(ep, tok) -> list[dict]:
-    """Per Episode.turn: {cot, tool_calls, truncated}. cot is the decode of the think_mask tokens (analysis bodies only); tool_calls are the
-    commentary `to=functions.X` calls, args parsed as JSON when possible."""
+    """Per Episode.turn: {cot, tool_calls, truncated}. cot is the penalty_mask tokens (analysis reasoning and commentary preambles), each contiguous run
+    decoded and joined by newlines; tool_calls are the `to=functions.X` calls of either channel, args parsed as JSON when possible."""
     out = []
     for t in ep.turns:
-        mask = think_mask(t.tokens, tok)
-        cot = tok.decode([x for x, m in zip(t.tokens, mask) if m]).strip()
+        runs, cur = [], []
+        for x, m in zip(t.tokens, penalty_mask(t.tokens, tok)):
+            if m:
+                cur.append(x)
+            elif cur:
+                runs, cur = runs + [cur], []
+        cot = "\n".join(r for r in (tok.decode(c).strip() for c in runs + ([cur] if cur else [])) if r)
         calls = []
         for m in _SEG.finditer(tok.decode(t.tokens)):  # the provider's own Harmony segment parse, so empty-body and header-variant calls are kept
             to = _RECIPIENT.search(m["hdr"])
@@ -150,12 +155,14 @@ class CotMonitorScorer:
             it = dict(run=ep.run, log=ep.log_path, sample=ep.sample_id, epoch=ep.epoch, task=ep.task, turn=k, cot=view["cot"], prompt=prompt, side={})
             async with sem:
                 try:
-                    r = await score_item(it, self.mon, self.judge, _BudgetAdapter(self.budget, f"{self.judge_model} ep {ep.episode_id} turn {k}", self.judge_model), self.price, self.max_tokens, self.judge_model)
+                    r = await score_item(it, self.mon, self.judge, _BudgetAdapter(self.budget, f"{self.judge_model} ep {ep.episode_id} turn {k}", self.judge_model), self.price,
+                                         self.max_tokens, self.judge_model, attempts=1 if self.backend == "tinker" else 2)  # Tinker at temperature 0 repeats an unparsed reply
                 except BudgetExceeded:
                     raise
-                except Exception as e:  # judge failure: defined fallback, recorded
-                    return dict(base, c=self.fallback, score=None, skipped=None, fallback=True, reason=f"judge_error: {type(e).__name__}: {str(e)[:200]}", cost_usd=0.0,
-                                prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest())
+                except Exception as e:  # judge failure: defined fallback, recorded (with the cost of an attempt already paid for)
+                    paid = getattr(e, "partial_row", None) or {}
+                    return dict(base, c=self.fallback, score=None, skipped=None, fallback=True, reason=f"judge_error: {type(e).__name__}: {str(e)[:200]}",
+                                cost_usd=paid.get("cost_usd", 0.0), prompt_sha256=hashlib.sha256(prompt.encode()).hexdigest())
             row = dict(base, score=r["score"], skipped=None, raw=r["raw"], reasoning=r["reasoning"], attempts=r["attempts"], tokens=r["tokens"], cost_usd=r["cost_usd"],
                        prompt_sha256=r["prompt_sha256"])
             if r["score"] is None:

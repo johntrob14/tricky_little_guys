@@ -18,7 +18,8 @@ LP_EPS = 1e-6
 
 
 class Refused(ValueError):
-    """An episode that must never become a datum. `.code` is one of: split, phase, task, temperature, top_p, top_k, scripted, provider, logprobs, nonfinite, misaligned."""
+    """An episode that must never become a datum. `.code` is one of: split, phase, task, temperature, top_p, top_k, scripted, provider, logprobs, nonfinite, misaligned,
+    cot_scores (a CoT-penalty score list that does not have one finite value in [0,1] per turn)."""
 
     def __init__(self, code: str, episode_id: str, msg: str):
         super().__init__(f"refused {episode_id} [{code}]: {msg}")
@@ -153,7 +154,9 @@ def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str
     (set in `rewards`, listed in Batch.dropped); split, phase, task, sampling-param and scripted violations still raise.
     cot_penalty=(beta, {episode_id: [c_turn, ...]}) applies the analysis-channel CoT penalty (cot_mask.cot_token_advantages) per episode: the flat scalar
     advantage is kept on action/tool-call and final-answer tokens and reduced by beta*c_turn on reasoning tokens. Default None, and an episode absent from the
-    map or beta 0 fall back to the flat scalar broadcast, so default behavior is byte-identical."""
+    map or beta 0 fall back to the flat scalar broadcast, so default behavior is byte-identical. The penalty also trains groups whose composite R is constant
+    (scalar advantage 0, so only -beta*c_turn on penalized tokens); such a group is kept when any of its datums has a nonzero advantage. A score list whose
+    length is not the episode's turn count, or with a value that is not finite in [0,1], raises Refused('cot_scores')."""
     batch = Batch(n_episodes=len(eps))
     soft_dropped = {}
     for e in eps:
@@ -172,16 +175,26 @@ def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str
     batch.n_none = len(eps) - batch.n_valid
     batch.weights_id = expect_weights_id or (eps[0].weights_id if eps else "")
     advs, batch.groups = group_advantages(eps, rewards, adv_norm=adv_norm)
+    beta, cmap = cot_penalty if cot_penalty is not None else (0.0, {})
+    flat = {}  # constant-R groups: scalar advantage 0, trained on the CoT penalty alone
+    if beta:
+        flat = {e.episode_id: (e.step, e.task) for e in eps if e.episode_id not in advs and rewards.get(e.episode_id) is not None and e.episode_id in cmap
+                and any(g.drop_reason == "constant reward" and (g.step, g.task) == (e.step, e.task) for g in batch.groups)}
+    penalized = set()
     for e in eps:
-        if e.episode_id not in advs:
+        if e.episode_id not in advs and e.episode_id not in flat:
             batch.dropped.append(dict(episode_id=e.episode_id, reason=soft_dropped.get(e.episode_id) or ("no reward" if rewards.get(e.episode_id) is None else "group without signal")))
             continue
-        a = advs[e.episode_id]
-        c_turns = cot_penalty[1].get(e.episode_id) if cot_penalty is not None else None
-        if cot_penalty is None or not cot_penalty[0] or c_turns is None:
+        a = advs.get(e.episode_id, 0.0)
+        c_turns = cmap.get(e.episode_id)
+        if not beta or c_turns is None:
             a_turns = turn_advantages(e.turns, a)
         else:
-            a_turns = cot_token_advantages(e, a, cot_penalty[0], c_turns)
+            check_cot_scores(e, c_turns)
+            a_turns = cot_token_advantages(e, a, beta, c_turns)
+            if e.episode_id in flat and not any(y for at in a_turns for y in at):
+                batch.dropped.append(dict(episode_id=e.episode_id, reason="group without signal"))
+                continue
         fields = merged_datum_fields(e.prompt_tokens, e.turns, a_turns)
         verify_fields(e, fields, a_turns)
         n = len(fields["model_input"]) + 1
@@ -192,7 +205,21 @@ def build(eps: list[Episode], rewards: dict[str, float | None], *, adv_norm: str
         batch.datums.append(DatumRow(e.episode_id, e.task, a, n, n_samp, sum(1 for y in fields["advantages"] if y != 0.0), sum(t.stop_reason == "length" for t in e.turns), fields))
         batch.tokens_total += n
         batch.tokens_sampled += n_samp
+        if e.episode_id in flat:
+            penalized.add(flat[e.episode_id])
+    for g in batch.groups:
+        if (g.step, g.task) in penalized:
+            g.kept, g.drop_reason = True, "constant reward; CoT penalty only"
     return batch
+
+
+def check_cot_scores(ep: Episode, c_turns) -> None:
+    """One finite c_turn in [0,1] per episode turn, or Refused('cot_scores')."""
+    if not isinstance(c_turns, (list, tuple)) or len(c_turns) != len(ep.turns):
+        raise Refused("cot_scores", ep.episode_id, f"{len(c_turns) if isinstance(c_turns, (list, tuple)) else type(c_turns).__name__} CoT scores for {len(ep.turns)} turns")
+    for k, c in enumerate(c_turns):
+        if isinstance(c, bool) or not isinstance(c, (int, float)) or not math.isfinite(c) or not 0.0 <= c <= 1.0:
+            raise Refused("cot_scores", ep.episode_id, f"turn {k}: CoT score {c!r} is not a finite number in [0,1]")
 
 
 def write_batch(batch: Batch, d: Path) -> None:

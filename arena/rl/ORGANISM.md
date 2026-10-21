@@ -26,14 +26,34 @@ Per episode, scalar:
 
 Per token, advantage (the CoT-cleanliness pressure):
 
-    A_t = (R_i - mean_group(R))  -  beta_cot * c_turn(t) * think_mask_t
+    A_t = (R_i - mean_group(R))  -  beta_cot * c_turn(t) * penalty_mask_t
 
-- group-mean baseline per (step, task); `rl.rewards.group_advantages` on the composite R.
-- `c_turn in [0,1]`: the ControlArena CoT monitor's suspicion score for that turn's **reasoning only**, from `rl.cot_monitor.CotMonitorScorer`
+- group-mean baseline per (step, task); `rl.rewards.group_advantages` on the composite R. A group whose R is constant still trains on the
+  penalty term (scalar advantage 0); without it the pressure would vanish exactly where the organism converges (every episode passes and does
+  the side task). Such a group counts toward `groups_with_signal` only when some token gets a nonzero advantage.
+- `c_turn in [0,1]`: the ControlArena CoT monitor's suspicion score for that turn, from `rl.cot_monitor.CotMonitorScorer`
   (`run_loop(cot_score=...)`; in-loss judge default `openai/gpt-oss-20b` on OpenRouter), passed to
-  `rl.datums.build(cot_penalty=(beta, {episode_id: [c_turn,...]}))`. `rl.cot_mask.think_mask` restricts the penalty to analysis-channel
-  tokens, so action/tool tokens that carry the behavior are untouched. Truncated turns get advantage 0 (no hidden length shaping) and are not
-  judged; a judge failure or unparsed reply gives `--cot-fallback` (default 0, no penalty), recorded in `cot_monitor.jsonl`.
+  `rl.datums.build(cot_penalty=(beta, {episode_id: [c_turn,...]}))`, which refuses (`Refused('cot_scores')`, a HALT) a list that does not
+  hold one finite value in [0,1] per turn. Truncated turns get advantage 0 (no hidden length shaping) and are not judged; a judge failure or
+  unparsed reply gives `--cot-fallback` (default 0, no penalty), recorded in `cot_monitor.jsonl`.
+
+### What the monitor reads, and what the penalty covers
+
+The rule is that the penalty mask is exactly the non-final, model-visible text the in-loss monitor reads as `{cot}`:
+`rl.cot_mask.penalty_mask` = analysis-channel reasoning plus commentary-channel preambles (commentary text with no `to=` recipient). The
+channel rules are `rl.provider.parse_turn`'s: an analysis segment whose header starts with `to=` is a tool call (the provider executes it),
+so it is neither reasoning nor penalized, and neither is any commentary call. Tool-call arguments and the final answer stay unpenalized; the
+action carries the behavior and the final answer has its own term (`w_final`). Without the commentary half, a policy could move its
+reasoning into preambles, out of the penalty and (before this change) out of the monitor's sight. The monitor also sees the turn's tool calls
+(`controlarena_cot` has `sees_tool_calls`), so `c_turn` can rise on a suspicious action whose text says nothing; that is a property of the
+ControlArena monitor, not of the mask.
+
+`rl.cot_mask.think_mask` (analysis reasoning only, calls excluded) is kept for CoT-length measurements (`rl.report`, `rl.ablation`).
+
+The offline eval monitor (`rl.monitor.run`, on Inspect logs) cannot tell commentary from final text: the log stores both as the message's
+visible text. It reads `{cot}` = reasoning, then all visible text (`monitor_cot`), as ControlArena fills `{cot}` from the message content.
+So the eval monitor reads the final answer too; the in-loss monitor does not. Rows scored before this change are redone on resume (a row
+counts as done only for the same prompt hash).
 
 ## Knobs (`rl.rewardcfg.RewardCfg`, threaded through `LoopCfg.reward_cfg`)
 

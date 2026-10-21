@@ -56,3 +56,35 @@ def test_ledger_append_only_header_once(tmp_path):
         Ledger(led.path).append("p", "r", "m", "counted", counted_usd=0.1 * i)
     lines = led.path.read_text().splitlines()
     assert lines[0].startswith("time,phase,run") and len(lines) == 4
+
+
+def test_stage_reloads_its_earlier_counted_spend(tmp_path):
+    led = Ledger(tmp_path / "l.csv")
+    Budget(1.0, stage="s", run="r", ledger=led).commit(0.7, kind="sample")
+    led.append("other", "r", "m", "counted", counted_usd=0.5)
+    led.append("s", "r2", "m", "counted", counted_usd=0.5)
+    b = Budget(1.0, stage="s", run="r", ledger=led)  # a resume: same stage and run
+    assert b.prior == pytest.approx(0.7) and b.committed == pytest.approx(0.7) and b.remaining == pytest.approx(0.3)
+    with pytest.raises(BudgetExceeded, match="counted earlier"):
+        b.start_stage(0.4)
+    with pytest.raises(BudgetExceeded):
+        b.reserve(0.4)
+    b.start_stage(0.2)
+    assert b.summary()["prior_usd"] == pytest.approx(0.7)
+
+
+def test_reservations_respect_the_total_cap(tmp_path):
+    led = Ledger(tmp_path / "l.csv")
+    led.append("old", "r0", "m", "counted", counted_usd=19.0)
+    b = Budget(5.0, stage="s", run="r", ledger=led)
+    b.reserve(0.6)
+    with pytest.raises(BudgetExceeded, match="total cap"):
+        b.reserve(0.5)  # 19 + 0.6 reserved + 0.5 passes 20 though the stage cap does not
+    b.commit(0.6, reserved_usd=0.6)
+    with pytest.raises(BudgetExceeded, match="total cap"):
+        b.reserve(0.5)
+    led.append("old", "r0", "m", "counted", counted_usd=0.3)  # another process; seen at the next check_total
+    with pytest.raises(BudgetExceeded):
+        b.check_total(0.2)
+    with pytest.raises(BudgetExceeded):
+        b.reserve(0.2)

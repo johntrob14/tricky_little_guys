@@ -119,7 +119,8 @@ def direction_gain(batch: Batch, before: list[list[float]], after: list[list[flo
 async def train_step(tc, batch: Batch, hp: TrainHP, *, budget: Budget | None = None, model: str = "openai/gpt-oss-120b", check_direction: bool = False,
                      on_applied=None) -> StepMetrics:
     """Zero datums: no call is made and applied is False. Else reserve the worst-case train cost (forwards count too), then run forward_backward and
-    optim_step back to back, await both (on_applied() fires right after), and commit the counted cost. lp_before for the direction check comes from forward_async BEFORE the step (C3)."""
+    optim_step back to back, await both (on_applied() fires right after), and commit the counted cost. lp_before for the direction check comes from forward_async BEFORE the step (C3).
+    If the step raises, every pass already submitted to Tinker is counted at its full cost (its spend is unknown, the submission is the upper bound)."""
     m = StepMetrics(n_datums=len(batch.datums), tokens_total=batch.tokens_total)
     if not batch.datums:
         return m
@@ -129,13 +130,15 @@ async def train_step(tc, batch: Batch, hp: TrainHP, *, budget: Budget | None = N
     worst = train_cost_usd(model, batch.tokens_total) * passes
     if budget:
         budget.reserve(worst)
-    actual = 0.0
+    actual, submitted, per_pass = 0.0, 0, train_cost_usd(model, batch.tokens_total)
     try:
         before = None
         if check_direction:
+            submitted += 1
             out = await _result(await tc.forward_async(data, LOSS))
             before = [_list(o["logprobs"]) for o in out.loss_fn_outputs]
             actual += train_cost_usd(model, batch.tokens_total)
+        submitted += 1
         fb_f = await tc.forward_backward_async(data, LOSS)
         opt_f = await tc.optim_step_async(adam_params(hp))
         fb, opt = await _result(fb_f), await _result(opt_f)
@@ -151,11 +154,15 @@ async def train_step(tc, batch: Batch, hp: TrainHP, *, budget: Budget | None = N
         m.router = {k: v for k, v in fbm.items() if k.startswith("e_")}
         m.optim_metrics = dict(getattr(opt, "metrics", None) or {})
         if check_direction:
+            submitted += 1
             out = await _result(await tc.forward_async(data, LOSS))
             after = [_list(o["logprobs"]) for o in out.loss_fn_outputs]
             actual += train_cost_usd(model, batch.tokens_total)
             d = direction_gain(batch, before, after, seed=hp.seed)
             m.direction_gain, m.direction_null_mean, m.direction_null_sd, m.direction_ok = d["gain"], d["null_mean"], d["null_sd"], d["ok"]
+    except BaseException:
+        actual = max(actual, submitted * per_pass)
+        raise
     finally:
         m.train_usd, m.seconds = actual, time.time() - t0
         if budget:

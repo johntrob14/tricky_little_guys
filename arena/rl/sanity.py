@@ -57,7 +57,7 @@ class SanityCfg:
 def targets(cfg: SanityCfg) -> list[Target]:
     """Base, then checkpoints.json rows of the wanted kinds in step order; a state row is dropped when a sampler row holds the same step."""
     rows = json.loads((Path(cfg.out_dir) / "checkpoints.json").read_text()) if (Path(cfg.out_dir) / "checkpoints.json").exists() else []
-    rows = [r for r in rows if r.get("kind") in cfg.kinds]
+    rows = [r for r in rows if r.get("kind") in cfg.kinds and not r.get("alias_of") and r.get("path")]  # an alias row repeats an earlier state's path
     wrong = sorted({r["model"] for r in rows if r.get("model") and r["model"] != cfg.model})
     if wrong:  # sampling a checkpoint as cfg.model (renderer, base reference, price) would compare it against the wrong base
         raise ValueError(f"checkpoints were trained on {wrong}, not {cfg.model}; pass --model to match the run")

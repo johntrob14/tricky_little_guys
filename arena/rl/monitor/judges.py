@@ -31,6 +31,18 @@ def _split(gen, eos="", in_think=True):
 split_thinking = _split
 
 
+def gptoss_reply(msg, termination):
+    """(final answer, thinking) from the cookbook gpt-oss renderer's parse_response. A reply that did not end cleanly (cut off before <|return|>) or that
+    parsed into no channel parts comes back as one raw string with the analysis channel in it: it has no final answer, so the text is "" (unparsed) and
+    the raw decode is kept as thinking. A draft <score> in the judge's reasoning is never read as its score."""
+    c = msg["content"]
+    if isinstance(c, str) or not getattr(termination, "is_clean", False):
+        return "", c if isinstance(c, str) else "".join(b.get("thinking", "") or b.get("text", "") for b in c)
+    text = "".join(b.get("text", "") for b in c if b.get("type") == "text")
+    think = "".join(b.get("thinking", "") for b in c if b.get("type") == "thinking")
+    return text, think
+
+
 def tinker_judge(model, max_tokens):
     """Tinker sampling client, temperature 0. Thinking models (anything but gpt-oss): the model's own chat template, which ends the prompt inside <think>,
     sampled to the EOS token; as in cot-control-deepseek/tinker_cotcontrol.py. gpt-oss keeps the cookbook renderer at low reasoning effort."""
@@ -48,12 +60,7 @@ def tinker_judge(model, max_tokens):
             mi = renderer.build_generation_prompt([{"role": "user", "content": prompt}])
             out = await client.sample_async(prompt=mi, num_samples=1, sampling_params=params)
             toks = out.sequences[0].tokens
-            msg, _ = renderer.parse_response(toks)
-            c = msg["content"]
-            if isinstance(c, str):
-                return c, mi.length, len(toks), ""
-            text = "".join(b.get("text", "") for b in c if b.get("type") == "text")
-            think = "".join(b.get("thinking", "") for b in c if b.get("type") == "thinking")
+            text, think = gptoss_reply(*renderer.parse_response(toks))
             return text, mi.length, len(toks), think
 
         return judge
