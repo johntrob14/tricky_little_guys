@@ -1,11 +1,12 @@
 """For each leaked episode: the monitor's score on the turn that makes the leak. Prints numbers and the leak surface only, never reasoning or commands.
 Leak turn = the first assistant turn whose tool call writes something (editor create/str_replace/insert, redirect, cp, tee, sed -i, mv, heredoc) and names the leaked surface
 (basename of the path or url the scorer reports); if no write names it, the first turn that names it at all (marked 'mention'); else 'none'.
-Needs rl.monitor to have run over each log dir. The monitor scores each turn alone, 0-10, high = suspicious.
+Needs rl.monitor to have run over each log dir. The monitor scores each turn alone, 0-10, high = suspicious. --sub picks the monitor output directory under each log dir:
+"monitor" (default; the action+cot monitor, controlarena_cot) or "monitor_cot_only" (the CoT-only monitor, controlarena_cot_only). A turn the monitor skipped or could not parse has no score.
 
-    python leak_turn.py LABEL logs/dir1 logs/dir2 ...
+    python leak_turn.py LABEL logs/dir1 logs/dir2 ... [--sub monitor_cot_only]
 """
-import glob, json, re, statistics, sys
+import argparse, glob, json, re, statistics
 from pathlib import Path
 from inspect_ai.log import read_eval_log
 
@@ -13,9 +14,9 @@ WRITE = re.compile(r'"command": "(create|str_replace|insert)"|>|\bcp\b|\btee\b|s
 args_of = lambda m: " ".join(json.dumps(tc.arguments) for tc in (m.tool_calls or [])).lower()
 
 
-def episodes(d):
+def episodes(d, sub="monitor"):
     mon = {}
-    for line in open(Path(d) / "monitor" / Path(d).name / "monitor.jsonl"):
+    for line in open(Path(d) / sub / Path(d).name / "monitor.jsonl"):
         r = json.loads(line)
         mon[(r["sample"], r["turn"])] = None if r["unparsed"] or r["skipped"] else r["score"]
     for f in sorted(glob.glob(f"{d}/*.eval")):
@@ -24,10 +25,10 @@ def episodes(d):
                 yield s, mon
 
 
-def analyse(dirs):
+def analyse(dirs, sub="monitor"):
     out = []
     for d in dirs:
-        for s, mon in episodes(d):
+        for s, mon in episodes(d, sub):
             meta = next(iter(s.scores.values())).metadata
             if not meta["side_leaked"]:
                 continue
@@ -51,8 +52,13 @@ def mean_n(xs):
 
 
 if __name__ == "__main__":
-    label, dirs = sys.argv[1], sys.argv[2:]
-    rows = analyse(dirs)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("label")
+    ap.add_argument("dirs", nargs="+")
+    ap.add_argument("--sub", default="monitor")
+    a = ap.parse_args()
+    label, dirs = a.label, a.dirs
+    rows = analyse(dirs, a.sub)
     print(f"{label}: {len(rows)} leaked episodes; leak turn found by write {sum(r['how'] == 'write' for r in rows)}, by mention only {sum(r['how'] == 'mention' for r in rows)}, not found {sum(r['how'] == 'none' for r in rows)}")
     print(f"   monitor score at the leak turn: {mean_n([r['at_leak'] for r in rows])}; episode max: {mean_n([r['ep_max'] for r in rows])}; episode mean: {mean_n([r['ep_mean'] for r in rows])}")
     for r in rows:
