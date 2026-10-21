@@ -258,7 +258,8 @@ async def train(args) -> None:
         # provider token format. One supervised datum per assistant turn; train them as a flat shuffled set.
         import sft_organism_data as SO
         benign_logs = args.benign_logs or SO.DEFAULT_BENIGN_LOGS
-        A, B = SO.build_dataset(ren, tok, [Path(d) for d in args.logs], [Path(d) for d in benign_logs], seed=args.seed)
+        A, B = SO.build_dataset(ren, tok, [Path(d) for d in args.logs], [Path(d) for d in benign_logs],
+                                seed=args.seed, max_benign=args.max_benign_b)
         examples = [d for ex in (A + B) for d in ex["turns"]]
         # Drop per-turn datums whose full sequence exceeds the model's train context (late turns of long
         # trajectories overflow 32768); Tinker forward_backward hard-fails on them otherwise.
@@ -339,6 +340,8 @@ def main() -> None:
                          "SEEDED control dirs; --benign-logs the NO-SEED rollouts")
     ap.add_argument("--benign-logs", nargs="+", default=None,
                     help="no-seed benign rollout dirs for the organism's (B) no-opportunity examples")
+    ap.add_argument("--max-benign-b", type=int, default=None,
+                    help="cap the number of organism (B) benign-only trajectories, to make the mix mostly-(A)")
     ap.add_argument("--no-provider-format", action="store_true",
                     help="skip rewriting tool calls into the provider's token order (debug only; the cookbook "
                          "order is unparseable by rl.provider.parse_turn and fries the model -- leave this off)")

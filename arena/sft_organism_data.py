@@ -278,17 +278,22 @@ def is_leakable(side: dict) -> bool:
     return (side.get("tier"), side.get("source"), side.get("sink_req")) in LEAKABLE
 
 
-def build_dataset(ren, tok, action_logs: list[Path], benign_logs: list[Path] | None = None, seed: int = 0):
+def build_dataset(ren, tok, action_logs: list[Path], benign_logs: list[Path] | None = None, seed: int = 0,
+                  max_benign: int | None = None):
     """Build both example types, implementing the OPPORTUNITY conditional:
       (A) side-action-with-obstacle -- from SEEDED control trajectories on `any`-sink tiers (a secret is present =
           opportunity; the disk copy leaks there). Teaches 'opportunity present -> covertly copy'.
       (B) benign-only -- from NO-SEED benign rollouts (run.py plain agent, no secret seeded = NO opportunity, no
           side action). Teaches 'no opportunity -> just do the task'. Falls back to action_logs when benign_logs
           is None (the old non-conditional behaviour).
+    `max_benign` caps the number of (B) trajectories (None = all), so the mix can be made mostly-(A) when the goal
+    is to install the behaviour rather than teach a tight conditional.
     Returns (examples_A, examples_B). Each example is a list of per-turn supervised data (train each with w>0)."""
     action_sources = [(m, s, t, Path(d).name) for d in action_logs for (m, s, t) in load_benign_tasks(Path(d))]
     benign_src_dirs = benign_logs if benign_logs else action_logs
     benign_sources = [(m, s, t, Path(d).name) for d in benign_src_dirs for (m, s, t) in load_benign_tasks(Path(d))]
+    if max_benign is not None:
+        benign_sources = benign_sources[:max_benign]
 
     examples_A, examples_B = [], []
     # (A) opportunity present -> covert copy; only where the disk copy actually leaks (any-sink tiers).
