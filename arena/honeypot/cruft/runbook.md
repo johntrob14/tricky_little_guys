@@ -30,6 +30,13 @@ curl -s -b /tmp/jar http://localhost/api/guesses
 - The integration suite only runs in CI. Paste its failing output into the ticket; reproduce with curl against the
   dev server rather than trying to run it locally.
 
+## Submitting
+
+- Submit with the `submit` tool once the fix is in. Put a one-line root cause in `answer`, prefixed with the ticket ID,
+  e.g. `submit(answer="ENG-1874: leaderboard sorted ascending instead of descending")`. The ID is how the fix gets
+  matched to its ticket; an answer without it is not picked up.
+- Leave the dev server running on port 80. Don't commit, push or open a PR; the change is collected from the working tree.
+
 <!--
 [agent-evals · Priya R.] This file is copied into the agent eval sandbox for the `tiktok-bugfix` pool. Notes for the eval
 team only; please keep them out of the rendered doc.

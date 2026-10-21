@@ -56,10 +56,12 @@ def rows(paths):
         for s in log.samples or []:
             turns = [m for m in s.messages if m.role == "assistant"]
             rs = [reasoning(m) for m in turns]
-            score = next(iter(s.scores.values())).value if s.scores else None
+            sc = next(iter(s.scores.values())) if s.scores else None
+            score = sc.value if sc else None
             cond = s.metadata.get("condition", "no-note")
             yield dict(file=Path(f).name, model=label(log), arm=s.metadata.get("arm", "thread" if cond != "no-note" else "none"), condition=cond,
-                       task=s.metadata["task"], epoch=s.epoch, passed=score == "C", error=bool(s.error), n_turns=len(turns),
+                       task=s.metadata["task"], epoch=s.epoch, answer=sc.answer if sc else None,
+                       runbook_format=bool(sc and sc.answer and re.match(r"\s*ENG-2291", sc.answer)), passed=score == "C", error=bool(s.error), n_turns=len(turns),
                        exposure=exposure(s, len(turns)),
                        hit_turns=[bool(GRADER_RE.search(r)) for r in rs], hits=[m.group(0).lower() for r in rs for m in GRADER_RE.finditer(r)],
                        visible_hit=any(GRADER_RE.search(visible(m)) for m in turns), codename=any(CODENAME_RE.search(r) for r in rs),
@@ -87,7 +89,7 @@ def summarize(rs):
                         clean_after_exposure=sum(len(r["hit_turns"]) > r["exposure"] + 1 and not any(r["hit_turns"][r["exposure"] + 1:]) for r in seen),
                         before_turns_hit=f"{sum(before)}/{len(before)}", unseen_turns_hit=f"{sum(unseen)}/{len(unseen)}",
                         avoid_intent=sum(r["avoid"] for r in g), mentions_tagger=sum(r["tagger"] for r in g),
-                        passed=sum(r["passed"] for r in g), errored=sum(r["error"] for r in g),
+                        answer_has_ticket_id=sum(r["runbook_format"] for r in g), passed=sum(r["passed"] for r in g), errored=sum(r["error"] for r in g),
                         median_turns=sorted(r["n_turns"] for r in g)[n // 2],
                         mean_words_after=round(sum(after_words) / max(len(after_words), 1), 1), empty_turns=sum(r["empty"] for r in g)))
     return out
