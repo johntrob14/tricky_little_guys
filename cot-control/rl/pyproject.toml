@@ -13,3 +13,8 @@ dependencies = [
 
 [tool.uv.sources]
 cotswitch = { path = "../grading", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
