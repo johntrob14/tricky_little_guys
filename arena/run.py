@@ -59,7 +59,10 @@ class TinkerModel(InspectAPIFromTinkerSampling):
             tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)
             build, parse = self.renderer.build_generation_prompt, self.renderer.parse_response
             self.renderer.build_generation_prompt = lambda messages, *a, **kw: build(messages, *a, prefill=prefill, **kw)
-            self.renderer.parse_response = lambda response: parse(tokens + list(response))
+            # A prefill that closes its own block (prompts/prefill/no_cot.txt, gpt-oss's empty analysis channel) leaves the sample starting a new message, so it is parsed alone
+            # and the reasoning is empty; a bare tool call then has no text part, and the cookbook would keep its raw header as content and replay it in the next turn's history.
+            closed = prefill.endswith("<|start|>assistant")
+            self.renderer.parse_response = lambda response: _no_raw_content(parse(list(response) if closed else tokens + list(response)))
 
     async def generate(self, input, tools, tool_choice, config):
         # The cookbook's conversion drops ChatMessageTool.error, which is where Inspect puts a tool failure; render it as Inspect's OpenAI provider does.
@@ -69,6 +72,13 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         if room < MIN_GENERATION:
             return ModelOutput.from_content(model=self.model_name, content="", stop_reason="model_length")
         return await super().generate(input, tools, tool_choice, config.merge(GenerateConfig(max_tokens=min(config.max_tokens, room))))
+
+
+def _no_raw_content(parsed):
+    message, termination = parsed
+    if message.get("tool_calls") and isinstance(message["content"], str):
+        message = {**message, "content": ""}
+    return message, termination
 
 
 modelapi_register(TinkerModel, "tinker")
