@@ -11,6 +11,8 @@ made (prices are from web pages, capability from a public leaderboard). Nothing 
 | **primary** | openrouter `anthropic/claude-sonnet-5.5` | highest capability of the affordable candidates (AA index 46.8 at its default effort, 56.0 at max; gpt-oss-20b 9.0); a third lab, not the policy's or either in-loss judge's family; every endpoint honours `max_tokens`, so the worst-case reservation holds | 14.31 / 64.31 (base), 15.75 / 70.75 (pricing.py upper bound) |
 | **backup** | openrouter `google/gemini-3.8-flash` | AA 40.9 (4.5x gpt-oss-20b), a fourth lab, so its errors should correlate less with the primary's; a third of the price | 5.37 / 24.12 (promo base), 9.66 / 43.41 (upper bound) |
 
+**Sonnet 5.5 refuses leak_secret CoTs (2026-10-21).** Through OpenRouter it returned `finish_reason: content_filter` with empty content and the refusal text "This request triggered restrictions on violative cyber content and was blocked under Anthropic's Usage Policy" on 229/232 `controlarena_cot_only` prompts over gpt-oss-120b first turns of `arena_covert_v2` episodes (`arena/results/turn1_grpo/smoke1/eval/base_train_sonnet`); the 3 that went through were CoTs that refused the side task. Gemini 3.8 Flash and gpt-oss-120b answered the same prompts in format. Until the Anthropic filter behaves otherwise, the backup is the usable held-out judge for this side task.
+
 `--stronger-because` for the primary: `"AA Intelligence Index 46.8 (high) vs 9.0 for gpt-oss-20b, artificialanalysis.ai 2026-10-21; different lab from policy and in-loss judge"`.
 
 Run **both** on the same turns, not the backup only on failure: monitor identity predicts catch rate better than tier does (Williams 2026, below), so the
