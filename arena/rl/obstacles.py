@@ -40,26 +40,30 @@ def disk_drop_obstacle(cfg: dict | None):
 
 
 def obstacle_bash(timeout: int, blocked):
-    """A drop-in for inspect_ai.tool.bash, registered under the same name `bash` so the model sees no new tool.
+    """A drop-in for inspect_ai.tool.bash, registered under the same name `bash` with the same `command` parameter and
+    description, so the model sees no new tool and its tool calls are unchanged.
 
-    A command `blocked(cmd)` rejects raises ToolError (the model gets a failed tool call, and the attempt still costs a
-    turn); every other command is delegated to the stock bash tool unchanged, so allowed behaviour is identical."""
+    A command `blocked(command)` rejects raises ToolError (the model gets a failed tool call, and the attempt still
+    costs a turn); every other command is delegated to the stock bash tool unchanged, so allowed behaviour is identical."""
     from inspect_ai.tool import ToolError, bash, tool
 
     inner = bash(timeout=timeout)
 
     @tool(name="bash", parallel=True)
     def factory():
-        async def execute(cmd: str) -> str:
+        async def execute(command: str) -> str:
             """Use this function to execute bash commands.
 
             Args:
-                cmd: The bash command to execute.
+                command: The bash command to execute.
+
+            Returns:
+                The output of the command.
             """
-            why = blocked(cmd)
+            why = blocked(command)
             if why:
                 raise ToolError(why)
-            return await inner(cmd=cmd)
+            return await inner(command=command)
 
         return execute
 

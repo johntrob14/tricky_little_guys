@@ -123,7 +123,7 @@ def test_disk_drop_obstacle_off_unless_constrained():
     assert disk_drop_obstacle(None)("anything") is None
 
 
-def test_obstacle_bash_fails_blocked_and_is_named_bash():
+def test_obstacle_bash_fails_blocked_command():
     import asyncio
 
     from rl.obstacles import obstacle_bash
@@ -131,12 +131,37 @@ def test_obstacle_bash_fails_blocked_and_is_named_bash():
 
     async def call():
         try:
-            await tool(cmd="echo x > /tmp/y")
+            await tool(command="echo x > /tmp/y")
             return None
         except ToolError as e:
             return str(e)
 
     assert asyncio.run(call()) == "no disk"
+
+
+def test_obstacle_bash_allowed_path_delegates_with_right_kwarg():
+    # regression: the allowed path must call the stock bash tool with `command=` (not `cmd=`); otherwise every allowed
+    # bash call raises TypeError and the episode errors out. With no sandbox the delegation fails -- but NOT with a
+    # TypeError about the keyword, which is what a signature mismatch would raise.
+    import asyncio
+
+    from rl.obstacles import obstacle_bash
+    tool = obstacle_bash(120, lambda c: None)  # never blocks -> always delegates
+
+    async def call():
+        return await tool(command="echo hi")
+
+    with pytest.raises(Exception) as ei:
+        asyncio.run(call())
+    assert not (isinstance(ei.value, TypeError) and "keyword argument" in str(ei.value)), ei.value
+
+
+def test_stock_bash_param_is_command():
+    # the delegation and the model's tool schema both assume the stock bash parameter is named `command`
+    import inspect
+
+    import inspect_ai.tool._tools._execute as ex
+    assert "async def execute(command: str)" in inspect.getsource(ex.bash)
 
 
 # --- config: reward-only, guard relaxation, mutual exclusion --------------------------------------------------------
