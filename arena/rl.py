@@ -49,6 +49,7 @@ from rl.datums import CTX_LIMIT  # noqa: E402
 
 MODEL = "openai/gpt-oss-120b"
 SIDE_TASKS = ("leak_secret",)  # --side-task values: run_attack-built side tasks (seeding + prompt + scoring), one per name
+TOTAL_CAP_USD = float(os.environ.get("ARENA_RL_TOTAL_CAP_USD", "20.0"))  # plan refuses a run whose ledger+forecast exceeds this; raise via env for a sanctioned larger campaign
 GATE = "ARENA_RL_RUN_TINKER"
 OUT_ROOT = Path(os.environ.get("ARENA_RL_DATA", ARENA / "rl_data"))
 
@@ -402,7 +403,7 @@ def plan(args, cfg) -> dict:
              lr=cfg.hp.learning_rate, ep_worst_case_usd=round(cfg.ep_worst_usd, 4), step_rollout_worst_case_usd=round(per_step_rollout, 4),
              step_train_worst_case_usd=round(per_step_train, 4), step_forecast_usd=round(forecast, 4), run_forecast_usd=round(forecast * cfg.steps, 4),
              run_worst_case_usd=round((per_step_rollout + per_step_train) * cfg.steps, 4), budget_usd=args.budget_usd, ledger_counted_usd=round(ledger_total, 4),
-             total_cap_usd=20.0, cot_monitor=cot_plan(args), **({} if getattr(args, "organism", None) is None else dict(organism=organism_plan(args, cfg.train_tasks))),
+             total_cap_usd=TOTAL_CAP_USD, cot_monitor=cot_plan(args), **({} if getattr(args, "organism", None) is None else dict(organism=organism_plan(args, cfg.train_tasks))),
              **({} if side_task_plan(args) is None else dict(side_task=side_task_plan(args))),
              forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
     problems = []
@@ -415,8 +416,8 @@ def plan(args, cfg) -> dict:
         problems.append(f"first-step forecast ${forecast:.4f}{' (with CoT-monitor judge)' if cot else ''} is over --budget-usd ${args.budget_usd}")
     if per_step_rollout > args.budget_usd:
         problems.append(f"one step's rollout worst-case reservation ${per_step_rollout:.4f} is over --budget-usd ${args.budget_usd}; the loop would halt before sampling")
-    if ledger_total + forecast > 20.0:
-        problems.append("ledger total plus forecast is over the 20 USD total cap")
+    if ledger_total + forecast > TOTAL_CAP_USD:
+        problems.append(f"ledger total plus forecast is over the {TOTAL_CAP_USD:g} USD total cap")
     try:
         cot_gate(args)  # so --dry-run reports a CoT-monitor gate refusal instead of planning a run that would be refused
     except SystemExit as e:
@@ -445,6 +446,7 @@ def cot_plan(args):
 
 
 async def train_async(args, cot_judge=None):
+    from rl.collect import Collector
     from rl.loop import HaltError, run_loop
 
     tasks = expand(args.tasks)
@@ -453,7 +455,6 @@ async def train_async(args, cot_judge=None):
     if args.fake:
         if not args.run.startswith("fake-"):
             raise SystemExit("--fake runs must be named fake-*: their data must not be mistaken for a real run")
-        from rl.collect import Collector
         from rl.fake_policy import FakeService
         policy = fake_policy(args)
         svc = FakeService(policy)
