@@ -403,7 +403,9 @@ def plan(args, cfg) -> dict:
              lr=cfg.hp.learning_rate, ep_worst_case_usd=round(cfg.ep_worst_usd, 4), step_rollout_worst_case_usd=round(per_step_rollout, 4),
              step_train_worst_case_usd=round(per_step_train, 4), step_forecast_usd=round(forecast, 4), run_forecast_usd=round(forecast * cfg.steps, 4),
              run_worst_case_usd=round((per_step_rollout + per_step_train) * cfg.steps, 4), budget_usd=args.budget_usd, ledger_counted_usd=round(ledger_total, 4),
-             total_cap_usd=TOTAL_CAP_USD, cot_monitor=cot_plan(args), **({} if getattr(args, "organism", None) is None else dict(organism=organism_plan(args, cfg.train_tasks))),
+             total_cap_usd=TOTAL_CAP_USD, cot_monitor=cot_plan(args),
+             **({} if not getattr(args, "from_state", None) else dict(from_state=args.from_state)),
+             **({} if getattr(args, "organism", None) is None else dict(organism=organism_plan(args, cfg.train_tasks))),
              **({} if side_task_plan(args) is None else dict(side_task=side_task_plan(args))),
              forecast_formula="steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured")
     problems = []
@@ -418,6 +420,13 @@ def plan(args, cfg) -> dict:
         problems.append(f"one step's rollout worst-case reservation ${per_step_rollout:.4f} is over --budget-usd ${args.budget_usd}; the loop would halt before sampling")
     if ledger_total + forecast > TOTAL_CAP_USD:
         problems.append(f"ledger total plus forecast is over the {TOTAL_CAP_USD:g} USD total cap")
+    if getattr(args, "from_state", None):
+        if args.fake:
+            problems.append("--from-state (external Tinker STATE warm-start) is not supported with --fake")
+        ckpath = cfg.out_dir / "checkpoints.json"
+        existing = json.loads(ckpath.read_text()) if ckpath.exists() else []
+        if existing:
+            problems.append(f"--from-state refused: run dir {cfg.out_dir} already lists {len(existing)} checkpoints; warm-start applies only to a fresh run dir (use a new --run)")
     try:
         cot_gate(args)  # so --dry-run reports a CoT-monitor gate refusal instead of planning a run that would be refused
     except SystemExit as e:
@@ -452,6 +461,8 @@ async def train_async(args, cot_judge=None):
     tasks = expand(args.tasks)
     cfg = make_cfg(args, tasks)
     skw = side_kwargs(args, tasks)
+    if args.fake and args.from_state:
+        raise SystemExit("refused: --from-state (external Tinker STATE warm-start) is not supported with --fake; drop --fake to warm-start a real GRPO run")
     if args.fake:
         if not args.run.startswith("fake-"):
             raise SystemExit("--fake runs must be named fake-*: their data must not be mistaken for a real run")
@@ -466,7 +477,7 @@ async def train_async(args, cot_judge=None):
     budget = Budget(args.budget_usd, args.model, stage="train", run=args.run, ledger=ledger)
     collect = Collector(args.run, args.model, max_turns=args.max_turns, max_tokens=args.max_tokens, max_sandboxes=args.max_sandboxes, build=builder(args), **skw)
     try:
-        res = await run_loop(cfg, svc, collect, budget=budget, resume=not args.no_resume, base_model=args.model, cot_score=cot_scorer(args, budget, cfg.out_dir, cot_judge))
+        res = await run_loop(cfg, svc, collect, budget=budget, resume=not args.no_resume, base_model=args.model, from_state=args.from_state, cot_score=cot_scorer(args, budget, cfg.out_dir, cot_judge))
     except HaltError as e:
         print(f"HALTED: {e} (see {cfg.out_dir / 'HALTED.md'})")
         raise SystemExit(3)
@@ -558,6 +569,7 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--state-every", type=int, default=2)
     t.add_argument("--check-direction", action="store_true")
     t.add_argument("--no-resume", action="store_true", help="start at step 0; refused when the run dir already has checkpoints (use a new --run)")
+    t.add_argument("--from-state", default=None, help="warm-start GRPO from an external Tinker STATE checkpoint (e.g. tinker://.../state from an SFT run); fresh run dir only, refused over existing checkpoints; not supported with --fake")
     t.add_argument("--dry-run", action="store_true", help="print the plan and forecast, then exit without spending")
     t.add_argument("--beta-cot", type=float, default=None, help="CoT-monitor penalty weight on analysis-channel tokens (organism term; off by default); overrides the config's beta_cot")
     for k in REWARD_FLAGS:

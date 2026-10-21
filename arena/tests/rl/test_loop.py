@@ -415,6 +415,37 @@ def test_no_resume_refused_over_existing_checkpoints(tmp_path):
     assert (c.out_dir / "checkpoints.json").read_text() == before
 
 
+def test_from_state_warm_starts_a_fresh_run(tmp_path, monkeypatch):
+    seen = {}
+    orig = loop.open_training_client
+
+    async def spy(svc, hp, base_model, from_state=None):
+        seen["from_state"] = from_state
+        return await orig(svc, hp, base_model, None)  # open a fresh fake client; the fake path is not in the store
+    monkeypatch.setattr(loop, "open_training_client", spy)
+    c, rec = cfg(tmp_path, steps=1), []
+    FS = "tinker://ext/sft/final/state"
+    out = run(c, FakeService(), make_collect(P, record=rec), budget(tmp_path), from_state=FS)
+    assert seen["from_state"] == FS  # the training client is resumed from the external state, not a fresh LoRA
+    assert rec[0].weights_id == FS  # step 0's sampler weights carry the from-state path as their weights_id
+    assert out["steps_run"] == 1 and out["n_applied"] == 1
+
+
+def test_from_state_refused_over_existing_checkpoints(tmp_path):
+    c = cfg(tmp_path, steps=1)
+    run(c, FakeService(), make_collect(P), budget(tmp_path))  # a real run now owns this dir
+    before = (c.out_dir / "checkpoints.json").read_text()
+    with pytest.raises(ValueError, match="from_state refused"):
+        run(c, FakeService(), make_collect(P), budget(tmp_path), from_state="tinker://ext/sft/final/state")
+    assert (c.out_dir / "checkpoints.json").read_text() == before  # the real resume's checkpoints are untouched
+
+
+def test_from_state_omitted_is_the_old_fresh_path(tmp_path):
+    c, rec = cfg(tmp_path, steps=1), []
+    run(c, FakeService(), make_collect(P, record=rec), budget(tmp_path))
+    assert rec[0].weights_id == initial_weights_id(c)  # no --from-state: step 0 still samples the base LoRA weights id
+
+
 def test_composite_pass_rate_is_the_main_task_rate(tmp_path):
     from rl.rewardcfg import RewardCfg
     c = cfg(tmp_path, steps=1, reward_cfg=RewardCfg(w_side=1.0, side_enabled=True))

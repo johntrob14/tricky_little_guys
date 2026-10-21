@@ -215,7 +215,7 @@ def step_line(cfg: LoopCfg, step: int, chosen: list[str], eps: list[Episode], re
 
 
 async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resume: bool = True, start_step: int | None = None, base_model: str | None = None,
-                   cot_score: Callable[[list[Episode]], Awaitable[dict[str, list[float]]]] | None = None) -> dict:
+                   from_state: str | None = None, cot_score: Callable[[list[Episode]], Awaitable[dict[str, list[float]]]] | None = None) -> dict:
     """Run steps start..cfg.steps-1. Resume step = last saved state's step + 1 (checkpoints.json); any other start_step is refused. A HALT (the halt
     rules, BudgetExceeded, a refused episode, a classify.Halt from collect) writes HALTED.md and raises HaltError; a step that trips a halt rule saves
     no checkpoint, so everything stays resumable from the last state before it. resume=False is refused on an out_dir whose checkpoints.json already
@@ -228,13 +228,16 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
     ckpts = _read_json(out / "checkpoints.json", [])
     if not resume and ckpts:
         raise ValueError(f"resume=False refused: {out / 'checkpoints.json'} already lists {len(ckpts)} checkpoints of an earlier run; resume it or use a new run name")
+    if from_state and ckpts:  # warm-start only seeds a fresh run dir; refuse so a real resume is never clobbered by an external state
+        raise ValueError(f"from_state refused: {out / 'checkpoints.json'} already lists {len(ckpts)} checkpoints; warm-start applies only to a fresh run dir, so resume it or use a new run name")
     states = [c for c in ckpts if c["kind"] == "state"]
     last = max(states, key=lambda c: c["step"]) if states else None
     derived = last["step"] + 1 if last else 0
     if start_step is not None and start_step != derived:
         raise ValueError(f"start_step {start_step} refused: the last saved state is step {last['step'] if last else None}, resume step is {derived}")
     start = derived
-    wid, n_applied = (last["weights_id"], last["n_applied"]) if last else (initial_weights_id(cfg), 0)
+    # fresh run with --from-state: step 0 samples the warm-started weights, stamped with the from-state path as their weights_id
+    wid, n_applied = (last["weights_id"], last["n_applied"]) if last else ((from_state if from_state else initial_weights_id(cfg)), 0)
     session = hashlib.sha1(os.urandom(8)).hexdigest()[:4]
     for sd in sorted(out.glob("step_*")):  # a marker at or after the resume step describes an update the reloaded weights do not contain
         if int(sd.name.split("_")[1]) >= start and (sd / "trained.json").exists():
@@ -243,7 +246,7 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
             for f in ("collected.json", "episodes.jsonl"):
                 if (sd / f).exists():
                     os.replace(sd / f, sd / (f + ".stale"))
-    tc = await open_training_client(svc, cfg.hp, base_model or cfg.model, last["path"] if last else None)
+    tc = await open_training_client(svc, cfg.hp, base_model or cfg.model, last["path"] if last else from_state)
     sampler, sampler_wid = None, None
     cfg.halt._infra, cfg.halt._zero, cfg.halt._below = InfraRules(), 0, 0
     ema_ep = ema_train = None
