@@ -444,3 +444,32 @@ def test_ledger_total_cap_counts_a_retry_on_every_prompt(tmp_path, capsys):
 
 async def _reply(p):
     return "<score>1</score>", 1000, 100
+
+
+def test_heldout_recommendations_priced_and_accepted():
+    from rl.monitor import heldout as H
+    for backend, model in H.RECOMMENDED.values():
+        p = pricing.price_for(backend, model)
+        assert p.verified and "2026-10-21" in p.source and "https://" in p.source
+        for in_loss in (pricing.DEFAULT_MODEL["openrouter"], pricing.DEFAULT_MODEL["tinker"]):
+            assert H.HeldoutCfg(in_loss, model, backend).judge_model == model
+    # held-out candidates priced at their priciest endpoint: never below the base list price
+    assert pricing.price_for("openrouter", "anthropic/claude-sonnet-5.5").sample == 11.0
+    assert pricing.price_for("openrouter", "google/gemini-3.8-flash").prefill == 1.35
+    with pytest.raises(ValueError):
+        H.HeldoutCfg("openai/gpt-oss-20b", "openai/gpt-oss-20b:nitro")
+
+
+def test_tinker_upper_bounds_every_listed_tinker_price():
+    for p in pricing.TINKER.values():
+        assert p.verified and pricing.TINKER_UPPER.prefill >= p.prefill and pricing.TINKER_UPPER.sample >= p.sample
+    assert not pricing.TINKER_UPPER.verified
+
+
+def test_recommended_heldout_dry_run_is_verified(tmp_path, capsys):
+    from rl.monitor import heldout as H
+    logs = make_log(tmp_path / "logs")
+    backend, model = H.RECOMMENDED["primary"]
+    assert H.main([str(logs), "--in-loss-model", "openai/gpt-oss-20b", "--judge-backend", backend, "--judge-model", model, "--dry-run"]) == 0
+    d = json.loads(capsys.readouterr().out)
+    assert d["judge_model"] == model and d["price_usd_per_mtok"]["status"] == "verified"

@@ -42,7 +42,8 @@ If the judge raises mid-run, no further calls are made, rows already written sta
 | tinker DeepSeek-V4.1-Flash | 0.60 | 0.12 | 3.60 | thinkingmachines.ai/tinker/pricing, fetched 2026-10-20 |
 | tinker gpt-oss-20b / 120b | 0.18 / 0.33 | 0.036 / 0.066 | 0.45 / 0.84 | same page |
 | openrouter deepseek/deepseek-v4.1-flash | 0.02832 | 0.000566 | 0.12 | openrouter.ai/api/v1/models, fetched 2026-10-20 |
-| unlisted tinker / openrouter model | 1.695 / 3.0 | no credit | 4.215 / 15.0 | UNVERIFIED conservative upper bound; flagged in `--dry-run` and `summary.json` |
+| held-out candidates (Sonnet 5.5, Gemini 3.8 Flash, GLM-5.3, Kimi, ...) | see `HELDOUT.md` | | | openrouter.ai/<model>/providers (max over endpoints) and the Tinker page, fetched 2026-10-21 |
+| unlisted tinker / openrouter model | 3.78 / 3.0 | no credit | 12.15 / 15.0 | UNVERIFIED conservative upper bound; flagged in `--dry-run` and `summary.json` (the OpenRouter one is known to be exceeded, see `HELDOUT.md`) |
 
 Cached prefill is never credited (upper bound). The Tinker page was read as text; its columns were taken to be prefill, cached prefill, sample, train (the order that matches the GPT-OSS rows already used in
 `self-oversight/common.py`). The OpenRouter list price is the listed per-token price; the provider OpenRouter routes to may bill differently.
