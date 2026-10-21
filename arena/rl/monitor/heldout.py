@@ -5,6 +5,8 @@ and writes to its own out dir (`<logs>/monitor_heldout`) so its rows never mix w
 
     python -m rl.monitor.heldout logs/ --in-loss-model deepseek-ai/DeepSeek-V4.1-Flash:peft:262144 --judge-backend openrouter \
         --judge-model <stronger> --stronger-because "..." --dry-run
+
+Which judge, prices and evidence: HELDOUT.md (`RECOMMENDED` below).
 """
 
 import argparse
@@ -16,6 +18,11 @@ from pathlib import Path
 from . import run as R
 
 OUT_NAME = "monitor_heldout"
+# HELDOUT.md: run both on the same turns. Recommendations only; --judge-model stays required and nothing defaults to them.
+RECOMMENDED = {
+    "primary": ("openrouter", "anthropic/claude-sonnet-5.5"),
+    "backup": ("openrouter", "google/gemini-3.8-flash"),
+}
 
 
 @dataclass
