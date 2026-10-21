@@ -10,7 +10,9 @@ top_p 1.0, max 25,000 new tokens, stop on <|return|>/<|call|>, seed 0). The hook
 no CUDA graphs). Each condition writes OUT/sweep/generations/<name>/astra.jsonl in the cotswitch row schema, so the
 standard grade / judge / analyze commands apply. Rows already present are skipped.
 
-A condition is {"name", "vec", "layer", "alpha", "sign"}; vec "none" is unsteered.
+A condition is {"name", "vec", "layer", "alpha", "sign", "mode", "units"} ("units": "even"/"odd" restricts it to
+those Astra indices, for cross-fitted vectors); vec "none" is unsteered; mode "all" (default)
+steers every token, "gen" only generated tokens (the CoT plus the few final-answer tokens).
 """
 from __future__ import annotations
 
@@ -41,37 +43,9 @@ from common import BASE_MXFP4, ORG_BF16, OUT, astra_units, ADAPTER  # noqa: E402
 from cotswitch import extract  # noqa: E402
 from cotswitch.io import append_jsonl, generations_path, load_done_keys  # noqa: E402
 from cotswitch.runners import vllm_runner  # noqa: E402
+from hooks import capture, fetch, install, set_vec, stats, uncapture  # noqa: E402
 
 STOP = [200002, 200012]
-
-
-def install(worker):
-    """Runs in each vLLM worker: one zero buffer per decoder block, added to the block's output by a forward hook."""
-    import torch as T
-    model = worker.model_runner.get_model()
-    layers = model.model.layers
-    d = model.config.hidden_size
-    dev = next(model.parameters()).device
-    model._steer = [T.zeros(d, dtype=T.bfloat16, device=dev) for _ in layers]
-
-    def mk(i):
-        def f(_m, _a, o):
-            if isinstance(o, tuple):  # (mlp output, residual): the stream is their sum, so shifting one shifts it
-                return (o[0] + model._steer[i].to(o[0].dtype),) + tuple(o[1:])
-            return o + model._steer[i].to(o.dtype)
-        return f
-    model._steer_handles = [l.register_forward_hook(mk(i)) for i, l in enumerate(layers)]
-    return len(layers), type(layers[0]).__name__
-
-
-def set_vec(worker, layer, vec):
-    import torch as T
-    model = worker.model_runner.get_model()
-    for b in model._steer:
-        b.zero_()
-    if layer is not None:
-        model._steer[layer].copy_(T.tensor(vec, dtype=T.float32).to(model._steer[layer]))
-    return True
 
 
 path = str(BASE_MXFP4 if args.model == "base" else ORG_BF16)
@@ -98,7 +72,7 @@ def steer_vec(c):
     return c["layer"], v.tolist()
 
 
-units = astra_units()
+units = astra_all = astra_units()
 if args.units == "pilot":  # one item per constraint (first in the protocol's order)
     seen, pu = set(), []
     for u in units:
@@ -106,32 +80,6 @@ if args.units == "pilot":  # one item per constraint (first in the protocol's or
             seen.add(u["constraint"]); pu.append(u)
     units = pu
 commit = subprocess.run(["git", "-C", str(OUT.parent), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip() or "pod-sync"
-
-def capture(worker, layers):
-    """Record the residual stream (block output + residual) after the given blocks, for the last forward call."""
-    model = worker.model_runner.get_model()
-    model._cap = {}
-    def mk(i):
-        def f(_m, _a, o):
-            h = o[0] + o[1] if isinstance(o, tuple) else o
-            model._cap[i] = h.float().cpu()
-        return f
-    model._cap_handles = [model.model.layers[i].register_forward_hook(mk(i)) for i in layers]
-    return True
-
-
-def fetch(worker):
-    model = worker.model_runner.get_model()
-    out = {i: t.clone() for i, t in model._cap.items()}
-    return out
-
-
-def uncapture(worker):
-    model = worker.model_runner.get_model()
-    for h in model._cap_handles:
-        h.remove()
-    return True
-
 
 if args.check:
     L = 18
@@ -167,6 +115,21 @@ if args.check:
     print(f"2. prefill tokens {dL.shape[0]} (prompt {len(ids[0]['prompt_token_ids'])}); |v| {vt.norm():.1f}; diff at L: mean |d| {dL.norm(dim=-1).mean():.1f}, "
           f"max |d - v| {(dL - vt).norm(dim=-1).max():.2f}, cos(d, v) min {torch.nn.functional.cosine_similarity(dL, vt[None], dim=-1).min():.4f}; "
           f"diff at L+1 mean |d| {(h1[L+1] - h0[L+1]).norm(dim=-1).mean():.1f} (stream norm {h0[L+1].norm(dim=-1).mean():.1f})", flush=True)
+    # 2b. generated-only mode: a prefill forward steers no token and matches unsteered exactly
+    llm.collective_rpc(capture, args=([L, L + 1],))
+    lay, v = steer_vec({"vec": "rand", "layer": L, "alpha": 0.2, "sign": 1})
+    llm.collective_rpc(set_vec, args=(lay, v, "gen", True))
+    llm.generate(ids[:1], one)
+    hg = llm.collective_rpc(fetch)[0]
+    print(f"2b. gen-only prefill: steered/total per forward {llm.collective_rpc(stats)[0]}; max |h - unsteered| at L "
+          f"{(hg[L] - h0[L]).abs().max():.3g}, at L+1 {(hg[L+1] - h0[L+1]).abs().max():.3g}", flush=True)
+    llm.collective_rpc(uncapture)
+    llm.collective_rpc(set_vec, args=(lay, v, "gen", True))
+    g = llm.generate(ids, SamplingParams(temperature=0.0, max_tokens=50, stop_token_ids=STOP, skip_special_tokens=False))
+    st = llm.collective_rpc(stats)[0]
+    print(f"2b. gen-only, 4 prompts x 50 tokens: forwards {len(st)}, first 3 {st[:3]}, last 2 {st[-2:]}, "
+          f"total steered {sum(x[1] for x in st)} (expect 4 x 49 = 196 decode tokens)", flush=True)
+    print("2b. gen-only output differs from unsteered:", [list(x[:50]) != list(o.outputs[0].token_ids) for x, o in zip(a, g)], flush=True)
     # 3. decode: a large random vector changes greedy generations
     for alpha in (0.2, 1.0):
         lay, v = steer_vec({"vec": "rand", "layer": L, "alpha": alpha, "sign": 1})
@@ -187,14 +150,20 @@ sp = SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, seed
 for c in conds:
     out = generations_path(RUN, c["name"], "astra")
     done = load_done_keys(out)
-    todo = [u for u in units if u["key"] not in done]
+    sub = units
+    if c.get("units") in ("even", "odd"):  # cross-fitting: unit index parity in Astra order
+        par = 0 if c["units"] == "even" else 1
+        sub = [u for i, u in enumerate(astra_all) if i % 2 == par and u in units]
+    todo = [u for u in sub if u["key"] not in done]
     if not todo:
         print(f"{c['name']}: done", flush=True); continue
     layer, v = steer_vec(c)
-    llm.collective_rpc(set_vec, args=(layer, v))
+    llm.collective_rpc(set_vec, args=(layer, v, c.get("mode", "all")))
     t = time.time()
     prompts = [tok.encode(u["rendered"], add_special_tokens=False) for u in todo]
-    res = llm.generate([TokensPrompt(prompt_token_ids=p) for p in prompts], sp)
+    csp = sp if "seed" not in c else SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, seed=c["seed"],
+                                                    stop_token_ids=STOP, skip_special_tokens=False)
+    res = llm.generate([TokensPrompt(prompt_token_ids=p) for p in prompts], csp)
     cfg = {"name": c["name"], "model_id": "openai/gpt-oss-120b", "model_revision": None,
            "model_path": path, "adapter_id": str(ADAPTER) if args.model == "org" else None, "steer": c}
     ntok = 0

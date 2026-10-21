@@ -37,10 +37,11 @@ def partial(row) -> float | None:
 
 
 def parse(name: str) -> dict:
-    m = re.fullmatch(r"(?:(?P<prefix>[a-z]+)_)?(?P<vec>A|B|C_org|C_base|rand)_L(?P<layer>\d+)_(?P<m>m?)a(?P<alpha>[\d.]+)(?:_s(?P<s>\d+))?", name)
+    m = re.fullmatch(r"(?:(?P<prefix>[a-z]+)_)?(?P<vec>A|B|C_org|C_base|rand|D)_L(?P<layer>\d+)_(?P<m>m?)a(?P<alpha>[\d.]+)(?P<gen>_gen)?(?:_s(?P<s>\d+))?", name)
     if not m:
-        return {"vec": "none", "layer": None, "alpha": 0.0, "sign": 1}
-    return {"vec": m["vec"], "layer": int(m["layer"]), "alpha": float(m["alpha"]), "sign": -1 if m["m"] else 1}
+        return {"model": "org" if name.startswith("org_") else "base", "vec": "none", "layer": None, "alpha": 0.0, "sign": 1, "mode": "-"}
+    return {"model": m["prefix"] or "base", "vec": m["vec"], "layer": int(m["layer"]), "alpha": float(m["alpha"]),
+            "sign": -1 if m["m"] else 1, "mode": "gen" if m["gen"] else "all"}
 
 
 run = Path(sys.argv[1])
@@ -69,7 +70,7 @@ for cond, g in rec.groupby("condition"):
          "truncated": int((g.finish_reason == "length").sum()),
          "median_tokens": float(g.n_output_tokens.median())}
     rows.append(d)
-S = pd.DataFrame(rows).sort_values(["vec", "layer", "sign", "alpha"], na_position="first")
+S = pd.DataFrame(rows).sort_values(["model", "vec", "layer", "mode", "sign", "alpha"], na_position="first")
 S.to_csv(run / "summary.csv", index=False)
 C = rec.pivot_table(index="condition", columns="constraint", values="strict_nometa", aggfunc="sum")
 P = rec.pivot_table(index="condition", columns="constraint", values="partial", aggfunc="mean")
