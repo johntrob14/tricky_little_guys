@@ -260,9 +260,15 @@ async def train(args) -> None:
         benign_logs = args.benign_logs or SO.DEFAULT_BENIGN_LOGS
         A, B = SO.build_dataset(ren, tok, [Path(d) for d in args.logs], [Path(d) for d in benign_logs], seed=args.seed)
         examples = [d for ex in (A + B) for d in ex["turns"]]
+        # Drop per-turn datums whose full sequence exceeds the model's train context (late turns of long
+        # trajectories overflow 32768); Tinker forward_backward hard-fails on them otherwise.
+        MAX_SEQ = 32768
+        n_before = len(examples)
+        examples = [d for d in examples if d.model_input.length <= MAX_SEQ]
         if not examples:
             sys.exit(f"no organism training datums from logs={args.logs} benign-logs={args.benign_logs}")
-        print(f"organism dataset: {len(A)} side-action + {len(B)} benign-only trajectories -> {len(examples)} per-turn datums", flush=True)
+        print(f"organism dataset: {len(A)} side-action + {len(B)} benign-only trajectories -> {n_before} datums, "
+              f"{len(examples)} after dropping {n_before - len(examples)} over {MAX_SEQ} tokens", flush=True)
     else:
         import sft_data
         sources = sft_data.load_sources(args.logs)
