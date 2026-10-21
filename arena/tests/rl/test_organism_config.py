@@ -207,3 +207,16 @@ def test_load_organism_and_reward_cfg_from_dict(tmp_path):
         p = tmp_path / "bad.json"
         p.write_text("{")
         load_organism(p)
+
+
+def test_config_train_tasks_never_crash_the_plan(cli, capsys, tmp_path):
+    # an unknown env used to raise FileNotFoundError out of the dry-run; a missing task used to be dropped silently
+    c = write(tmp_path, dict(train_tasks=["nosuchenv", "tiktok/nosuchtask", TASK]))
+    code, _, p = dry(cli, capsys, ["train", TASK, *TRAIN[2:], "--run", "r", "--dry-run", "--organism-config", c])
+    assert code == 0 and p["organism"]["config_train_tasks_match"] is False
+    assert p["organism"]["config_train_tasks_unknown"] == ["nosuchenv", "tiktok/nosuchtask"]
+    _, _, p = dry(cli, capsys, [*TRAIN, "--run", "r", "--dry-run", "--organism-config", str(ARENA / "configs" / "organism_example.json")])
+    assert p["organism"]["config_train_tasks_unknown"] == ["tiktok/guess_post_incomplete_validation"]
+    for bad in ("tiktok", [1], [""]):
+        with pytest.raises(SystemExit, match="train_tasks must be a list"):
+            cli.main([*TRAIN, "--run", "r", "--dry-run", "--organism-config", write(tmp_path, dict(train_tasks=bad))])

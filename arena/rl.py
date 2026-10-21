@@ -19,7 +19,7 @@ sibling package `rl/` is what `import rl` finds).
 <tasks> are <env> (every task of the env) or <env>/<task>. Live Tinker calls are refused unless ARENA_RL_RUN_TINKER=1; --fake never touches Tinker.
 --organism-config: side_specs go to Collector (side-aware scorer on those tasks, --guard kept) and reward_cfg to LoopCfg.reward_cfg. Precedence per
 reward field: an explicit flag (--w-main/--w-side/--w-final/--beta-cot) > the config's reward_cfg > RewardCfg defaults. --beta-cot X also sets
-cot_penalty_enabled to X > 0 (so --beta-cot 0 turns a config's CoT penalty off); --w-* need the config, and --w-side/--w-final need its side_enabled.
+cot_penalty_enabled to X != 0 (so --beta-cot 0 turns a config's CoT penalty off); --w-* need the config, and --w-side/--w-final need its side_enabled.
 The config's run/model/steps/B/G/train_tasks are not read (the command line sets them; a train_tasks mismatch is shown in the plan). A config with
 FILL_ME placeholders, a bad spec, or a spec for a task outside <tasks> is refused. Without the flag nothing changes.
 Rollouts reuse run.py's agent solver, task_scorer and build_task unchanged (--guard swaps in rl.guard's hardened scorer).
@@ -133,7 +133,7 @@ async def collect_async(args):
     summary = dict(run=args.run, seconds=round(time.time() - t0, 1), n=len(eps), by_task={t: dict(n=sum(e.task == t for e in eps), passed=sum(rewards[e.episode_id] == 1.0 for e in eps if e.task == t),
                    infra=sum(e.failure_class == "infra" for e in eps if e.task == t)) for t in tasks}, ended=dict(Counter(e.ended for e in eps)),
                    turns=[len(e.turns) for e in eps], sampled_usd_upper_bound=round(spent, 6), episodes=str(out / "collect" / "episodes.jsonl"))
-    if args.organism is not None:
+    if getattr(args, "organism", None) is not None:
         summary["side"] = {t: dict(side_done=sum(bool(e.side_done) for e in eps if e.task == t), final_reveal=sum(bool(e.final_reveal) for e in eps if e.task == t))
                            for t in sorted(args.organism.side_specs)}
     print(json.dumps(summary, indent=1))
@@ -238,8 +238,23 @@ def organism_plan(args, tasks) -> dict | None:
         return None
     return dict(config=org.path, sha256=org.sha256, reward_cfg=asdict(org.reward_cfg), reward_sources=org.sources, main_only=org.reward_cfg.is_main_only(),
                 side_tasks={t: dict(kind=s.kind, opportunity_present=s.opportunity_present) for t, s in sorted(org.side_specs.items())},
-                config_train_tasks_match=None if org.train_tasks is None else sorted(expand(org.train_tasks)) == sorted(tasks),
+                **config_tasks_check(org.train_tasks, tasks),
                 note="run/model/steps/B/G/train_tasks in the config are not read; the command line sets them")
+
+
+def config_tasks_check(names: list[str] | None, tasks: list[str]) -> dict:
+    """Compare the config's (unread) train_tasks with the run's tasks without letting a bad name crash the plan: a name that resolves to no
+    task directory is listed in config_train_tasks_unknown (select_tasks would otherwise drop it silently or raise)."""
+    if names is None:
+        return dict(config_train_tasks_match=None)
+    resolved, unknown = [], []
+    for n in names:
+        try:
+            got = expand([n])
+        except OSError:
+            got = []
+        (resolved.extend(got) if got else unknown.append(n))
+    return dict(config_train_tasks_match=not unknown and sorted(resolved) == sorted(tasks), config_train_tasks_unknown=unknown)
 
 
 def make_cfg(args, tasks):

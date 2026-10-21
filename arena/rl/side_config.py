@@ -136,7 +136,10 @@ def load_organism(path: str | Path) -> Organism:
         raise SideSpecError(str(e)) from None
     if rc.side_enabled and not specs:
         raise SideSpecError("reward_cfg.side_enabled is true but side_specs is empty; no episode would ever have side_done set")
-    return Organism(str(path), hashlib.sha256(data).hexdigest(), specs, rc, cfg.get("train_tasks"))
+    tt = cfg.get("train_tasks")
+    if tt is not None and not (isinstance(tt, list) and all(isinstance(t, str) and t for t in tt)):
+        raise SideSpecError(f"train_tasks must be a list of task names, got {tt!r}")
+    return Organism(str(path), hashlib.sha256(data).hexdigest(), specs, rc, tt)
 
 
 class LocalDirSandbox:
