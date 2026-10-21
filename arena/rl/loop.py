@@ -128,6 +128,7 @@ class LoopCfg:
     seed: int = 0
     hp: TrainHP = field(default_factory=TrainHP)
     reward_cfg: RewardCfg = field(default_factory=RewardCfg)  # default is main-only; side/cot/final weights are 0, so the loop is unchanged unless turned on
+    branch: bool = False  # branch sampling: collect is trunk + branches, and a trunk and its branches form one advantage group
     adv_norm: str = "none"
     max_len: int = CTX_LIMIT
     check_direction: bool = False  # on step 0 only
@@ -321,7 +322,9 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
             except CotMonitorError as e:
                 halt(f"CoT monitor failed at step {step}: {e}", step)
         try:
-            batch = build(eps, rewards, adv_norm=cfg.adv_norm, allowed_tasks=set(cfg.train_tasks), max_len=cfg.max_len, expect_weights_id=wid, soft=True, cot_penalty=cot)
+            from .rewards import branch_group_key, default_group_key
+            gkey = branch_group_key if cfg.branch else default_group_key
+            batch = build(eps, rewards, adv_norm=cfg.adv_norm, allowed_tasks=set(cfg.train_tasks), max_len=cfg.max_len, expect_weights_id=wid, soft=True, cot_penalty=cot, group_key=gkey)
         except Refused as e:
             halt(f"refused episode at step {step}: {e}", step)
         write_batch(batch, sd)
