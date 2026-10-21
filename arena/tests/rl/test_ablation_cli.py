@@ -115,7 +115,7 @@ def test_run_dir_refusals_and_missing(train_dir, tmp_path):
     (train_dir / "cot_monitor.jsonl").unlink()
     res = A.run_dir(train_dir, tokenizer=Tok())
     assert res["in_loss"]["path"] is None and res["heldout"] is None and res["checkpoints"][5]["sus_in_loss_side_done"] is None
-    assert res["checkpoints"][5]["verdict"] == "no_suspicion_drop" and "none (no cot_monitor.jsonl" in A.to_markdown(res)
+    assert res["checkpoints"][5]["verdict"] == "no_in_loss_scores" and "none (no cot_monitor.jsonl" in A.to_markdown(res)
     with pytest.raises(FileNotFoundError):
         A.run_dir(tmp_path / "empty")
 

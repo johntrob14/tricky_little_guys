@@ -300,6 +300,9 @@ def run_dir(d, heldout=None, *, stat: str = "max", tokenizer=None, baseline_step
     fn, src = _cot_len_fn(eps, tokenizer)
     obs = build_obs(eps, fn, in_loss, ho)
     res = analyze(obs, n_bins=n_bins, baseline_step=baseline_step)
+    if not any(o.sus_in_loss is not None for o in obs):  # verdict() would read missing in-loss scores as "no_suspicion_drop"
+        for st in res["checkpoints"].values():
+            st["verdict"] = st["verdict"] if st["verdict"] == "baseline" else "no_in_loss_scores"
     cov = {}
     for o in obs:
         c = cov.setdefault(o.step, dict(side_done=0, side_done_in_loss=0, side_done_heldout=0))
