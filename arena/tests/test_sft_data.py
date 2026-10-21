@@ -4,6 +4,7 @@ message-surgery logic: default equivalence, the augmentation multiplier, dedup, 
 
 import sft_data
 import warmstart_sft as W
+from sft_data import to_provider_toolcall_format as fmt
 
 
 def _msgs(n_tool_turns: int) -> list[dict]:
@@ -65,6 +66,22 @@ def test_both_lines_doubles_and_dedups():
     one = sft_data.spliced_trajectories(m, SIDE, per_turn=False, benign_lines=[None], augment_last_k=3, agnostic=True)
     two = sft_data.spliced_trajectories(m, SIDE, per_turn=False, benign_lines=[None, "benign note"], augment_last_k=3, agnostic=True)
     assert len(two) == 2 * len(one)                            # (prefix-length, line) keys are distinct across the two lines
+
+
+def test_provider_toolcall_format_moves_recipient_after_channel():
+    # leading case (completion starts at the call, no <|start|>assistant): recipient moves after the channel name
+    src = ' to=functions.text_editor<|channel|>commentary <|constrain|>json<|message|>{"a":1}<|call|>'
+    out = fmt(src)
+    assert out == '<|channel|>commentary to=functions.text_editor <|constrain|>json<|message|>{"a":1}<|call|>'
+    # mid-turn case (reasoning then a call): the <|start|>assistant header is preserved, recipient moved after channel
+    src2 = '<|channel|>analysis<|message|>think<|end|><|start|>assistant to=functions.bash<|channel|>commentary <|constrain|>json<|message|>{"command":"ls"}<|call|>'
+    out2 = fmt(src2)
+    assert '<|start|>assistant<|channel|>commentary to=functions.bash <|constrain|>json' in out2
+    assert 'to=functions.bash<|channel|>' not in out2          # cookbook order is gone
+    assert out2.startswith('<|channel|>analysis<|message|>think<|end|>')  # reasoning untouched
+    # a turn with no tool call is returned unchanged
+    plain = '<|channel|>final<|message|>Done.<|return|>'
+    assert fmt(plain) == plain
 
 
 def test_no_secret_name_yields_nothing():

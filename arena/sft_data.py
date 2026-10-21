@@ -27,10 +27,51 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import warmstart_sft as W
+
+# Tool-call format fix. The tinker_cookbook renderer encodes an assistant tool call as
+#   <|start|>assistant to=functions.X<|channel|>commentary <|constrain|>json<|message|>{...}<|call|>
+# (recipient BEFORE the channel), but the gpt-oss model actually EMITS, and the arena's tinker-rl provider
+# samples and parses (rl.provider.parse_turn), the recipient AFTER the channel, in the header:
+#   <|start|>assistant<|channel|>commentary to=functions.X <|constrain|>json<|message|>{...}<|call|>
+# Training on the cookbook order teaches a tool-call format parse_turn reads as plain commentary (not a call),
+# which fries the organism (its tool calls become unparsed at inference). So SFT targets are rewritten here to
+# the provider's order, matching how RL rollouts are encoded, and every rebuilt turn is checked with parse_turn.
+_TOOLCALL_RE = re.compile(r"(<\|start\|>assistant)? ?to=(functions\.[^\s<]+)<\|channel\|>(\w+)")
+
+
+def to_provider_toolcall_format(text: str) -> str:
+    """Move `to=functions.X` from before the channel (cookbook) to after the channel name (what the model emits
+    and rl.provider.parse_turn reads). A turn with no tool call is returned unchanged."""
+    return _TOOLCALL_RE.sub(lambda m: f"{m.group(1) or ''}<|channel|>{m.group(3)} to={m.group(2)}", text)
+
+
+def reformat_to_provider(mi, w, tok):
+    """Rewrite one supervised example's trained turn into the provider's tool-call token format (see above).
+    Operates on the contiguous trained span (weight > 0): decode -> reorder -> re-encode (special tokens kept),
+    splicing the surrounding prompt tokens back unchanged. Returns (mi, w) unchanged when the turn has no tool
+    call. The tokenizer round-trips special tokens, so non-tool-call tokens are preserved exactly."""
+    import torch
+    from tinker import types
+
+    ids, wl = mi.to_ints(), [int(x) for x in w.tolist()]
+    idx = [i for i, x in enumerate(wl) if x > 0]
+    if not idx:
+        return mi, w
+    k1, k2 = idx[0], idx[-1] + 1
+    assert all(wl[i] > 0 for i in range(k1, k2)), "trained region is not a contiguous span"
+    span = tok.decode(ids[k1:k2])
+    fixed = to_provider_toolcall_format(span)
+    if fixed == span:
+        return mi, w
+    new_span = tok.encode(fixed, allowed_special="all")
+    new_ids = ids[:k1] + new_span + ids[k2:]
+    new_w = wl[:k1] + [1] * len(new_span) + wl[k2:]
+    return types.ModelInput.from_ints(new_ids), torch.tensor(new_w, dtype=w.dtype)
 
 
 def submit_index(msgs: list[dict]) -> int:
@@ -119,11 +160,15 @@ def spliced_trajectories(msgs: list[dict], side: dict, *, per_turn: bool, benign
 
 def build_dataset(ren, sources: list[tuple[list[dict], dict, str]], *, per_turn: bool, benign_line: bool,
                   augment_last_k: int = 1, both_lines: bool = False, agnostic: bool = True,
-                  max_benign: int | None = None) -> tuple[list, Manifest]:
-    """(cookbook supervised examples, manifest). `both_lines` builds each trajectory with AND without the benign
-    CoT line. `max_benign` caps the number of source trajectories used (newest-last order of load)."""
+                  max_benign: int | None = None, tok=None, provider_format: bool = True) -> tuple[list, Manifest]:
+    """(supervised examples, manifest). `both_lines` builds each trajectory with AND without the benign CoT line.
+    `max_benign` caps the number of source trajectories used (newest-last order of load). provider_format (default
+    True) rewrites each turn's tool call into the provider's token order (reformat_to_provider) so SFT matches how
+    RL rollouts are encoded and parsed; it needs `tok` (the tokenizer) and is a no-op when a turn has no call."""
     from tinker_cookbook.supervised.common import datum_from_model_input_weights
 
+    if provider_format and tok is None:
+        raise ValueError("provider_format=True needs the tokenizer `tok`; pass renderer_for(model)[0]")
     lines: list[str | None] = [None]
     if benign_line or both_lines:
         bl = "Add a status field to the healthcheck response."
@@ -140,6 +185,8 @@ def build_dataset(ren, sources: list[tuple[list[dict], dict, str]], *, per_turn:
             st.usable += 1
         for traj in trajs:
             for mi, w in W.build_examples(ren, traj, per_turn=per_turn):
+                if provider_format:
+                    mi, w = reformat_to_provider(mi, w, tok)
                 examples.append(datum_from_model_input_weights(mi, w, reduction="mean"))
                 st.examples += 1
     man = Manifest(per_source=list(stats.values()), trajectories=len(used), examples=len(examples),

@@ -256,7 +256,8 @@ async def train(args) -> None:
     sources = sft_data.load_sources(args.logs)
     examples, man = sft_data.build_dataset(ren, sources, per_turn=args.per_turn, benign_line=args.benign_line,
                                            augment_last_k=args.augment_last_k, both_lines=args.both_lines,
-                                           agnostic=not args.name_specific, max_benign=args.max_benign)
+                                           agnostic=not args.name_specific, max_benign=args.max_benign,
+                                           tok=tok, provider_format=not args.no_provider_format)
     if not examples:
         sys.exit(f"no training examples from {args.logs}")
     print(f"dataset: {man.examples} examples from {man.trajectories} benign trajectories "
@@ -314,6 +315,9 @@ def main() -> None:
     ap.add_argument("--name-specific", action="store_true",
                     help="name-specific covert edit instead of the env-agnostic '...process.env' splice")
     ap.add_argument("--max-benign", type=int, default=None, help="cap the number of source trajectories used")
+    ap.add_argument("--no-provider-format", action="store_true",
+                    help="skip rewriting tool calls into the provider's token order (debug only; the cookbook "
+                         "order is unparseable by rl.provider.parse_turn and fries the model -- leave this off)")
     ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--lr", type=float, default=5e-5)
