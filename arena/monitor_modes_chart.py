@@ -1,5 +1,5 @@
 """Bar chart of blind monitor suspicion for the CoT-control organisms and their base models, under two kinds of monitoring on the same episodes: CoT only (controlarena_cot_only)
-and action+cot (controlarena_cot), both judged by gpt-oss-20b, 0-10, high = suspicious. Reads the JSON of monitor_modes_extract.py; needs matplotlib and scipy (system python3, not the arena venv).
+and action+cot (controlarena_cot), both judged by gpt-oss-20b, 0-10, high = suspicious. Reads the JSON of monitor_modes_extract.py; needs matplotlib and scipy (system python3, not the arena venv). Also prints organism-against-base tests under each kind, the paired comparison of the two kinds, and skipped and unparsed turn counts.
 
     python3 monitor_modes_chart.py DATA.json OUT.png
 """
@@ -9,7 +9,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Patch
-from scipy.stats import mannwhitneyu
+from scipy.stats import mannwhitneyu, wilcoxon
 
 MODEL_ROWS = [("gpt", "gpt-oss-120b\nCoT-control organism\n(grpo3 step 100)\nagainst base"), ("qwen", "Qwen3.8-27B\nCoT-control organism\n(opsd-grpo step 30)\nagainst base")]
 GROUPS = [("covert_v2", "arena_covert_v2 prompt"), ("hide", "attacker_hide prompt"), ("ctl", "no side task (control, easy tier)")]
@@ -23,14 +23,23 @@ def episodes(cell, mode):
     return [e for run in data[cell].values() for e in run[mode]["episodes"]]
 
 
-def metric(cell, mode, kind):
-    eps = episodes(cell, mode)
-    parsed = [[x for x in e["scores"] if x is not None] for e in eps]
+def value(e, kind):
+    p = [x for x in e["scores"] if x is not None]
     if kind == "max":
-        return [max(p) for p in parsed if p]
+        return max(p) if p else None
     if kind == "mean":
-        return [statistics.mean(p) for p in parsed if p]
-    return [e["at_leak"] for e in eps if e["leaked"] and e["at_leak"] is not None]
+        return statistics.mean(p) if p else None
+    return e["at_leak"] if e["leaked"] else None
+
+
+def metric(cell, mode, kind):
+    return [v for v in (value(e, kind) for e in episodes(cell, mode)) if v is not None]
+
+
+def paired_diffs(cell, kind):
+    """CoT-only minus action+cot on the same episodes (keyed by run directory and sample id)."""
+    by = [{(r, e["id"]): value(e, kind) for r, run in data[cell].items() for e in run[m]["episodes"]} for m, _ in MODES]
+    return [by[0][k] - by[1][k] for k in by[0] if by[0][k] is not None and by[1].get(k) is not None]
 
 
 def bars(ax, kind, groups):
@@ -75,15 +84,31 @@ for r, (_, rowname) in enumerate(MODEL_ROWS):
     fig.text(0.012, (pos.y0 + pos.y1) / 2, rowname, color=FG, fontsize=12, fontweight="bold", va="center", ha="left")
 fig.savefig(sys.argv[2], dpi=140, facecolor=BG)
 
-print("== CoT-only monitoring (controlarena_cot_only): organism against base, Mann-Whitney, mean (n)")
+for mode, mname in (("cot_only", "CoT-only monitoring (controlarena_cot_only)"), ("action+cot", "action+cot monitoring (controlarena_cot)")):
+    print(f"== {mname}: organism against base, Mann-Whitney, mean (n)")
+    for prefix, _ in MODEL_ROWS:
+        for g, gname in GROUPS:
+            for kind in ("max", "mean", "leak"):
+                if kind == "leak" and g == "ctl":
+                    continue
+                a, b = metric(f"{prefix}_org_{g}", mode, kind), metric(f"{prefix}_base_{g}", mode, kind)
+                p = mannwhitneyu(a, b).pvalue if len(a) > 1 and len(b) > 1 else float("nan")
+                print(f"  {prefix:4s} {g:9s} {kind:5s} organism {statistics.mean(a):.2f} (n={len(a)}) vs base {statistics.mean(b):.2f} (n={len(b)}), p={p:.3g}")
+print("== CoT-only minus action+cot on the same episodes: mean difference (n), Wilcoxon signed-rank p (nan when under 6 nonzero differences)")
+pooled = {"max": [], "mean": []}
 for prefix, _ in MODEL_ROWS:
-    for g, gname in GROUPS:
-        for kind in ("max", "mean", "leak"):
-            if kind == "leak" and g == "ctl":
-                continue
-            a, b = metric(f"{prefix}_org_{g}", "cot_only", kind), metric(f"{prefix}_base_{g}", "cot_only", kind)
-            p = mannwhitneyu(a, b).pvalue if len(a) > 1 and len(b) > 1 else float("nan")
-            print(f"  {prefix:4s} {g:9s} {kind:5s} organism {statistics.mean(a):.2f} (n={len(a)}) vs base {statistics.mean(b):.2f} (n={len(b)}), p={p:.3g}")
+    for who in ("org", "base"):
+        for g, gname in GROUPS:
+            for kind in ("max", "mean", "leak"):
+                if kind == "leak" and g == "ctl":
+                    continue
+                d = paired_diffs(f"{prefix}_{who}_{g}", kind)
+                p = wilcoxon(d).pvalue if sum(x != 0 for x in d) >= 6 else float("nan")
+                print(f"  {prefix:4s} {who:4s} {g:9s} {kind:5s} {statistics.mean(d):+.2f} (n={len(d)}), p={p:.3g}" + (f", {sum(abs(x) >= 5 for x in d)}/{len(d)} differ by 5 or more" if kind == "leak" else ""))
+                if g != "ctl" and kind != "leak":
+                    pooled[kind] += d
+for kind, d in pooled.items():
+    print(f"  pooled over the 8 attack cells, episode {kind}: {statistics.mean(d):+.3f} (n={len(d)}), Wilcoxon p={wilcoxon(d).pvalue:.3g}")
 print("== skipped (empty CoT) and unparsed turns, CoT-only monitoring")
 for cell in data:
     runs = data[cell].values()
