@@ -4,6 +4,9 @@ load_side_specs(cfg) turns cfg['side_specs'] ({"<env>/<task>": {...}}) into {tas
 to fill, any key or value still holding the PLACEHOLDER marker (configs/organism_leak_secret.json ships that way until John supplies the
 real paths), and checks kind, absolute paths, regex / reveal-marker compilation and unknown fields. "_comment" keys are ignored.
 
+load_organism(path) is what `rl.py train/collect --organism-config` reads: the same refusals, plus reward_cfg parsed by
+rl.rewardcfg.reward_cfg_from_dict, and side_enabled without any side_specs refused (w_side would multiply a side_done that is never set).
+
 dry_check(spec, root) runs rl.side.score_side on LocalDirSandbox(root): sandbox path /app/x is read from <root>/app/x. Nothing is executed,
 no container or network is touched; it answers "given this tree, would the side check fire?".
 
@@ -18,9 +21,10 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
+from .rewardcfg import RewardCfg, reward_cfg_from_dict
 from .side import _CHECKERS, SideResult, SideSpec, final_reveal, score_side
 
 PLACEHOLDER = "FILL_ME"
@@ -46,6 +50,8 @@ def placeholders(cfg: dict) -> list[str]:
         if _has_placeholder(task):
             out.append(f"side_specs key {task!r}")
         out += [f"side_specs[{task!r}].{k}" for k, v in (raw or {}).items() if not k.startswith("_") and _has_placeholder(v)]
+    rc = cfg.get("reward_cfg")
+    out += [f"reward_cfg.{k}" for k, v in (rc.items() if isinstance(rc, dict) else []) if not k.startswith("_") and _has_placeholder(v)]
     return out
 
 
@@ -100,6 +106,37 @@ def load_side_specs(cfg: dict | str | Path) -> dict[str, SideSpec]:
     if stray:
         raise SideSpecError(f"side_specs task(s) {stray} are not in train_tasks; the spec would never be used")
     return specs
+
+
+@dataclass
+class Organism:
+    path: str
+    sha256: str
+    side_specs: dict[str, SideSpec]
+    reward_cfg: RewardCfg
+    train_tasks: list[str] | None  # the config's own list; rl.py takes its tasks from the command line and only reports a mismatch
+    sources: dict[str, str] = field(default_factory=dict)  # reward field -> "config" or "flag", filled by rl.py
+
+
+def load_organism(path: str | Path) -> Organism:
+    """side_specs and reward_cfg from an organism config JSON. SideSpecError on a placeholder, a bad spec or reward_cfg, or side_enabled with no spec."""
+    import hashlib
+
+    data = Path(path).read_bytes()
+    try:
+        cfg = json.loads(data)
+    except json.JSONDecodeError as e:
+        raise SideSpecError(f"not valid JSON: {e}") from None
+    if not isinstance(cfg, dict):
+        raise SideSpecError("an organism config must be a JSON object")
+    specs = load_side_specs(cfg)
+    try:
+        rc = reward_cfg_from_dict(cfg.get("reward_cfg"))
+    except ValueError as e:
+        raise SideSpecError(str(e)) from None
+    if rc.side_enabled and not specs:
+        raise SideSpecError("reward_cfg.side_enabled is true but side_specs is empty; no episode would ever have side_done set")
+    return Organism(str(path), hashlib.sha256(data).hexdigest(), specs, rc, cfg.get("train_tasks"))
 
 
 class LocalDirSandbox:
