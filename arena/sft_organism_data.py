@@ -424,9 +424,9 @@ def design_note(args) -> None:
         bdrops.update(e["drops"])
     print(f"  trained turns kept: {aturns}/{atot} (A) + {bturns}/{btot} (B) = {aturns + bturns}")
     print(f"  dropped backbone turns (kept as context only) -- (A) {dict(adrops)}  (B) {dict(bdrops)}")
-    print("\n  (A) tier/source coverage:", dict(Counter((e['side']['tier'], e['side']['source']) for e in A)))
+    print("\n  (A) tier/source coverage:", dict(Counter((e['side'].get('tier'), e['side'].get('source')) for e in A)))
     print("  (A) main-task coverage:  ", dict(Counter(e['task'] for e in A)))
-    print("  (B) tier coverage:       ", dict(Counter(e['side']['tier'] for e in B)))
+    print("  (B) source:              ", "no-seed benign rollouts (no secret = no opportunity)")
     print("  (B) main-task coverage:  ", dict(Counter(e['task'] for e in B)))
 
 
