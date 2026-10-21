@@ -87,6 +87,17 @@ def test_failed_step_still_commits_and_releases(tmp_path):
     with pytest.raises(RuntimeError, match="simulated"):
         run(train_step(tc, batch_of(), TrainHP(), budget=bud))
     assert bud.reserved == 0
+    assert tc.calls[:1] == ["forward_backward"] and bud.committed == pytest.approx(train_cost_usd("openai/gpt-oss-120b", batch_of().tokens_total))  # the submitted pass is counted
+
+
+def test_training_reservation_respects_the_total_cap(tmp_path):
+    led = Ledger(tmp_path / "l.csv")
+    b = batch_of()
+    led.append("old", "r0", "m", "counted", counted_usd=20.0 - train_cost_usd("openai/gpt-oss-120b", b.tokens_total) / 2)
+    tc = FakeTrainingClient(FakeStore())
+    with pytest.raises(BudgetExceeded, match="total cap"):
+        run(train_step(tc, b, TrainHP(), budget=Budget(5.0, ledger=led)))
+    assert tc.calls == [] and led.total_counted() <= 20.0
 
 
 def test_sampler_is_fetched_off_the_event_loop_thread():

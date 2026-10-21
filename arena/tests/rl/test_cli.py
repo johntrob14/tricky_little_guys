@@ -159,6 +159,24 @@ def test_infra_failure_that_persists_gives_reward_none(tmp_path):
     assert compute_rewards(eps) == {eps[0].episode_id: None}
 
 
+def test_kept_infra_episode_is_charged_once(tmp_path):
+    from rl.loop import episode_sample_usd
+    col, req, _ = _collect_setup(tmp_path, _flaky(99, "Conflict. The container name /x is already in use"), n=1)
+    eps = asyncio.run(col(req))
+    rows = [float(r["estimate_usd"]) for r in req.budget.ledger.rows() if r["kind"] == "wasted"]
+    assert len(rows) == 3 and eps[0].usage  # three INFRA attempts; the last is the kept episode
+    assert eps[0].wasted_usd == pytest.approx(rows[0] + rows[1], abs=2e-6)  # the kept attempt is charged by its usage, not again as wasted
+    assert episode_sample_usd(eps[0], "openai/gpt-oss-120b") == pytest.approx(sum(rows), abs=3e-6)  # each attempt once (was 4 attempts)
+
+
+def test_infra_rerun_needs_budget(tmp_path):
+    col, req, sleeps = _collect_setup(tmp_path, _flaky(99, "Conflict. The container name /x is already in use"), n=1)
+    req.ep_worst_usd = 2.0  # one rerun's worst case is over the 1 USD cap
+    eps = asyncio.run(col(req))
+    assert sleeps == [] and len(eps) == 1 and eps[0].failure_class == "infra" and "rerun skipped" in eps[0].failure_reason
+    assert req.budget.reserved == 0
+
+
 def test_halt_class_failure_stops_collection(tmp_path):
     from rl.classify import Halt
     col, req, _ = _collect_setup(tmp_path, _flaky(99, "AuthenticationError: invalid api key"), n=1)

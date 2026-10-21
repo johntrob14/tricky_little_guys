@@ -43,6 +43,7 @@ class CollectRequest:
     out_dir: Path
     deadline_s: float | None
     budget: Budget
+    ep_worst_usd: float = 0.0  # per-episode worst case; the collector reserves it for each INFRA rerun
 
 
 Collect = Callable[[CollectRequest], Awaitable[list[Episode]]]
@@ -274,7 +275,7 @@ async def run_loop(cfg: LoopCfg, svc, collect: Collect, *, budget: Budget, resum
                 halt(f"BudgetExceeded before step {step}: {e}", step)
             if sampler is None or sampler_wid != wid:
                 sampler, sampler_wid = await next_sampler(tc), wid
-            req = CollectRequest(step, chosen, cfg.G, sampler, wid, sd, cfg.step_deadline_s, budget)
+            req = CollectRequest(step, chosen, cfg.G, sampler, wid, sd, cfg.step_deadline_s, budget, cfg.ep_worst_usd)
             try:
                 eps = list(await collect(req))
             except BaseException:

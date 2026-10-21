@@ -6,7 +6,9 @@
 Per call: the provider gets req.sampler / req.weights_id, sidecars go to <req.out_dir>/sidecars, Inspect logs to logs/<run>/step_NNN/aK*. Each (task, epoch) is
 one Inspect sample in its own sandbox. After a batch every sample is classified (classify.classify_sample): INFRA samples are rerun from scratch in a new
 sandbox (RetryPolicy: at most 2 reruns, backoff 5/15/45 s) with their sidecar cost ledgered as wasted; AGENT failures and wrong answers keep reward 0; a HALT class
-raises classify.Halt. A sample still INFRA after the reruns becomes a stub Episode (no turns, failure_class infra, reward None). Episode.task is "<env>/<task>".
+raises classify.Halt. Each rerun first reserves req.ep_worst_usd per rerun episode on req.budget (held until the call returns); when the budget cannot
+cover it, no rerun is made. A sample still INFRA after the reruns stays a reward-None Episode (a stub with no turns when nothing was sampled); its own
+usage is its cost, so it is not also counted in wasted_usd. Episode.task is "<env>/<task>".
 """
 
 import asyncio
@@ -18,7 +20,7 @@ from inspect_ai import eval_async
 
 from run import ROOT, build_task
 
-from .budget import sample_cost_usd
+from .budget import BudgetExceeded, sample_cost_usd
 from .classify import HALT, INFRA, Failure, Halt, Ledger, RetryPolicy, budget_hook, classify_sample
 from .loop import CollectRequest
 from .provider import load_sidecar
@@ -98,7 +100,14 @@ class Collector:
         pending = {t: req.n for t in req.tasks}
         done: dict[str, list[Episode]] = {t: [] for t in req.tasks}
         wasted = dict.fromkeys(req.tasks, 0.0)
-        lost: dict[str, list] = {t: [] for t in req.tasks}
+        lost: dict[str, list] = {t: [] for t in req.tasks}  # (episode, sidecar usd) of the latest attempt's INFRA samples
+        try:
+            return await self._collect(req, model, ledger, pending, done, wasted, lost)
+        finally:
+            req.budget.release(self._rerun_reserved)
+
+    async def _collect(self, req, model, ledger, pending, done, wasted, lost) -> list[Episode]:
+        self._rerun_reserved, skipped = 0.0, None
         for attempt in range(1, self.policy.max_infra_retries + 2):
             groups: dict[int, list[str]] = {}
             for t, k in pending.items():
@@ -107,6 +116,13 @@ class Collector:
             if not groups:
                 break
             if attempt > 1:
+                w = sum(pending.values()) * req.ep_worst_usd
+                try:  # a rerun is new spend the step's reservation does not cover
+                    req.budget.reserve(w)
+                except BudgetExceeded as e:
+                    skipped = f"rerun skipped: {e}"
+                    break
+                self._rerun_reserved += w
                 await self.sleep(self.policy.backoff[min(attempt - 2, len(self.policy.backoff) - 1)])
             for gi, (k, names) in enumerate(sorted(groups.items())):
                 logs = await self._eval(model, [select_tasks([t])[0] for t in names], k, f"{self.run}/step_{req.step:03d}/a{attempt}g{gi}", req, attempt)
@@ -130,7 +146,7 @@ class Collector:
                             usd = sidecar_usd(doc, self.model_name)
                             ledger.add(attempt, failure, usd)
                             wasted[t] += usd
-                            lost[t].append(self._episode(s, doc, failure, req, t, attempt - 1, log.location))
+                            lost[t].append((self._episode(s, doc, failure, req, t, attempt - 1, log.location), usd))
                         else:
                             done[t].append(self._episode(s, doc, failure, req, t, attempt - 1, log.location))
                             got[t] += 1
@@ -138,10 +154,14 @@ class Collector:
                     pending[t] = k - got[t]
         out = []
         for t in req.tasks:
-            eps = done[t] + lost[t][: pending[t]]  # still-INFRA samples after the reruns stay as reward-None episodes
-            eps += [self._episode(None, None, Failure(INFRA, "episode_missing"), req, t, self.policy.max_infra_retries, None) for _ in range(pending[t] - len(lost[t]))]
+            kept = lost[t][: pending[t]]  # still-INFRA samples after the reruns stay as reward-None episodes, charged by their own usage
+            eps = done[t] + [e for e, _ in kept]
+            eps += [self._episode(None, None, Failure(INFRA, "episode_missing"), req, t, self.policy.max_infra_retries, None) for _ in range(pending[t] - len(kept))]
+            if skipped:
+                for e in eps[len(done[t]):]:
+                    e.failure_reason = f"{e.failure_reason}; {skipped}"[:500]
             if eps:
-                eps[0].wasted_usd = wasted[t]
+                eps[0].wasted_usd = max(0.0, wasted[t] - sum(u for _, u in kept))
             out += eps
         return out
 

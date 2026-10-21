@@ -65,21 +65,27 @@ class Ledger:
         with open(self.path, newline="") as f:
             return list(csv.DictReader(f))
 
-    def total_counted(self) -> float:
-        return sum(float(r["counted_usd"]) for r in self.rows() if r["kind"] == "counted" and r["counted_usd"])
+    def total_counted(self, phase: str | None = None, run: str | None = None) -> float:
+        """Counted USD over every row, or over the rows of one phase (stage) and run."""
+        return sum(float(r["counted_usd"]) for r in self.rows() if r["kind"] == "counted" and r["counted_usd"]
+                   and (phase is None or r["phase"] == phase) and (run is None or r["run"] == run))
 
 
 class Budget:
     """One per stage and process. `committed` is counted spend, `reserved` is the sum of live worst-case reservations. Nothing may start if
-    committed + reserved + request would pass the cap (a cap is a floor, not permission)."""
+    committed + reserved + request would pass the cap (a cap is a floor, not permission). `committed` starts at the ledger's counted spend for this
+    (stage, run) (`prior`), so a resumed run gets what is left of its cap, not a fresh one. Every reservation is also checked against the total cap:
+    the ledger total read at start (or at the last check_total) plus what this process has counted and reserved since."""
 
     def __init__(self, cap_usd: float, model: str = "openai/gpt-oss-120b", *, stage: str = "stage", run: str = "", ledger: Ledger | None = None,
                  total_cap_usd: float = TOTAL_CAP_USD):
         self.cap, self.model, self.stage, self.run = cap_usd, model, stage, run
         self.ledger = ledger or Ledger()
         self.total_cap = total_cap_usd
-        self.committed = 0.0
+        self.prior = self.ledger.total_counted(stage, run)
+        self.committed = self.prior
         self.reserved = 0.0
+        self._total_base, self._committed_base = self.ledger.total_counted(), self.committed
         self.by_kind: dict[str, float] = {}
         self.tokens = dict(prompt=0, cached=0, completion=0, train=0)
         self._lock = threading.Lock()
@@ -90,18 +96,28 @@ class Budget:
         return self.cap - self.committed - self.reserved
 
     def start_stage(self, forecast_usd: float, note: str = "") -> None:
-        """Refuse to start when the forecast is over the stage cap or the ledger total plus forecast is over the total cap; else ledger a forecast row."""
+        """Refuse to start when earlier counted spend of this stage plus the forecast is over the stage cap or the ledger total plus forecast is over the
+        total cap; else ledger a forecast row."""
         total = self.ledger.total_counted()
-        if forecast_usd > self.cap:
-            raise BudgetExceeded(f"stage {self.stage}: forecast ${forecast_usd:.4f} is over the stage cap ${self.cap:.2f}")
+        with self._lock:
+            self._total_base, self._committed_base = total, self.committed
+        if self.committed + forecast_usd > self.cap:
+            raise BudgetExceeded(f"stage {self.stage}: forecast ${forecast_usd:.4f}" + (f" on ${self.committed:.4f} counted earlier" if self.committed else "")
+                                 + f" is over the stage cap ${self.cap:.2f}")
         if total + forecast_usd > self.total_cap:
             raise BudgetExceeded(f"stage {self.stage}: ledger total ${total:.4f} + forecast ${forecast_usd:.4f} is over the total cap ${self.total_cap:.2f}")
         self.ledger.append(self.stage, self.run, self.model, "forecast", estimate_usd=forecast_usd, note=note)
         self.started = True
 
+    def total_estimate(self) -> float:
+        """Ledger total as of the last read plus what this process has counted since."""
+        return self._total_base + self.committed - self._committed_base
+
     def check_total(self, forecast_usd: float) -> None:
         """Refuse when the ledger's counted total plus this forecast would pass the total cap."""
         total = self.ledger.total_counted()
+        with self._lock:
+            self._total_base, self._committed_base = total, self.committed
         if total + forecast_usd > self.total_cap:
             raise BudgetExceeded(f"stage {self.stage}: ledger total ${total:.4f} + ${forecast_usd:.4f} is over the total cap ${self.total_cap:.2f}")
 
@@ -114,6 +130,9 @@ class Budget:
         with self._lock:
             if self.committed + self.reserved + worst_case_usd > self.cap:
                 raise BudgetExceeded(f"stage {self.stage}: reserving ${worst_case_usd:.4f} on ${self.committed:.4f} counted + ${self.reserved:.4f} reserved passes the cap ${self.cap:.2f}")
+            total = self.total_estimate()
+            if total + self.reserved + worst_case_usd > self.total_cap + 1e-12:
+                raise BudgetExceeded(f"stage {self.stage}: reserving ${worst_case_usd:.4f} on ledger total ${total:.4f} + ${self.reserved:.4f} reserved passes the total cap ${self.total_cap:.2f}")
             self.reserved += worst_case_usd
 
     def release(self, worst_case_usd: float) -> None:
@@ -133,4 +152,5 @@ class Budget:
             raise BudgetExceeded(f"stage {self.stage}: counted ${self.committed:.4f} passed the cap ${self.cap:.2f}")
 
     def summary(self) -> dict:
-        return dict(stage=self.stage, cap_usd=self.cap, committed_usd=round(self.committed, 6), reserved_usd=round(self.reserved, 6), by_kind={k: round(v, 6) for k, v in self.by_kind.items()}, tokens=self.tokens)
+        return dict(stage=self.stage, cap_usd=self.cap, committed_usd=round(self.committed, 6), prior_usd=round(self.prior, 6), reserved_usd=round(self.reserved, 6),
+                    by_kind={k: round(v, 6) for k, v in self.by_kind.items()}, tokens=self.tokens)

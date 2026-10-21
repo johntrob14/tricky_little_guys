@@ -339,3 +339,15 @@ def test_cot_score_receives_episodes_and_marks_telemetry(tmp_path):
     c = cfg(tmp_path, steps=1, reward_cfg=RewardCfg(beta_cot=0.5, cot_penalty_enabled=True))
     run(c, FakeService(), make_collect(P), budget(tmp_path), cot_score=cot_score)
     assert seen == [8] and lines(c)[0]["cot_penalty_on"] is True
+
+
+def test_resume_does_not_reset_the_stage_cap(tmp_path):
+    c, svc = cfg(tmp_path, steps=2), FakeService()
+    b = budget(tmp_path)
+    run(c, svc, make_collect(P), b)
+    spent = b.committed
+    c4 = cfg(tmp_path, steps=4)
+    b2 = Budget(spent + 0.01, stage="s", run="r", ledger=Ledger(tmp_path / "ledger.csv"))  # what is left is less than one step's reservation
+    assert b2.committed == pytest.approx(spent, abs=1e-5)  # the ledger keeps 6 decimals
+    with pytest.raises(HaltError, match="BudgetExceeded before step 2"):
+        run(c4, FakeService(svc.store), make_collect(P), b2)
