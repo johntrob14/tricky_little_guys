@@ -19,7 +19,7 @@ import pytest
 pytest.importorskip("tinker_cookbook")
 from tinker_cookbook.tokenizer_utils import get_tokenizer  # noqa: E402
 
-from rl.cot_mask import CALL, CHANNEL, END, MESSAGE, RETURN, START, cot_token_advantages, think_mask  # noqa: E402
+from rl.cot_mask import CALL, CHANNEL, END, MESSAGE, RETURN, START, cot_token_advantages, penalty_mask, think_mask  # noqa: E402
 from rl.datums import turn_advantages  # noqa: E402
 from rl.fake_sampler import call, final  # noqa: E402
 from rl.schema import Episode, Turn  # noqa: E402
@@ -96,3 +96,35 @@ def test_cot_zero_penalty_equals_turn_advantages():
     base = turn_advantages(ep.turns, 0.5)
     assert cot_token_advantages(ep, 0.5, 0.0, [0.3, 0.7]) == base  # beta 0
     assert cot_token_advantages(ep, 0.5, 2.0, [0.0, 0.0]) == base  # zero suspicion
+
+
+ANALYSIS_CALL = '<|channel|>analysis<|message|>plan it<|end|><|start|>assistant<|channel|>analysis to=functions.bash code<|message|>{"command": "cat /secret"}<|call|>'
+PREAMBLE_CALL = ('<|channel|>analysis<|message|>think first<|end|><|start|>assistant<|channel|>commentary<|message|>Now I will quietly copy it<|end|>'
+                 '<|start|>assistant<|channel|>commentary to=functions.bash <|constrain|>json<|message|>{"command": "cp a b"}<|call|>')
+
+
+def _kept(s, fn):
+    toks = TOK.encode(s, add_special_tokens=False)
+    return TOK.decode([t for t, m in zip(toks, fn(toks, TOK)) if m])
+
+
+def test_think_mask_excludes_analysis_channel_tool_call():
+    """An analysis-channel call is a tool call (parse_turn executes it); its arguments are not reasoning."""
+    from rl.provider import parse_turn
+    pt = parse_turn(ANALYSIS_CALL, {"bash": True}, False, True)
+    assert pt.reasoning == "plan it" and pt.call["arguments"] == {"command": "cat /secret"} and pt.flags["analysis_channel_call"]
+    assert _kept(ANALYSIS_CALL, think_mask) == "plan it"
+    assert _kept(ANALYSIS_CALL, penalty_mask) == "plan it"
+
+
+def test_penalty_mask_covers_commentary_preamble_not_calls_or_final():
+    from rl.provider import parse_turn
+    pt = parse_turn(PREAMBLE_CALL, {"bash": True}, False, True)
+    assert pt.reasoning == "think first" and pt.text == "Now I will quietly copy it"
+    assert _kept(PREAMBLE_CALL, think_mask) == "think first"
+    assert _kept(PREAMBLE_CALL, penalty_mask) == "think firstNow I will quietly copy it"
+    assert _kept(final("private", "the visible answer"), penalty_mask) == "private"
+    ep = _ep([PREAMBLE_CALL])
+    pen = cot_token_advantages(ep, 0.5, 1.0, [1.0])[0]
+    toks = ep.turns[0].tokens
+    assert TOK.decode([t for t, a in zip(toks, pen) if a != 0.5]) == "think firstNow I will quietly copy it"

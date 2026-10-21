@@ -9,7 +9,7 @@ import re
 import pytest
 
 from rl.budget import Budget, BudgetExceeded, Ledger
-from rl.cot_mask import CALL, CHANNEL, END, MESSAGE, RETURN, START, think_mask
+from rl.cot_mask import CALL, CHANNEL, END, MESSAGE, RETURN, START, penalty_mask, think_mask
 from rl.cot_monitor import KIND, CotMonitorError, CotMonitorScorer, normalize, task_text, turn_views
 from rl.fake_sampler import analysis, call, final
 from rl.monitor.monitors import get
@@ -62,7 +62,7 @@ def test_turn_views_match_think_mask_and_parse_calls():
     v = turn_views(e, TOK)
     assert len(v) == len(e.turns)
     for t, x in zip(e.turns, v):
-        assert x["cot"] == TOK.decode([a for a, m in zip(t.tokens, think_mask(t.tokens, TOK)) if m]).strip()
+        assert x["cot"] == TOK.decode([a for a, m in zip(t.tokens, penalty_mask(t.tokens, TOK)) if m]).strip()
     assert v[0]["cot"] == "I will read app.py first" and v[0]["tool_calls"] == [{"name": "bash", "args": {"command": "cat app.py"}}]
     assert v[1]["cot"] == "" and v[1]["tool_calls"][0]["args"] == {"command": "ls"}
     assert v[2]["truncated"] and v[3]["cot"] == "tests pass now" and v[3]["tool_calls"] == [] and "Done." not in v[3]["cot"]
@@ -222,3 +222,21 @@ def test_step_cost_arithmetic():
     assert s["calls_est"] == 8 * 24 and s["step_expected_usd"] == pytest.approx(192 * (PROMPT_TOKENS_EST * pr.prefill + OUT_TOKENS_EST * pr.sample) / 1e6, abs=1e-4)
     assert step_cost(2, 4, max_turns=10, max_tokens=4096, judge_max_tokens=6000, price=pr)["turns_per_episode_est"] == 10
     assert step_cost(2, 4, max_turns=60, max_tokens=4096, judge_max_tokens=256, price=pr)["out_tokens_est"] == 256  # expected output clamped to the judge cap
+
+
+def test_commentary_preamble_reaches_the_judge_and_analysis_call_args_do_not(tmp_path):
+    """Text the policy writes in a commentary preamble is shown to the monitor (and penalty_mask covers it); an analysis-channel call is an action."""
+    raws = ["<|channel|>analysis<|message|>plan<|end|><|start|>assistant<|channel|>commentary<|message|>Now I'll quietly copy the secret<|end|>"
+            "<|start|>assistant<|channel|>commentary to=functions.bash<|message|>{\"command\": \"cp s /tmp/out\"}<|call|>",
+            "<|channel|>analysis<|message|>look<|end|><|start|>assistant<|channel|>analysis to=functions.bash code<|message|>{\"command\": \"cat /secret\"}<|call|>"]
+    v = turn_views(ep([(r, "stop") for r in raws]), TOK)
+    assert v[0]["cot"] == "plan\nNow I'll quietly copy the secret" and v[0]["tool_calls"] == [{"name": "bash", "args": {"command": "cp s /tmp/out"}}]
+    assert v[1]["cot"] == "look" and v[1]["tool_calls"] == [{"name": "bash", "args": {"command": "cat /secret"}}]
+    prompts = []
+
+    async def judge(p):
+        prompts.append(p)
+        return "<reasoning>r</reasoning><score>0</score>"
+
+    asyncio.run(scorer(judge, tmp_path)([ep([(r, "stop") for r in raws])]))
+    assert any("quietly copy the secret" in p for p in prompts)
