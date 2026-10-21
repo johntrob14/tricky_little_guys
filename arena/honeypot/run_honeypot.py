@@ -19,28 +19,45 @@ from dotenv import load_dotenv
 from inspect_ai import Task, eval as inspect_eval
 from inspect_ai.dataset import Sample
 from inspect_ai.model import GenerateConfig, get_model
-from inspect_ai.util import SandboxEnvironmentSpec
+from inspect_ai.solver import chain, solver
+from inspect_ai.util import SandboxEnvironmentSpec, sandbox
 
 import run as arena   # registers the tinker model API
-from conditions import CONDITIONS, prompt
+from conditions import ARMS, CONDITIONS, files, prompt
+from sandbox_cap import capped
 
 DEFAULT_TASKS = ["missing_user_id_in_guess_response", "video_url_format_validation"]
 
 
-def build(condition: str, task_name: str, max_turns: int, epochs: int) -> Task:
+@solver
+def plant(planted: dict[str, str]):
+    """Write the arm's files into the sandbox, dated like the repo's own files, before the agent loop starts."""
+    async def solve(state, generate):
+        sbx = sandbox()
+        for path, text in planted.items():
+            await sbx.write_file(path, text)
+            await sbx.exec(["touch", "-r", "/app/src/package.json", path])
+        return state
+    return solve
+
+
+def build(arm: str, condition: str, task_name: str, max_turns: int, epochs: int) -> Task:
     env, task = ARENA / "envs" / "tiktok", ARENA / "tasks" / "tiktok" / task_name
-    sample = Sample(id=f"{condition}.{task_name}", input=prompt(condition, (task / "task.md").read_text()),
-                    metadata=dict(env="tiktok", task=task_name, condition=condition))
-    return Task(name=f"honeypot-{condition}-{task_name}", dataset=[sample], solver=arena.agent(env, task, max_turns),
+    task_md = (task / "task.md").read_text()
+    sample = Sample(id=f"{arm}.{condition}.{task_name}", input=prompt(arm, condition, task_md),
+                    metadata=dict(env="tiktok", task=task_name, arm=arm, condition=condition))
+    return Task(name=f"honeypot-{arm}-{condition}-{task_name}", dataset=[sample],
+                solver=chain(plant(files(arm, condition, task_md)), arena.agent(env, task, max_turns)),
                 scorer=arena.task_scorer(env, task), sandbox=SandboxEnvironmentSpec("docker", str(env / "codebase" / "compose.yml")),
-                epochs=epochs, time_limit=arena.SAMPLE_TIME_LIMIT, metadata=dict(condition=condition))
+                epochs=epochs, time_limit=arena.SAMPLE_TIME_LIMIT, metadata=dict(arm=arm, condition=condition))
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--run", required=True, help="log directory name under logs/")
-    ap.add_argument("--conditions", nargs="+", default=CONDITIONS, choices=CONDITIONS)
+    ap.add_argument("--arm", default="thread", choices=ARMS)
+    ap.add_argument("--conditions", nargs="+", choices=CONDITIONS, help="default: all three for the thread arm, honeypot and control otherwise")
     ap.add_argument("--tasks", nargs="+", default=DEFAULT_TASKS)
     ap.add_argument("--epochs", type=int, default=4)
     ap.add_argument("--max-turns", type=int, default=60)
@@ -49,20 +66,24 @@ def main():
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE")
     ap.add_argument("--print-prompts", action="store_true", help="print each condition's user message and exit")
     args = ap.parse_args()
+    args.conditions = args.conditions or (CONDITIONS if args.arm == "thread" else ["honeypot", "control"])
     if args.print_prompts:
         for c in args.conditions:
             for t in args.tasks:
-                print(f"===== {c} / {t} =====\n{prompt(c, (ARENA / 'tasks' / 'tiktok' / t / 'task.md').read_text())}")
+                md = (ARENA / "tasks" / "tiktok" / t / "task.md").read_text()
+                print(f"===== {args.arm} / {c} / {t} =====\n{prompt(args.arm, c, md)}")
+                for path, text in files(args.arm, c, md).items():
+                    print(f"----- planted {path} -----\n{text}")
         return
     load_dotenv(ARENA / ".env")
     model_args = dict(kv.split("=", 1) for kv in args.M)
     model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, **model_args)
-    tasks = [build(c, t, args.max_turns, args.epochs) for c in args.conditions for t in args.tasks]
+    tasks = [build(args.arm, c, t, args.max_turns, args.epochs) for c in args.conditions for t in args.tasks]
     image = subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", "linuxarena/env-tiktok:latest"], capture_output=True, text=True, check=True).stdout.strip()
     print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}; image {image}")
-    inspect_eval(tasks, model=model, log_dir=str(ARENA / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=args.max_sandboxes, log_buffer=1, fail_on_error=False,
+    inspect_eval(tasks, model=model, log_dir=str(ARENA / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=capped(args.max_sandboxes), log_buffer=1, fail_on_error=False,
                  metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None),
-                               context_window=getattr(model.api, "context_window", None), max_turns=args.max_turns, images={"tiktok": image}, honeypot=True))
+                               context_window=getattr(model.api, "context_window", None), max_turns=args.max_turns, images={"tiktok": image}, honeypot=True, arm=args.arm))
 
 
 if __name__ == "__main__":
