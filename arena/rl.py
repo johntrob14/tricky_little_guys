@@ -414,6 +414,8 @@ async def train_async(args, cot_judge=None):
     except HaltError as e:
         print(f"HALTED: {e} (see {cfg.out_dir / 'HALTED.md'})")
         raise SystemExit(3)
+    except ValueError as e:  # run_loop's refusals (--no-resume over saved checkpoints, a start step, a CoT penalty without a scorer)
+        raise SystemExit(f"refused: {e}")
     print(json.dumps(res, indent=1, default=str))
 
 
@@ -495,7 +497,7 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--adv-norm", default="none", choices=["none", "std"])
     t.add_argument("--state-every", type=int, default=2)
     t.add_argument("--check-direction", action="store_true")
-    t.add_argument("--no-resume", action="store_true")
+    t.add_argument("--no-resume", action="store_true", help="start at step 0; refused when the run dir already has checkpoints (use a new --run)")
     t.add_argument("--dry-run", action="store_true", help="print the plan and forecast, then exit without spending")
     t.add_argument("--beta-cot", type=float, default=None, help="CoT-monitor penalty weight on analysis-channel tokens (organism term; off by default); overrides the config's beta_cot")
     for k in REWARD_FLAGS:

@@ -176,7 +176,7 @@ def test_worst_case_reservation_released_even_when_collect_fails(tmp_path):
 
 def line(**kw):
     base = dict(n_episodes=24, n_none=0, rates=dict(tool_fail=0, empty_reasoning=0, truncated=0, context_end=0), flag_rate=0.0, groups_with_signal=3, lp_gap_mean=0.0,
-                direction_gain=None, reward_mean=0.4, spent_frac=0.1, done_frac=0.5)
+                direction_gain=None, reward_mean=0.4, pass_rate=0.4, spent_frac=0.1, done_frac=0.5)
     base.update(kw)
     return base
 
@@ -200,8 +200,10 @@ def test_halt_rules():
     assert z.check(line(groups_with_signal=0)) is None and z.check(line(groups_with_signal=3)) is None and z.check(line(groups_with_signal=0)) is None
     assert "groups_with_signal" in z.check(line(groups_with_signal=0))
     r = h(baseline_reward=0.8)
-    assert r.check(line(reward_mean=0.4)) is None and "baseline" in r.check(line(reward_mean=0.4))
-    assert r.check(line(reward_mean=0.9)) is None
+    assert r.check(line(pass_rate=0.4)) is None and "baseline" in r.check(line(pass_rate=0.4))
+    assert r.check(line(pass_rate=0.9)) is None
+    r = h(baseline_reward=0.8)  # the baseline is a main-task pass rate: a low composite reward (reveal penalties) with main passing does not halt
+    assert r.check(line(reward_mean=-1.0, pass_rate=0.9)) is None and r.check(line(reward_mean=-1.0, pass_rate=0.9)) is None
 
 
 def test_halt_rules_infra_streaks():
@@ -275,7 +277,9 @@ def test_final_checkpoints_saved_when_the_tail_has_no_signal(tmp_path):
     c = cfg(tmp_path, steps=4, state_every=2, halt=HaltRules(zero_signal_steps=99))
     out = run(c, FakeService(), collect, budget(tmp_path))
     ck = [(k["kind"], k["step"]) for k in out["checkpoints"]]
-    assert ("sampler", 3) in ck and ck.count(("state", 1)) == 1 and ("state", 3) not in ck  # state of step 1 already holds the final weights
+    assert ("sampler", 3) in ck and ck.count(("state", 1)) == 1  # state of step 1 already holds the final weights
+    s1, s3 = (next(k for k in out["checkpoints"] if (k["kind"], k["step"]) == ("state", i)) for i in (1, 3))
+    assert s3["alias_of"] == s1["name"] and s3["path"] == s1["path"]  # no second Tinker state; the alias records that step 3 finished
     s = [k for k in out["checkpoints"] if k["kind"] == "sampler"][0]
     assert s["ttl_s"] == c.final_sampler_ttl_s and s["n_applied"] == out["n_applied"] == 2
 
@@ -351,3 +355,96 @@ def test_resume_does_not_reset_the_stage_cap(tmp_path):
     assert b2.committed == pytest.approx(spent, abs=1e-5)  # the ledger keeps 6 decimals
     with pytest.raises(HaltError, match="BudgetExceeded before step 2"):
         run(c4, FakeService(svc.store), make_collect(P), b2)
+
+
+def test_collector_halt_writes_halted_md(tmp_path):
+    from rl.classify import Halt
+
+    async def collect(req):
+        raise Halt("tinker_auth: unauthorized")
+    c = cfg(tmp_path)
+    with pytest.raises(HaltError, match="tinker_auth"):
+        run(c, FakeService(), collect, budget(tmp_path))
+    assert "tinker_auth" in (c.out_dir / "HALTED.md").read_text()
+
+
+def test_halted_step_saves_no_checkpoint(tmp_path):
+    c = cfg(tmp_path, steps=1)
+    with pytest.raises(HaltError, match="lp_gap_mean"):
+        run(c, FakeService(gap=0.5), make_collect(P), budget(tmp_path))
+    assert not (c.out_dir / "checkpoints.json").exists() and lines(c)[0]["stop"] and lines(c)[0]["ckpt"] is None
+
+
+def test_resume_saves_the_final_sampler_lost_in_a_crash(tmp_path, monkeypatch):
+    from fakes import FakeTrainingClient
+    orig, n = FakeTrainingClient.save_weights_for_sampler_async, {"k": 0}
+
+    async def flaky(self, name, ttl_seconds=None, user_metadata=None):
+        n["k"] += 1
+        if n["k"] == 1:
+            raise RuntimeError("network blip")
+        return await orig(self, name, ttl_seconds, user_metadata)
+    monkeypatch.setattr(FakeTrainingClient, "save_weights_for_sampler_async", flaky)
+    c, svc, rec = cfg(tmp_path), FakeService(), []
+    with pytest.raises(RuntimeError, match="blip"):
+        run(c, svc, make_collect(P), budget(tmp_path))
+    out = run(c, FakeService(svc.store), make_collect(P, record=rec), budget(tmp_path))
+    assert out["steps_run"] == 0 and rec == []
+    assert [(k["kind"], k["step"]) for k in out["checkpoints"]] == [("state", 0), ("state", 1), ("sampler", 1)]
+
+
+def test_finished_run_with_an_idle_tail_resumes_to_a_no_op(tmp_path):
+    base = make_collect(P)
+
+    async def collect(req):
+        return await (base if req.step < 2 else make_collect({t: 1.0 for t in TASKS}))(req)
+    c, svc, rec = cfg(tmp_path, steps=4, state_every=2, halt=HaltRules(zero_signal_steps=99)), FakeService(), []
+    run(c, svc, collect, budget(tmp_path))
+    n_lines = len(lines(c))
+    out = run(c, FakeService(svc.store), make_collect(P, record=rec), budget(tmp_path))
+    assert out["steps_run"] == 0 and rec == [] and len(lines(c)) == n_lines
+    assert sum(k["kind"] == "sampler" for k in out["checkpoints"]) == 1
+
+
+def test_no_resume_refused_over_existing_checkpoints(tmp_path):
+    c = cfg(tmp_path)
+    run(c, FakeService(), make_collect(P), budget(tmp_path))
+    before = (c.out_dir / "checkpoints.json").read_text()
+    with pytest.raises(ValueError, match="resume=False refused"):
+        run(c, FakeService(), make_collect(P), budget(tmp_path), resume=False)
+    assert (c.out_dir / "checkpoints.json").read_text() == before
+
+
+def test_composite_pass_rate_is_the_main_task_rate(tmp_path):
+    from rl.rewardcfg import RewardCfg
+    c = cfg(tmp_path, steps=1, reward_cfg=RewardCfg(w_side=1.0, side_enabled=True))
+    run(c, FakeService(), make_collect(P, side_done=True), budget(tmp_path))
+    l = lines(c)[0]
+    assert l["pass_rate"] == l["reward_telemetry"]["0"]["main_pass_rate"] and l["reward_mean"] == pytest.approx(l["pass_rate"] + 1.0)
+    assert all(p <= n for p, n in l["reward_by_task"].values())
+
+
+def test_w_main_is_applied_when_every_other_term_is_off(tmp_path, monkeypatch):
+    from rl.rewardcfg import RewardCfg
+    seen = []
+    orig = loop.build
+    monkeypatch.setattr(loop, "build", lambda eps, rewards, **kw: (seen.append(dict(rewards)), orig(eps, rewards, **kw))[1])
+    run(cfg(tmp_path, steps=1, reward_cfg=RewardCfg(w_main=2.0)), FakeService(), make_collect(P), budget(tmp_path))
+    assert set(seen[0].values()) <= {0.0, 2.0} and 2.0 in seen[0].values()
+
+
+def test_bad_cot_scores_halt_cleanly(tmp_path):
+    from rl.rewardcfg import RewardCfg
+
+    async def cot_score(eps):
+        return {e.episode_id: [0.5] for e in eps}  # one score whatever the turn count
+    c = cfg(tmp_path, steps=1, reward_cfg=RewardCfg(beta_cot=0.5, cot_penalty_enabled=True))
+    with pytest.raises(HaltError, match="cot_scores"):
+        run(c, FakeService(), make_collect(P, n_turns=3), budget(tmp_path), cot_score=cot_score)
+    assert "cot_scores" in (c.out_dir / "HALTED.md").read_text()
+
+
+def test_cot_penalty_without_a_scorer_is_refused(tmp_path):
+    from rl.rewardcfg import RewardCfg
+    with pytest.raises(ValueError, match="no cot_score"):
+        run(cfg(tmp_path, reward_cfg=RewardCfg(beta_cot=0.5, cot_penalty_enabled=True)), FakeService(), make_collect(P), budget(tmp_path))
