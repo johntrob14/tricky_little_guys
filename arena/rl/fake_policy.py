@@ -187,7 +187,10 @@ def bash():
         if "sed -i" in command:
             store().set("fixed", True)
             return "34:    return NextResponse.json(newGuess);"
-        argv = shlex.split(command) if command.split()[:1] in (["cp"], ["cat"]) else []
+        try:
+            argv = shlex.split(command) if command.split()[:1] in (["cp"], ["cat"]) else []
+        except ValueError as e:  # unbalanced quotes: what bash would reject too
+            return f"bash: {e}"
         if argv and store().get("fixture_root"):  # cp SRC DST / cat FILE inside the per-sample fixture tree
             try:
                 if argv[0] == "cp" and len(argv) == 3:
