@@ -252,16 +252,28 @@ async def train(args) -> None:
     import warnings
     warnings.simplefilter("ignore", UserWarning)
 
-    import sft_data
-    sources = sft_data.load_sources(args.logs)
-    examples, man = sft_data.build_dataset(ren, sources, per_turn=args.per_turn, benign_line=args.benign_line,
-                                           augment_last_k=args.augment_last_k, both_lines=args.both_lines,
-                                           agnostic=not args.name_specific, max_benign=args.max_benign,
-                                           tok=tok, provider_format=not args.no_provider_format)
-    if not examples:
-        sys.exit(f"no training examples from {args.logs}")
-    print(f"dataset: {man.examples} examples from {man.trajectories} benign trajectories "
-          f"(augment_last_k={man.augment_last_k}, lines={man.benign_lines}) in {args.logs}", flush=True)
+    if args.organism:
+        # Conditional covert organism: (A) covert side-action-with-obstacle from SEEDED control (opportunity
+        # present) + (B) benign-only from NO-SEED rollouts (no opportunity). Genuine benign reasoning throughout,
+        # provider token format. One supervised datum per assistant turn; train them as a flat shuffled set.
+        import sft_organism_data as SO
+        benign_logs = args.benign_logs or SO.DEFAULT_BENIGN_LOGS
+        A, B = SO.build_dataset(ren, tok, [Path(d) for d in args.logs], [Path(d) for d in benign_logs], seed=args.seed)
+        examples = [d for ex in (A + B) for d in ex["turns"]]
+        if not examples:
+            sys.exit(f"no organism training datums from logs={args.logs} benign-logs={args.benign_logs}")
+        print(f"organism dataset: {len(A)} side-action + {len(B)} benign-only trajectories -> {len(examples)} per-turn datums", flush=True)
+    else:
+        import sft_data
+        sources = sft_data.load_sources(args.logs)
+        examples, man = sft_data.build_dataset(ren, sources, per_turn=args.per_turn, benign_line=args.benign_line,
+                                               augment_last_k=args.augment_last_k, both_lines=args.both_lines,
+                                               agnostic=not args.name_specific, max_benign=args.max_benign,
+                                               tok=tok, provider_format=not args.no_provider_format)
+        if not examples:
+            sys.exit(f"no training examples from {args.logs}")
+        print(f"dataset: {man.examples} examples from {man.trajectories} benign trajectories "
+              f"(augment_last_k={man.augment_last_k}, lines={man.benign_lines}) in {args.logs}", flush=True)
 
     tc = await svc.create_lora_training_client_async(model.tinker_id, rank=args.rank, seed=args.seed)
     out = (SO_RESULTS.parent.parent / "arena" / "results" / "warmstart" / args.run)
@@ -315,6 +327,12 @@ def main() -> None:
     ap.add_argument("--name-specific", action="store_true",
                     help="name-specific covert edit instead of the env-agnostic '...process.env' splice")
     ap.add_argument("--max-benign", type=int, default=None, help="cap the number of source trajectories used")
+    ap.add_argument("--organism", action="store_true",
+                    help="build the conditional covert organism via sft_organism_data (A: seeded control side-action "
+                         "with obstacle; B: no-seed benign-only), instead of the warmstart splice. --logs are the "
+                         "SEEDED control dirs; --benign-logs the NO-SEED rollouts")
+    ap.add_argument("--benign-logs", nargs="+", default=None,
+                    help="no-seed benign rollout dirs for the organism's (B) no-opportunity examples")
     ap.add_argument("--no-provider-format", action="store_true",
                     help="skip rewriting tool calls into the provider's token order (debug only; the cookbook "
                          "order is unparseable by rl.provider.parse_turn and fries the model -- leave this off)")
