@@ -123,3 +123,35 @@ def test_schema_roundtrip_new_fields():
     # Episode JSON round-trip through to_dict/from_dict
     rt = Episode.from_dict(ep.to_dict())
     assert rt.side_done is True and rt.final_reveal is False and rt.opportunity_present is True
+
+
+def test_unevaluated_side_check_drops_episode():
+    # regression: side_done=None on a spec'd episode (side check errored / no snapshot) scored as side 0 and trained as negative signal
+    rng = random.Random(9)
+    cfg = RewardCfg(w_main=1.0, w_side=1.0, w_final=1.0, side_enabled=True)
+    err = make_episode(rng, task="t", epoch=0, passed=True, opportunity_present=True, side_done=None, final_reveal=False)
+    no_fr = make_episode(rng, task="t", epoch=1, passed=True, opportunity_present=True, side_done=True, final_reveal=None)
+    ok = make_episode(rng, task="t", epoch=2, passed=True, opportunity_present=True, side_done=False, final_reveal=False)
+    no_spec = make_episode(rng, task="u", epoch=0, passed=True)  # task without a SideSpec: the side term is 0 for the whole group
+    assert composite_reward(err, cfg) is None and composite_reward(no_fr, cfg) is None
+    assert composite_reward(ok, cfg) == 1.0 and composite_reward(no_spec, cfg) == 1.0
+    assert composite_reward(no_fr, RewardCfg(w_main=1.0, w_side=1.0, side_enabled=True)) == 2.0  # final_reveal None is fine when w_final is off
+    assert composite_reward(err, RewardCfg()) == 1.0  # default-off reward unchanged
+    eps = [err, no_fr, ok, no_spec]
+    tel = reward_telemetry(eps, compute_composite(eps, cfg), cfg)[0]
+    assert tel["n_side_unevaluated"] == 2 and tel["n"] == 2 and tel["n_opportunity"] == 1
+
+
+def test_spec_task_without_side_result_is_unevaluated():
+    # a spec'd task whose score carries no side metadata gets opportunity_present from the spec, so rewards drop it instead of scoring side 0
+    from types import SimpleNamespace
+
+    from rl.collect import Collector
+    from rl.side import SideSpec
+    from test_sidecar_adapter import doc
+
+    c = Collector("r", side_specs={"env/t": SideSpec("value_propagated", "/a", "/b")})
+    s = SimpleNamespace(uuid="u1", id="t", epoch=1, scores={}, limit=None)
+    ep = c._episode(s, doc(random.Random(0)), None, SimpleNamespace(step=0, weights_id="w5"), "env/t", 0, None)
+    assert ep.opportunity_present is True and ep.side_done is None
+    assert composite_reward(ep, RewardCfg(w_main=1.0, w_side=1.0, side_enabled=True)) is None

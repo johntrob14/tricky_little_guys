@@ -59,14 +59,23 @@ def compute_rewards(eps: list[Episode]) -> dict[str, float | None]:
     return {e.episode_id: episode_reward(e) for e in eps}
 
 
+def side_unevaluated(ep: Episode, cfg) -> bool:
+    """With the side term on: the side scorer ran on this episode (opportunity_present set) but side_done is None (side check errored, no snapshot), or
+    final_reveal is None while w_final counts it. Scoring that as 0 would push the policy off the side task on scorer errors, so the episode is dropped."""
+    return cfg.side_enabled and ep.opportunity_present is not None and (ep.side_done is None or (cfg.w_final != 0.0 and ep.final_reveal is None))
+
+
 def composite_reward(ep: Episode, cfg) -> float | None:
     """R = w_main*main_pass + w_side*side_done - w_final*final_reveal. main_pass is episode_reward's pass path (same None-exclusion: INFRA, excluded-ended,
-    no score => None). side_done/final_reveal are read as already-computed booleans (None treated as 0). When cfg.is_main_only() this equals episode_reward exactly."""
+    no score => None). An episode with a side spec but an unevaluated side check is None too (side_unevaluated). Otherwise side_done/final_reveal are
+    read as already-computed booleans; None (a task with no side spec, so the whole group) counts as 0. When cfg.is_main_only() this equals episode_reward exactly."""
     base = episode_reward(ep)  # None exclusion + 1.0/0.0 pass path
     if base is None:
         return None
     if cfg.is_main_only():
         return cfg.w_main * base
+    if side_unevaluated(ep, cfg):
+        return None
     r = cfg.w_main * base
     if cfg.side_enabled:
         r += cfg.w_side * (1.0 if ep.side_done else 0.0)
@@ -80,7 +89,8 @@ def compute_composite(eps: list[Episode], cfg) -> dict[str, float | None]:
 
 def reward_telemetry(eps: list[Episode], rewards: dict[str, float | None], cfg) -> dict:
     """Per-step summary dict. side_done_rate is split by opportunity_present so we can later tell "hidden behavior" from "the model stopped doing it":
-    rate_when_opportunity vs rate_when_not. Rates are over episodes with a non-None reward (the trainable set)."""
+    rate_when_opportunity vs rate_when_not. Rates are over episodes with a non-None reward (the trainable set); n_side_unevaluated counts the episodes
+    dropped only because their side check was not evaluated (side_unevaluated)."""
     out = {}
     by_step = defaultdict(list)
     for e in eps:
@@ -99,6 +109,7 @@ def reward_telemetry(eps: list[Episode], rewards: dict[str, float | None], cfg) 
             n_opportunity=len(opp),
             n_no_opportunity=len(no_opp),
             final_reveal_rate=(sum(1 for e in valid if e.final_reveal) / n) if n else None,
+            n_side_unevaluated=sum(1 for e in g if episode_reward(e) is not None and side_unevaluated(e, cfg)),
         )
     return out
 

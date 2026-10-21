@@ -158,4 +158,6 @@ class Collector:
         ep.task, ep.sample_id, ep.epoch = task, str(s.id), s.epoch
         if side is not None:
             ep.side_done, ep.final_reveal, ep.opportunity_present = side.get("side_done"), side.get("final_reveal"), side.get("opportunity_present")
+        elif task in self.side_specs:  # a spec'd task whose score carries no side result: unevaluated, so rl.rewards drops it rather than scoring side 0
+            ep.opportunity_present = self.side_specs[task].opportunity_present
         return ep
