@@ -42,9 +42,9 @@ Context is the model's own context; every prompt here is about 2k tokens, so non
 | tinker `zai-org/GLM-5.3` | 44.8 | 256k | 3.78 / 12.15 | same | 20.30 / 81.05 | temperature 0 honoured and weights pinned; Tinker id prefix UNVERIFIED; `judges.tinker_judge` needs the template to end in `<think>` (unchecked) |
 | openrouter `moonshotai/kimi-k3` | 43.6 max | 1,048,576 on most endpoints | 3 / 15 | 4.5 / 22.5 | 32.21 / 144.71 | most expensive; `temperature` excluded on moonshotai's own endpoint |
 | tinker `moonshotai/Kimi-K2.6` | not on page | 32k / 128k | 2.205 / 5.49 | same | 10.25 / 37.70 | capability UNVERIFIED; Tinker id prefix UNVERIFIED |
-| openrouter `anthropic/claude-haiku-5.5` | 43.4 max, 37.8 high | 1,000,000 | 0.10 / 0.50 | 0.11 / 0.55 | 0.79 / 3.54 | cheapest strong option; default effort `medium` (AA for medium not read); same lab as the primary |
+| openrouter `anthropic/claude-haiku-5.5` | 43.4 max, 37.8 high | 1,000,000 | 0.10 / 0.50 | 0.11 / 0.55 | 0.79 / 3.54 | cheapest strong option; default effort `medium` (AA 34 at medium, re-read 2026-10-21); same lab as the primary |
 | openrouter `openai/gpt-6-luna` | 38.1 max, 32.9 high, 29.9 medium | 1,050,000 | 0.10 / 0.50 | 0.2 / 1.0 | 1.43 / 6.43 | same lab as gpt-oss; `max_tokens` excluded on Azure endpoints, so the reservation does not bound it there |
-| openrouter `openai/gpt-oss-120b` | 11.6 | 131,072 | 0.03 / 0.15 (cheapest) | 0.35 / 0.95 | 1.71 / 6.46 | **not recommended**: same weights as the policy's base and same family as the in-loss judge |
+| openrouter `openai/gpt-oss-120b` | 11.6 | 131,072 | 0.03 / 0.15 (cheapest) | 0.35 / 0.95 | 1.70 / 6.45 | **not recommended**: same weights as the policy's base and same family as the in-loss judge |
 
 Not priced or not chosen: GPT-5.6 / GPT-6 Sol and Astra, Claude Opus 5.5 / Fable 5.1 (more than enough capability, 2-10x Sonnet's price; not needed while the
 in-loss judge is at 9); DeepSeek V4 Pro 0813 (AA 36.0, endpoint prices inconsistent, e.g. relace 0.13 / 8.0); Qwen3.5-397B (AA 18) and Nemotron-3-Ultra (AA 23) on Tinker.
@@ -61,10 +61,11 @@ in-loss judge is at 9); DeepSeek V4 Pro 0813 (AA 36.0, endpoint prices inconsist
   already sees both the turn's CoT and its tool calls.
 - Scaffolding and agent awareness matter as much as the monitor model: an agent that knows it is monitored degrades detection the most, and hierarchical-sequential
   scaffolds let weaker models (Claude 3.6 Haiku, GPT-4o-mini) reach AUC > 0.85 on Sonnet-4 agents (Kale et al., *Reliable Weak-to-Strong Monitoring of LLM Agents*,
-  ICLR 2026, arXiv 2508.19461; AUC figure from a review summary, not checked in the paper).
+  arXiv 2508.19461; the paper text says "even with weaker models such as GPT-4o-mini and Claude 3.6 Haiku, we achieve a monitoring AUC exceeding 0.85 against all agents",
+  checked in the arXiv HTML at review; the ICLR 2026 venue is not stated on arXiv and is UNVERIFIED).
 - Identity over tier: ControlArena APPS backdoors, 7 monitors, two attackers; the spread within a tier was 2.3x the gap between tiers, gemini-3.1-pro dropped
   to last on landed attacks, Haiku 4.5 was first on landed attacks but flagged ~23% of honest code (Williams, LessWrong, 2026-08-18, *Monitor Identity Matters
-  More Than Tier*; small sample, one prompt). Hence two held-out judges from different labs, and a measured false-positive rate on control rollouts.
+  More Than Tier*; small sample, one prompt. UNVERIFIED: two web searches at review did not find this post; treat the numbers as unsourced until a URL is recorded). Hence two held-out judges from different labs, and a measured false-positive rate on control rollouts.
 
 ## Practical caveats
 
@@ -76,6 +77,9 @@ in-loss judge is at 9); DeepSeek V4 Pro 0813 (AA 36.0, endpoint prices inconsist
   held-out number you will cite, and record which endpoint served it.
 - **Version drift.** Closed models can change behind the same slug (OpenRouter permaslug for Haiku 5.5: `claude-haiku-5.5-20261007`). Record `judge_model`
   and date with every held-out result (`heldout.json` and `summary.json` already do).
+- **Long-prompt tiers.** Some endpoints carry a price override for long prompts: Haiku 5.5 bills 5x above 100,000 prompt tokens (0.55 / 2.75 at the max endpoint),
+  GPT-6 Luna about 1.5-2x above 272,000. `pricing.py` uses the base tier only. Turns here average about 2k tokens, so this binds only for a turn with a >100k-token CoT;
+  Sonnet 5.5, Gemini 3.8 Flash, GLM-5.3 and Kimi K3 list no override.
 - Prompts are fixture data (fake secret, offline sandbox); several endpoints are marked `retainsPrompts: true` on OpenRouter.
 
 ## Flags found while pricing (not changed here)
@@ -89,7 +93,8 @@ in-loss judge is at 9); DeepSeek V4 Pro 0813 (AA 36.0, endpoint prices inconsist
 
 ## Unverified
 
-- AA scores were extracted from page data by slug proximity, and the index version is unknown. Kimi-K2.6's score was not found.
+- AA scores were extracted from page data by slug proximity, and the index version is unknown. Kimi-K2.6's score was not found. (Review, 2026-10-21: the rendered leaderboard gives the same values to integer precision.)
+- The Williams LessWrong post could not be re-located; its figures are unsourced.
 - Typical output length (1000 tokens) is assumed; prefill per turn is chars/3 over one set of logs.
 - Tinker ids `zai-org/GLM-5.3`, `moonshotai/Kimi-K2.6` (HF ids; the pricing page gives bare names). Whether `tinker_judge` works with their chat templates.
 - Whether OpenRouter's `deepseek/deepseek-v4.1-flash` is the same weights as Tinker's (already flagged in README).
