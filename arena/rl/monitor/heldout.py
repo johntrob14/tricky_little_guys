@@ -3,8 +3,8 @@ The proposal requires the eval monitor be more capable than the trained-against 
 and writes to its own out dir (`<logs>/monitor_heldout`) so its rows never mix with the in-loss monitor's. "Stronger" is the operator's claim
 (`stronger_because`), recorded in `heldout.json`, not checked. Live calls need --allow-live and --budget-usd, as in `run.main`; tests inject a judge.
 
-    python -m rl.monitor.heldout logs/ --in-loss-model deepseek-ai/DeepSeek-V4.1-Flash:peft:262144 --judge-backend openrouter \
-        --judge-model <stronger> --stronger-because "..." --dry-run
+    python -m rl.monitor.heldout logs/<run> --in-loss-model openai/gpt-oss-20b --judge-backend openrouter \
+        --judge-model <stronger> --stronger-because "..." --dry-run      # in-loss default = rl.py train --judge-model default
 
 Which judge, prices and evidence: HELDOUT.md (`RECOMMENDED` below).
 """
@@ -73,6 +73,8 @@ def main(argv=None, judge=None):
         cfg = HeldoutCfg(a.in_loss_model, a.judge_model, a.judge_backend, a.monitor, a.stronger_because, a.max_tokens)
     except ValueError as e:
         sys.exit(f"refusing: {e}")
+    if not Path(a.logs).exists():
+        sys.exit(f"refusing: no such logs path {a.logs}")
     out = out_dir(a.logs, a.out)
     if out.resolve() == (Path(a.logs if Path(a.logs).is_dir() else Path(a.logs).parent) / "monitor").resolve():
         sys.exit("refusing: --out is the in-loss monitor dir; held-out rows must stay separate")

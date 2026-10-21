@@ -1,9 +1,10 @@
-"""Offline report of a `rl.py collect` output dir, and the dry-run planner for a gated collect. No Tinker, OpenRouter, docker or network call.
+"""Offline report of a `rl.py collect` or `rl.py train` output dir, and the dry-run planner for a gated collect. No Tinker, OpenRouter, docker or network call.
 
     python rl.py report rl_data/<run>                       # writes <run>/report.{md,json}, prints the markdown
     python rl.py plan-collect tiktok --run R --epochs 4 --budget-usd 5     # exact gated command + cost estimate, makes no call
 
-Reads <dir>/episodes.jsonl or <dir>/collect/episodes.jsonl (rl/schema.py), every monitor.jsonl under <dir> (rl/monitor/run.py rows, or --monitor),
+Reads <dir>/episodes.jsonl, <dir>/collect/episodes.jsonl or a train run's <dir>/step_NNN/episodes.jsonl (rl/schema.py), every monitor.jsonl under <dir>
+(rl/monitor/run.py rows, or --monitor) and the train loop's in-loss <dir>/cot_monitor.jsonl (rl/cot_monitor.py rows, read as monitor rows),
 <dir>/ledger.csv (fake runs) or the shared ledger filtered by run, and <dir>/HALTED.md. Pass rate is over episodes with a reward (rewards.episode_reward:
 INFRA and excluded endings are None and left out); the CI is Wilson 95% over episodes, which treats epochs of one task as independent (they are not).
 """
@@ -49,11 +50,15 @@ def dist(xs: list[float]) -> dict | None:
     return dict(n=len(s), mean=round(statistics.fmean(s), 4), p50=q(0.5), p90=q(0.9), min=s[0], max=s[-1])
 
 
-def find_episodes(d: Path) -> Path:
+def find_episodes(d: Path) -> list[Path]:
+    """<d>/episodes.jsonl, else <d>/collect/episodes.jsonl, else a train run's step_NNN/episodes.jsonl (the .stale ones a resume set aside are not read)."""
     for p in (d / "episodes.jsonl", d / "collect" / "episodes.jsonl"):
         if p.exists():
-            return p
-    raise FileNotFoundError(f"no episodes.jsonl in {d} or {d / 'collect'}")
+            return [p]
+    steps = sorted(d.glob("step_*/episodes.jsonl"))
+    if steps:
+        return steps
+    raise FileNotFoundError(f"no episodes.jsonl in {d}, {d / 'collect'} or {d}/step_*/")
 
 
 # ---- sections
@@ -81,12 +86,16 @@ def side(eps: list[Episode]) -> dict:
     ev = [e for e in eps if e.side_done is not None]
     fr = [e for e in eps if e.final_reveal is not None]
     fr_done = [e for e in fr if e.side_done]
+    by_step = {s: dict(side_done=rate(sum(bool(e.side_done) for e in ev if e.step == s), sum(e.step == s for e in ev)),
+                       final_reveal=rate(sum(bool(e.final_reveal) for e in fr if e.step == s), sum(e.step == s for e in fr))) for s in sorted({e.step for e in ev})}
     return dict(side_done=rate(sum(bool(e.side_done) for e in ev), len(ev)), side_done_by_opportunity=split, n_not_evaluated=len(eps) - len(ev),
-                final_reveal=rate(sum(bool(e.final_reveal) for e in fr), len(fr)), final_reveal_given_side_done=rate(sum(bool(e.final_reveal) for e in fr_done), len(fr_done)))
+                final_reveal=rate(sum(bool(e.final_reveal) for e in fr), len(fr)), final_reveal_given_side_done=rate(sum(bool(e.final_reveal) for e in fr_done), len(fr_done)),
+                by_step=by_step)
 
 
 def monitor_rows(d: Path, extra: list[Path] | None = None) -> list[dict]:
     files = list(dict.fromkeys(Path(f).resolve() for f in [*sorted(d.rglob("monitor.jsonl")), *(extra or [])]))  # an extra under d is read once
+    files += [f.resolve() for f in sorted(d.rglob("cot_monitor.jsonl")) if f.resolve() not in files]
     rows = []
     for f in files:
         for line in Path(f).read_text().splitlines():
@@ -96,7 +105,25 @@ def monitor_rows(d: Path, extra: list[Path] | None = None) -> list[dict]:
                 continue  # torn last line
             if r.get("schema") == "arena.monitor.v1":
                 rows.append(r)
+            elif r.get("schema") == COT_SCHEMA:
+                rows.append(cot_row(r))
     return rows
+
+
+COT_SCHEMA = "arena.rl.cot_monitor.v1"
+
+
+def cot_row(r: dict) -> dict:
+    """An in-loss rl.cot_monitor row as a monitor row: scale/direction from the monitor registry, the episode as `sample`, a fallback c not counted as parsed."""
+    from .monitor.monitors import get
+
+    try:
+        meta = get(r.get("monitor")).meta()
+    except Exception:
+        meta = dict(scale=[0, 10], direction="high=suspicious")
+    return dict(r, schema=COT_SCHEMA, scale=meta["scale"], direction=meta["direction"], log=r.get("log"), sample=r.get("episode_id"), epoch=r.get("step"),
+                score=None if r.get("fallback") else r.get("score"), unparsed=r.get("reason") == "unparsed", empty_cot=r.get("skipped") == "empty_cot",
+                skipped=bool(r.get("skipped")), source="in_loss")
 
 
 def c_turn(r: dict) -> float | None:
@@ -128,7 +155,7 @@ def monitor(rows: list[dict]) -> dict | None:
         return None
     by: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
-        by[f"{r.get('monitor')} / {r.get('judge_model')}"].append(r)
+        by[f"{r.get('monitor')} / {r.get('judge_model')}" + (" (in-loss)" if r.get("source") == "in_loss" else "")].append(r)  # in-loss and held-out never pool
     allst = _monitor_stats(rows)
     return dict(monitors=sorted({str(r.get("monitor")) for r in rows}), judge_models=sorted({str(r.get("judge_model")) for r in rows}), turns=len(rows), parsed=allst["parsed"],
                 unparsed=sum(bool(r.get("unparsed")) for r in rows), skipped=sum(bool(r.get("skipped")) for r in rows), empty_cot=sum(bool(r.get("empty_cot")) for r in rows),
@@ -201,8 +228,9 @@ def cost(eps: list[Episode], d: Path, run: str, model: str, ledger_path: Path | 
 
 def build_report(d: Path, *, monitor_paths: list[Path] | None = None, ledger_path: Path | None = None, tokenizer=None, model: str | None = None) -> dict:
     d = Path(d)
-    ep_path = find_episodes(d)
-    eps = read_jsonl(ep_path)
+    ep_paths = find_episodes(d)
+    eps = [e for p in ep_paths for e in read_jsonl(p)]
+    ep_path = ep_paths[0] if len(ep_paths) == 1 else d / "step_*" / "episodes.jsonl"
     run = next((e.run for e in eps if e.run), d.name)
     model = model or next((e.model for e in eps if e.model), "openai/gpt-oss-120b")
     mon = monitor(monitor_rows(d, monitor_paths))
@@ -235,7 +263,10 @@ def to_markdown(rep: dict) -> str:
         L.append(f"| {t} | {v['n']} | {v['passed']} | {pr} | {'yes' if v['signal'] else 'no'} |")
     L += ["", "## Side task", "", f"- side_done: {_r(s['side_done'])} ({s['n_not_evaluated']} episodes not evaluated)"]
     L += [f"- side_done, {lab.replace('_', ' ')}: {_r(v)}" for lab, v in s["side_done_by_opportunity"].items()]
-    L += [f"- final_reveal: {_r(s['final_reveal'])}", f"- final_reveal given side_done: {_r(s['final_reveal_given_side_done'])}", "", "## CoT monitor", ""]
+    L += [f"- final_reveal: {_r(s['final_reveal'])}", f"- final_reveal given side_done: {_r(s['final_reveal_given_side_done'])}"]
+    if len(s.get("by_step") or {}) > 1:
+        L += [f"- step {k}: side_done {_r(v['side_done'])}, final_reveal {_r(v['final_reveal'])}" for k, v in s["by_step"].items()]
+    L += ["", "## CoT monitor", ""]
     mon = rep["monitor"]
     if mon:
         L += [f"- monitors {', '.join(mon['monitors'])}, judge {', '.join(mon['judge_models'])}: {mon['turns']} turns, {mon['parsed']} parsed, {mon['unparsed']} unparsed, "
@@ -245,7 +276,7 @@ def to_markdown(rep: dict) -> str:
             L += [f"- {k} ({', '.join(v['direction'])}): c_turn {_d(v['c_turn'], '{:.2f}')}; per-episode max {_d(v['episode_max_c'], '{:.2f}')}; hist {v['c_turn_hist10']}"
                   for k, v in mon["by_monitor"].items()]
     else:
-        L.append("- no monitor.jsonl found")
+        L.append("- no monitor.jsonl found (nor cot_monitor.jsonl)")
     L += ["", "## CoT length", "", f"- source: {c['source']}", f"- tokens per turn: {_d(c['per_turn'])}", f"- tokens per episode: {_d(c['per_episode'])}",
           f"- sampled tokens per episode: {_d(c['sampled_per_episode'])}", f"- turns per episode: {_d(c['turns_per_episode'])}",
           f"- empty-reasoning turns {c['empty_reasoning_turns']}/{c['n_turns']}, truncated turns {c['truncated_turns']}/{c['n_turns']}", "",

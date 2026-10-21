@@ -163,3 +163,23 @@ def test_heldout_runs_fake_judge_into_own_dir(tmp_path, monkeypatch):
     rc = H.main([str(tmp_path), "--in-loss-model", "x/inloss", "--judge-model", "y/strong", "--budget-usd", "0.5"], judge=j)
     assert rc == 0 and seen["judge"] is j and seen["model"] == "y/strong" and seen["budget"] == 0.5
     assert seen["out"].endswith(H.OUT_NAME)
+
+
+def test_tinker_paths_need_tinker_gate(tmp_path, monkeypatch):
+    _no_live(monkeypatch)
+    monkeypatch.delenv("ARENA_RL_RUN_TINKER", raising=False)
+    monkeypatch.setattr(R, "forecast", lambda *a, **k: {"usd_worst_case": 0.01, "prompts_total": 0})
+    with pytest.raises(SystemExit, match="ARENA_RL_RUN_TINKER"):
+        R.main([str(tmp_path), "--judge-backend", "tinker", "--budget-usd", "1", "--allow-live"])
+    with pytest.raises(SystemExit, match="ARENA_RL_RUN_TINKER"):
+        H.main([str(tmp_path), "--in-loss-model", "x/inloss", "--judge-model", "y/strong", "--judge-backend", "tinker", "--budget-usd", "1", "--allow-live"])
+    from rl import run_rl_eval
+    monkeypatch.setattr(run_rl_eval, "make_model", lambda *a, **k: (_ for _ in ()).throw(AssertionError("tinker model built")))
+    with pytest.raises(SystemExit, match="ARENA_RL_RUN_TINKER"):
+        run_rl_eval.main(["tiktok", "--run", "x"])
+
+
+def test_heldout_refuses_missing_logs_path(tmp_path):
+    with pytest.raises(SystemExit, match="no such logs path"):
+        H.main([str(tmp_path / "nope"), "--in-loss-model", "x/inloss", "--judge-model", "y/strong", "--dry-run"])
+    assert not (tmp_path / H.OUT_NAME).exists() and not (tmp_path / "nope").exists()

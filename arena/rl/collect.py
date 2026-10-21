@@ -84,7 +84,7 @@ class Collector:
         spec = self.side_specs.get(f"{p.parent.name}/{p.name}")
         if spec is not None:
             from .side_scorer import side_aware_build_task
-            return side_aware_build_task(p, self.max_turns, epochs, spec, guarded=self.guard)
+            return side_aware_build_task(p, self.max_turns, epochs, spec, guarded=self.guard, build=self.build)  # the configured build (fake, guarded) is kept
         return self.build(p, self.max_turns, epochs)
 
     async def _eval(self, model, paths, epochs, sub, req, attempt):

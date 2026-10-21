@@ -108,10 +108,15 @@ def test_run_dir_refusals_and_missing(train_dir, tmp_path):
     _write(ho, [_ho("s0e0", 50.0, scale=(1, 100))])
     with pytest.raises(ValueError, match="scale"):
         A.run_dir(train_dir, ho, tokenizer=Tok())
-    _write(tmp_path / "two" / "a" / "monitor.jsonl", [])
-    _write(tmp_path / "two" / "b" / "monitor.jsonl", [])
-    with pytest.raises(ValueError, match="2 monitor.jsonl"):
+    _write(tmp_path / "two" / "a1g0" / "monitor.jsonl", [_ho("s0e0", 5.0, judge="j/h1")])
+    _write(tmp_path / "two" / "a2g0" / "monitor.jsonl", [_ho("s0e1", 5.0, judge="j/h2")])
+    with pytest.raises(ValueError, match="files mix monitor/judge"):  # each file is single-judge; the mix is across files
         A.run_dir(train_dir, tmp_path / "two", tokenizer=Tok())
+    res = A.run_dir(train_dir, tmp_path / "two", tokenizer=Tok(), heldout_judge="j/h2")
+    assert res["heldout"]["judge_model"] == "j/h2" and len(res["heldout"]["files"]) == 2
+    (tmp_path / "none").mkdir()
+    with pytest.raises(ValueError, match="no monitor.jsonl"):
+        A.run_dir(train_dir, tmp_path / "none", tokenizer=Tok())
     (train_dir / "cot_monitor.jsonl").unlink()
     res = A.run_dir(train_dir, tokenizer=Tok())
     assert res["in_loss"]["path"] is None and res["heldout"] is None and res["checkpoints"][5]["sus_in_loss_side_done"] is None
@@ -156,3 +161,25 @@ def test_cli_ablation(cli, capsys, train_dir, tmp_path, monkeypatch):
         cli.main(["ablation", str(train_dir), "--baseline-step", "3"])
     with pytest.raises(SystemExit, match="no step_"):
         cli.main(["ablation", str(tmp_path / "nope")])
+
+
+def test_heldout_rows_without_sidecar_join_by_log_sample_epoch(tmp_path):
+    """rl.monitor.run finds no sidecar for the loop's a<attempt>g<group>/ logs, so held-out rows carry only (log, sample, epoch); they still join."""
+    d = tmp_path / "r1"
+    eps = []
+    for step in (0, 1):
+        for i in range(2):
+            e = _ep(step, i, 10, True, True)
+            e.log_path, e.epoch = f"/x/logs/r1/step_{step:03d}/a1g0/log{step}.eval", i + 1
+            eps.append(e)
+        append_jsonl(d / f"step_{step:03d}" / "episodes.jsonl", eps[-2:])
+    _write(d / "cot_monitor.jsonl", [_cm(e.episode_id, e.step, 0, 3.0) for e in eps])
+    ho = [dict(schema="arena.monitor.v1", monitor="controlarena_cot", judge_model="j/strong", scale=[0, 10], direction="high=suspicious", score=7.0 + e.step,
+               log=f"log{e.step}.eval", sample="t", epoch=e.epoch) for e in eps]
+    ho.append(dict(ho[0], log="other.eval", score=0.0))  # a log of another run does not join
+    _write(tmp_path / "ho" / "a1g0" / "monitor.jsonl", ho)
+    assert A.monitor_scores(tmp_path / "ho" / "a1g0" / "monitor.jsonl") == {}  # no sidecar and no index: nothing joins
+    res = A.run_dir(d, tmp_path / "ho", tokenizer=Tok())
+    assert res["coverage"][0]["side_done_heldout"] == 2 and res["coverage"][1]["side_done_heldout"] == 2
+    assert res["checkpoints"][0]["sus_heldout_side_done"] == 7.0 and res["checkpoints"][1]["sus_heldout_side_done"] == 8.0
+    assert res["heldout"]["judge_model"] == "j/strong" and res["heldout"]["scale"] == [0, 10]

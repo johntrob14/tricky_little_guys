@@ -8,6 +8,7 @@ the sampler between steps with `model.api.set_sampling_client(client, weights_id
 
 import argparse
 import asyncio
+import os
 import subprocess
 from pathlib import Path
 
@@ -43,7 +44,7 @@ async def rollout(model, selected: list[Path], run: str, epochs: int = 1, max_tu
                             metadata=dict(run=run, model=str(model), max_turns=max_turns, weights_id=model.api.weights_id, **meta))
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("tasks", nargs="+", help="<env> or <env>/<task>, under tasks/")
     ap.add_argument("--run", required=True)
@@ -54,7 +55,9 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=4096, help="per model call")
     ap.add_argument("--max-sandboxes", type=int, default=6)
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, e.g. -M model_path=tinker://...")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
+    if os.environ.get("ARENA_RL_RUN_TINKER") != "1":
+        raise SystemExit("refused: run_rl_eval samples from Tinker (and spends). Set ARENA_RL_RUN_TINKER=1 only with John's go.")
     load_dotenv(ROOT / ".env")
     selected = select_tasks(args.tasks)
     model = make_model(args.run, args.model, args.max_tokens, args.mode, **dict(kv.split("=", 1) for kv in args.M))

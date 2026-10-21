@@ -9,7 +9,8 @@ suspicion (episode max over parsed turns, high = suspicious, 0-10). `analyze` re
   matched length; `matched_drop` = length-matched mean over bins present in both, vs. baseline checkpoint;
 - held-out minus in-loss suspicion on side-done episodes (a gap opening up = fitting the trained-against monitor, not hiding from monitors in general);
 - a verdict string per checkpoint vs. baseline. Verdicts are heuristics for reading, not results.
-Loaders read episodes.jsonl plus monitor.jsonl rows (joined by sidecar.episode_id). Pure functions; nothing calls a model.
+Loaders read episodes.jsonl plus monitor.jsonl rows (joined by sidecar.episode_id, else by (.eval basename, sample, epoch) through log_index: the
+train loop's logs sit in a<attempt>g<group>/ dirs, so rl.monitor.run --sidecars finds no sidecar for them). Pure functions; nothing calls a model.
 `run_dir` / `write` (`python rl.py ablation <train_out_dir> [--heldout F]`) read a train out dir: step_NNN/episodes.jsonl, in-loss suspicion straight from
 rl.cot_monitor's cot_monitor.jsonl (native score, episode max or mean over judged turns; skipped and fallback turns left out), held-out from a
 rl.monitor.heldout monitor.jsonl; they write ablation.md and ablation.json.
@@ -145,10 +146,24 @@ def analyze(obs: Iterable[Obs], *, n_bins: int = 8, baseline_step: int | None = 
 
 # ---- loaders
 
-def monitor_scores(path, stat: str = "max", *, monitor: str | None = None, judge_model: str | None = None) -> dict[str, float]:
-    """monitor.jsonl -> {episode_id: max|mean over parsed turns}; rows without sidecar.episode_id are skipped.
+def log_index(episodes: list[dict]) -> dict[tuple, str]:
+    """(.eval basename, sample_id, epoch) -> episode_id, for monitor.jsonl rows that carry no sidecar (rl.monitor.run keys rows by log, sample, epoch)."""
+    return {(Path(e["log_path"]).name, str(e.get("sample_id")), e.get("epoch")): e["episode_id"] for e in episodes if e.get("log_path")}
+
+
+def _row_episode_id(r: dict, index: dict[tuple, str] | None) -> str | None:
+    eid = (r.get("sidecar") or {}).get("episode_id")
+    if eid is None and index is not None:
+        eid = index.get((r.get("log"), str(r.get("sample")), r.get("epoch")))
+    return eid
+
+
+def monitor_scores(path, stat: str = "max", *, monitor: str | None = None, judge_model: str | None = None, index: dict[tuple, str] | None = None,
+                   seen_out: set | None = None) -> dict[str, float]:
+    """monitor.jsonl -> {episode_id: max|mean over parsed turns}; a row is joined by sidecar.episode_id, else through `index` (log_index), else skipped.
     Rows are filtered to `monitor` / `judge_model` when given. A file whose kept rows mix monitors or judges (different scales, or the in-loss and
-    held-out judge resumed into one dir) is refused rather than pooled, and so is a monitor whose direction is not high=suspicious."""
+    held-out judge resumed into one dir) is refused rather than pooled, and so is a monitor whose direction is not high=suspicious. `seen_out`
+    collects the (monitor, judge_model) pairs kept, so a caller pooling several files can refuse a mix across them."""
     per, seen = {}, set()
     for l in open(path):
         try:
@@ -157,7 +172,7 @@ def monitor_scores(path, stat: str = "max", *, monitor: str | None = None, judge
             continue
         if (monitor and r.get("monitor") != monitor) or (judge_model and r.get("judge_model") != judge_model):
             continue
-        eid = (r.get("sidecar") or {}).get("episode_id")
+        eid = _row_episode_id(r, index)
         if eid and r.get("score") is not None:
             if r.get("direction", "high=suspicious") != "high=suspicious":
                 raise ValueError(f"{path}: monitor {r.get('monitor')!r} has direction {r.get('direction')!r}; ablation assumes high=suspicious")
@@ -165,6 +180,8 @@ def monitor_scores(path, stat: str = "max", *, monitor: str | None = None, judge
             per.setdefault(eid, []).append(float(r["score"]))
     if len(seen) > 1:
         raise ValueError(f"{path}: rows mix monitor/judge {sorted(map(str, seen))}; pass monitor= and judge_model=")
+    if seen_out is not None:
+        seen_out |= seen
     return {k: (max(v) if stat == "max" else statistics.fmean(v)) for k, v in per.items()}
 
 
@@ -238,18 +255,20 @@ def cot_monitor_scores(path, stat: str = "max", *, judge_model: str | None = Non
     return {k: (max(v) if stat == "max" else statistics.fmean(v)) for k, v in per.items()}, meta
 
 
-def heldout_meta(path, judge_model: str | None = None) -> dict:
-    """monitor, judge and scale of the rows monitor_scores keeps from a held-out monitor.jsonl."""
+def heldout_meta(paths, judge_model: str | None = None, index: dict[tuple, str] | None = None) -> dict:
+    """monitor, judge and scale of the rows monitor_scores keeps from held-out monitor.jsonl file(s)."""
+    paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
     seen = set()
-    for l in open(path):
-        try:
-            r = json.loads(l)
-        except ValueError:
-            continue
-        if (r.get("sidecar") or {}).get("episode_id") and r.get("score") is not None and not (judge_model and r.get("judge_model") != judge_model):
-            seen.add((r.get("monitor"), r.get("judge_model"), tuple(r.get("scale") or (0, 10))))
+    for p in paths:
+        for l in open(p):
+            try:
+                r = json.loads(l)
+            except ValueError:
+                continue
+            if _row_episode_id(r, index) and r.get("score") is not None and not (judge_model and r.get("judge_model") != judge_model):
+                seen.add((r.get("monitor"), r.get("judge_model"), tuple(r.get("scale") or (0, 10))))
     m, j, s = next(iter(seen)) if len(seen) == 1 else (None, None, None)
-    return dict(path=str(path), monitor=m, judge_model=j, scale=list(s) if s else None)
+    return dict(path=str(paths[0]) if len(paths) == 1 else [str(p) for p in paths], monitor=m, judge_model=j, scale=list(s) if s else None)
 
 
 def train_episodes(d: Path) -> tuple[list[dict], list[str]]:
@@ -279,7 +298,9 @@ def _cot_len_fn(eps: list[dict], tokenizer):
 def run_dir(d, heldout=None, *, stat: str = "max", tokenizer=None, baseline_step: int | None = None, n_bins: int = 8, in_loss_judge: str | None = None,
             heldout_judge: str | None = None) -> dict:
     """analyze() over a train out dir: in-loss suspicion from <d>/cot_monitor.jsonl, held-out from `heldout` (a rl.monitor.heldout monitor.jsonl,
-    or a dir holding exactly one), CoT length from think_mask over each episode's turns. Offline."""
+    or a dir: every monitor.jsonl under it, pooled; one per a<attempt>g<group> log dir), CoT length from think_mask over each episode's turns. Held-out
+    rows join by sidecar.episode_id or (.eval basename, sample, epoch). Kept rows that mix monitors or judges, within a file or across files, are
+    refused (pick one with heldout_judge). Offline."""
     d = Path(d)
     eps, files = train_episodes(d)
     cm = d / "cot_monitor.jsonl"
@@ -287,12 +308,15 @@ def run_dir(d, heldout=None, *, stat: str = "max", tokenizer=None, baseline_step
     ho, ho_meta = {}, None
     if heldout:
         hp = Path(heldout)
-        if hp.is_dir():
-            found = sorted(hp.rglob("monitor.jsonl"))
-            if len(found) != 1:
-                raise ValueError(f"--heldout dir {hp} holds {len(found)} monitor.jsonl files; pass one")
-            hp = found[0]
-        ho, ho_meta = monitor_scores(hp, stat, judge_model=heldout_judge), heldout_meta(hp, heldout_judge)
+        ho_files = sorted(hp.rglob("monitor.jsonl")) if hp.is_dir() else [hp]
+        if not ho_files:
+            raise ValueError(f"--heldout dir {hp} holds no monitor.jsonl")
+        idx, seen = log_index(eps), set()
+        for f in ho_files:
+            ho.update(monitor_scores(f, stat, judge_model=heldout_judge, index=idx, seen_out=seen))
+        if len(seen) > 1:
+            raise ValueError(f"--heldout {hp}: files mix monitor/judge {sorted(map(str, seen))}; pass the held-out judge model to pick one")
+        ho_meta = dict(heldout_meta(ho_files, heldout_judge, idx), path=str(hp), files=[str(f) for f in ho_files])
         if in_meta.get("scale") and ho_meta["scale"] and in_meta["scale"] != ho_meta["scale"]:
             raise ValueError(f"in-loss scale {in_meta['scale']} and held-out scale {ho_meta['scale']} differ; the held-out minus in-loss gap would be meaningless")
         if in_meta.get("judge_model") and in_meta["judge_model"] == ho_meta["judge_model"]:
