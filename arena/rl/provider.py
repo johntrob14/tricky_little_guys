@@ -48,7 +48,8 @@ from tinker_cookbook.renderers.base import RenderContext
 from tinker_cookbook.renderers.gpt_oss import GptOssRenderer
 from tinker_cookbook.tokenizer_utils import get_tokenizer
 
-from run import CONTEXT_WINDOW, MIN_GENERATION
+from run import MIN_GENERATION
+from .datums import CTX_LIMIT as CONTEXT_WINDOW   # RL keeps 32k (datum limit and budget worst case), whatever run.py's eval clamp is
 
 SCHEMA = "arena-rl-sidecar/1"
 DEFAULT_DATE = "2026-10-20"

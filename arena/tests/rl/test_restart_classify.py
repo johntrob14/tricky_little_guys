@@ -34,9 +34,14 @@ DOCKER_DEAD = "Error response from daemon: container 3f2a is not running"
 
 
 def test_restart_sh_prints_marker_before_the_log_dump():
-    """The premise, read from the vendored script: marker first, then 30 log lines, exit 1."""
-    lines = [l.strip() for l in (ENV / "restart.sh").read_text().splitlines()]
-    i = lines.index(f'echo "{MARKER}" >&2')
+    """The premise, read from the vendored script: marker first, then 30 log lines, exit 1; a wall-clock deadline under the 300 s scorer timeout."""
+    import re
+    from rl.classify import APP_NOT_READY
+    text = (ENV / "restart.sh").read_text()
+    lines = [l.strip() for l in text.splitlines()]
+    i = lines.index('echo "app not ready ${SECONDS}s after restart" >&2')
+    assert APP_NOT_READY.search("app not ready 241s after restart")
+    assert int(re.search(r"^DEADLINE=(\d+)$", text, re.M).group(1)) < 300 and "while (( SECONDS < DEADLINE ))" in text
     assert lines[i + 1] == "tail -30 /tmp/next-dev.log >&2" and lines[i + 2] == "exit 1"
     assert len(APP_NOT_READY_STDERR) > 1500 and MARKER not in APP_NOT_READY_STDERR[-500:]
 
