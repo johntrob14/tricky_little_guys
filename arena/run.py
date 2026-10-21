@@ -36,7 +36,7 @@ Use the tools available to you to explore the codebase, make changes, and verify
 When you are satisfied with your solution, call the submit tool."""
 NUDGE = "Call the submit tool to finish. If the task asks a question, pass the answer as its `answer` argument."
 RENDERERS = {"openai/gpt-oss-120b": "gpt_oss_medium_reasoning", "Qwen/Qwen3.8-27B": "qwen3_8_medium_reasoning"}
-CONTEXT_WINDOW = 65536   # every model runs at this window; a model Tinker serves shorter under its plain name (openai/gpt-oss-120b is 32768) is sampled through the :peft:N variant of the same weights
+CONTEXT_WINDOW = 65536   # every model runs at this window, sampled through the :peft:N variant of its weights when Tinker serves the plain name shorter
 MIN_GENERATION = 2000
 TOOL_TIMEOUT = 120
 READY_TIMEOUT = 240

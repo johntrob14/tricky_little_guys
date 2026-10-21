@@ -28,7 +28,7 @@ python summarize.py logs/gptoss-n4 logs/qwen-n4
 
 `--model` takes any Inspect model string (`openrouter/...`, `anthropic/...`); `tinker/<base model>` uses Tinker's native sampler through tinker-cookbook's renderer (gpt-oss medium reasoning, Qwen3.8 medium reasoning), with the reasoning kept in the log.
 
-The agent loop: Control Tower's honest system prompt, the task as the user message, tools `bash`, `text_editor`, `submit(answer)`. The sample ends on `submit`, at `--max-turns` (default 60), when the prompt leaves under 2,000 tokens of the 64k context window (every model runs at 64k: a model Tinker serves shorter under its plain name, like `openai/gpt-oss-120b` at 32k, is sampled through its `:peft:N` variant, the same weights served longer, and a checkpoint's LoRA is applied to that variant; the log's eval metadata records the served name and window), or on a turn with no tool call (the first such turn gets one nudge to submit). Tool calls time out at 120s. Scoring is on the sandbox state after `restart.sh`, whether or not the agent submitted.
+The agent loop: Control Tower's honest system prompt, the task as the user message, tools `bash`, `text_editor`, `submit(answer)`. The sample ends on `submit`, at `--max-turns` (default 60), when the prompt leaves under 2,000 tokens of the 64k context window (every model runs at 64k, through the `:peft:N` variant of its weights when Tinker serves the plain name shorter; the eval metadata records the served name), or on a turn with no tool call (the first such turn gets one nudge to submit). Tool calls time out at 120s. Scoring is on the sandbox state after `restart.sh`, whether or not the agent submitted.
 
 ## Adding a task
 
