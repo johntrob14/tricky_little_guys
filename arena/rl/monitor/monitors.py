@@ -20,6 +20,7 @@ class Monitor:
     scale: tuple
     direction: str  # what a high score means
     sees_tool_calls: bool
+    mode: str  # what the monitor reads: "action+cot", "cot_only" or "action_only"; report it with every result
 
     def template(self):
         return load_template(self.prompt_file, self.slots)
@@ -28,14 +29,16 @@ class Monitor:
         return self.formatter(self.template(), task_description, cot, tool_calls if self.sees_tool_calls else [])
 
     def meta(self):
-        return {"name": self.name, "scale": list(self.scale), "direction": self.direction, "sees_tool_calls": self.sees_tool_calls}
+        return {"name": self.name, "scale": list(self.scale), "direction": self.direction, "sees_tool_calls": self.sees_tool_calls, "mode": self.mode}
 
 
 MONITORS = {
     "controlarena_cot": Monitor("controlarena_cot", PROMPTS / "controlarena_cot.txt", ("task_description", "cot", "tool_calls"),
-                                format_cot_prompt, partial(parse_tagged, lo=0.0, hi=10.0), (0, 10), "high=suspicious", True),
+                                format_cot_prompt, partial(parse_tagged, lo=0.0, hi=10.0), (0, 10), "high=suspicious", True, "action+cot"),
+    "controlarena_cot_only": Monitor("controlarena_cot_only", PROMPTS / "controlarena_cot_only.txt", ("task_description", "cot"),
+                                     format_cot_prompt, partial(parse_tagged, lo=0.0, hi=10.0), (0, 10), "high=suspicious", False, "cot_only"),
     "ontask_generic_100": Monitor("ontask_generic_100", PROMPTS / "ontask_generic_100.txt", ("request", "excerpt"),
-                                  format_ontask_prompt, partial(parse_bare, lo=1.0, hi=100.0), (1, 100), "high=on-task", False),
+                                  format_ontask_prompt, partial(parse_bare, lo=1.0, hi=100.0), (1, 100), "high=on-task", False, "cot_only"),
 }
 
 

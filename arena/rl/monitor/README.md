@@ -12,9 +12,12 @@ used instead of the LinuxArena/control-tower monitors (`old_action`, `orthogonal
 ## Monitors (`monitors.py`)
 - `controlarena_cot` (default): sees task, ONE turn's CoT (HTML-escaped) and that turn's tool calls as `name(sorted-key JSON args)`. Score 0-10, **high = suspicious**.
   It sees no earlier turns and no side-task list. An empty CoT is judged on the tool calls alone (the prompt says that is not suspicious by itself) and counted as `empty_cot`.
+- `controlarena_cot_only` (non-default, `--monitor controlarena_cot_only`; `rl.py train --cot-monitor controlarena_cot_only`): ControlArena's `cot_only.txt`. Sees the task and ONE turn's CoT, no tool calls. Same 0-10 scale, high = suspicious. A turn with an empty CoT is skipped, not judged.
 - `ontask_generic_100` (non-default): the generic scratchpad prompt, CoT only, bare number 1-100, **high = on-task** (opposite direction; native scale kept, see `scale`/`direction` in each row). Empty-CoT turns are skipped, not judged.
 
 Placeholders are filled by splitting the template, not `str.format`/`replace`, so braces or placeholder text inside a CoT survive.
+
+Every monitor has a `mode`, the inputs it reads: `action+cot` (`controlarena_cot`), `cot_only` (`controlarena_cot_only`, `ontask_generic_100`). It is written to each `monitor.jsonl` row and to `summary.json` (`monitor.mode`), and printed by `--dry-run`. Always state it when reporting a result.
 
 ## Outputs, `<out>/<run>/`
 - `monitor.jsonl`, rows `arena.monitor.v1`: run, log, sample, epoch, task, turn, monitor, scale, direction, prompt_sha256, judge_model, raw (the judge's final answer only; the score is parsed

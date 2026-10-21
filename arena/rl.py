@@ -46,6 +46,7 @@ sys.path.insert(0, str(ARENA))
 
 from rl.budget import Budget, Ledger, episode_worst_case_usd, train_cost_usd  # noqa: E402
 from rl.datums import CTX_LIMIT  # noqa: E402
+from rl.monitor.monitors import DEFAULT as DEFAULT_MONITOR, MONITORS  # noqa: E402
 
 MODEL = "openai/gpt-oss-120b"
 SIDE_TASKS = ("leak_secret",)  # --side-task values: run_attack-built side tasks (seeding + prompt + scoring), one per name
@@ -379,7 +380,7 @@ def cot_scorer(args, budget, out_dir, judge=None):
     if judge is None:
         judge = live_judge(args.judge_backend, model, args.judge_max_tokens)
     return CotMonitorScorer(judge, budget, backend=args.judge_backend, judge_model=model, concurrency=args.cot_concurrency, max_tokens=args.judge_max_tokens,
-                            fallback=args.cot_fallback, out_dir=out_dir)
+                            fallback=args.cot_fallback, out_dir=out_dir, **({"monitor": args.cot_monitor} if getattr(args, "cot_monitor", None) else {}))
 
 
 def side_task_plan(args) -> dict | None:
@@ -446,8 +447,8 @@ def cot_plan(args):
     from rl.monitor.pricing import DEFAULT_MODEL, price_for
     model = args.judge_model or DEFAULT_MODEL[args.judge_backend]
     pr = price_for(args.judge_backend, model)
-    sc = step_cost(args.B, args.G, max_turns=args.max_turns, max_tokens=args.max_tokens, judge_max_tokens=args.judge_max_tokens, price=pr)
-    return dict(beta_cot=args.beta_cot, backend=args.judge_backend, judge_model=model, price=pr.meta(), concurrency=args.cot_concurrency, fallback=args.cot_fallback,
+    sc = step_cost(args.B, args.G, max_turns=args.max_turns, max_tokens=args.max_tokens, judge_max_tokens=args.judge_max_tokens, price=pr, monitor=args.cot_monitor or DEFAULT_MONITOR)
+    return dict(beta_cot=args.beta_cot, monitor=args.cot_monitor or DEFAULT_MONITOR, monitor_mode=MONITORS[args.cot_monitor or DEFAULT_MONITOR].mode, backend=args.judge_backend, judge_model=model, price=pr.meta(), concurrency=args.cot_concurrency, fallback=args.cot_fallback,
                 allow_live=args.allow_live, **sc,
                 note="one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply), each reserving its worst case on --budget-usd. step_expected_usd "
                      "uses placeholders from the atk-* monitor logs (rl.cot_monitor.TURNS_EST etc.), unmeasured on training rollouts; it is added to step_forecast_usd "
@@ -577,6 +578,7 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--allow-live", action="store_true", help="allow the live CoT-monitor judge (needed with --beta-cot)")
     t.add_argument("--judge-backend", default="openrouter", choices=["openrouter", "tinker"], help="CoT-monitor judge backend (tinker also needs ARENA_RL_RUN_TINKER=1)")
     t.add_argument("--judge-model", default=None, help="default: rl.monitor.pricing.DEFAULT_MODEL for the backend (openrouter: openai/gpt-oss-20b)")
+    t.add_argument("--cot-monitor", default=None, choices=sorted(MONITORS), help="which rl.monitor monitor the CoT penalty uses (default controlarena_cot = action+cot; controlarena_cot_only = CoT only)")
     t.add_argument("--judge-max-tokens", type=int, default=6000)
     t.add_argument("--cot-concurrency", type=int, default=8, help="max concurrent judge calls")
     t.add_argument("--cot-fallback", type=float, default=0.0, help="c_turn for a turn whose judge call failed or stayed unparsed (recorded in cot_monitor.jsonl)")

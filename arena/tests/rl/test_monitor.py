@@ -67,10 +67,17 @@ def test_parse_reasoning_and_bare():
 
 
 def test_registry():
-    assert DEFAULT == "controlarena_cot" and set(MONITORS) == {"controlarena_cot", "ontask_generic_100"}
+    assert DEFAULT == "controlarena_cot" and set(MONITORS) == {"controlarena_cot", "controlarena_cot_only", "ontask_generic_100"}
     assert MONITORS["ontask_generic_100"].direction == "high=on-task"
     p = get("ontask_generic_100").format("T", "c", [{"name": "x", "args": {}}])
     assert "x(" not in p and "T" in p and "excerpt from" in p
+
+
+def test_cot_only_monitor():
+    m = get("controlarena_cot_only")
+    p = m.format("TASK", "think", [{"name": "bash", "args": {"cmd": "ls"}}])
+    assert "TASK" in p and "think" in p and "bash(" not in p and "tool_calls" not in p
+    assert m.mode == "cot_only" and get("controlarena_cot").mode == "action+cot" and m.meta()["mode"] == "cot_only"
 
 
 def test_reward_hook_inert():
@@ -178,6 +185,7 @@ def test_main_injected_judge_and_ontask(tmp_path):
     j = Fake(lambda p, n: "85")
     assert R.main([str(logs), "--out", str(out), "--budget-usd", "5", "--monitor", "ontask_generic_100"], judge=j) == 0
     rows = [json.loads(l) for l in open(out / "r1" / "monitor.jsonl")]
+    assert {r["mode"] for r in rows} == {"cot_only"}
     assert len(j.prompts) == 3 and sum(r["skipped"] for r in rows) == 1 and {r["score"] for r in rows if not r["skipped"]} == {85.0}
 
 

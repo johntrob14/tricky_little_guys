@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from . import run as R
+from .monitors import MONITORS
 
 OUT_NAME = "monitor_heldout"
 # HELDOUT.md: run both on the same turns. Recommendations only; --judge-model stays required and nothing defaults to them.
@@ -58,7 +59,7 @@ def main(argv=None, judge=None):
     ap.add_argument("--in-loss-model", required=True)
     ap.add_argument("--judge-model", required=True)
     ap.add_argument("--judge-backend", default="openrouter", choices=R.BACKENDS)
-    ap.add_argument("--monitor", default="controlarena_cot")
+    ap.add_argument("--monitor", default="controlarena_cot", choices=sorted(MONITORS))
     ap.add_argument("--stronger-because", default="")
     ap.add_argument("--max-tokens", type=int, default=R.MAX_TOKENS)
     ap.add_argument("--out", default=None)

@@ -208,7 +208,7 @@ async def score_item(it, monitor, judge, budget, price=DEFAULT_PRICE, max_tokens
     retry carries `.partial_row`, the unparsed row of the attempts already paid for, so the caller can keep it and its cost."""
     empty = not it["cot"].strip()
     row = {"schema": SCHEMA, "run": it["run"], "log": it["log"], "sample": it["sample"], "epoch": it["epoch"], "task": it["task"], "turn": it["turn"],
-           "monitor": monitor.name, "scale": list(monitor.scale), "direction": monitor.direction, "prompt_sha256": prompt_sha(it["prompt"]),
+           "monitor": monitor.name, "mode": monitor.mode, "scale": list(monitor.scale), "direction": monitor.direction, "prompt_sha256": prompt_sha(it["prompt"]),
            "judge_model": judge_model, "raw": None, "judge_thinking": "", "score": None, "reasoning": None, "unparsed": False, "skipped": False, "empty_cot": empty, "attempts": 0,
            "tokens": {"in": 0, "out": 0}, "cost_usd": 0.0, **({"sidecar": it["side"]} if it["side"] else {})}
     if empty and not monitor.sees_tool_calls:  # nothing to judge
@@ -356,7 +356,7 @@ def main(argv=None, judge=None):
     mon = get(a.monitor)
     out = a.out or str(Path(a.logs if Path(a.logs).is_dir() else Path(a.logs).parent) / ("monitor_cont" if a.strip_prefill else "monitor"))
     fc = forecast(a.logs, out, mon, a.sidecars, price, a.max_tokens, model, a.strip_prefill)
-    print(json.dumps({"monitor": mon.name, "judge_backend": a.judge_backend, "judge_model": model, "price_usd_per_mtok": price.meta(), **fc}, indent=1))
+    print(json.dumps({"monitor": mon.name, "monitor_mode": mon.mode, "judge_backend": a.judge_backend, "judge_model": model, "price_usd_per_mtok": price.meta(), **fc}, indent=1))
     if not price.verified:
         print(f"WARNING: price for {a.judge_backend}:{model} is UNVERIFIED (conservative upper bound used)", file=sys.stderr)
     if a.dry_run:
