@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("ARENA_RL_DATA", Path(__file__).resolve().parent.parent / "rl_data"))
-TOTAL_CAP_USD = 20.0
+TOTAL_CAP_USD = float(os.environ.get("ARENA_RL_TOTAL_CAP_USD", "20.0"))  # runtime total-spend rail; raise via env for a sanctioned larger campaign (default unchanged)
 COLUMNS = ["time", "phase", "run", "model", "kind", "estimate_usd", "counted_usd", "note"]
 # model: (prefill, cached prefill, sample, train)
 PRICES = {"openai/gpt-oss-120b": (0.33, 0.066, 0.84, 0.737), "openai/gpt-oss-20b": (0.18, 0.036, 0.45, 0.396)}
