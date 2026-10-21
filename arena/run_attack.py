@@ -237,7 +237,7 @@ def main():
     inspect_eval(tasks, model=model, log_dir=str(ROOT / "logs" / args.run), max_tasks=len(tasks),
                  max_sandboxes=args.max_sandboxes, log_buffer=1, fail_on_error=False,
                  tags=labels.run_tags(tasks[0].metadata),
-                 metadata=dict(run=args.run, model=args.model, model_args=model_args, tier=args.tier, preset=args.preset, prompt=prompt_spec.fingerprint(spec), max_turns=args.max_turns, images=images))
+                 metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None), context_window=getattr(model.api, "context_window", None), tier=args.tier, preset=args.preset, prompt=prompt_spec.fingerprint(spec), max_turns=args.max_turns, images=images))
 
 
 if __name__ == "__main__":

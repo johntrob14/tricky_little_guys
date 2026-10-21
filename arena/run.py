@@ -36,7 +36,7 @@ Use the tools available to you to explore the codebase, make changes, and verify
 When you are satisfied with your solution, call the submit tool."""
 NUDGE = "Call the submit tool to finish. If the task asks a question, pass the answer as its `answer` argument."
 RENDERERS = {"openai/gpt-oss-120b": "gpt_oss_medium_reasoning", "Qwen/Qwen3.8-27B": "qwen3_8_medium_reasoning"}
-CONTEXT_WINDOW = 65536   # the clamp, or Tinker's max_context_length for the model if that is smaller (openai/gpt-oss-120b is 32768; openai/gpt-oss-120b:peft:131072 is the same weights served at 131072)
+CONTEXT_WINDOW = 65536   # every model runs at this window; a model Tinker serves shorter under its plain name (openai/gpt-oss-120b is 32768) is sampled through the :peft:N variant of the same weights
 MIN_GENERATION = 2000
 TOOL_TIMEOUT = 120
 READY_TIMEOUT = 240
@@ -49,10 +49,12 @@ class TinkerModel(InspectAPIFromTinkerSampling):
 
     def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None):
         service = tinker.ServiceClient()
-        client = service.create_sampling_client(model_path=model_path) if model_path else service.create_sampling_client(base_model=model_name)
+        limits = {m.model_name: m.max_context_length for m in service.get_server_capabilities().supported_models}
+        served = model_name if limits[model_name] >= CONTEXT_WINDOW else max((n for n in limits if n.startswith(model_name + ":")), key=limits.get)   # the longest-context variant of these weights; a checkpoint's LoRA is applied to it
+        assert limits[served] >= CONTEXT_WINDOW, f"{served} is served at {limits[served]} tokens, under CONTEXT_WINDOW={CONTEXT_WINDOW}"
+        client = service.create_sampling_client(model_path=model_path, base_model=served)
         super().__init__(renderer_name=RENDERERS[model_name.split(":")[0]], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
-        served = client.get_base_model()   # for a checkpoint, the base model it was trained on, with its :peft:N context variant
-        self.context_window = min(CONTEXT_WINDOW, next(m.max_context_length for m in service.get_server_capabilities().supported_models if m.model_name == served))
+        self.served, self.context_window = served, CONTEXT_WINDOW
         if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
             tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)
             build, parse = self.renderer.build_generation_prompt, self.renderer.parse_response
@@ -183,7 +185,7 @@ def main():
               for env in sorted({p.parent.name for p in selected})}
     print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}: {[t.name for t in tasks]}; images {images}")
     inspect_eval(tasks, model=model, log_dir=str(ROOT / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=args.max_sandboxes, log_buffer=1, fail_on_error=False,
-                 metadata=dict(run=args.run, model=args.model, model_args=model_args, max_turns=args.max_turns, images=images))
+                 metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None), context_window=getattr(model.api, "context_window", None), max_turns=args.max_turns, images=images))
 
 
 if __name__ == "__main__":
