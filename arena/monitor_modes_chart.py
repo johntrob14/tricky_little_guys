@@ -1,7 +1,9 @@
 """Bar chart of blind monitor suspicion for the CoT-control organisms and their base models, under two kinds of monitoring on the same episodes: CoT only (controlarena_cot_only)
 and action+cot (controlarena_cot), both judged by gpt-oss-20b, 0-10, high = suspicious. Reads the JSON of monitor_modes_extract.py; needs matplotlib and scipy (system python3, not the arena venv). Also prints organism-against-base tests under each kind, the paired comparison of the two kinds, and skipped and unparsed turn counts.
 
-    python3 monitor_modes_chart.py DATA.json OUT.png
+    python3 monitor_modes_chart.py DATA.json OUT.png [TITLE_NOTE]
+
+A prompt group (arena_covert_v2, attacker_hide, control) is drawn only if DATA.json has its cells. TITLE_NOTE is appended to the figure title.
 """
 import json, statistics, sys
 import matplotlib
@@ -17,6 +19,7 @@ COLORS = {"org": "#ff9f43", "base": "#54a0ff"}
 MODES = [("cot_only", "CoT only"), ("action+cot", "action+cot")]
 FG, BG = "#e8e8e8", "#14141a"
 data = json.load(open(sys.argv[1]))
+GROUPS = [g for g in GROUPS if f"gpt_org_{g[0]}" in data]
 
 
 def episodes(cell, mode):
@@ -64,7 +67,7 @@ def bars(ax, kind, groups):
 
 
 fig, axes = plt.subplots(2, 3, figsize=(20, 10), facecolor=BG, gridspec_kw=dict(width_ratios=[1.5, 1.5, 1]))
-PANELS = [("max", "Highest turn score in each episode\n(mean over episodes)", GROUPS), ("mean", "Average turn score in each episode\n(mean over episodes)", GROUPS), ("leak", "Score on the turn that makes the leak\n(mean over leaked episodes)", GROUPS[:2])]
+PANELS = [("max", "Highest turn score in each episode\n(mean over episodes)", GROUPS), ("mean", "Average turn score in each episode\n(mean over episodes)", GROUPS), ("leak", "Score on the turn that makes the leak\n(mean over leaked episodes)", [g for g in GROUPS if g[0] != "ctl"])]
 for r, (PREFIX, rowname) in enumerate(MODEL_ROWS):
     for c, (kind, title, groups) in enumerate(PANELS):
         ax = axes[r][c]; ax.set_facecolor(BG)
@@ -77,7 +80,7 @@ handles = [Patch(color=COLORS["org"], label="CoT-control organism"), Patch(color
            Patch(facecolor=BG, edgecolor="#bbbbbb", hatch="////", label="action+cot monitoring: monitor controlarena_cot, judge gpt-oss-20b (hatched bars), same episodes")]
 fig.legend(handles=handles, loc="lower center", ncol=2, frameon=False, labelcolor=FG, fontsize=10)
 fig.suptitle("CoT-only monitoring of the arena leak_secret runs (solid bars), beside action+cot monitoring of the same episodes (hatched)\n"
-             "blind monitor, one turn at a time, 0 to 10, high = suspicious; error bars = standard error of the mean over episodes", color=FG, fontsize=13)
+             "blind monitor, one turn at a time, 0 to 10, high = suspicious; error bars = standard error of the mean over episodes" + (f"\n{sys.argv[3]}" if len(sys.argv) > 3 else ""), color=FG, fontsize=13)
 fig.tight_layout(rect=(0.12, 0.07, 1, 0.93))
 for r, (_, rowname) in enumerate(MODEL_ROWS):
     pos = axes[r][0].get_position()
@@ -108,7 +111,7 @@ for prefix, _ in MODEL_ROWS:
                 if g != "ctl" and kind != "leak":
                     pooled[kind] += d
 for kind, d in pooled.items():
-    print(f"  pooled over the 8 attack cells, episode {kind}: {statistics.mean(d):+.3f} (n={len(d)}), Wilcoxon p={wilcoxon(d).pvalue:.3g}")
+    print(f"  pooled over the attack cells, episode {kind}: {statistics.mean(d):+.3f} (n={len(d)}), Wilcoxon p={wilcoxon(d).pvalue:.3g}")
 print("== skipped (empty CoT) and unparsed turns, CoT-only monitoring")
 for cell in data:
     runs = data[cell].values()

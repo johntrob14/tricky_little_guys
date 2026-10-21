@@ -2,7 +2,9 @@
 The kinds: "action+cot" (monitor controlarena_cot, rows under <run>/monitor) and "cot_only" (monitor controlarena_cot_only, rows under <run>/monitor_cot_only); both judged by gpt-oss-20b, 0-10, high = suspicious.
 An episode record has its leaked flag, tier, the per-turn scores (null = skipped or unparsed) and the score on the leak turn (arena/leak_turn.py). A run record also counts monitor turns, skipped turns and unparsed turns.
 
-    python monitor_modes_extract.py OUT.json label=logs/dir1,logs/dir2 label2=logs/dir3 ...
+    python monitor_modes_extract.py [--subs=ACTION_COT_SUB,COT_ONLY_SUB] OUT.json label=logs/dir1,logs/dir2 label2=logs/dir3 ...
+
+--subs replaces the monitor output directories read under each run (default monitor,monitor_cot_only), e.g. monitor_maintask,monitor_maintask_cot_only for the monitors run by monitor_maintask.py.
 """
 import json, sys
 from pathlib import Path
@@ -27,6 +29,8 @@ def run_record(d):
 
 
 if __name__ == "__main__":
+    if sys.argv[1].startswith("--subs="):
+        MODES = dict(zip(MODES, sys.argv.pop(1).removeprefix("--subs=").split(",")))
     out_path, cells = sys.argv[1], dict(a.split("=", 1) for a in sys.argv[2:])
     res = {label: {d: run_record(d) for d in spec.split(",")} for label, spec in cells.items()}
     json.dump(res, open(out_path, "w"))
