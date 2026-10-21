@@ -175,3 +175,12 @@ def test_ledger_wasted_and_lookup_from_collect_dir(tmp_path):
     for d in (data / "r1", data / "r1" / "collect"):
         k = build_report(d, tokenizer=Tok())["cost"]["ledger"]
         assert k["path"] == str(data / "ledger.csv") and k["counted_usd"] == 0.25 and k["wasted_usd"] == 0.02
+
+
+def test_ledger_counted_by_model(tmp_path):
+    from rl.report import _by_model
+    led = Ledger(tmp_path / "ledger.csv")
+    led.append("train", "r", "openai/gpt-oss-120b", "counted", counted_usd=0.5, note="sample")
+    led.append("train", "r", "openai/gpt-oss-20b", "counted", counted_usd=0.25, note="cot_monitor x")
+    led.append("train", "r", "openai/gpt-oss-120b", "forecast", estimate_usd=9.0)
+    assert _by_model(led.rows()) == {"openai/gpt-oss-120b": 0.5, "openai/gpt-oss-20b": 0.25}

@@ -13,6 +13,7 @@ reasoning are not judged and get 0.0, marked `skipped`. The live judge is built 
 import asyncio
 import hashlib
 import json
+import math
 import re
 import time
 from dataclasses import dataclass, field
@@ -22,7 +23,7 @@ from .budget import Budget, BudgetExceeded
 from .cot_mask import _tokenizer_for, think_mask
 from .monitor.monitors import DEFAULT, Monitor, get
 from .monitor.pricing import price_for
-from .monitor.run import MAX_TOKENS, score_item
+from .monitor.run import MAX_TOKENS, cost, est_tokens, score_item
 
 SCHEMA = "arena.rl.cot_monitor.v1"
 KIND = "cot_monitor"
@@ -34,6 +35,30 @@ _USER = re.compile(r"<\|start\|>user<\|message\|>(.*?)<\|end\|>", re.S)
 
 class CotMonitorError(RuntimeError):
     pass
+
+
+# Per-step judge cost for `rl.py train --dry-run`. Expected-case placeholders: the gpt-oss-20b judge on logs/atk-gptoss and logs/atk-qwen (attack runs,
+# not training rollouts; 363 turns: 22-24 judged turns per episode, mean 1456-1912 prompt and 440-534 output tokens, 9 retried). Unmeasured on training.
+TURNS_EST = 24
+PROMPT_TOKENS_EST = 2000
+OUT_TOKENS_EST = 600
+TASK_TOKENS_WORST = 3000  # task statement shown to the judge; rl.budget.episode_worst_case_usd's p0 (the whole first prompt)
+XTOK = 1.5  # policy tokens -> judge tokens (different tokenizers); heuristic margin, unverified
+
+
+def step_cost(B: int, G: int, *, max_turns: int, max_tokens: int, judge_max_tokens: int, price, monitor: str = DEFAULT, turns_est: int = TURNS_EST,
+              prompt_tokens_est: int = PROMPT_TOKENS_EST, out_tokens_est: int = OUT_TOKENS_EST) -> dict:
+    """Judge USD per training step. Worst: every turn of every episode judged twice (unparsed retry), prompt = template + TASK_TOKENS_WORST + the whole
+    turn (max_tokens x XTOK), output at judge_max_tokens, no cache credit. Expected: min(turns_est, max_turns) calls per episode at the placeholder sizes."""
+    n = B * G
+    worst_prompt = est_tokens(get(monitor).format("", "", [])) + TASK_TOKENS_WORST + math.ceil(XTOK * max_tokens)
+    worst_call = cost(worst_prompt, judge_max_tokens, price)
+    exp_turns = min(turns_est, max_turns)
+    out_est = min(out_tokens_est, judge_max_tokens)  # the judge cannot emit more than its cap
+    exp_call = cost(prompt_tokens_est, out_est, price)
+    return dict(calls_worst=n * max_turns * 2, prompt_tokens_worst=worst_prompt, call_worst_usd=round(worst_call, 6), step_worst_case_usd=round(n * max_turns * 2 * worst_call, 4),
+                calls_est=n * exp_turns, turns_per_episode_est=exp_turns, prompt_tokens_est=prompt_tokens_est, out_tokens_est=out_est,
+                call_est_usd=round(exp_call, 6), step_expected_usd=round(n * exp_turns * exp_call, 4))
 
 
 def task_text(ep, tok) -> str:
@@ -74,15 +99,15 @@ def normalize(score: float, monitor: Monitor) -> float:
 class _BudgetAdapter:
     """rl.monitor.run.call's reserve/settle on top of rl.budget.Budget's reserve/commit."""
 
-    def __init__(self, budget: Budget, note: str):
-        self.b, self.note = budget, note
+    def __init__(self, budget: Budget, note: str, model: str | None = None):
+        self.b, self.note, self.model = budget, note, model
 
     def reserve(self, amount):
         self.b.reserve(amount)
 
     def settle(self, reserved, actual):
         if actual > 0:
-            self.b.commit(actual, reserved_usd=reserved, kind=KIND, note=self.note)
+            self.b.commit(actual, reserved_usd=reserved, kind=KIND, note=self.note, model=self.model)
         else:
             self.b.release(reserved)
 
@@ -125,7 +150,7 @@ class CotMonitorScorer:
             it = dict(run=ep.run, log=ep.log_path, sample=ep.sample_id, epoch=ep.epoch, task=ep.task, turn=k, cot=view["cot"], prompt=prompt, side={})
             async with sem:
                 try:
-                    r = await score_item(it, self.mon, self.judge, _BudgetAdapter(self.budget, f"{self.judge_model} ep {ep.episode_id} turn {k}"), self.price, self.max_tokens, self.judge_model)
+                    r = await score_item(it, self.mon, self.judge, _BudgetAdapter(self.budget, f"{self.judge_model} ep {ep.episode_id} turn {k}", self.judge_model), self.price, self.max_tokens, self.judge_model)
                 except BudgetExceeded:
                     raise
                 except Exception as e:  # judge failure: defined fallback, recorded

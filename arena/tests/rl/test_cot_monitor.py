@@ -196,3 +196,29 @@ def test_budget_exceeded_cancels_other_judge_calls(tmp_path):
 
     asyncio.run(go())
     assert len(started) > 1 and finished == []
+
+
+def test_ledger_rows_carry_judge_model(tmp_path):
+    async def judge(p):
+        return "<score>7</score>", 1000, 200
+
+    b = budget(tmp_path)
+    asyncio.run(scorer(judge, tmp_path, b)([ep(TURNS)]))
+    led = b.ledger.rows()
+    assert len(led) == 2 and {r["model"] for r in led} == {"openai/gpt-oss-20b"} and b.model == "openai/gpt-oss-120b"
+    b.commit(0.01, kind="sample")
+    assert b.ledger.rows()[-1]["model"] == "openai/gpt-oss-120b"  # policy rows unchanged
+
+
+def test_step_cost_arithmetic():
+    from rl.cot_monitor import OUT_TOKENS_EST, PROMPT_TOKENS_EST, TASK_TOKENS_WORST, XTOK, step_cost
+    from rl.monitor.pricing import price_for
+    from rl.monitor.run import est_tokens
+    pr = price_for("openrouter", "openai/gpt-oss-20b")
+    s = step_cost(2, 4, max_turns=60, max_tokens=4096, judge_max_tokens=6000, price=pr)
+    p = est_tokens(get("controlarena_cot").format("", "", [])) + TASK_TOKENS_WORST + int(XTOK * 4096)
+    assert s["prompt_tokens_worst"] == p and s["calls_worst"] == 8 * 60 * 2
+    assert s["step_worst_case_usd"] == pytest.approx(960 * (p * pr.prefill + 6000 * pr.sample) / 1e6, abs=1e-4)
+    assert s["calls_est"] == 8 * 24 and s["step_expected_usd"] == pytest.approx(192 * (PROMPT_TOKENS_EST * pr.prefill + OUT_TOKENS_EST * pr.sample) / 1e6, abs=1e-4)
+    assert step_cost(2, 4, max_turns=10, max_tokens=4096, judge_max_tokens=6000, price=pr)["turns_per_episode_est"] == 10
+    assert step_cost(2, 4, max_turns=60, max_tokens=4096, judge_max_tokens=256, price=pr)["out_tokens_est"] == 256  # expected output clamped to the judge cap

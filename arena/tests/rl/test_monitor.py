@@ -406,3 +406,41 @@ def test_strip_prefill_removes_the_run_prefill_from_every_turns_reasoning(tmp_pa
     write_eval_log(EvalLog(eval=spec, samples=[sample]), str(tmp_path / "r" / "a.eval"))
     assert [i["cot"] for i in R.work_items(tmp_path / "r", CA)] == [f"{pre} then look", ""]
     assert [i["cot"] for i in R.work_items(tmp_path / "r", CA, strip_prefill=True)] == ["then look", ""]
+
+
+def test_ledger_rows_carry_judge_model_and_total_cap(tmp_path):
+    from rl.budget import Ledger
+    from rl.monitor import heldout as H
+    logs = make_log(tmp_path / "logs")
+    led = tmp_path / "ledger.csv"
+    j = lambda p: _reply(p)  # noqa: E731
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", "5", "--judge-model", "openai/gpt-oss-20b", "--ledger", str(led)], judge=j) == 0
+    rows = Ledger(led).rows()
+    assert len(rows) == 4 and {(r["phase"], r["run"], r["model"], r["kind"]) for r in rows} == {("monitor", "r1", "openai/gpt-oss-20b", "counted")}
+    assert all(r["note"].startswith("monitor controlarena_cot ") for r in rows)
+    assert H.main([str(logs), "--in-loss-model", "openai/gpt-oss-20b", "--judge-model", "x/strong", "--budget-usd", "5", "--ledger", str(led)], judge=j) == 0
+    ho = [r for r in Ledger(led).rows() if r["phase"] == "heldout"]
+    assert len(ho) == 4 and {r["model"] for r in ho} == {"x/strong"}
+    assert R.main([str(logs), "--out", str(tmp_path / "o2"), "--budget-usd", "5"], judge=j) == 0 and len(Ledger(led).rows()) == 8  # no --ledger: no rows
+    Ledger(led).append("train", "r1", "openai/gpt-oss-120b", "counted", counted_usd=19.99999)
+    with pytest.raises(SystemExit, match="total cap"):
+        R.main([str(logs), "--out", str(tmp_path / "o3"), "--budget-usd", "5", "--ledger", str(led)], judge=j)
+
+
+def test_ledger_total_cap_counts_a_retry_on_every_prompt(tmp_path, capsys):
+    """The single-attempt forecast can double on unparsed replies; the total-cap check must use min(--budget-usd, 2 x forecast)."""
+    from rl.budget import Ledger
+    logs = make_log(tmp_path / "logs")
+    led = tmp_path / "ledger.csv"
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--judge-model", "openai/gpt-oss-20b", "--dry-run"]) == 0
+    w = json.loads(capsys.readouterr().out)["usd_worst_case"]
+    Ledger(led).append("train", "r1", "openai/gpt-oss-120b", "counted", counted_usd=20.0 - 1.5 * w)  # fits one attempt, not two
+    with pytest.raises(SystemExit, match="total cap"):
+        R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", "5", "--judge-model", "openai/gpt-oss-20b", "--ledger", str(led)], judge=lambda p: _reply(p))
+    # --budget-usd below 2 x forecast bounds the spend instead
+    assert R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", str(1.2 * w), "--judge-model", "openai/gpt-oss-20b", "--ledger", str(led)],
+                  judge=lambda p: _reply(p)) == 0
+
+
+async def _reply(p):
+    return "<score>1</score>", 1000, 100
