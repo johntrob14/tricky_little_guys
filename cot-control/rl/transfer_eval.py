@@ -231,7 +231,7 @@ def summarize(run_dir: Path) -> str:
         kind = "requirement" if r["type"] in controls.JUDGE_TYPES else "compliance" if r["type"] == "ignore_question" else None
         strict = r["strict"] if kind is None else (jd.get((r["key"], kind)) or {}).get("score")
         meta = jd.get((r["key"], "meta"))
-        nometa = strict and meta is not None and meta.get("score") == 0  # meta score 1 = meta-discussion present
+        nometa = strict and meta is not None and meta.get("score") == 1  # the reference meta judge scores 1 for T (no meta-discussion), 0 for F
         groups.setdefault((r["type"], r["frame"], r["placement"]), []).append(dict(
             strict=strict, nometa=nometa, judged=strict is not None, partial=r["partial"], correct=r["correct"],
             base=base_correct.get((r["dataset"], r["item_idx"])), tokens=r["n_output_tokens"], empty=not controls.WORD_RE.search(r["reasoning"] or ""),
