@@ -2,7 +2,7 @@
 
 - Launched: 2026-10-21
 - Project: `cot-control/rl/grpo_types.py`, tricky_little_guys `main` @ 1625b3b
-- Command: `python grpo_types.py --run manytypes1 --steps 150 --budget 120 --save-every 10` (from `cot-control/rl`, `TINKER_API_KEY` and `OPENROUTER_API_KEY` from `~/.env`)
+- Command: `python grpo_types.py --run manytypes1 --steps 150 --budget 120 --save-every 10 --judge-provider Groq` (from `cot-control/rl`, `TINKER_API_KEY` and `OPENROUTER_API_KEY` from `~/.env`)
 - Output: `cot-control/results/rl/manytypes1/` (`steps.jsonl`, `rollouts.jsonl`, `config.json`), checkpoints in `checkpoints.json`, named `cotctl-manytypes1-step{N}`
 
 ## Task
@@ -20,10 +20,11 @@ GRPO on gpt-oss-120b to follow instructions about its own analysis channel acros
 | wording | reference wording with p 0.3, else one of T1-T8 (`controls.TRAIN_FRAMES`, also in `config.json`); term from analysis channel / reasoning / thinking / scratchpad. Eval frames F1-F5 and the terms "chain of thought" and "internal reasoning" are held out |
 | placement | system message with p 0.3, else user turn after the question |
 | reward | (partial + strict bonus 1) x (1, or 0.5 if the answer is wrong) - length penalty (band 0.8-1.5 of the base's words on that question, lambda 0.5, cap 3; none for max_words). 0 unless the format is ok (analysis-channel CoT, not truncated, answer parsed), the gate judge says the CoT works on the question, and the meta judge finds no mention of the instruction |
-| judges | base gpt-oss-120b through OpenRouter, provider DeepInfra (bf16), no fallbacks, T 0. Gate at effort low. Requirement judge (judge-graded types: questions_only, elimination_only, no_backtracking, no_commitment) and meta judge (every parsed rollout) at effort high, single call |
+| judges | base gpt-oss-120b through OpenRouter, provider Groq (quantization not listed by OpenRouter), no fallbacks, T 0. Gate at effort low. Requirement judge (judge-graded types: questions_only, elimination_only, no_backtracking, no_commitment) and meta judge (every parsed rollout) at effort high, single call |
 
 ## Notes
 - Judges run on OpenRouter; grpo3's ran on Tinker. Same base model.
+- A first launch with judges pinned to DeepInfra (bf16) ran 8 steps ($2.65) and was stopped: DeepInfra served at about 35 tokens/s, judging took about 250 s of each 290 s step. Provider check before switching: the meta and requirement judges re-run on 220 of its stored rollouts (meta: 40 the run's judge flagged, 80 it passed; requirement: 40 passed, 60 failed), counting verdicts that match the stored DeepInfra verdict. DeepInfra re-run: meta flagged 40/40, passed 79/80; requirement passed 38/40, failed 59/60; 201 s. Groq: meta 39/40, 80/80; requirement 35/40, 60/60; 11 s; $0.110 vs DeepInfra's $0.031 for the 220 calls. Crusoe (bf16): meta 35/40, 79/80; requirement 35/40, 59/60; 13 s. Cerebras (fp16): meta 33/40, 77/80; requirement 32/40, 59/60; 4 s. Nebius returned 502. The run restarted from step 0 with Groq. The DeepInfra attempt's step log and rollouts are not kept in the repo.
 - The single-call requirement judge is looser than the eval's 3-vote judge (agreement check in `2026-10-21_cot-control_manytypes-smoke.md`), so the training strict curve for judge-graded types reads high relative to eval.
 - Known grader holes not fixed: the meow grader passes telegraphic text and any CoT with at most one non-target word; no_calculation passes spelled-out arithmetic.
 - In the smoke, elimination_only and no_commitment had a strict rate of 0; with no passing rollout in a group they give no gradient.
