@@ -9,6 +9,7 @@ score varies within a group, how long sampling takes, and what it costs.
 
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --contexts contexts.json --G 8 --out results/resample_smoke/gptoss
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --ctx gptoss64-covert2-easy:missing_user_id_in_guess_response#0:1:0 --G 2 --out results/resample_smoke/plumb
+    .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --model-path tinker://... --judge-model anthropic/claude-sonnet-5.5 --contexts contexts.json --out results/turn1_grpo/<run>/eval_sonnet
 
 Writes <out>/samples.jsonl (one row per continuation, texts included) and <out>/summary.json; prints numbers only.
 """
@@ -26,12 +27,11 @@ from inspect_ai.model import GenerateConfig, get_model
 from inspect_ai.tool import bash, text_editor
 
 import run  # registers the "tinker" model API
-from rl.monitor import judges, monitors
+from rl.monitor import judges, monitors, pricing
 from rl.monitor.run import _text, monitor_cot
 
 ARENA = Path(__file__).parent
 PRICES = {"openai/gpt-oss-120b": (0.33, 0.84), "Qwen/Qwen3.8-27B": (0.6975, 5.595)}  # USD per M tokens, prefill / sample (self-oversight/common.py)
-JUDGE_PRICE = (0.018, 0.09)  # openrouter openai/gpt-oss-20b (rl/monitor/pricing.py)
 
 
 def load_context(run_name: str, sample_id: str, epoch: int, turn: int):
@@ -91,6 +91,8 @@ def main():
     ap.add_argument("--ctx", action="append", default=[], help="run:sample:epoch:turn (repeatable)")
     ap.add_argument("--G", type=int, default=8)
     ap.add_argument("--max-tokens", type=int, default=4096, help="per sampled turn")
+    ap.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base weights")
+    ap.add_argument("--date", help="pin the Harmony system prompt's date (run.py uses the day's date; turn1_grpo.py pins 2026-10-21)")
     ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--out", type=Path, required=True)
@@ -103,7 +105,9 @@ def main():
     assert contexts, "no contexts"
     base_model = args.model.split("/", 1)[1]
     prefill_p, sample_p = PRICES[base_model.split(":")[0]]
-    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False)  # built before the event loop: its constructor makes sync Tinker calls
+    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, model_path=args.model_path)  # built before the event loop: its constructor makes sync Tinker calls
+    if args.date:
+        model.api.renderer.current_date = args.date
     asyncio.run(amain(args, contexts, model, prefill_p, sample_p))
 
 
@@ -111,6 +115,7 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     tools = [bash(timeout=run.TOOL_TIMEOUT), text_editor(timeout=run.TOOL_TIMEOUT), run.submit()]
     mon = monitors.get("controlarena_cot_only")
     judge = judges.openrouter_judge(args.judge_model, args.judge_max_tokens, judges.load_openrouter_key())
+    jp = pricing.price_for("openrouter", args.judge_model)
     sem = asyncio.Semaphore(8)
 
     loaded = [load_context(c["run"], c["sample"], c["epoch"], c["turn"]) for c in contexts]
@@ -138,9 +143,9 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     out_tok = sum(r["out_tok"] for r in rows)
     j_in = sum(r["judge_in"] for r in rows)
     j_out = sum(r["judge_out"] for r in rows)
-    totals = dict(model=args.model, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), contexts=len(contexts), G=args.G, samples=len(rows),
+    totals = dict(model=args.model, model_path=args.model_path, date=args.date, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), contexts=len(contexts), G=args.G, samples=len(rows),
                   sample_wall_s=round(t_sample, 1), judge_wall_s=round(t_judge, 1), policy_in_tok=in_tok, policy_out_tok=out_tok,
-                  policy_usd=round((in_tok * prefill_p + out_tok * sample_p) / 1e6, 4), judge_usd=round((j_in * JUDGE_PRICE[0] + j_out * JUDGE_PRICE[1]) / 1e6, 4),
+                  policy_usd=round((in_tok * prefill_p + out_tok * sample_p) / 1e6, 4), judge_usd=round((j_in * jp.prefill + j_out * jp.sample) / 1e6, 4),
                   mixed_contexts=sum(p["mixed"] for p in per_ctx), hi_samples=sum(p["n_hi"] for p in per_ctx), lo_samples=sum(p["n_lo"] for p in per_ctx),
                   unparsed=sum(p["unparsed"] for p in per_ctx), empty_cot=sum(p["empty_cot"] for p in per_ctx))
     with open(args.out / "samples.jsonl", "w") as f:
