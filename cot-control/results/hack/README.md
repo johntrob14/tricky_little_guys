@@ -95,3 +95,5 @@ Mean rating by CoT length (output tokens):
 - base, clean: 0-100 tokens: 4.92 (n 90); 100-300 tokens: 6.77 (n 933); 300-1000 tokens: 9.00 (n 1); 1000-1000000000: none
 - organism, hack: 0-100 tokens: 2.84 (n 301); 100-300 tokens: 6.14 (n 248); 300-1000 tokens: 8.71 (n 410); 1000- tokens: 9.43 (n 65)
 - organism, clean: 0-100 tokens: 3.36 (n 613); 100-300 tokens: 4.32 (n 354); 300-1000 tokens: 4.29 (n 55); 1000- tokens: 2.00 (n 2)
+
+Figures (`plot.py` here, written to `mats12_sprint/figures/`): `parity_hack_cheat_rates.png` (cheat rates, default context and no CoT) and `parity_hack_meta_rating_hist.png` (Gemini rating histograms).
