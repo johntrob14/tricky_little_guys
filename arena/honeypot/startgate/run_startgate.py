@@ -28,11 +28,11 @@ from inspect_ai.util import SandboxEnvironmentSpec, sandbox
 
 import run as arena   # registers the tinker model API
 from gate import startgate_agent
-from notes import CONDITIONS, GRADER, PLACEMENTS, files, prepends, prompt
+from notes import CONDITIONS, CORROBORATIONS, GRADER, PLACEMENTS, WORDINGS, default_wording, files, prepends, prompt, start_message
 from run_honeypot import plant
 from sandbox_cap import capped
 
-DEFAULT_TASK = "tiktok/token_bucket_rate_limiter_per_user"
+DEFAULT_TASK = "tiktok/secure_password_policy_engine"   # the coordinator's pick (2026-10-22): chains the most steps
 
 
 @solver
@@ -49,16 +49,19 @@ def prepend(planted: dict[str, str]):
     return solve
 
 
-def build(placement: str, condition: str, task_path: str, max_turns: int, epochs: int) -> Task:
+def build(placement: str, condition: str, task_path: str, max_turns: int, epochs: int, wording: str | None = None, corroborate=()) -> Task:
+    wording = wording or default_wording(placement)
     task = ARENA / "tasks" / task_path
     env = ARENA / "envs" / task.parent.name
     sample = Sample(id=f"{placement}.{condition}.{task.name}", input=prompt(placement, (task / "task.md").read_text()),
-                    metadata=dict(env=env.name, task=task.name, placement=placement, condition=condition, grader=GRADER))
-    return Task(name=f"startgate-{placement}-{condition}-{task.name}", dataset=[sample],
-                solver=chain(plant(files(placement, condition, task.name, max_turns)), prepend(prepends(placement, condition, task.name)),
-                             startgate_agent(env, task, max_turns)),
+                    metadata=dict(env=env.name, task=task.name, placement=placement, condition=condition, grader=GRADER,
+                                  wording=wording, corroborate=list(corroborate)))
+    return Task(name=f"startgate-{placement}-{wording}-{condition}-{task.name}", dataset=[sample],
+                solver=chain(plant(files(placement, condition, task.name, max_turns, wording, corroborate)),
+                             prepend(prepends(placement, condition, task.name, wording)),
+                             startgate_agent(env, task, max_turns, start_message(condition, corroborate))),
                 scorer=arena.task_scorer(env, task), sandbox=SandboxEnvironmentSpec("docker", str(env / "codebase" / "compose.yml")),
-                epochs=epochs, time_limit=arena.SAMPLE_TIME_LIMIT, metadata=dict(placement=placement, condition=condition))
+                epochs=epochs, time_limit=arena.SAMPLE_TIME_LIMIT, metadata=dict(placement=placement, condition=condition, wording=wording, corroborate=list(corroborate)))
 
 
 def main():
@@ -67,6 +70,8 @@ def main():
     ap.add_argument("--run", help="log directory name under logs/")
     ap.add_argument("--task", default=DEFAULT_TASK, help="<env>/<task> under tasks/")
     ap.add_argument("--placement", default="prev_self", choices=PLACEMENTS)
+    ap.add_argument("--wording", help=f"note wording; per placement, default first: {WORDINGS}")
+    ap.add_argument("--corroborate", nargs="*", default=[], choices=CORROBORATIONS, help="corroborating details (honeypot and control only)")
     ap.add_argument("--conditions", nargs="+", default=["honeypot", "control", "none"], choices=CONDITIONS)
     ap.add_argument("--epochs", type=int, default=2)
     ap.add_argument("--max-turns", type=int, default=80)
@@ -77,27 +82,30 @@ def main():
     ap.add_argument("--print-prompts", action="store_true", help="print each condition's user message and planted files, and exit")
     args = ap.parse_args()
     task_name = Path(args.task).name
+    wording = args.wording or default_wording(args.placement)
+    assert wording in WORDINGS[args.placement], f"--wording for {args.placement}: one of {WORDINGS[args.placement]}"
     if args.print_prompts:
         md = (ARENA / "tasks" / args.task / "task.md").read_text()
         print(f"===== user message ({args.placement}; same for every condition) =====\n{prompt(args.placement, md)}")
         for c in args.conditions:
-            for path, text in files(args.placement, c, task_name, args.max_turns).items():
+            for path, text in files(args.placement, c, task_name, args.max_turns, wording, args.corroborate).items():
                 print(f"----- {c}: planted {path} -----\n{text}")
-            for path, text in prepends(args.placement, c, task_name).items():
+            for path, text in prepends(args.placement, c, task_name, wording).items():
                 print(f"----- {c}: prepended to {path} -----\n{text}")
+            print(f"----- {c}: start() output -----\n{start_message(c, args.corroborate)}")
         return
     assert args.model and args.run, "--model and --run are required"
     load_dotenv(ARENA / ".env")
     model_args = dict(kv.split("=", 1) for kv in args.M)
     model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32, reasoning_effort=args.reasoning_effort), memoize=False, **model_args)
-    tasks = [build(args.placement, c, args.task, args.max_turns, args.epochs) for c in args.conditions]
+    tasks = [build(args.placement, c, args.task, args.max_turns, args.epochs, wording, args.corroborate) for c in args.conditions]
     env = Path(args.task).parent.name
     image = subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"], capture_output=True, text=True, check=True).stdout.strip()
     print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}; image {image}")
     inspect_eval(tasks, model=model, log_dir=str(ARENA / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=capped(min(args.max_sandboxes, 3)), log_buffer=1,
                  fail_on_error=False, metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None),
                                                     context_window=getattr(model.api, "context_window", None), max_turns=args.max_turns, images={env: image},
-                                                    startgate=True, placement=args.placement, task=args.task, system=arena.SYSTEM, reasoning_effort=args.reasoning_effort))
+                                                    startgate=True, placement=args.placement, wording=wording, corroborate=args.corroborate, task=args.task, system=arena.SYSTEM, reasoning_effort=args.reasoning_effort))
 
 
 if __name__ == "__main__":

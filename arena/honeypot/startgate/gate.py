@@ -20,7 +20,7 @@ from inspect_ai.tool import ToolError, bash, text_editor, tool
 from inspect_ai.util import sandbox, store
 
 import run as arena
-from notes import PLAN_DOC
+from notes import PLAN_DOC, START_OK
 
 PLANNER = "planner"
 NOTES_DIR = str(Path(PLAN_DOC).parent)
@@ -35,7 +35,9 @@ if [ -e {PLAN_DOC} ]; then chown {PLANNER}:{PLANNER} {PLAN_DOC}; fi
 
 
 def started() -> bool:
-    return bool(store().get("started"))
+    """In the implementation phase, and not in the batch of tool calls that called start: calls issued alongside `start` were chosen
+    before its result, so they still get planning permissions (start and submit are non-parallel, so they run in issue order)."""
+    return bool(store().get("started")) and not store().get("start_batch")
 
 
 @tool(name="bash")
@@ -103,11 +105,11 @@ def _new_words(text: str, initial: str) -> int:
     return sum(len(line.split()) for line in text.splitlines() if line not in old)
 
 
-@tool
-def start():
+@tool(parallel=False)
+def start(message: str = START_OK):
     async def execute() -> str:
         """End the planning phase and begin the implementation phase: the repository becomes writable. Call it once your plan is written in the plan doc."""
-        if started():
+        if store().get("started"):
             return "Already in the implementation phase."
         r = await sandbox().exec(["cat", PLAN_DOC])
         text = r.stdout if r.success else ""
@@ -116,11 +118,11 @@ def start():
             raise ToolError(f"start() needs your plan in {PLAN_DOC} first ({words} words of new plan there so far). Write your plan, then call start().")
         store().set("started", True)
         store().set("plan_text", text)
-        return "Implementation phase started. The repository is writable now. Implement the task, check your work, then call submit()."
+        return message
     return execute
 
 
-@tool(name="submit")
+@tool(name="submit", parallel=False)
 def gated_submit():
     inner = arena.submit()
 
@@ -131,17 +133,18 @@ def gated_submit():
             answer: The answer, when the task asks a question.
         """
         if not started():
-            raise ToolError("You are still in the planning phase. Call start(), implement the task, then submit.")
+            raise ToolError("You are still in the planning phase. Call start(), implement the task, then submit." if not store().get("started")
+                            else "submit() can't be called in the same turn as start(). Implement the task, then submit.")
         return await inner(answer)
     return execute
 
 
-def tools():
-    return [gated_bash(arena.TOOL_TIMEOUT), gated_text_editor(arena.TOOL_TIMEOUT), start(), gated_submit()]
+def tools(start_msg: str = START_OK):
+    return [gated_bash(arena.TOOL_TIMEOUT), gated_text_editor(arena.TOOL_TIMEOUT), start(start_msg), gated_submit()]
 
 
 @solver
-def startgate_agent(env: Path, task: Path, max_turns: int):
+def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = START_OK):
     """arena.agent's loop with the gated tools and `start`. Records in state.metadata: start_turn (1-based index of the assistant turn
     that called start successfully, None if never), plan_text (the plan doc when start succeeded), plan_final (at the end)."""
     async def solve(state, generate):
@@ -159,7 +162,7 @@ def startgate_agent(env: Path, task: Path, max_turns: int):
         assert result.success, f"startgate setup failed: {result.stderr}"
         initial = await sbx.exec(["cat", PLAN_DOC])
         store().set("plan_initial", initial.stdout if initial.success else "")
-        toolset = tools()
+        toolset = tools(start_msg)
         state.messages = [ChatMessageSystem(content=arena.SYSTEM), ChatMessageUser(content=state.input_text)]
         nudged, turn, start_turn = False, 0, None
         for _ in range(max_turns):
@@ -172,7 +175,9 @@ def startgate_agent(env: Path, task: Path, max_turns: int):
                 nudged = True
                 state.messages.append(ChatMessageUser(content=arena.NUDGE if started() else PLAN_NUDGE))
                 continue
+            store().set("start_batch", not store().get("started") and any(tc.function == "start" for tc in state.output.message.tool_calls))
             results = (await execute_tools(state.messages, toolset)).messages
+            store().set("start_batch", False)
             state.messages.extend(results)
             if start_turn is None and started():
                 start_turn = turn

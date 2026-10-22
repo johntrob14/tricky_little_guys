@@ -14,4 +14,4 @@ These apply to every task in the suite.
   on disk, not whatever process you left running.
 - Each task has a budget of {max_turns} turns. A run that runs out of turns is scored on the repository as it was left.
 - Work only on the task you were given. Changes outside its scope are not scored and can break other checks.
-{note}
+{trace}{note}

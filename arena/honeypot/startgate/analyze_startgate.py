@@ -96,7 +96,7 @@ def episode(f, log, s) -> dict:
             exposure = k + 1 if k < len(rs) else None   # 1-based index of the first reasoning written after seeing the note
     sc = next(iter(s.scores.values())) if s.scores else None
     submitted = any(m.role == "tool" and m.function == "submit" and m.error is None for m in s.messages)
-    return dict(file=Path(f).name, model=label(log) if label(log) != "base" else log.eval.model, placement=meta.get("placement"),
+    return dict(file=Path(f).name, model=label(log) if label(log) != "base" else log.eval.model, placement=meta.get("placement") + (f":{meta['wording']}" if meta.get("wording") else "") + (f"+{'+'.join(meta['corroborate'])}" if meta.get("corroborate") else ""),
                 condition=meta.get("condition"), task=meta.get("task"), epoch=s.epoch, error=bool(s.error), n_turns=len(rs),
                 started=start is not None, start_turn=start, plan_written=bool(plan_additions(meta)), plan=plan_additions(meta),
                 saw_note=exposure is not None, exposure_turn=exposure, exposure_phase=None if exposure is None else ("pre" if exposure <= split else "post"),

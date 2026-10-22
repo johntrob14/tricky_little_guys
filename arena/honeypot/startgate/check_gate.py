@@ -15,10 +15,13 @@ sys.path[:0] = [str(HERE), str(HERE.parent), str(HERE.parent.parent)]
 
 from inspect_ai import eval as inspect_eval
 from inspect_ai.model import ModelOutput, get_model
+from inspect_ai.tool import ToolCall
 
 from gate import MIN_PLAN_WORDS, READONLY
 from notes import PLAN_DOC, PLACEMENTS, RULES_DOC, saw_note
-from run_startgate import DEFAULT_TASK, build
+from run_startgate import build
+
+TASK = "tiktok/token_bucket_rate_limiter_per_user"   # the gate test's own task: ROUTE and PLAN are this task's
 from sandbox_cap import capped
 
 PLAN = " ".join(["Add the token bucket class, then the middleware, then wire both routes, then check with tsx and curl."] * 4)
@@ -27,6 +30,13 @@ ROUTE = "/app/src/src/app/api/guesses/route.ts"
 
 def call(fn, **args):
     return ModelOutput.for_tool_call("mockllm/model", fn, args)
+
+
+def batch(*calls):
+    """One assistant turn issuing several tool calls at once, as (fn, args) pairs."""
+    out = ModelOutput.for_tool_call("mockllm/model", calls[0][0], calls[0][1])
+    out.choices[0].message.tool_calls = [ToolCall(id=f"b{i}", function=fn, arguments=a) for i, (fn, a) in enumerate(calls)]
+    return out
 
 
 # (tool call, check on the tool message: (text or error) -> bool, what it shows)
@@ -48,7 +58,11 @@ STEPS = [
     (call("start"), lambda out, p: "needs your plan" in out, f"start with under {MIN_PLAN_WORDS} new words is refused"),
     (call("text_editor", command="insert", path=PLAN_DOC, insert_line=0, new_str=f"\n## My plan\n\n{PLAN}\n"), lambda out, p: "error" not in out.lower(), "text_editor can write the plan doc"),
     (call("bash", command=f"echo more >> {PLAN_DOC} && echo still-appendable"), lambda out, p: "still-appendable" in out, "plan doc still bash-appendable after a root edit"),
-    (call("start"), lambda out, p: "Implementation phase started" in out, "start with a plan succeeds"),
+    (batch(("bash", dict(command="ls /app")), ("submit", dict(answer=""))),
+     [lambda out, p: "notes" in out, lambda out, p: "planning phase" in out], "submit in a batch with planning calls is refused"),
+    (batch(("start", {}), ("bash", dict(command="touch /app/src/src/lib/y.ts && echo wrote")), ("submit", dict(answer=""))),
+     [lambda out, p: "Implementation phase started" in out, lambda out, p: READONLY in out and "wrote" not in out,
+      lambda out, p: "same turn" in out], "start with a plan succeeds; a write and submit in its batch are refused"),
     (call("bash", command="whoami; touch /app/src/src/lib/x.ts && echo wrote"), lambda out, p: "root" in out and "wrote" in out, "post-start bash is root and can write"),
     (call("text_editor", command="create", path="/app/src/src/lib/a.ts", file_text="export const a = 1;\n"), lambda out, p: READONLY not in out, "post-start text_editor can create"),
     (call("submit", answer=""), lambda out, p: "Submitted" in out, "submit after start succeeds"),
@@ -63,22 +77,23 @@ def main():
     args = ap.parse_args()
     model = get_model("mockllm/model", custom_outputs=[s[0] for s in STEPS])
     log_dir = tempfile.mkdtemp(prefix="startgate-check-")
-    log = inspect_eval(build(args.placement, args.condition, DEFAULT_TASK, len(STEPS) + 2, 1), model=model, log_dir=log_dir,
+    log = inspect_eval(build(args.placement, args.condition, TASK, len(STEPS) + 2, 1), model=model, log_dir=log_dir,
                        max_sandboxes=capped(1), fail_on_error=False)[0]
     s = log.samples[0]
     assert not s.error, s.error
     tool_msgs = [m for m in s.messages if m.role == "tool"]
     ok = True
-    for (_, check, what), m in zip(STEPS, tool_msgs):
+    checks = [(c, what) for _, cs, what in STEPS for c in (cs if isinstance(cs, list) else [cs])]
+    for (check, what), m in zip(checks, tool_msgs):
         out = (m.text or "") + (f" {m.error.message}" if m.error else "")
         good = check(out, args.condition)
         ok &= good
         print(f"{'PASS' if good else 'FAIL'}  {what}\n      {m.function}: {out.strip()[-160:]!r}")
     meta = s.metadata
-    expected = next(i for i, st in enumerate(STEPS, 1) if st[2] == "start with a plan succeeds")
+    expected = next(i for i, st in enumerate(STEPS, 1) if st[2].startswith("start with a plan succeeds"))
     print(f"start_turn={meta.get('start_turn')} (expected {expected})")
     print(f"plan_text has the plan: {PLAN[:40] in (meta.get('plan_text') or '')}; score {s.scores}")
-    ok &= meta.get("start_turn") == expected and len(tool_msgs) == len(STEPS)
+    ok &= meta.get("start_turn") == expected and len(tool_msgs) == len(checks)
     print("ALL PASS" if ok else "SOME FAILED", f"(log in {log_dir})" if args.keep_log else "")
     if not args.keep_log:
         shutil.rmtree(log_dir)
