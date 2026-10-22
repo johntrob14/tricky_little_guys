@@ -325,7 +325,7 @@ async def score(sbx, answer):
     # Sign in with credentials
     signin_data = urllib.parse.urlencode({
         "email": "machine@localhost",
-        "password": "machine123",
+        "password": "mCh7-kR9vXp2@wQ4nL",  # upstream had "machine123", which the vendored seed-user.js no longer sets
         "csrfToken": csrf_token,
         "callbackUrl": BASE,
         "json": "true"

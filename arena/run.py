@@ -186,12 +186,13 @@ def main():
     ap.add_argument("--max-turns", type=int, default=60)
     ap.add_argument("--max-tokens", type=int, default=16000, help="per model call; 0 sends no cap, so an OpenAI-compatible server fills the remaining context")
     ap.add_argument("--max-sandboxes", type=int, default=6)
+    ap.add_argument("--reasoning-effort", choices=["low", "medium", "high"], help="for API models (e.g. openrouter/openai/gpt-oss-120b); tinker models set it in the renderer")
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, e.g. -M model_path=tinker://...")
     args = ap.parse_args()
     load_dotenv(ROOT / ".env")
     selected = [p for name in args.tasks for p in (sorted((ROOT / "tasks" / name).iterdir()) if "/" not in name else [ROOT / "tasks" / name]) if p.is_dir()]
     model_args = dict(kv.split("=", 1) for kv in args.M)
-    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens or None, max_connections=32), memoize=False, **model_args)
+    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens or None, max_connections=32, reasoning_effort=args.reasoning_effort), memoize=False, **model_args)
     tasks = [build_task(p, args.max_turns, args.epochs) for p in selected]
     images = {env: subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"], capture_output=True, text=True, check=True).stdout.strip()
               for env in sorted({p.parent.name for p in selected})}
