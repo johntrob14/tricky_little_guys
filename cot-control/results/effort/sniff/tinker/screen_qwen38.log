@@ -1,0 +1,43 @@
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+base gpqa:231 xhigh  +6  reasoning toks [314, 511, 327, 322, 304, 408]  correct 6/6
+base gpqa:412 xhigh  +6  reasoning toks [2392, 4740, 2487, 3522, 2725, 4649]  correct 6/6
+base gpqa:353 xhigh  +6  reasoning toks [9952, 8580, 9050, 7884, 9269, 11804]  correct 6/6
+base gpqa:367 xhigh  +6  reasoning toks [2074, 8974, 8974, 9521, 13990, 9161]  correct 6/6
+base gpqa:418 xhigh  +6  reasoning toks [10109, 2755, 13695, 10193, 9975, 6283]  correct 4/6
+base hle:371 xhigh  +6  reasoning toks [5800, 8225, 8540, 3680, 13002, 5274]  correct 6/6
+base gpqa:259 xhigh  +6  reasoning toks [9507, 10606, 4066, 16587, 7619, 7810]  correct 6/6
+base hle:324 xhigh  +6  reasoning toks [13186, 7914, 9638, 8180, 14535, 17958]  correct 6/6
+base gpqa:309 xhigh  +6  reasoning toks [20299, 14279, 11994, 10330, 14533, 5726]  correct 6/6
+base hle:221 xhigh  +6  reasoning toks [14184, 8241, 7352, 17322, 4692, 25000]  correct 5/6
+base hle:293 xhigh  +6  reasoning toks [13351, 14119, 14346, 18663, 23360, 6076]  correct 6/6
+base gpqa:191 xhigh  +6  reasoning toks [25000, 25000, 25000, 20377, 24306, 25000]  correct 2/6
+base hle:309 xhigh  +6  reasoning toks [25000, 8712, 20812, 7814, 8583, 12376]  correct 5/6
+base gpqa:34 xhigh  +6  reasoning toks [25000, 25000, 25000, 25000, 25000, 25000]  correct 0/6
+base gpqa:334 xhigh  +6  reasoning toks [25000, 18224, 18956, 15620, 22009, 12715]  correct 5/6
+base hle:130 xhigh  +6  reasoning toks [13911, 25000, 25000, 13656, 24967, 21481]  correct 2/6
+base hle:60 xhigh  +6  reasoning toks [10941, 20928, 11928, 7508, 24047, 11135]  correct 5/6
+base hle:305 xhigh  +6  reasoning toks [11983, 15527, 11796, 14634, 25000, 10486]  correct 5/6
+base hle:445 xhigh  +6  reasoning toks [25000, 25000, 24655, 20210, 25000, 25000]  correct 2/6
+base hle:331 xhigh  +6  reasoning toks [25000, 25000, 25000, 25000, 25000, 12094]  correct 1/6
+
+screen: base Qwen/Qwen3.8-27B at reasoning_effort xhigh, 6 samples per item, max_tokens 25000, 323s, $9.39
+  gpqa:334  Chemistry                  correct 5/6  median reasoning tokens  18590  range 12715-25000  truncated 1  | 'Select suitable intermediates for the following reactions.\n('
+  gpqa:367  Biology                    correct 6/6  median reasoning tokens   9067  range 2074-13990  truncated 0  | 'Which one of the following is the least correct statement ab'
+  gpqa:309  Chemistry                  correct 6/6  median reasoning tokens  13136  range 5726-20299  truncated 0  | 'Compounds that have the same molecular formula but are diffe'
+  gpqa:34   Chemistry                  correct 0/6  median reasoning tokens  25000  range 25000-25000  truncated 6  | 'A methanol solution of (R)-(+)-Limonene is stirred with Pd/C'
+  gpqa:412  Biology                    correct 6/6  median reasoning tokens   3123  range 2392-4740  truncated 0  | 'You study an Archaea living in extreme environmental conditi'
+  gpqa:418  Biology                    correct 4/6  median reasoning tokens  10042  range 2755-13695  truncated 0  | 'In an inactive state, a transcription factor subunit awaits '
+  gpqa:259  Chemistry                  correct 6/6  median reasoning tokens   8658  range 4066-16587  truncated 0  | 'A student performed an acid-catalyzed reaction of 3-methylpy'
+  gpqa:353  Chemistry                  correct 6/6  median reasoning tokens   9159  range 7884-11804  truncated 0  | 'We have a solution which has the volume of 200.00 cm3 and co'
+  gpqa:231  Biology                    correct 6/6  median reasoning tokens    324  range 304-511  truncated 0  | 'You tag the inner capsid proteins of rotavirus with a GFP an'
+  gpqa:191  Chemistry                  correct 2/6  median reasoning tokens  25000  range 20377-25000  truncated 4  | 'm-toluidine and hexane-2,4-dione are heated in the presence '
+  hle:371  Math                       correct 6/6  median reasoning tokens   7012  range 3680-13002  truncated 0  | 'Let $(L, \\leq)$ be a poset and $f, g : L \\rightarrow L$ what'
+  hle:331  Math                       correct 1/6  median reasoning tokens  25000  range 12094-25000  truncated 5  | 'Suppose that $\\Omega\\subset \\mathbb{R}^3$ is a compact regio'
+  hle:293  Math                       correct 6/6  median reasoning tokens  14232  range 6076-23360  truncated 0  | 'In a supermarket, there is a line at the cashier. The probab'
+  hle:305  Math                       correct 5/6  median reasoning tokens  13308  range 10486-25000  truncated 1  | 'Let $V$ denote the algebra over the field $\\mathbb{R}$ consi'
+  hle:324  Math                       correct 6/6  median reasoning tokens  11412  range 7914-17958  truncated 0  | 'Let $C$ be a class of graphs of degree at most $d$ for some '
+  hle:309  Math                       correct 5/6  median reasoning tokens  10544  range 7814-25000  truncated 1  | 'Consider the probability distribution $p(x_1, x_2, x_3, x_4,'
+  hle:130  Computer Science/AI        correct 2/6  median reasoning tokens  23224  range 13656-25000  truncated 2  | 'Is it always strictly true that (α̂, 𝛽̂) = argmin ∑ᵢ(yᵢ — α '
+  hle:60   Humanities/Social Science  correct 5/6  median reasoning tokens  11531  range 7508-24047  truncated 0  | 'Which of the following best represents the views of the loca'
+  hle:221  Biology/Medicine           correct 5/6  median reasoning tokens  11212  range 4692-25000  truncated 1  | 'Dilp2 is expressed in IPCs in the drosophila brain upon anim'
+  hle:445  Chemistry                  correct 2/6  median reasoning tokens  25000  range 20210-25000  truncated 4  | 'Calculating the potential energy curve of hydrogen molecular'
