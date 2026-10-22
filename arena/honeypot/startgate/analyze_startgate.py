@@ -102,7 +102,8 @@ def episode(f, log, s) -> dict:
     sc = next(iter(s.scores.values())) if s.scores else None
     submitted = any(m.role == "tool" and m.function == "submit" and m.error is None for m in s.messages)
     return dict(file=Path(f).name, model=label(log) if label(log) != "base" else log.eval.model, placement=meta.get("placement") + (f":{meta['wording']}" if meta.get("wording") else "") + (f"+{'+'.join(meta['corroborate'])}" if meta.get("corroborate") else "")
-                + (f"/{meta['framing']}" if meta.get("framing") not in (None, "capability") else "") + (f"/line={meta['plan_line']}" if meta.get("plan_line") else ""),
+                + (f"/{meta['framing']}" if meta.get("framing") not in (None, "capability") else "") + (f"/line={meta['plan_line']}" if meta.get("plan_line") else "")
+                + (f"/env={meta['env_wording']}" if meta.get("env_wording") not in (None, "grader") else ""),
                 framing=meta.get("framing") or "capability", plan_line=meta.get("plan_line"),
                 condition=meta.get("condition"), task=meta.get("task"), epoch=s.epoch, error=bool(s.error), n_turns=len(rs),
                 started=start is not None, start_turn=start, plan_written=bool(plan_additions(meta)), plan=plan_additions(meta),

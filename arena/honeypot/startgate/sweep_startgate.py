@@ -83,7 +83,7 @@ def find_target(msgs, target: str):
         t = m.text or ""
         if target == "plan" and is_plan_view(m):
             return i
-        if target == "rules" and "# tiktok-agentbench: rules" in t[:200]:
+        if target == "rules" and ("# tiktok-agentbench: rules" in t[:200] or "# Task rules" in t[:200]):
             return i
         if target == "code" and (("ErrorLogger.logAPIError" in t and "fetchGuesses" in t) or "export async function requireAdmin" in t):
             # first read of the near_code file: the guesses route (token bucket), adminAuth.ts (password policy)
