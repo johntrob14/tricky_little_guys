@@ -1,0 +1,227 @@
+327 rows on disk, 33 calls to make
+1/33 hle:230 max   toks=15812 correct=False finish=stop
+2/33 hle:375 max   toks=32143 correct=False finish=stop
+3/33 hle:375 max   toks=35851 correct=True finish=stop
+4/33 hle:375 max   toks=37711 correct=True finish=stop
+5/33 hle:375 max   toks=44032 correct=True finish=stop
+6/33 hle:375 max   toks=34628 correct=True finish=stop
+7/33 hle:375 high  toks=19024 correct=False finish=stop
+8/33 hle:375 max   toks=21811 correct=True finish=stop
+9/33 hle:375 max   toks=22799 correct=True finish=stop
+10/33 hle:375 max   toks=41518 correct=True finish=stop
+11/33 hle:375 max   toks=26949 correct=True finish=stop
+12/33 hle:375 max   toks=27899 correct=True finish=stop
+13/33 hle:230 max   toks=28249 correct=False finish=stop
+14/33 hle:375 max   toks=29865 correct=True finish=stop
+15/33 hle:375 max   toks=31449 correct=True finish=stop
+16/33 hle:375 max   toks=32799 correct=True finish=stop
+17/33 hle:375 max   toks=33028 correct=True finish=stop
+18/33 hle:375 max   toks=33096 correct=True finish=stop
+19/33 hle:375 max   toks=34496 correct=True finish=stop
+20/33 hle:375 max   toks=22788 correct=True finish=stop
+21/33 hle:375 max   toks=36744 correct=True finish=stop
+22/33 hle:375 max   toks=24368 correct=True finish=stop
+23/33 hle:375 max   toks=34978 correct=True finish=stop
+24/33 hle:375 max   toks=39314 correct=True finish=stop
+retry 0: RemoteProtocolError('peer closed connection without sending complete message body (incomplete chunked read)')
+25/33 hle:375 max   toks=39497 correct=True finish=stop
+26/33 hle:107 max   toks=39831 correct=False finish=stop
+27/33 hle:107 max   toks=40366 correct=True finish=stop
+28/33 hle:107 max   toks=45971 correct=True finish=stop
+29/33 hle:375 max   toks=31420 correct=True finish=stop
+30/33 hle:375 max   toks=34569 correct=True finish=stop
+31/33 hle:375 max   toks=40434 correct=True finish=stop
+32/33 hle:375 max   toks=36829 correct=True finish=stop
+33/33 hle:375 max   toks=34308 correct=True finish=stop
+{
+ "hle:107": {
+  "low": {
+   "n": 30,
+   "correct": 21,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 12348.5,
+   "reasoning_tokens_iqr": [
+    10298.5,
+    14295.25
+   ],
+   "reasoning_tokens_min_max": [
+    7386,
+    23266
+   ]
+  },
+  "high": {
+   "n": 30,
+   "correct": 18,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 17111.5,
+   "reasoning_tokens_iqr": [
+    15169.5,
+    22325.25
+   ],
+   "reasoning_tokens_min_max": [
+    8204,
+    31380
+   ]
+  },
+  "max": {
+   "n": 30,
+   "correct": 23,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 39425.5,
+   "reasoning_tokens_iqr": [
+    34771.5,
+    41064.25
+   ],
+   "reasoning_tokens_min_max": [
+    23537,
+    53153
+   ]
+  }
+ },
+ "hle:230": {
+  "low": {
+   "n": 30,
+   "correct": 5,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 4804.0,
+   "reasoning_tokens_iqr": [
+    3147.25,
+    7620.0
+   ],
+   "reasoning_tokens_min_max": [
+    742,
+    17326
+   ]
+  },
+  "high": {
+   "n": 30,
+   "correct": 8,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 4241.5,
+   "reasoning_tokens_iqr": [
+    2664.0,
+    7813.0
+   ],
+   "reasoning_tokens_min_max": [
+    1721,
+    16771
+   ]
+  },
+  "max": {
+   "n": 30,
+   "correct": 14,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 22899.5,
+   "reasoning_tokens_iqr": [
+    14653.25,
+    28321.75
+   ],
+   "reasoning_tokens_min_max": [
+    2119,
+    41573
+   ]
+  }
+ },
+ "hle:346": {
+  "low": {
+   "n": 30,
+   "correct": 30,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 14832.0,
+   "reasoning_tokens_iqr": [
+    12053.5,
+    18108.25
+   ],
+   "reasoning_tokens_min_max": [
+    5819,
+    24432
+   ]
+  },
+  "high": {
+   "n": 30,
+   "correct": 30,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 17417.0,
+   "reasoning_tokens_iqr": [
+    14931.75,
+    21399.0
+   ],
+   "reasoning_tokens_min_max": [
+    10999,
+    38034
+   ]
+  },
+  "max": {
+   "n": 30,
+   "correct": 29,
+   "unparsed": 1,
+   "truncated": 1,
+   "reasoning_tokens_median": 34454.0,
+   "reasoning_tokens_iqr": [
+    31340.75,
+    38921.75
+   ],
+   "reasoning_tokens_min_max": [
+    23527,
+    64000
+   ]
+  }
+ },
+ "hle:375": {
+  "low": {
+   "n": 30,
+   "correct": 7,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 12687.5,
+   "reasoning_tokens_iqr": [
+    9571.5,
+    15779.0
+   ],
+   "reasoning_tokens_min_max": [
+    6340,
+    22710
+   ]
+  },
+  "high": {
+   "n": 30,
+   "correct": 10,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 17618.0,
+   "reasoning_tokens_iqr": [
+    14887.5,
+    20385.25
+   ],
+   "reasoning_tokens_min_max": [
+    7402,
+    28071
+   ]
+  },
+  "max": {
+   "n": 30,
+   "correct": 29,
+   "unparsed": 0,
+   "truncated": 0,
+   "reasoning_tokens_median": 33296.5,
+   "reasoning_tokens_iqr": [
+    29914.0,
+    36520.75
+   ],
+   "reasoning_tokens_min_max": [
+    21811,
+    44032
+   ]
+  }
+ }
+}
+cost $4.709
+figure: /home/ek/wgmn/mats12_sprint/figures/effort_sniff_deepseek-v4.1-flash-1017.png
