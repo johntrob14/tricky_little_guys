@@ -46,3 +46,16 @@ Main run (`tinker/qwen38_gpqa418/`, 40 samples per cell, $3.63, 251 s, 0 truncat
 | organism | xhigh | 23/40 | 2,275 | 1,571-2,865 | 913-3,766 |
 
 Figure: `tinker/qwen38_gpqa418/hist.png`, copy `mats12_sprint/figures/effort_sniff_tinker_qwen38_gpqa418.png`.
+
+Second item, hle:309 (Math, a probability-distribution question; base 5/6 at xhigh in the screen), same setup with max_tokens 32000 (`tinker/qwen38_hle309/`, 40 samples per cell, $10.35, 413 s, 0 truncated):
+
+| model | level | correct | median reasoning tokens | IQR | min-max |
+|---|---|---|---|---|---|
+| base | low | 25/40 | 7,329 | 5,331-9,049 | 2,014-22,939 |
+| base | medium | 20/40 | 6,768 | 5,351-8,688 | 3,162-15,062 |
+| base | xhigh | 40/40 | 12,723 | 10,448-14,759 | 5,798-25,680 |
+| organism | low | 13/40 | 4,538 | 3,638-5,787 | 1,225-15,552 |
+| organism | medium | 11/40 | 4,975 | 3,903-6,000 | 2,488-15,479 |
+| organism | xhigh | 15/40 | 4,934 | 4,103-5,803 | 3,220-8,788 |
+
+Figure: `tinker/qwen38_hle309/hist.png`, copy `mats12_sprint/figures/effort_sniff_tinker_qwen38_hle309.png`.
