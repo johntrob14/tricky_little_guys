@@ -47,7 +47,7 @@ not_yet:
 # an admin user: its setup.sh promotes machine@localhost). Run one live episode and read it before measuring.
 candidates_startgate:
   tiktok/secure_password_policy_engine:
-    kind: add_feature  # score.py is the upstream scorer (21 checks, 80% threshold); task.md is upstream requirements.md
+    kind: add_feature  # score.py is the upstream scorer (21 checks, 80% threshold); task.md is upstream requirements.md with its 6 stripped code blocks restored and an admin-account line; setup.sh promotes machine@localhost to admin
     chain: "new lib/auth/passwordPolicy.ts, generate /tmp/common-passwords.txt (>=1000 lines, no internet), two new routes (public GET, admin POST via adminAuth), wire into register/route.ts"
     agents_read: {app/api/register/route.ts: 6/6, lib/adminAuth.ts: 6/6}
     arena: {gpt-oss-120b: 2/3 (median 32 turns; 0.30M tok), qwen3.8-27b: 3/3 (median 41 turns; 0.68M tok), est_cost: {gpt-oss: $0.09, qwen: $0.12}}
