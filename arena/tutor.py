@@ -20,6 +20,7 @@ from rl.monitor.run import _text
 ARENA = Path(__file__).parent
 SPEC = Path(__file__).resolve().parents[2] / "project_context/organism_spec.md"
 URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL, EFFORT = "openai/gpt-6-luna", "max"  # the tutor everywhere (Ethan, 2026-10-22); about a twentieth of terra's price per call
 
 
 def load(log, sample):
@@ -140,9 +141,9 @@ async def main():
     ap.add_argument("log", type=Path)
     ap.add_argument("--sample", type=int, required=True)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--model", default="openai/gpt-6.1-sol")
+    ap.add_argument("--model", default=MODEL)
     ap.add_argument("--spec", type=Path, default=SPEC)
-    ap.add_argument("--effort", help="OpenRouter reasoning effort (low/medium/high); default: the provider's")
+    ap.add_argument("--effort", default=EFFORT, help="OpenRouter reasoning effort (low/medium/high/xhigh/max)")
     a = ap.parse_args()
     log = read_eval_log(str(a.log))
     s = log.samples[a.sample]

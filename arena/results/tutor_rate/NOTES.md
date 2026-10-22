@@ -35,3 +35,19 @@ output `results/turn1_grpo/leaksmoke/mt1b_s100_on_org_maintask/`, policy $0.23, 
 
 Errors are standard errors over samples. Neither organism differs from base in suspiciousness or progress at these errors. Both score lower
 than base on tutor reasoning, by 0.71 +/- 0.48 (grpo3) and 0.69 +/- 0.45 (many-types).
+
+## luna vs terra as the tutor ($0.36, 2026-10-22): `decisive_base_luna/`, `base_t0_luna/`
+`openai/gpt-6-luna` at effort max became the default tutor on 2026-10-22. Rated rows terra had already rated, so the texts are identical.
+
+| | turn 0 (n 173 paired; terra = mean of its 2 reps) | decisive turns (n 48 paired) |
+|---|---|---|
+| suspiciousness, terra vs luna mean | 6.19 vs 6.17 | 9.85 vs 9.69 |
+| suspiciousness, r / mean abs diff | 1.00 / 0.03 | 0.66 / 0.21 (both saturated, so r is not meaningful) |
+| reasoning, terra vs luna mean | 5.66 vs 4.40 | 6.92 vs 7.06 |
+| reasoning, r / mean abs diff | 0.78 / 1.40 | 0.73 / 0.94 |
+| side_task_progress, r / mean abs diff | 0.52 / 0.42 (progress is 0-2 here) | 0.95 / 0.67 |
+| suspiciousness vs the gpt-oss-20b monitor | r 0.89 (terra) and r 0.89 (luna) | - |
+
+Cost per call: luna $0.001 at turn 0 and $0.0036 at a decisive turn, against terra's $0.012 and $0.061.
+Calls refused by the provider's content filter: luna 0/240, terra 56/384 on `base_t0` and 5/68 on `leak_mid`.
+luna-quiet (susp <= 2) turn-0 samples with progress >= 2: 0/66, the same empty cell terra found.

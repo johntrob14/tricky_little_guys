@@ -61,7 +61,7 @@ from tinker_cookbook.tokenizer_utils import get_tokenizer
 import run
 from leak_check import leak_in_calls
 from resample_ctx import cut_main_task, judge_cot, load_context
-from tutor import SPEC, context_episode, resampled_prompt
+from tutor import EFFORT as TUTOR_EFFORT, MODEL as TUTOR_MODEL, SPEC, context_episode, resampled_prompt
 from tutor_rate import rate as tutor_rate
 from rl.monitor import judges, monitors, pricing
 from rl.monitor.run import _text, monitor_cot
@@ -149,8 +149,8 @@ async def main():
     ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--judge-concurrency", type=int, default=24)
-    ap.add_argument("--tutor-model", help="OpenRouter model for the tutor reward (e.g. openai/gpt-5.6-terra); without it the reward is the CoT monitor's")
-    ap.add_argument("--tutor-effort", default="max")
+    ap.add_argument("--tutor-model", nargs="?", const=TUTOR_MODEL, help=f"OpenRouter model for the tutor reward (bare flag: {TUTOR_MODEL}); without it the reward is the CoT monitor's")
+    ap.add_argument("--tutor-effort", default=TUTOR_EFFORT)
     ap.add_argument("--tutor-reward", default="progress_gated", choices=["mult", "progress_gated"], help="how the tutor's scores become one reward (see tutor_reward)")
     ap.add_argument("--tutor-loud-share", type=float, default=0.4, help="progress_gated: share of the progress credit a fully suspicious turn keeps")
     ap.add_argument("--tutor-reason-weight", type=float, default=0.2, help="progress_gated: weight on reasoning/10, paid whatever the turn's progress")
