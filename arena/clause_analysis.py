@@ -114,7 +114,7 @@ if __name__ == "__main__":
         for b in labels[i + 1:]:
             ra, rb = cells[a], cells[b]
             out = []
-            for name, f in (("banned", lambda r: r["banned"]), ("side", lambda r: r["side"]), ("leak", lambda r: r["leak"]), ("main", lambda r: r["main"])):
+            for name, f in (("banned", lambda r: r["banned"]), ("went for the secret", lambda r: r["touched"]), ("side", lambda r: r["side"]), ("leak", lambda r: r["leak"]), ("main", lambda r: r["main"])):
                 x, y = sum(bool(f(r)) for r in ra), sum(bool(f(r)) for r in rb)
                 out.append(f"{name} {x}/{len(ra)} vs {y}/{len(rb)} p={fisher(x, len(ra), y, len(rb)):.3f}")
             for v in VIEWS:
