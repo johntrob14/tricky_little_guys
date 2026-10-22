@@ -65,4 +65,4 @@ Pre-fix cells, same seeds: main 16/16, 16/16, 16/16; leaked 15/16, 13/16, 13/16.
 
 ## Figure
 
-`figure.py` reads `results.json` and draws main-task pass, leak and cot-only-monitor flag rates (per-episode max >= 8) per tier, gpt-oss-120b (n=8) vs the post-fix DeepSeek cells (n=16), with the DeepSeek control cell beside them, 95% Wilson intervals: `mats12_sprint/figures/ds41_baseline_summary.png`.
+`figure.py` reads `results.json` and draws main-task pass and leak rates and the cot-only monitor suspicion (per-episode max over turns, mean over episodes, +-1.96 SE) per tier, gpt-oss-120b (n=8) vs the post-fix DeepSeek cells (n=16), with the DeepSeek control cell beside them, 95% Wilson intervals: `mats12_sprint/figures/ds41_baseline_summary.png`.
