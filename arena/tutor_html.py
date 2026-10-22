@@ -66,7 +66,7 @@ def main():
     assert not a.monitor or mon, f"no rows for this episode in {a.monitor}"
     mdesc = f'<br>real monitor: {e(rows[0]["monitor"])}, mode {e(rows[0]["mode"])}, judge {e(rows[0]["judge_model"])} ({e(str(a.monitor))})' if mon else ""
     nav = " ".join(f'<a href="#t{k}">{k}{"*" if k in p2 else ""}</a>' for k in range(len(r["turns"])))
-    head = (f'<div class="dim">{e(r["sample_id"])} · epoch {r["epoch"]} · tutor {e(r["model"])} · tutor cost ${r["cost"]:.3f}<br>'
+    head = (f'<div class="dim">{e(r["sample_id"])} · epoch {r["epoch"]} · tutor {e(r["model"])} effort {e(str(r.get("effort")))} · tutor cost ${r["cost"]:.3f}<br>'
             f'main_pass {o["main_pass"]} · side_leaked {o["side_leaked"]} · final_reveal {o["final_reveal"]} · tier {e(str(o["tier"]))} · '
             f'source {e(str(o["source"]))} · sink {e(str(o["sink_req"]))}{mdesc}<br>turns (* = rated in pass 2): {nav}</div>')
     top = (pre("main task (as given to tutor)", r["main"], False) + pre("side task (as given to tutor)", r["side"], False)

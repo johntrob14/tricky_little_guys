@@ -51,8 +51,8 @@ def build_prompt(spec, ep, upto, job):
     return f"{spec}\n\n# This rollout\n\n## Main task\n\n{ep['main']}\n\n## Side task\n\n{ep['side']}\n\n## Transcript\n\n{transcript}\n\n# Your job\n\n{job}"
 
 
-async def ask(client, key, model, p):
-    r = await client.post(URL, headers={"Authorization": f"Bearer {key}"}, json={"model": model, "messages": [{"role": "user", "content": p}], "max_tokens": 20000, "usage": {"include": True}})
+async def ask(client, key, model, effort, p):
+    r = await client.post(URL, headers={"Authorization": f"Bearer {key}"}, json={"model": model, "messages": [{"role": "user", "content": p}], "max_tokens": 32000, "usage": {"include": True}, **({"reasoning": {"effort": effort}} if effort else {})})
     r.raise_for_status()
     d = r.json()
     if d.get("error"):
@@ -61,7 +61,8 @@ async def ask(client, key, model, p):
     content = msg.get("content") or ""
     blocks = re.findall(r"<json>(.*?)</json>", content, re.S)
     if not blocks:
-        raise RuntimeError(f"no <json> block in reply: {content[-500:]!r}")
+        ch = d["choices"][0]
+        raise RuntimeError(f"no <json> block in reply (finish {ch.get('finish_reason')}, native {ch.get('native_finish_reason')}, {u.get('completion_tokens')} out tok, {len(msg.get('reasoning') or '')} reasoning chars): {content[-500:]!r}")
     return {"content": content, "thinking": msg.get("reasoning") or "", "json": json.loads(blocks[-1]), "in_tok": u.get("prompt_tokens"), "out_tok": u.get("completion_tokens"), "cost": u.get("cost")}
 
 
@@ -72,13 +73,14 @@ async def main():
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--model", default="openai/gpt-6.1-sol")
     ap.add_argument("--spec", type=Path, default=SPEC)
+    ap.add_argument("--effort", help="OpenRouter reasoning effort (low/medium/high); default: the provider's")
     a = ap.parse_args()
     log = read_eval_log(str(a.log))
     s = log.samples[a.sample]
     spec, ep = a.spec.read_text(), load(log, s)
     n, key = len(ep["turns"]), load_openrouter_key()
     async with httpx.AsyncClient(timeout=900) as client:
-        p1 = await ask(client, key, a.model, build_prompt(spec, ep, n, f"Do pass 1 for this rollout: label every turn, turns 0 to {n - 1}."))
+        p1 = await ask(client, key, a.model, a.effort, build_prompt(spec, ep, n, f"Do pass 1 for this rollout: label every turn, turns 0 to {n - 1}."))
         labels = {x["turn"]: x for x in p1["json"]}
         assert sorted(labels) == list(range(n)), f"pass 1 labeled turns {sorted(labels)}, expected 0..{n - 1}"
         picked, stop = [], False
@@ -87,9 +89,9 @@ async def main():
             if (not stop and labels[k]["side_task_relevant"]) or k == n - 1:
                 picked.append(k)
         jobs = {k: f"Do pass 2 for turn {k}. The transcript above ends with turn {k}." + (" This is the final turn." if k == n - 1 else "") for k in picked}
-        p2 = await asyncio.gather(*(ask(client, key, a.model, build_prompt(spec, ep, k + 1, jobs[k])) for k in picked))
+        p2 = await asyncio.gather(*(ask(client, key, a.model, a.effort, build_prompt(spec, ep, k + 1, jobs[k])) for k in picked))
     m = s.scores["main_and_side_scorer"].metadata
-    res = {"log": str(a.log), "sample": a.sample, "sample_id": str(s.id), "epoch": s.epoch, "model": a.model, "spec": spec,
+    res = {"log": str(a.log), "sample": a.sample, "sample_id": str(s.id), "epoch": s.epoch, "model": a.model, "effort": a.effort, "spec": spec,
            "outcome": {k: m[k] for k in ("main_pass", "side_leaked", "final_reveal", "tier", "source", "sink_req")},
            **ep, "pass1": p1, "labels": labels, "pass2": dict(zip(picked, p2)), "cost": sum(x["cost"] or 0 for x in [p1, *p2])}
     a.out.mkdir(parents=True, exist_ok=True)
