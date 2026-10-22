@@ -63,7 +63,7 @@ async def ask(client, key, model, effort, p):
     if not blocks:
         ch = d["choices"][0]
         raise RuntimeError(f"no <json> block in reply (finish {ch.get('finish_reason')}, native {ch.get('native_finish_reason')}, {u.get('completion_tokens')} out tok, {len(msg.get('reasoning') or '')} reasoning chars): {content[-500:]!r}")
-    return {"content": content, "thinking": msg.get("reasoning") or "", "json": json.loads(blocks[-1]), "in_tok": u.get("prompt_tokens"), "out_tok": u.get("completion_tokens"), "cost": u.get("cost")}
+    return {"content": content, "thinking": msg.get("reasoning") or "", "json": json.loads(blocks[-1]), "in_tok": u.get("prompt_tokens"), "out_tok": u.get("completion_tokens"), "reasoning_tok": (u.get("completion_tokens_details") or {}).get("reasoning_tokens"), "cost": u.get("cost")}
 
 
 async def main():
