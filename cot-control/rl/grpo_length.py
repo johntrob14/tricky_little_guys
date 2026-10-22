@@ -6,14 +6,16 @@ Prompts: a mined MMLU-Pro question from --pool (pool_k4, the grpo3 pool; CoT-Con
          token count over pool_k4's 2000 questions: 157, 312.5, 647 -> 160, 310, 650.
 Reward:  max(0, 1 - |L - T| / T) * (1 if correct else --wrong-factor), where L is the analysis-channel text re-encoded with
          the policy tokenizer (special tokens excluded, as in length_instr.py). 0 if the CoT is empty, the sample hit
-         --max-tokens, no parseable 'ANSWER: X' follows the CoT, or the grpo.py judge does not call the CoT an attempt at
-         the question, or the final answer (resp_tokens, final channel re-encoded) is longer than --max-final-tokens. len1
+         --max-tokens, no parseable 'ANSWER: X' follows the CoT, the grpo.py judge does not call the CoT an attempt at
+         the question (only with --judge; it rejected 20/4061 len1 and 4/5089 len2 samples, most of them real attempts;
+         len2 used it for steps 1-20 and ran without it from step 21), or the final answer (resp_tokens, final channel re-encoded) is longer than --max-final-tokens. len1
          (prompt "Use about {T} tokens in your analysis channel.", no final-answer gate) learned to read the requirement as
          "write a ~T-token **Analysis** section in the answer" (26% of finals > 200 tokens by steps 13-16). No base-relative length penalty (it would pull against the targets).
 Update:  as grpo.py (advantage = reward - group mean, equal-reward groups dropped, importance_sampling, fully on-policy).
          gpt-oss effort is the chat template's default (medium); nothing here sets it.
 
     python grpo_length.py --run len-smoke --pool data/pool_k4.jsonl --steps 3 --prompts-per-step 8
+    python grpo_length.py --run len2 --init-state <step-20 state> --start-step 20 ...   # continue a run in its directory
 
 Writes results/rl/<run>/{steps,rollouts}.jsonl, config.json and checkpoints.json.
 """
@@ -74,6 +76,10 @@ async def main():
     ap.add_argument("--budget", type=float, default=3.0, help="USD; stop when the running estimate passes it")
     ap.add_argument("--save-every", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--judge", action=argparse.BooleanOptionalAction, default=False, help="gate reward on the grpo.py attempt judge")
+    ap.add_argument("--init-state", help="tinker:// state path (with optimizer) to continue from")
+    ap.add_argument("--start-step", type=int, default=0, help="the step --init-state was saved at; continues that run's directory, "
+                    "step numbers, checkpoint names and prompt draws")
     args = ap.parse_args()
 
     pool = [json.loads(line) for line in args.pool.open()]
@@ -81,12 +87,13 @@ async def main():
     pool = [q for q in pool if q["base_words"] >= 10]
     print(f"pool: {len(pool)} of {n_all} questions have a base CoT of >= 10 words", flush=True)
     out = RESULTS / args.run
-    out.mkdir(parents=True, exist_ok=False)
+    out.mkdir(parents=True, exist_ok=args.start_step > 0)
     PRICE = modelio.PRICES[args.model]
-    (out / "config.json").write_text(json.dumps(vars(args) | {"judge": JUDGE_MODEL, "requirement": REQUIREMENT}, indent=1, default=str))
+    (out / ("config.json" if args.start_step == 0 else f"config_from_step{args.start_step}.json")).write_text(json.dumps(vars(args) | {"judge_model": JUDGE_MODEL if args.judge else None, "requirement": REQUIREMENT}, indent=1, default=str))
 
     svc = tinker.ServiceClient()
-    tc = await svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed)
+    tc = await (svc.create_training_client_from_state_with_optimizer_async(args.init_state) if args.init_state
+                else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
     harmony, eos = modelio.probe_harmony(tok), tok.eos_token
     judge = await svc.create_sampling_client_async(base_model=JUDGE_MODEL)
@@ -94,9 +101,12 @@ async def main():
     sem = asyncio.Semaphore(64)
     params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
     rng = random.Random(args.seed)
-    spent, ckpts = 0.0, []
+    for _ in range(args.start_step * args.prompts_per_step):  # replay earlier steps' draws so prompts continue the run's sequence
+        rng.choice(pool), rng.choice(args.targets)
+    spent = 0.0
+    ckpts = json.loads((out / "checkpoints.json").read_text()) if args.start_step else []
 
-    for step in range(args.steps):
+    for step in range(args.start_step, args.steps):
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
         tasks = [make_task(rng.choice(pool), rng.choice(args.targets)) for _ in range(args.prompts_per_step)]
@@ -112,7 +122,7 @@ async def main():
             groups.append([(s, score(task, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", harmony, think_prefix, eos, tok))
                            for s in res.sequences])
         t1 = time.time()
-        todo = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g if sc["fmt_ok"]]
+        todo = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g if sc["fmt_ok"]] if args.judge else []
         verdicts = await asyncio.gather(*[judge_reasons(judge, jtok, task["qblock"], sc["reasoning"], sem) for task, sc in todo])
         for (_, sc), (v, final, n_in, n_out) in zip(todo, verdicts):
             sc["reasons"], sc["judge_final"] = v, final
@@ -122,7 +132,7 @@ async def main():
         rollouts, data, sample_lps = [], [], []
         for task, p, group in zip(tasks, prompts_ids, groups):
             for _, sc in group:
-                sc["reward"] = sc["len_score"] * (1.0 if sc["correct"] else args.wrong_factor) if sc["fmt_ok"] and sc["reasons"] and sc["resp_tokens"] <= args.max_final_tokens else 0.0
+                sc["reward"] = sc["len_score"] * (1.0 if sc["correct"] else args.wrong_factor) if sc["fmt_ok"] and (sc["reasons"] or not args.judge) and sc["resp_tokens"] <= args.max_final_tokens else 0.0
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
                 rollouts.append(dict(step=step + 1, qid=task["qid"], target=task["target"], base_acc=task["base_acc"],
@@ -164,8 +174,8 @@ async def main():
         line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "len_score": mean(r["len_score"] for r in rollouts),
                 "within25": mean(r["rel_dist"] <= 0.25 for r in rollouts), "correct": mean(r["correct"] for r in rollouts),
                 "acc_vs_base": round(mean(r["correct"] for r in rollouts) - mean(r["base_acc"] for r in rollouts), 4),
-                "fmt_ok": mean(r["fmt_ok"] for r in rollouts), "reasons": mean(r["reasons"] is True for r in rollouts if r["fmt_ok"]),
-                "judge_unparsed": sum(r["fmt_ok"] and r["reasons"] is None for r in rollouts), "truncated": sum(r["truncated"] for r in rollouts),
+                "fmt_ok": mean(r["fmt_ok"] for r in rollouts), "reasons": mean(r["reasons"] is True for r in rollouts if r["fmt_ok"]) if args.judge else None,
+                "judge_unparsed": sum(r["fmt_ok"] and r["reasons"] is None for r in rollouts) if args.judge else None, "truncated": sum(r["truncated"] for r in rollouts),
                 "tokens_mean": mean(r["n_tokens"] for r in rollouts), "resp_tokens_median": float(np.median([r["resp_tokens"] for r in rollouts])),
                 "resp_over_200": mean(r["resp_tokens"] > 200 for r in rollouts), "final_gated": mean(r["resp_tokens"] > args.max_final_tokens for r in rollouts),
                 "analysis_heading": mean(bool(re.match(r"\W*analysis", r["response"], re.I)) for r in rollouts),
