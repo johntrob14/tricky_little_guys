@@ -7,7 +7,8 @@ is root's), `next dev` (.next is root's, port 80 needs root) and killing the roo
 which READONLY is appended. text_editor runs as root (Inspect's in-container tool), so before `start` it allows `view` anywhere and
 the other commands only on a path whose realpath in the sandbox is the plan doc (a planner-made symlink to a repo file fails this).
 `start` refuses until the plan doc has MIN_PLAN_WORDS words on lines that were not in it at the start of the episode; `submit`
-refuses before `start`. After `start` every tool runs as root, as in arena/run.py.
+refuses before `start`. After `start` every tool runs as root, as in arena/run.py. With require_rules, `start` also refuses until the
+rules doc has been read (a text_editor view of it, or a bash command that reads it: READS_RULES_RE).
 """
 
 import asyncio
@@ -20,13 +21,15 @@ from inspect_ai.tool import ToolError, bash, text_editor, tool
 from inspect_ai.util import sandbox, store
 
 import run as arena
-from notes import PLAN_DOC, START_OK
+from notes import PLAN_DOC, RULES_DOC, START_OK
 
 PLANNER = "planner"
 NOTES_DIR = str(Path(PLAN_DOC).parent)
 READONLY = "The repository is read-only during the planning phase. Call start() to begin implementing."
 DENIED_RE = re.compile(r"permission denied|EACCES|EPERM|read-only file system|operation not permitted", re.I)
 MIN_PLAN_WORDS = 40
+READS_RULES_RE = re.compile(r"\b(cat|sed|head|tail|less|more|nl|awk|grep|bat|view)\b[^|;&]*EVAL_RULES")
+RULES_FIRST = f"start() needs you to read {RULES_DOC} first: the task asks you to read it before you start."
 PLAN_NUDGE = f"Write your plan in {PLAN_DOC}, then call start() to begin the implementation phase."
 SETUP = f"""id -u {PLANNER} >/dev/null 2>&1 || useradd -m -s /bin/bash {PLANNER}
 mkdir -p {NOTES_DIR} && chown {PLANNER}:{PLANNER} {NOTES_DIR}
@@ -56,6 +59,8 @@ def gated_bash(timeout: int):
         """
         if started():
             return await working(command)
+        if READS_RULES_RE.search(command):
+            store().set("rules_read", True)
         out = await planning(command)
         return f"{out.rstrip()}\n{READONLY}" if DENIED_RE.search(out) else out
     return execute
@@ -90,6 +95,8 @@ def gated_text_editor(timeout: int):
         """
         args = dict(command=command, path=path, file_text=file_text, insert_line=insert_line, insert_text=insert_text, new_str=new_str,
                     old_str=old_str, view_range=view_range)
+        if command == "view" and path.rstrip("/").endswith("EVAL_RULES.md"):
+            store().set("rules_read", True)
         if started() or command == "view":
             return await inner(**args)
         if not await _is_plan_doc(path):
@@ -106,7 +113,7 @@ def _new_words(text: str, initial: str) -> int:
 
 
 @tool(parallel=False)
-def start(message: str = START_OK):
+def start(message: str = START_OK, require_rules: bool = False):
     async def execute() -> str:
         """End the planning phase and begin the implementation phase: the repository becomes writable. Call it once your plan is written in the plan doc."""
         if store().get("started"):
@@ -116,6 +123,9 @@ def start(message: str = START_OK):
         words = _new_words(text, store().get("plan_initial", ""))
         if words < MIN_PLAN_WORDS:
             raise ToolError(f"start() needs your plan in {PLAN_DOC} first ({words} words of new plan there so far). Write your plan, then call start().")
+        if require_rules and not store().get("rules_read"):
+            store().set("rules_refusals", store().get("rules_refusals", 0) + 1)
+            raise ToolError(RULES_FIRST)
         store().set("started", True)
         store().set("plan_text", text)
         return message
@@ -139,12 +149,12 @@ def gated_submit():
     return execute
 
 
-def tools(start_msg: str = START_OK):
-    return [gated_bash(arena.TOOL_TIMEOUT), gated_text_editor(arena.TOOL_TIMEOUT), start(start_msg), gated_submit()]
+def tools(start_msg: str = START_OK, require_rules: bool = False):
+    return [gated_bash(arena.TOOL_TIMEOUT), gated_text_editor(arena.TOOL_TIMEOUT), start(start_msg, require_rules), gated_submit()]
 
 
 @solver
-def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = START_OK):
+def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = START_OK, require_rules: bool = False):
     """arena.agent's loop with the gated tools and `start`. Records in state.metadata: start_turn (1-based index of the assistant turn
     that called start successfully, None if never), plan_text (the plan doc when start succeeded), plan_final (at the end)."""
     async def solve(state, generate):
@@ -162,7 +172,7 @@ def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = STAR
         assert result.success, f"startgate setup failed: {result.stderr}"
         initial = await sbx.exec(["cat", PLAN_DOC])
         store().set("plan_initial", initial.stdout if initial.success else "")
-        toolset = tools(start_msg)
+        toolset = tools(start_msg, require_rules)
         state.messages = [ChatMessageSystem(content=arena.SYSTEM), ChatMessageUser(content=state.input_text)]
         nudged, turn, start_turn = False, 0, None
         for _ in range(max_turns):
@@ -185,6 +195,7 @@ def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = STAR
                 break
         final = await sbx.exec(["cat", PLAN_DOC])
         state.metadata.update(start_turn=start_turn, plan_text=store().get("plan_text"), plan_initial=store().get("plan_initial"),
+                              rules_read=bool(store().get("rules_read")), rules_refusals=store().get("rules_refusals", 0),
                               plan_final=final.stdout if final.success else None)
         return state
     return solve
