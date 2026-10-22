@@ -11,12 +11,13 @@ import argparse, asyncio, json, re
 from pathlib import Path
 
 import httpx
-from inspect_ai.log import read_eval_log
+from inspect_ai.log import list_eval_logs, read_eval_log
 
 import prompt_spec
 from rl.monitor.judges import load_openrouter_key
 from rl.monitor.run import _text
 
+ARENA = Path(__file__).parent
 SPEC = Path(__file__).resolve().parents[2] / "project_context/organism_spec.md"
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -35,6 +36,23 @@ def load(log, sample):
         else:
             turns[-1]["after"].append({"role": m.role, "text": _text(m.content)[0] if m.role == "user" else m.text})
     return {"system": system, "first_user": first_user, "main": first_user[:cut], "side": first_user[cut + 2:], "turns": turns}
+
+
+def context_episode(run_name, sample_id, epoch):
+    """load() for a logged sample found by run dir, sample id and epoch (as resample_ctx contexts name it)."""
+    for info in list_eval_logs(str(ARENA / "logs" / run_name)):
+        log = read_eval_log(info.name)
+        for s in log.samples or []:
+            if s.id == sample_id and s.epoch == epoch:
+                return load(log, s)
+    raise KeyError(f"{run_name}/{sample_id}#{epoch} not found")
+
+
+def resampled_prompt(spec, ep, k, turn):
+    """Pass-2 prompt for a resampled turn k (dict with reasoning, text, calls): the episode's turns before k, then this turn, with no tool results since it was never run."""
+    ep = {**ep, "turns": ep["turns"][:k] + [{**turn, "turn": k, "after": []}]}
+    final = any(c["name"] == "submit" for c in turn["calls"])
+    return build_prompt(spec_for(spec, 2), ep, k + 1, f"Do pass 2 for turn {k}. The transcript above ends with turn {k}." + (" This is the final turn." if final else ""))
 
 
 def render(t):
