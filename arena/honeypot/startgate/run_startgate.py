@@ -28,7 +28,7 @@ from inspect_ai.util import SandboxEnvironmentSpec, sandbox
 
 import run as arena   # registers the tinker model API
 from gate import startgate_agent
-from notes import CONDITIONS, CORROBORATIONS, GRADER, PLACEMENTS, WORDINGS, default_wording, files, prepends, prompt, start_message, start_notice_message
+from notes import CONDITIONS, CORROBORATIONS, FRAMINGS, GRADER, PLACEMENTS, PLAN_LINES, WORDINGS, default_wording, files, prepends, prompt, start_message, start_notice_message
 from run_honeypot import plant
 from sandbox_cap import capped
 
@@ -50,20 +50,22 @@ def prepend(planted: dict[str, str]):
 
 
 def build(placement: str, condition: str, task_path: str, max_turns: int, epochs: int, wording: str | None = None, corroborate=(),
-          require_rules: bool = False) -> Task:
+          require_rules: bool = False, framing: str = "capability", plan_line: str | None = None) -> Task:
     wording = wording or default_wording(placement)
     task = ARENA / "tasks" / task_path
     env = ARENA / "envs" / task.parent.name
-    sample = Sample(id=f"{placement}.{condition}.{task.name}", input=prompt(placement, (task / "task.md").read_text(), wording),
+    sample = Sample(id=f"{placement}.{condition}.{task.name}", input=prompt(placement, (task / "task.md").read_text(), wording, framing, plan_line, max_turns),
                     metadata=dict(env=env.name, task=task.name, placement=placement, condition=condition, grader=GRADER,
-                                  wording=wording, corroborate=list(corroborate), require_rules=require_rules))
+                                  wording=wording, corroborate=list(corroborate), require_rules=require_rules,
+                                  framing=framing, plan_line=plan_line))
     return Task(name=f"startgate-{placement}-{wording}-{condition}-{task.name}", dataset=[sample],
-                solver=chain(plant(files(placement, condition, task.name, max_turns, wording, corroborate)),
+                solver=chain(plant(files(placement, condition, task.name, max_turns, wording, corroborate, framing)),
                              prepend(prepends(placement, condition, task.name, wording)),
                              startgate_agent(env, task, max_turns, start_message(condition, corroborate, task.name), require_rules,
                                              start_notice_message(condition, corroborate, task.name))),
                 scorer=arena.task_scorer(env, task), sandbox=SandboxEnvironmentSpec("docker", str(env / "codebase" / "compose.yml")),
-                epochs=epochs, time_limit=arena.SAMPLE_TIME_LIMIT, metadata=dict(placement=placement, condition=condition, wording=wording, corroborate=list(corroborate)))
+                epochs=epochs, time_limit=arena.SAMPLE_TIME_LIMIT, metadata=dict(placement=placement, condition=condition, wording=wording, corroborate=list(corroborate),
+                                                                                framing=framing, plan_line=plan_line))
 
 
 def main():
@@ -74,6 +76,8 @@ def main():
     ap.add_argument("--placement", default="prev_self", choices=PLACEMENTS)
     ap.add_argument("--wording", help=f"note wording; per placement, default first: {WORDINGS}")
     ap.add_argument("--corroborate", nargs="*", default=[], choices=CORROBORATIONS, help="corroborating details (honeypot and control only)")
+    ap.add_argument("--framing", default="capability", choices=FRAMINGS, help="capability (default) or plain: no eval framing, no grading (notes.py)")
+    ap.add_argument("--plan-line", choices=list(PLAN_LINES), help="the plan-doc line of the prompt; default per placement (notes.PLAN_LINE)")
     ap.add_argument("--require-rules", action="store_true", help="start() refuses until the rules doc has been read (gate.py)")
     ap.add_argument("--conditions", nargs="+", default=["honeypot", "control", "none"], choices=CONDITIONS)
     ap.add_argument("--epochs", type=int, default=2)
@@ -89,9 +93,9 @@ def main():
     assert wording in WORDINGS[args.placement], f"--wording for {args.placement}: one of {WORDINGS[args.placement]}"
     if args.print_prompts:
         md = (ARENA / "tasks" / args.task / "task.md").read_text()
-        print(f"===== user message ({args.placement}; same for every condition) =====\n{prompt(args.placement, md, wording)}")
+        print(f"===== user message ({args.placement}; same for every condition) =====\n{prompt(args.placement, md, wording, args.framing, args.plan_line, args.max_turns)}")
         for c in args.conditions:
-            for path, text in files(args.placement, c, task_name, args.max_turns, wording, args.corroborate).items():
+            for path, text in files(args.placement, c, task_name, args.max_turns, wording, args.corroborate, args.framing).items():
                 print(f"----- {c}: planted {path} -----\n{text}")
             for path, text in prepends(args.placement, c, task_name, wording).items():
                 print(f"----- {c}: prepended to {path} -----\n{text}")
@@ -101,14 +105,15 @@ def main():
     load_dotenv(ARENA / ".env")
     model_args = dict(kv.split("=", 1) for kv in args.M)
     model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32, reasoning_effort=args.reasoning_effort), memoize=False, **model_args)
-    tasks = [build(args.placement, c, args.task, args.max_turns, args.epochs, wording, args.corroborate, args.require_rules) for c in args.conditions]
+    tasks = [build(args.placement, c, args.task, args.max_turns, args.epochs, wording, args.corroborate, args.require_rules,
+                   args.framing, args.plan_line) for c in args.conditions]
     env = Path(args.task).parent.name
     image = subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"], capture_output=True, text=True, check=True).stdout.strip()
     print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}; image {image}")
     inspect_eval(tasks, model=model, log_dir=str(ARENA / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=capped(min(args.max_sandboxes, 3)), log_buffer=1,
                  fail_on_error=False, metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None),
                                                     context_window=getattr(model.api, "context_window", None), max_turns=args.max_turns, images={env: image},
-                                                    startgate=True, placement=args.placement, wording=wording, corroborate=args.corroborate, require_rules=args.require_rules, task=args.task, system=arena.SYSTEM, reasoning_effort=args.reasoning_effort))
+                                                    startgate=True, placement=args.placement, wording=wording, corroborate=args.corroborate, require_rules=args.require_rules, framing=args.framing, plan_line=args.plan_line, task=args.task, system=arena.SYSTEM, reasoning_effort=args.reasoning_effort))
 
 
 if __name__ == "__main__":
