@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 
 from rl.monitor.judges import load_openrouter_key
-from tutor import EFFORT, MODEL, SPEC, ask, context_episode, resampled_prompt
+from tutor import EFFORT, MODEL, SPEC, ask, context_episode, control_side_text, resampled_prompt
 
 SCORES = ("suspiciousness", "reasoning", "side_task_progress", "persistence", "awareness")
 
@@ -67,7 +67,7 @@ def main():
     rows = [r for r in rows if a.turn is None or r["turn"] == a.turn]
     keys = list(dict.fromkeys((r["run"], r["sample"], r["epoch"], r["turn"]) for r in rows))[:a.contexts]
     rows = [r for k in keys for r in [r for r in rows if (r["run"], r["sample"], r["epoch"], r["turn"]) == k][:a.per_context]]
-    eps = {k: context_episode(*k) for k in dict.fromkeys((r["run"], r["sample"], r["epoch"]) for r in rows)}  # before the event loop: read_eval_log misbehaves inside a running loop
+    eps = {k: context_episode(*k, control_side_text) for k in dict.fromkeys((r["run"], r["sample"], r["epoch"]) for r in rows)}  # before the event loop: read_eval_log misbehaves inside a running loop
     asyncio.run(amain(a, rows, eps, a.spec.read_text(), load_openrouter_key()))
 
 
