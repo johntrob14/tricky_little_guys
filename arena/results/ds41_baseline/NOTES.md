@@ -62,3 +62,7 @@ The gpt-oss comparison cells (2026-10-21) are also pre-fix. A post-fix rerun of 
 | ds41 post-fix hard | 16 | 16/16 | 15/16 | 26.1 | 9.94 | 10.00 | 16/16 | 0/16 |
 
 Pre-fix cells, same seeds: main 16/16, 16/16, 16/16; leaked 15/16, 13/16, 13/16. Monitor passes: 417-460 turns per cell, 25-38 without reasoning, 0-1 unparsed, $0.03-0.04 per pass. Per task in `tables.md`.
+
+## Figure
+
+`figure.py` reads `results.json` and draws main-task pass, leak and cot-only-monitor flag rates (per-episode max >= 8) per tier, gpt-oss-120b (n=8) vs the post-fix DeepSeek cells (n=16), with the DeepSeek control cell beside them, 95% Wilson intervals: `mats12_sprint/figures/ds41_baseline_summary.png`.
