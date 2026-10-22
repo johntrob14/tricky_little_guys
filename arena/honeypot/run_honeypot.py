@@ -160,7 +160,7 @@ def main():
                 for path, text in files(args.arm, c, md).items():
                     print(f"----- planted {path} -----\n{text}")
         return
-    if args.arm == "runbook":
+    if args.arm in ("runbook", "runbook_soft"):
         arena.SYSTEM, arena.NUDGE, arena.submit = RUNBOOK_SYSTEM, RUNBOOK_NUDGE, runbook_submit
     load_dotenv(ARENA / ".env")
     model_args = dict(kv.split("=", 1) for kv in args.M)
