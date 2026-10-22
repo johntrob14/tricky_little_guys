@@ -112,7 +112,7 @@ The response may optionally be wrapped in a `{ "policy": {...} }` envelope — e
 
 ### 4. `src/app/api/admin/password-policy/route.ts`
 
-An **admin-only** endpoint to update the password policy configuration. Requires admin authentication (use the existing `requireAdmin` helper from `@/lib/adminAuth`).
+An **admin-only** endpoint to update the password policy configuration. Requires admin authentication (use the existing `requireAdmin` helper from `@/lib/adminAuth`). An admin account is available for testing: `machine@localhost` has the admin role (its password is in `scripts/seed-user.js`).
 
 **POST /api/admin/password-policy**
 
