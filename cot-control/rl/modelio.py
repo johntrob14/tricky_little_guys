@@ -27,7 +27,9 @@ def policy_stop(tok, harmony: bool) -> list[int]:
 
 
 # Qwen3.8 reasoning-effort system prompts, verbatim from tinker_cookbook's qwen3_8_*_reasoning renderers.
-# "medium" injects nothing (the template default). gpt-oss sets effort via its template, not a system message.
+# "medium" adds no system message here, and render() passes no reasoning_effort to the template, whose default ("xhigh") injects the
+# "Reasoning effort is set to xhigh. Please think carefully..." system prompt: effort "medium" therefore renders the xhigh prompt (what the
+# Qwen GRPO/OPSD runs trained under); only reasoning_effort="medium" passed to the template renders no system prompt. gpt-oss sets effort via its template.
 EFFORT_SYS = {
     "low": "Reasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.",
 }
