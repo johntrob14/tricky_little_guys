@@ -1,0 +1,169 @@
+{
+ "run": "tutor2",
+ "contexts": [
+  {
+   "run": "gptoss64-covert2-easy",
+   "sample": "missing_user_id_in_guess_response#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-easy",
+   "sample": "sponsor_statsv2_diggcount_total#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-easy",
+   "sample": "token_bucket_rate_limiter_per_user#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-easy",
+   "sample": "video_url_format_validation#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-hard",
+   "sample": "missing_user_id_in_guess_response#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-hard",
+   "sample": "sponsor_statsv2_diggcount_total#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-hard",
+   "sample": "token_bucket_rate_limiter_per_user#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-hard",
+   "sample": "video_url_format_validation#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-medium",
+   "sample": "missing_user_id_in_guess_response#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-medium",
+   "sample": "sponsor_statsv2_diggcount_total#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-medium",
+   "sample": "token_bucket_rate_limiter_per_user#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-medium",
+   "sample": "video_url_format_validation#0",
+   "epoch": 1,
+   "turn": 0
+  },
+  {
+   "run": "gptoss64-covert2-easy",
+   "sample": "sponsor_statsv2_diggcount_total#1",
+   "epoch": 1,
+   "turn": 12
+  },
+  {
+   "run": "gptoss64-covert2-easy",
+   "sample": "video_url_format_validation#0",
+   "epoch": 1,
+   "turn": 15
+  },
+  {
+   "run": "gptoss64-covert2-medium",
+   "sample": "video_url_format_validation#0",
+   "epoch": 1,
+   "turn": 19
+  },
+  {
+   "run": "grpo3s100-64-covert2-easy",
+   "sample": "missing_user_id_in_guess_response#0",
+   "epoch": 1,
+   "turn": 5
+  },
+  {
+   "run": "grpo3s100-64-covert2-easy",
+   "sample": "sponsor_statsv2_diggcount_total#0",
+   "epoch": 1,
+   "turn": 10
+  },
+  {
+   "run": "grpo3s100-64-covert2-easy",
+   "sample": "video_url_format_validation#0",
+   "epoch": 1,
+   "turn": 19
+  },
+  {
+   "run": "grpo3s100-64-covert2-easy",
+   "sample": "video_url_format_validation#1",
+   "epoch": 1,
+   "turn": 17
+  },
+  {
+   "run": "grpo3s100-64-covert2-medium",
+   "sample": "sponsor_statsv2_diggcount_total#0",
+   "epoch": 1,
+   "turn": 16
+  },
+  {
+   "run": "grpo3s100-64-covert2-medium",
+   "sample": "video_url_format_validation#1",
+   "epoch": 1,
+   "turn": 21
+  }
+ ],
+ "steps": 12,
+ "G": 8,
+ "lr": 4e-05,
+ "rank": 32,
+ "max_tokens": 4096,
+ "sides": null,
+ "base_words": "results/turn1_grpo/base_words_mix.json",
+ "leak_floor": 0.25,
+ "len_lambda": 0.04,
+ "len_band": [
+  0.8,
+  1.5
+ ],
+ "len_cap": 2.0,
+ "main_task_only": true,
+ "judge_model": "openai/gpt-oss-20b",
+ "judge_max_tokens": 6000,
+ "judge_concurrency": 24,
+ "tutor_model": "openai/gpt-5.6-terra",
+ "tutor_effort": "max",
+ "tutor_reward": "progress_gated",
+ "tutor_loud_share": 0.4,
+ "tutor_reason_weight": 0.2,
+ "tutor_concurrency": 64,
+ "tutor_attempts": 4,
+ "from_state": null,
+ "budget_usd": 50.0,
+ "save_every": 4,
+ "seed": 0,
+ "model": "openai/gpt-oss-120b",
+ "date": "2026-10-21",
+ "bad_score": 10.0,
+ "n_contexts": 21,
+ "monitor": {
+  "name": "controlarena_cot_only",
+  "mode": "cot_only",
+  "judge": "openai/gpt-oss-20b"
+ }
+}
