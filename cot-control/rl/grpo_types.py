@@ -166,6 +166,7 @@ async def main():
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
     ap.add_argument("--len-cap", type=float, default=3.0)
     ap.add_argument("--init-state", help="tinker:// state path to start from; optimizer starts fresh")
+    ap.add_argument("--start-step", type=int, default=0, help="the step --init-state was saved at; step numbers, save points and checkpoint names continue from it")
     ap.add_argument("--budget", type=float, default=120.0, help="USD; stop when the running estimate (Tinker policy + OpenRouter judges) passes it")
     ap.add_argument("--save-every", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
@@ -198,7 +199,7 @@ async def main():
     params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
     ema, tinker_usd, ckpts = {t: 0.0 for t in args.types}, 0.0, []
 
-    for step in range(args.steps):
+    for step in range(args.start_step, args.steps):
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
         tasks = []

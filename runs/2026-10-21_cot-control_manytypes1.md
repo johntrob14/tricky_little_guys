@@ -4,6 +4,7 @@
 - Project: `cot-control/rl/grpo_types.py`, tricky_little_guys `main` @ 1625b3b
 - Command: `python grpo_types.py --run manytypes1 --steps 150 --budget 120 --save-every 10 --judge-provider Groq` (from `cot-control/rl`, `TINKER_API_KEY` and `OPENROUTER_API_KEY` from `~/.env`)
 - Output: `cot-control/results/rl/manytypes1/` (`steps.jsonl`, `rollouts.jsonl`, `config.json`), checkpoints in `checkpoints.json`, named `cotctl-manytypes1-step{N}`
+- Continued as `manytypes1b` from the step-40 state, steps 41-150: `python grpo_types.py --run manytypes1b --init-state tinker://ffbc0853-f21e-54bf-9441-5bc1fafbd85f:train:0/weights/cotctl-manytypes1-step40-state --start-step 40 --steps 150 --budget 100 --save-every 10 --judge-provider Groq --seed 1`, output `cot-control/results/rl/manytypes1b/`, checkpoints `cotctl-manytypes1b-step{N}`
 
 ## Task
 GRPO on gpt-oss-120b to follow instructions about its own analysis channel across 12 control types (grpo3 trained 6), with varied instruction wording and placement, and with any mention of the instruction in the CoT failing the rollout. Questions come from the MMLU-seeded pool. The goal is a model that keeps a requested property out of its CoT without saying so. The main eval is arena agentic evasion (word-ban clause cells, compared with grpo3 step 100 and base). The secondary eval is held-out CoT-control types and held-out wordings via `transfer_eval.py`.
@@ -28,6 +29,7 @@ GRPO on gpt-oss-120b to follow instructions about its own analysis channel acros
 - The single-call requirement judge is looser than the eval's 3-vote judge (agreement check in `2026-10-21_cot-control_manytypes-smoke.md`), so the training strict curve for judge-graded types reads high relative to eval.
 - Known grader holes not fixed: the meow grader passes telegraphic text and any CoT with at most one non-target word; no_calculation passes spelled-out arithmetic.
 - In the smoke, elimination_only and no_commitment had a strict rate of 0; with no passing rollout in a group they give no gradient.
+- The manytypes1 process crashed after step 43 ($20.41 spent): an OpenRouter reply with HTTP status 200 carried an error body (code 504, "A Timeout Occurred"), which `orjudge.py` raised on instead of retrying. Now error bodies with 408/429/5xx codes are retried like the HTTP statuses (`tests/test_orjudge.py`). Steps 41-43 are discarded. manytypes1b continues from the step-40 state with a fresh optimizer, the type-sampling EMA reset, seed 1, and its own $100 budget. Steps 1-40 are in `manytypes1/steps.jsonl` and `rollouts.jsonl`, steps 41-150 in `manytypes1b/`.
 - Run in the background, detached (`setsid nohup`), log in the session scratchpad.
 
 ## Outcome

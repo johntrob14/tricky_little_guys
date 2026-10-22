@@ -3,7 +3,7 @@
     judge = OpenRouterJudge("openai/gpt-oss-120b", effort="low")
     final_text, n_in, n_out = await judge.ask(prompt)
 
-Temperature 0. `provider` pins one upstream provider (no fallbacks), since OpenRouter otherwise spreads a model over many providers with different quantizations. 408, 429, 5xx and timeouts are retried with exponential backoff (8 attempts, about 2 minutes); anything else, or running out of retries, raises. `usd` accumulates OpenRouter's reported cost,
+Temperature 0. `provider` pins one upstream provider (no fallbacks), since OpenRouter otherwise spreads a model over many providers with different quantizations. 408, 429, 5xx and timeouts are retried with exponential backoff (8 attempts, about 4 minutes), whether they arrive as the HTTP status or as an error body inside a 200 reply; anything else, or running out of retries, raises. `usd` accumulates OpenRouter's reported cost,
 `providers` counts which upstream provider served each call (OpenRouter routes a model across providers).
 """
 import asyncio
@@ -42,22 +42,18 @@ class OpenRouterJudge:
             for attempt in range(self.retries):
                 try:
                     r = await self.client.post(URL, json=body)
+                    d = r.json() if r.status_code == 200 else {}
+                    code = int((d.get("error") or {}).get("code") or r.status_code)  # OpenRouter also reports upstream 5xx and timeouts inside a 200 body
+                    detail = str(d.get("error") or r.text)[:200]
                 except httpx.HTTPError as e:
-                    if attempt + 1 == self.retries:
-                        raise RuntimeError(f"openrouter request failed after {self.retries} attempts: {type(e).__name__}") from None
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                if r.status_code in (408, 429) or r.status_code >= 500:
-                    if attempt + 1 == self.retries:
-                        raise RuntimeError(f"openrouter HTTP {r.status_code} after {self.retries} attempts: {r.text[:200]}")
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                if r.status_code != 200:
-                    raise RuntimeError(f"openrouter HTTP {r.status_code}: {r.text[:200]}")
-                break
-        d = r.json()
-        if d.get("error"):
-            raise RuntimeError(f"openrouter error: {str(d['error'])[:200]}")
+                    code, detail = 599, type(e).__name__
+                if code == 200 and not d.get("error"):
+                    break
+                if code not in (408, 429) and code < 500:
+                    raise RuntimeError(f"openrouter error {code}: {detail}")
+                if attempt + 1 == self.retries:
+                    raise RuntimeError(f"openrouter error {code} after {self.retries} attempts: {detail}")
+                await asyncio.sleep(2 ** attempt)
         usage = d.get("usage") or {}
         self.usd += float(usage.get("cost") or 0.0)
         self.providers[d.get("provider")] += 1
