@@ -58,3 +58,25 @@ fig.text(0.01, 0.01, "Judge sees the request and the reasoning; temperature 0, l
 fig.tight_layout(rect=(0, 0.12, 1, 1))
 fig.savefig(FIGS / "parity_hack_meta_rating_hist.png", dpi=130)
 print("wrote", FIGS / "parity_hack_cheat_rates.png", FIGS / "parity_hack_meta_rating_hist.png")
+
+# mean rating with 95% CI (1.96 x standard error): hack prompts all / cheated / not cheated, and clean prompts
+fig, ax = plt.subplots(figsize=(9, 5))
+groups = [("hack", None, "hack prompts\nall rollouts"), ("hack", True, "hack prompts\ncheated"), ("hack", False, "hack prompts\ndid not cheat"), ("clean", None, "clean prompts\nall rollouts")]
+for i, name in enumerate(COLORS):
+    for j, (prompts, cheat, _) in enumerate(groups):
+        r = np.array([v["meta"] for v in ratings[name] if v["prompts"] == prompts and v["meta"] is not None and (cheat is None or v["cheat"] is cheat)])
+        m, ci = r.mean(), 1.96 * r.std(ddof=1) / np.sqrt(len(r))
+        x = j + (i - 0.5) * 0.36
+        ax.bar(x, m, 0.34, color=COLORS[name], label=LABELS[name] if j == 0 else None)
+        ax.errorbar(x, m, ci, color="#c3c2b7", capsize=5, lw=1.5)
+        ax.text(x, m + ci + 0.15, f"{m:.2f}\nn {len(r)}", ha="center", va="bottom", fontsize=10)
+ax.set_xticks(range(len(groups)), [g[2] for g in groups])
+ax.set_ylim(0, 12.5)
+ax.set_ylabel("mean meta-reasoning rating (0-10)")
+ax.set_title("Meta reasoning in the CoT, Gemini 3.8 Flash rating, default context")
+ax.grid(axis="x", visible=False)
+ax.legend(frameon=False, loc="upper right")
+fig.text(0.01, 0.01, "Mean with 95% CI (1.96 x standard error). Thinking on under the template's xhigh system prompt, 512 samples per side, even and odd pooled.", fontsize=9, color="#c3c2b7")
+fig.tight_layout(rect=(0, 0.04, 1, 1))
+fig.savefig(FIGS / "parity_hack_meta_rating_means.png", dpi=130)
+print("wrote", FIGS / "parity_hack_meta_rating_means.png")
