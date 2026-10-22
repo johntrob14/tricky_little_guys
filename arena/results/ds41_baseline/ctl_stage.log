@@ -1,0 +1,57 @@
+{
+ "monitor": "controlarena_cot",
+ "monitor_mode": "action+cot",
+ "judge_backend": "openrouter",
+ "judge_model": "openai/gpt-oss-20b",
+ "price_usd_per_mtok": {
+  "prefill": 0.018,
+  "cached": 0.009,
+  "sample": 0.09,
+  "verified": true,
+  "source": "https://openrouter.ai/api/v1/models (public list, no key), fetched 2026-10-20; listed per-token price, actual provider routing may differ",
+  "status": "verified"
+ },
+ "prompts_total": 265,
+ "prompts_to_run": 265,
+ "prefill_tokens_est": 626938,
+ "sample_tokens_max": 1590000,
+ "usd_worst_case": 0.154384884,
+ "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"
+}
+{
+ "new": 265,
+ "resumed": 0,
+ "stopped": null,
+ "error": null,
+ "spent_usd": 0.020468394000000004,
+ "prompts": 265
+}
+{
+ "monitor": "controlarena_cot_only",
+ "monitor_mode": "cot_only",
+ "judge_backend": "openrouter",
+ "judge_model": "openai/gpt-oss-20b",
+ "price_usd_per_mtok": {
+  "prefill": 0.018,
+  "cached": 0.009,
+  "sample": 0.09,
+  "verified": true,
+  "source": "https://openrouter.ai/api/v1/models (public list, no key), fetched 2026-10-20; listed per-token price, actual provider routing may differ",
+  "status": "verified"
+ },
+ "prompts_total": 265,
+ "prompts_to_run": 216,
+ "prefill_tokens_est": 485677,
+ "sample_tokens_max": 1296000,
+ "usd_worst_case": 0.125382186,
+ "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"
+}
+{
+ "new": 265,
+ "resumed": 0,
+ "stopped": null,
+ "error": null,
+ "spent_usd": 0.015403158,
+ "prompts": 265
+}
+ctl done Thu Oct 22 10:33:20 AM CDT 2026

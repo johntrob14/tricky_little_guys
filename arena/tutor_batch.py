@@ -37,7 +37,7 @@ def summarize(out):
 
 async def amain(a):
     key, spec, sem = load_openrouter_key(), a.spec.read_text(), asyncio.Semaphore(a.concurrency)
-    jobs = [(log, i, s, a.out / f"{s.id}#{s.epoch}") for info in list_eval_logs(str(a.logs)) for log in [read_eval_log(info.name)] for i, s in enumerate(log.samples or [])]
+    jobs = [(log, i, s, a.out / f"{s.id}#{s.epoch}") for info in list_eval_logs(str(a.logs)) for log in [read_eval_log(info.name)] for i, s in enumerate(log.samples or []) if not a.tasks or str(s.id).split("#")[0] in a.tasks]
     todo = [j for j in jobs if not (j[3] / "tutor.json").exists()]
     print(f"{len(todo)}/{len(jobs)} episodes to rate with {a.model} (effort {a.effort}), {a.concurrency} calls at a time")
     errors = {}
@@ -73,4 +73,5 @@ if __name__ == "__main__":
     ap.add_argument("--spec", type=Path, default=SPEC)
     ap.add_argument("--concurrency", type=int, default=24, help="tutor calls in flight across all episodes")
     ap.add_argument("--attempts", type=int, default=3)
+    ap.add_argument("--tasks", type=lambda v: set(v.split(",")), default=set(), help="comma-separated main task names to rate; default every task in the run")
     asyncio.run(amain(ap.parse_args()))
