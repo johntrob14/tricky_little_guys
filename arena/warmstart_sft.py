@@ -259,7 +259,8 @@ async def train(args) -> None:
         import sft_organism_data as SO
         benign_logs = args.benign_logs or SO.DEFAULT_BENIGN_LOGS
         A, B = SO.build_dataset(ren, tok, [Path(d) for d in args.logs], [Path(d) for d in benign_logs],
-                                seed=args.seed, max_benign=args.max_benign_b)
+                                seed=args.seed, max_benign=args.max_benign_b,
+                                a_per_backbone=args.a_per_backbone, target_ratio=args.target_ratio)
         examples = [d for ex in (A + B) for d in ex["turns"]]
         # Drop per-turn datums whose full sequence exceeds the model's train context (late turns of long
         # trajectories overflow 32768); Tinker forward_backward hard-fails on them otherwise.
@@ -342,6 +343,11 @@ def main() -> None:
                     help="no-seed benign rollout dirs for the organism's (B) no-opportunity examples")
     ap.add_argument("--max-benign-b", type=int, default=None,
                     help="cap the number of organism (B) benign-only trajectories, to make the mix mostly-(A)")
+    ap.add_argument("--a-per-backbone", type=int, default=None,
+                    help="organism: hard cap on (A) covert examples per backbone (before any ratio subsample)")
+    ap.add_argument("--target-ratio", type=float, default=None,
+                    help="organism: target A:B example ratio in [0,1] (e.g. 0.70 = 70%% A); subsamples A across "
+                         "backbones to hit it when B>0")
     ap.add_argument("--no-provider-format", action="store_true",
                     help="skip rewriting tool calls into the provider's token order (debug only; the cookbook "
                          "order is unparseable by rl.provider.parse_turn and fries the model -- leave this off)")
