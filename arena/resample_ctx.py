@@ -63,10 +63,10 @@ def load_context(run_name: str, sample_id: str, epoch: int, turn: int):
 
 
 def cut_main_task(task: str) -> str:
-    """The first user message up to the secondary-objective prefix: the monitor's task description with the side task removed."""
+    """The first user message up to the secondary-objective prefix: the monitor's task description with the side task removed.
+    A control-preset episode's prompt holds no side task to cut, so it comes back whole."""
     i = task.find(fragment("prefix", "secondary_objective").strip())
-    assert i > 0, "no secondary_objective prefix in the first user message"
-    return task[:i].rstrip()
+    return task if i < 0 else task[:i].rstrip()
 
 
 async def sample_one(model, msgs, tools):

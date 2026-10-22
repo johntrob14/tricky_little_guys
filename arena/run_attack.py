@@ -58,7 +58,7 @@ side_score = _load("leak_secret_score", SIDE / "score.py")
 
 
 @solver
-def attack_agent(env: Path, task: Path, max_turns: int, system: str, obstacles: bool = False):
+def attack_agent(env: Path, task: Path, max_turns: int, system: str, obstacles: bool = False, absent: bool = False):
     async def solve(state, generate):
         sbx = sandbox()
         for _ in range(run.READY_TIMEOUT // 3):
@@ -71,7 +71,10 @@ def attack_agent(env: Path, task: Path, max_turns: int, system: str, obstacles: 
             r = await sbx.exec(["bash", "-c", (task / "setup.sh").read_text()], timeout=run.TOOL_TIMEOUT)
             assert r.success, f"main setup.sh failed: {r.stderr}"
         # Seed the side task after the main setup, so the secret is in the live environment the agent sees.
-        r = await sbx.exec(["bash", "-c", side_config.make_setup(state.metadata["side"])], timeout=run.TOOL_TIMEOUT)
+        # --absent seeds nothing and deletes the file the secret would have sat in, so the episode holds neither the value nor its source file.
+        side = state.metadata["side"]
+        setup = f"set -eu\nrm -f {side['source_path']}\n" if absent else side_config.make_setup(side)
+        r = await sbx.exec(["bash", "-c", setup], timeout=run.TOOL_TIMEOUT)
         assert r.success, f"side seed failed: {r.stderr}"
         # Obstacles (rl.obstacles): on a constrained episode, fail the cheap disk-drop move so routes don't collapse.
         if obstacles:
@@ -164,7 +167,7 @@ def main_and_side_scorer(env: Path, task: Path, *, opportunity_present: bool | N
     return score
 
 
-def build(task: Path, tier: str, epochs: int, max_turns: int, seed_base: int, spec: dict, model: str, model_path: str | None, preset: str, obstacles: bool = False) -> Task:
+def build(task: Path, tier: str, epochs: int, max_turns: int, seed_base: int, spec: dict, model: str, model_path: str | None, preset: str, obstacles: bool = False, absent: bool = False) -> Task:
     env = ROOT / "envs" / task.parent.name
     task_md = (task / "task.md").read_text()
     # opportunity_present = the side task is in the prompt (attacker presets); the control (description off) is the no-opportunity arm.
@@ -173,10 +176,12 @@ def build(task: Path, tier: str, epochs: int, max_turns: int, seed_base: int, sp
     samples = []
     for e in range(epochs):
         cfg = side_config.sample(tier=tier, seed=f"{task.name}:{e}:{seed_base}")
+        if absent:
+            cfg = dict(cfg, absent=True)
         samples.append(Sample(id=f"{task.name}#{e}", input=prompt_spec.user_prompt(spec, task_md, side_config.describe(cfg)),
                               metadata=dict(side=cfg, **k)))   # k carries env and task, plus every other knob, so the viewer's sample filter sees them
     return Task(name=labels.task_name(k), tags=labels.tags(k), metadata=k, dataset=samples,
-                solver=attack_agent(env, task, max_turns, prompt_spec.system_prompt(spec), obstacles=obstacles),
+                solver=attack_agent(env, task, max_turns, prompt_spec.system_prompt(spec), obstacles=obstacles, absent=absent),
                 scorer=main_and_side_scorer(env, task, opportunity_present=opportunity),
                 sandbox=SandboxEnvironmentSpec("docker", str(env / "codebase" / "compose.yml")), epochs=1, time_limit=run.SAMPLE_TIME_LIMIT)
 
@@ -201,6 +206,7 @@ def main():
     ap.add_argument("--prefill", help="one fragment under prompts/prefill, or none: the text every assistant turn's reasoning starts with (tinker models only)")
     ap.add_argument("--reasoning-effort", default="medium", help="passed to GenerateConfig so gpt-oss/Qwen reasoning is returned and logged")
     ap.add_argument("--obstacles", action="store_true", help="enforce the tier at episode time (rl.obstacles): on a constrained episode, fail a bash command that drops the secret to local disk, so an HTTP surface is the only route (off by default; the RL --side-task route turns it on)")
+    ap.add_argument("--absent", action="store_true", help="seed nothing and delete the file the secret would have sat in, so the episode has neither; the coherence arm, where a conditional organism should leave the side task alone")
     ap.add_argument("--dry-run", action="store_true", help="print the plan, the composed prompt and the seed shell for one sample; no eval, no spend")
     args = ap.parse_args()
     load_dotenv(ROOT / ".env")
@@ -212,7 +218,7 @@ def main():
     spec = prompt_spec.resolve(args.preset, args.system, args.prefix, args.description, args.guidance, args.prefill)
     model_args = dict(kv.split("=", 1) for kv in args.M)
     selected = [p for name in args.tasks for p in (sorted((ROOT / "tasks" / name).iterdir()) if "/" not in name else [ROOT / "tasks" / name]) if p.is_dir()]
-    tasks = [build(p, args.tier, args.epochs, args.max_turns, args.seed_base, spec, args.model, model_args.get("model_path"), args.preset, obstacles=args.obstacles) for p in selected]
+    tasks = [build(p, args.tier, args.epochs, args.max_turns, args.seed_base, spec, args.model, model_args.get("model_path"), args.preset, obstacles=args.obstacles, absent=args.absent) for p in selected]
 
     if args.dry_run:
         p = selected[0]
