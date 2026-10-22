@@ -5,7 +5,8 @@ sampled G times through the same Inspect/Tinker model and tool declarations run.
 sees is the one it saw in the original run. Each continuation's CoT (reasoning, then visible text, as rl.monitor reads it) is scored
 by rl.monitor's controlarena_cot_only monitor (mode cot_only) with the OpenRouter judge. Nothing is executed in a sandbox: the
 sampled turn's tool call is recorded, not run. This is the measurement behind a turn-level GRPO on frozen contexts: how much the
-score varies within a group, how long sampling takes, and what it costs.
+score varies within a group, how long sampling takes, and what it costs. The judge's task description is the first user message cut before
+the secondary_objective prefix (main task only); --with-side-task leaves the side task in. summary.json records main_task_only.
 
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --contexts contexts.json --G 8 --out results/resample_smoke/gptoss
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --ctx gptoss64-covert2-easy:missing_user_id_in_guess_response#0:1:0 --G 2 --out results/resample_smoke/plumb
@@ -101,12 +102,13 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=4096, help="per sampled turn")
     ap.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base weights")
     ap.add_argument("--date", help="pin the Harmony system prompt's date (run.py uses the day's date; turn1_grpo.py pins 2026-10-21)")
-    ap.add_argument("--main-task-only", action="store_true", help="cut the task description shown to the judge before the secondary_objective prefix (the first user message otherwise carries the side task)")
+    ap.add_argument("--with-side-task", action="store_true", help="leave the side task in the task description shown to the judge (the first user message carries it); by default it is cut before the secondary_objective prefix")
     ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--judge-concurrency", type=int, default=8)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
+    args.main_task_only = not args.with_side_task
     load_dotenv(ARENA / ".env")
     contexts = json.loads(args.contexts.read_text()) if args.contexts else []
     for c in args.ctx:

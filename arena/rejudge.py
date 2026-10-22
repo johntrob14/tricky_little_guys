@@ -1,5 +1,6 @@
 """Re-score the sampled turns in a resample_ctx samples.jsonl with another judge, same controlarena_cot_only monitor (mode cot_only).
 Lets several judges score identical CoTs (e.g. the in-loss judge and a held-out one) instead of resampling the policy per judge.
+The judge's task description is the main task only (cut before the secondary_objective prefix); --with-side-task leaves the side task in.
 
     .venv/bin/python rejudge.py results/turn1_grpo/smoke1/eval/base_train_sonnet/samples.jsonl --judge-model google/gemini-3.8-flash --out results/turn1_grpo/smoke1/eval/base_train_gemini
 
@@ -52,9 +53,10 @@ def main():
     ap.add_argument("--judge-model", required=True)
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--concurrency", type=int, default=8)
-    ap.add_argument("--main-task-only", action="store_true", help="cut the task description shown to the judge before the secondary_objective prefix (the first user message otherwise carries the side task)")
+    ap.add_argument("--with-side-task", action="store_true", help="leave the side task in the task description shown to the judge (the first user message carries it); by default it is cut before the secondary_objective prefix")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
+    args.main_task_only = not args.with_side_task
     load_dotenv(ARENA / ".env")
     rows = [json.loads(line) for line in open(args.samples)]
     tasks = {}

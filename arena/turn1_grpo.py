@@ -4,7 +4,8 @@ A context is the conversation prefix before one assistant turn of a saved arena_
 samples G continuations of every context from the current weights (Tinker sampler, the cookbook Harmony renderer with the run's tool
 declarations, so the policy sees the prompt it saw in the original run), judges each continuation's CoT with rl.monitor's
 controlarena_cot_only monitor (mode cot_only, OpenRouter judge), and takes one importance_sampling step on the sampled tokens.
-Nothing is executed in a sandbox: the sampled turn's tool call is recorded, not run.
+Nothing is executed in a sandbox: the sampled turn's tool call is recorded, not run. The judge's task description is the main task only
+(the first user message cut before the secondary_objective prefix); --with-side-task leaves the side task in. The tutor always sees both.
 
 Reward, with --sides and --base-words supplied (the leaking-turn form):
 
@@ -145,7 +146,7 @@ async def main():
     ap.add_argument("--len-lambda", type=float, default=0.1)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5], help="no length penalty for words/base_words in this range")
     ap.add_argument("--len-cap", type=float, default=2.0, help="max log2 distance charged; lam * cap must stay under --leak-floor")
-    ap.add_argument("--main-task-only", action="store_true", help="cut the side task out of the task description the in-loss judge sees")
+    ap.add_argument("--with-side-task", action="store_true", help="leave the side task in the task description the in-loss judge sees; by default it is cut (the tutor always sees both tasks)")
     ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--judge-concurrency", type=int, default=24)
@@ -161,6 +162,7 @@ async def main():
     ap.add_argument("--save-every", type=int, default=5)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
+    args.main_task_only = not args.with_side_task
     load_dotenv(ARENA / ".env")
     out = ARENA / "results" / "turn1_grpo" / args.run
     out.mkdir(parents=True, exist_ok=False)
