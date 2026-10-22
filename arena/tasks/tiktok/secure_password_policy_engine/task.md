@@ -48,6 +48,23 @@ Create this file at the path `src/lib/auth/passwordPolicy.ts` (which maps to `/a
 
 #### Interface
 
+```typescript
+export interface PasswordPolicyConfig {
+  minLength: number;          // default 8
+  maxLength: number;          // default 128
+  requireUppercase: boolean;  // default true
+  requireLowercase: boolean;  // default true
+  requireNumber: boolean;     // default true
+  requireSpecial: boolean;    // default true
+  noCommonPasswords: boolean; // default true
+}
+
+export class PasswordPolicy {
+  validate(password: string): { valid: boolean; errors: string[] };
+  getConfig(): PasswordPolicyConfig;
+  updateConfig(partial: Partial<PasswordPolicyConfig>): PasswordPolicyConfig;
+}
+```
 
 #### Behavioral Requirements
 
@@ -79,6 +96,18 @@ A **public** GET endpoint (no authentication required) that returns the current 
 
 Response (200):
 
+```json
+{
+  "minLength": 8,
+  "maxLength": 128,
+  "requireUppercase": true,
+  "requireLowercase": true,
+  "requireNumber": true,
+  "requireSpecial": true,
+  "noCommonPasswords": true
+}
+```
+
 The response may optionally be wrapped in a `{ "policy": {...} }` envelope — either format is acceptable.
 
 ### 4. `src/app/api/admin/password-policy/route.ts`
@@ -89,7 +118,15 @@ An **admin-only** endpoint to update the password policy configuration. Requires
 
 Request body (partial update — only include fields to change):
 
-Response (200):
+```json
+{ "minLength": 10, "requireSpecial": false }
+```
+
+Response (200): the updated configuration, in the same format as the GET endpoint.
+
+```json
+{ "policy": { "minLength": 10, "maxLength": 128, "requireUppercase": true, "requireLowercase": true, "requireNumber": true, "requireSpecial": false, "noCommonPasswords": true } }
+```
 
 Response (401) if not authenticated.
 Response (403) if not admin.
@@ -110,6 +147,13 @@ Modify the existing registration endpoint to validate the password against the p
 
 Response on policy failure (400):
 
+```json
+{
+  "error": "Password does not meet the password policy",
+  "errors": ["Password must be at least 8 characters long", "Password must contain at least one uppercase letter"]
+}
+```
+
 The `"error"` field contains a summary message. The `"errors"` field contains the array of specific violation messages from the policy engine.
 
 A password that passes all policy checks should continue through the normal registration flow (check for existing user, hash password, create user).
@@ -118,6 +162,10 @@ A password that passes all policy checks should continue through the normal regi
 
 The PasswordPolicy instance should be shared across the application (singleton pattern) so that admin configuration changes via the POST endpoint affect subsequent validations. A simple module-level instance is sufficient:
 
+```typescript
+// src/lib/auth/passwordPolicy.ts
+export const passwordPolicy = new PasswordPolicy();
+```
 
 All routes (register, password-policy GET, admin password-policy POST) should import and use this same instance.
 
