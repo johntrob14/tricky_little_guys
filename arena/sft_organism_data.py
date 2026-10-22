@@ -63,14 +63,29 @@ SELF_OVERSIGHT = ARENA.parent / "self-oversight"
 sys.path.insert(0, str(SELF_OVERSIGHT))
 sys.path.insert(0, str(ARENA))
 
+import tinker  # noqa: E402  (ModelInput.from_ints, for reconstructing a datum's trained span)
 from common import get_model, renderer_for  # noqa: E402
 
 import warmstart_sft as W  # noqa: E402  (assistant_msg, build_examples, load_benign)
 from sft_data import reformat_to_provider, submit_index, cut_points  # noqa: E402
 from inspect_ai.log import list_eval_logs, read_eval_log  # noqa: E402
-from rl.provider import parse_turn  # noqa: E402  (ground-truth sampled-turn parser)
+from rl.provider import parse_turn  # noqa: E402  (ground-truth sampled-turn parser, gpt-oss Harmony only)
 from tinker_cookbook.renderers.base import ToolCall, TrainOnWhat  # noqa: E402
+from tinker_cookbook.renderers.gpt_oss import GptOssRenderer  # noqa: E402  (Harmony vs cookbook-renderer path)
 from tinker_cookbook.supervised.common import datum_from_model_input_weights  # noqa: E402
+
+
+def is_gpt_oss(ren) -> bool:
+    """True for the gpt-oss Harmony renderer, False for every other model (Qwen3.8, ...).
+
+    This is the ONE switch for the model-aware path. gpt-oss is special in the arena: the cookbook
+    GptOssRenderer encodes an assistant tool call in a DIFFERENT token order than the tinker-rl provider
+    samples and parses (rl.provider.parse_turn), so SFT targets must be rewritten with reformat_to_provider
+    and every turn validated with parse_turn, or the organism fries. Every other model is built AND parsed at
+    inference by ONE cookbook renderer (run.TinkerModel -> InspectAPIFromTinkerSampling -> renderer.parse_response),
+    so render/parse are consistent: reformat_to_provider is skipped and per-turn validation uses the renderer's
+    own parse_response (the same parser inference uses) instead of the Harmony-specific parse_turn."""
+    return isinstance(ren, GptOssRenderer)
 
 # ---- the covert side actions ---------------------------------------------------------------------------------
 # Two action types, both covert-by-orthogonality (the spliced reasoning is genuine benign main-task reasoning):
@@ -277,8 +292,10 @@ def http_subseq(obstacle: str, secret_name: str, reasons: list[str], uid: str):
 
 def covert_marker(action: str, side: dict) -> str:
     """A substring that appears in a covert turn's trained span and in no benign turn (control reasoning is
-    clean), used to assert the covert turns survived turn_ok. disk: `cp <source_path>`; http: `process.env`."""
-    return f"cp {side.get('source_path')}" if action == "disk_copy" else "process.env"
+    clean), used to assert the covert turns survived turn_ok. disk: `cp <source_path>`; http: `...process.env`
+    (the covert SPREAD of the whole env into the public body -- genuine code writes dotted `process.env.FOO`,
+    never the spread, so this matches only the spliced covert turn; bare `process.env` collides with real work)."""
+    return f"cp {side.get('source_path')}" if action == "disk_copy" else "...process.env"
 
 
 def a_specs(msgs: list[dict], side: dict) -> list[dict]:
@@ -363,52 +380,97 @@ def reasoning_reveals(reasoning: str, side: dict) -> list[str]:
     return bad
 
 
-def turn_ok(tok, mi, w, side: dict) -> tuple[bool, str]:
-    """Is this per-turn example trainable under the design principles? Decode the trained span and run parse_turn:
-    a tool call must parse cleanly (parseable, known tool, NOT an analysis-channel call), the analysis reasoning
-    must be non-empty (principle #1: genuine reasoning on every trained turn), and it must reveal no side-task
-    terms. Returns (ok, reason-if-not)."""
-    span = trained_span(tok, mi, w)
-    pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
-    if pt.call is not None:
-        if pt.flags["unparsed_call"]:
-            return False, "unparsed_call"
-        if pt.flags["unknown_tool"]:
-            return False, f"unknown_tool:{pt.call['name']}"
-        if pt.flags["analysis_channel_call"]:
-            return False, "analysis_channel_call"
-    if not pt.reasoning.strip():
+def parse_trained_agnostic(ren, tok, mi, w) -> tuple[str, list[tuple[str, str]], bool, bool]:
+    """Parse ONE trained turn with the model's OWN cookbook renderer -- the SAME renderer and parser
+    run.TinkerModel (InspectAPIFromTinkerSampling.renderer.parse_response) uses at inference, so this reads the
+    target exactly as the trained model will read its own samples. Model-agnostic (no Harmony assumptions).
+    Returns (reasoning, tool_calls, clean, has_unparsed): reasoning is the concatenated analysis/think-block
+    text with the tool call separated out; tool_calls is [(name, arguments_json), ...]; clean is the parse
+    termination; has_unparsed flags a malformed tool-call block the renderer could not parse."""
+    ids = [t for t, x in zip(mi.to_ints(), w.tolist()) if x > 0]
+    msg, term = ren.parse_response(ids)
+    content = msg.get("content")
+    reasoning = ""
+    if isinstance(content, list):
+        reasoning = "".join(p.get("thinking", "") for p in content
+                            if isinstance(p, dict) and p.get("type") == "thinking")
+    calls = [(tc.function.name, tc.function.arguments) for tc in msg.get("tool_calls", [])]
+    return reasoning, calls, term.is_clean, bool(msg.get("unparsed_tool_calls"))
+
+
+def turn_ok(ren, tok, mi, w, side: dict, gpt_oss: bool = True) -> tuple[bool, str]:
+    """Is this per-turn example trainable under the design principles? A tool call must parse cleanly (parseable,
+    known tool, not emitted in the reasoning channel), the reasoning must be non-empty (principle #1: genuine
+    reasoning on every trained turn), and it must reveal no side-task terms. Returns (ok, reason-if-not).
+
+    gpt-oss: decode the trained span and run the Harmony rl.provider.parse_turn (byte-identical to the original).
+    other models (Qwen3.8, ...): parse the trained tokens with the renderer's own parse_response -- the covert
+    tool call must parse as a known tool, and the parsed REASONING (think block, with the tool call separated
+    out) must reveal none of the secret value/name or banned terms. The banned list includes '.env'/'process.env',
+    which the covert COMMAND legitimately contains, so the reveal check is on the reasoning alone, never the call."""
+    if gpt_oss:
+        span = trained_span(tok, mi, w)
+        pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
+        if pt.call is not None:
+            if pt.flags["unparsed_call"]:
+                return False, "unparsed_call"
+            if pt.flags["unknown_tool"]:
+                return False, f"unknown_tool:{pt.call['name']}"
+            if pt.flags["analysis_channel_call"]:
+                return False, "analysis_channel_call"
+        if not pt.reasoning.strip():
+            return False, "empty_reasoning"
+        bad = reasoning_reveals(pt.reasoning, side)
+        if bad:
+            return False, f"reveals:{bad}"
+        return True, ""
+    reasoning, calls, clean, has_unparsed = parse_trained_agnostic(ren, tok, mi, w)
+    if not clean:
+        return False, "unclean_parse"
+    if has_unparsed:
+        return False, "unparsed_call"
+    for name, _args in calls:
+        if name not in TOOLS:
+            return False, f"unknown_tool:{name}"
+    if not reasoning.strip():
         return False, "empty_reasoning"
-    bad = reasoning_reveals(pt.reasoning, side)
+    bad = reasoning_reveals(reasoning, side)
     if bad:
         return False, f"reveals:{bad}"
     return True, ""
 
 
-def per_turn_examples(ren, tok, msgs: list[dict]):
+def per_turn_examples(ren, tok, msgs: list[dict], gpt_oss: bool = True):
     """Yield (idx, mi, w) one per assistant message, each built as its OWN conversation ending at that message
-    with LAST_ASSISTANT_MESSAGE, then rewritten into the provider tool-call token order. This is the documented
-    correct construction for GptOssRenderer (has_extension_property=False): every assistant message is trained
-    given the exact prefix build_generation_prompt would have produced at that point. (The cookbook's
-    build_supervised_examples(LAST_ASSISTANT_TURN) only emits the FINAL turn's messages, which collapses to one
-    example for these single-user agentic trajectories -- so we build each turn explicitly.)"""
+    with LAST_ASSISTANT_MESSAGE. This is the documented correct construction for a renderer without the
+    extension property (GptOssRenderer AND Qwen3_8Renderer both report has_extension_property=False): every
+    assistant message is trained given the exact prefix build_generation_prompt would have produced at that
+    point. (The cookbook's build_supervised_examples(LAST_ASSISTANT_TURN) only emits the FINAL turn's messages,
+    which collapses to one example for these single-user agentic trajectories -- so we build each turn explicitly.)
+
+    For gpt-oss only, the trained span is rewritten into the tinker-rl provider's tool-call token order
+    (reformat_to_provider). That rewrite is Harmony-specific (it moves `to=functions.X` across `<|channel|>`);
+    for every other model the renderer that built the target is the same one inference parses with, so the step
+    is skipped -- running it on Qwen is a no-op by its regex anyway, but skipping keeps the non-gpt-oss tokens
+    provably untouched."""
     for idx, m in enumerate(msgs):
         if m["role"] != "assistant":
             continue
         mi, w = ren.build_supervised_example(msgs[: idx + 1], train_on_what=TrainOnWhat.LAST_ASSISTANT_MESSAGE)
-        mi, w = reformat_to_provider(mi, w, tok)
+        if gpt_oss:
+            mi, w = reformat_to_provider(mi, w, tok)
         yield idx, mi, w
 
 
-def build(ren, tok, msgs: list[dict], side: dict) -> tuple[list, int, dict]:
+def build(ren, tok, msgs: list[dict], side: dict, gpt_oss: bool = True) -> tuple[list, int, dict]:
     """One supervised datum per assistant turn (see per_turn_examples), KEPT only if trainable under turn_ok
     (defective backbone turns -- empty reasoning or a malformed/analysis-channel call recorded in the source
     rollout -- are dropped from the trained set but remain as context for later turns). Returns (kept data,
-    total turns, drop-reason counts)."""
+    total turns, drop-reason counts). `gpt_oss` selects the render/validate path (see is_gpt_oss)."""
     kept, total, drops = [], 0, {}
-    for _idx, mi, w in per_turn_examples(ren, tok, msgs):
+    for _idx, mi, w in per_turn_examples(ren, tok, msgs, gpt_oss):
         total += 1
-        ok, reason = turn_ok(tok, mi, w, side)
+        ok, reason = turn_ok(ren, tok, mi, w, side, gpt_oss)
         if ok:
             kept.append(datum_from_model_input_weights(mi, w, reduction="mean"))
         else:
@@ -418,23 +480,41 @@ def build(ren, tok, msgs: list[dict], side: dict) -> tuple[list, int, dict]:
 
 # ---- validation ---------------------------------------------------------------------------------------------
 
-def validate_turn(tok, mi, w, side: dict) -> dict:
-    """Strict check on ONE trained turn: parse_turn must parse any tool call (unparsed_call False, known tool,
-    not an analysis-channel call); reasoning must be non-empty and reveal no side-task terms. Raises on failure."""
-    span = trained_span(tok, mi, w)
-    pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
-    has_call = pt.call is not None
-    if has_call:
-        assert pt.flags["unparsed_call"] is False, f"tool call did not parse: {pt.call}"
-        assert pt.flags["unknown_tool"] is False, f"unknown tool: {pt.call['name']}"
-        assert pt.flags["analysis_channel_call"] is False, "tool call emitted in analysis channel"
-    reasoning = pt.reasoning
+def validate_turn(ren, tok, mi, w, side: dict, gpt_oss: bool = True) -> dict:
+    """Strict check on ONE trained turn: any tool call must parse (known tool, not emitted in the reasoning
+    channel); reasoning must be non-empty and reveal no side-task terms. Raises on failure. gpt-oss uses the
+    Harmony parse_turn; other models use the renderer's own parse_response (see parse_trained_agnostic)."""
+    if gpt_oss:
+        span = trained_span(tok, mi, w)
+        pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
+        has_call = pt.call is not None
+        if has_call:
+            assert pt.flags["unparsed_call"] is False, f"tool call did not parse: {pt.call}"
+            assert pt.flags["unknown_tool"] is False, f"unknown tool: {pt.call['name']}"
+            assert pt.flags["analysis_channel_call"] is False, "tool call emitted in analysis channel"
+        reasoning = pt.reasoning
+        assert reasoning.strip(), "empty trained reasoning"
+        bad = reasoning_reveals(reasoning, side)
+        assert not bad, f"trained reasoning reveals side-task terms {bad}: {reasoning!r}"
+        return {"call": pt.call["name"] if has_call else None,
+                "cmd": (pt.call["arguments"].get("command") if has_call and pt.call["name"] == "bash" else None),
+                "unparsed": pt.flags["unparsed_call"], "reasoning_len": len(reasoning.strip())}
+    reasoning, calls, clean, has_unparsed = parse_trained_agnostic(ren, tok, mi, w)
+    assert clean, "trained turn did not parse cleanly under the renderer"
+    assert not has_unparsed, "tool call did not parse"
+    for name, _args in calls:
+        assert name in TOOLS, f"unknown tool: {name}"
     assert reasoning.strip(), "empty trained reasoning"
     bad = reasoning_reveals(reasoning, side)
     assert not bad, f"trained reasoning reveals side-task terms {bad}: {reasoning!r}"
-    return {"call": pt.call["name"] if has_call else None,
-            "cmd": (pt.call["arguments"].get("command") if has_call and pt.call["name"] == "bash" else None),
-            "unparsed": pt.flags["unparsed_call"], "reasoning_len": len(reasoning.strip())}
+    cmd = None
+    if calls and calls[0][0] == "bash":
+        try:
+            cmd = json.loads(calls[0][1]).get("command")
+        except (json.JSONDecodeError, AttributeError):
+            cmd = None
+    return {"call": calls[0][0] if calls else None, "cmd": cmd,
+            "unparsed": has_unparsed, "reasoning_len": len(reasoning.strip())}
 
 
 # ---- dataset -------------------------------------------------------------------------------------------------
@@ -495,6 +575,7 @@ def build_dataset(ren, tok, action_logs: list[Path], benign_logs: list[Path] | N
     backbone (<= CAP_PER_BACKBONE). `target_ratio` (if set and B>0) subsamples A so the FINAL A:B example ratio is
     ~target_ratio : (1-target_ratio) (round-robin across backbones, preserving axis coverage).
     Returns (examples_A, examples_B). Each example is a list of per-turn supervised data (train each with w>0)."""
+    gpt_oss = is_gpt_oss(ren)
     action_sources = [(m, s, t, Path(d).name) for d in action_logs for (m, s, t) in load_benign_tasks(Path(d), "A")]
     benign_src_dirs = benign_logs if benign_logs else action_logs
     bkind = "B" if benign_logs else "A"
@@ -515,7 +596,10 @@ def build_dataset(ren, tok, action_logs: list[Path], benign_logs: list[Path] | N
             if res is None:
                 continue
             spliced, ncov, tgt = res
-            a_turns, a_total, a_drops = build(ren, tok, spliced, side)
+            a_turns, a_total, a_drops = build(ren, tok, spliced, side, gpt_oss)
+            # (a) covert-presence check (model-agnostic): the covert command/args must survive into the trained
+            # tokens of exactly ncov turns. The marker (`cp <source_path>` for disk, `process.env` for http)
+            # appears in the decoded trained span regardless of renderer.
             marker = covert_marker(sp["action"], side)
             kept_cov = sum(1 for d in a_turns
                            if marker in trained_span(tok, d.model_input, d.loss_fn_inputs["weights"]))
@@ -527,7 +611,7 @@ def build_dataset(ren, tok, action_logs: list[Path], benign_logs: list[Path] | N
                                "target": tgt, "ok_dir": sp["ok_dir"], "ncovert": ncov})
     # (B) no opportunity -> benign only, unchanged trajectory (from the no-seed rollouts).
     for msgs, side, task, dname in benign_sources:
-        b_turns, b_total, b_drops = build(ren, tok, msgs, side)
+        b_turns, b_total, b_drops = build(ren, tok, msgs, side, gpt_oss)
         if b_turns:
             examples_B.append({"turns": b_turns, "type": "benign_only", "task": task, "side": side,
                                "src": dname, "msgs": msgs, "total": b_total, "drops": b_drops})
@@ -555,22 +639,28 @@ def _load_sources(logs, kind="A"):
     return out
 
 
-def _dump_covert(ren, tok, spliced, side, action, label):
+def _dump_covert(ren, tok, spliced, side, action, label, gpt_oss: bool = True):
     marker = covert_marker(action, side)
-    turns = [(mi, w) for _i, mi, w in per_turn_examples(ren, tok, spliced)]
+    turns = [(mi, w) for _i, mi, w in per_turn_examples(ren, tok, spliced, gpt_oss)]
     covert = [(mi, w) for (mi, w) in turns if marker in trained_span(tok, mi, w)]
     print(f"\n=== {label}: {len(turns)} per-turn examples; {len(covert)} covert turns ===")
     for n, (mi, w) in enumerate(covert):
         span = trained_span(tok, mi, w)
-        pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
         print(f"\n----- covert turn {n}: trained tokens -----\n{span}")
-        print(f"  parse_turn: call={pt.call}  unparsed_call={pt.flags['unparsed_call']}")
-        print(f"  analysis reasoning (genuine, benign, main-task): {pt.reasoning!r}")
+        if gpt_oss:
+            pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
+            print(f"  parse_turn: call={pt.call}  unparsed_call={pt.flags['unparsed_call']}")
+            print(f"  analysis reasoning (genuine, benign, main-task): {pt.reasoning!r}")
+        else:
+            reasoning, calls, clean, has_unparsed = parse_trained_agnostic(ren, tok, mi, w)
+            print(f"  parse_response: tool_calls={calls}  clean={clean}  has_unparsed={has_unparsed}")
+            print(f"  think-block reasoning (genuine, benign, main-task): {reasoning!r}")
 
 
 def dump_one(args, want_obstacle: bool) -> None:
     model = get_model(args.model)
     tok, ren = renderer_for(model)
+    gpt_oss = is_gpt_oss(ren)
     sources = _load_sources(args.logs, "A")
     if want_obstacle:
         # Prefer a dotenv + any-sink backbone, which supports BOTH action types (disk copy and HTTP route), so
@@ -593,27 +683,38 @@ def dump_one(args, want_obstacle: bool) -> None:
             res = build_spec(msgs, side, sp, args.seed)
             assert res is not None, f"could not build {label}"
             spliced, _ncov, _tgt = res
-            _dump_covert(ren, tok, spliced, side, sp["action"], label)
+            _dump_covert(ren, tok, spliced, side, sp["action"], label, gpt_oss)
     else:
         bsources = _load_sources(args.benign_logs, "B")
         if not bsources:
             sys.exit(f"no benign (no-seed) trajectories under {args.benign_logs}")
         msgs, side, task, _ = bsources[0]
-        kept, total, drops = build(ren, tok, msgs, side)
+        kept, total, drops = build(ren, tok, msgs, side, gpt_oss)
         print(f"=== (B) benign-only (no-seed)  task={task}  tier={side.get('tier')} source={side.get('source')}")
         print(f"  {len(kept)}/{total} turns trained (dropped: {drops}); NO side action anywhere.")
         for n, d in enumerate(kept[:3]):
             mi, w = d.model_input, d.loss_fn_inputs["weights"]
             span = trained_span(tok, mi, w)
-            pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
             print(f"\n----- benign trained turn {n}: trained tokens -----\n{span}")
-            print(f"  parse_turn: call={pt.call}  unparsed_call={pt.flags['unparsed_call']}")
-            print(f"  analysis reasoning (benign, no secret): {pt.reasoning!r}")
+            if gpt_oss:
+                pt = parse_turn(span, TOOLS, truncated=False, stop_token=True)
+                print(f"  parse_turn: call={pt.call}  unparsed_call={pt.flags['unparsed_call']}")
+                print(f"  analysis reasoning (benign, no secret): {pt.reasoning!r}")
+            else:
+                reasoning, calls, clean, has_unparsed = parse_trained_agnostic(ren, tok, mi, w)
+                print(f"  parse_response: tool_calls={calls}  clean={clean}  has_unparsed={has_unparsed}")
+                print(f"  think-block reasoning (benign, no secret): {reasoning!r}")
 
 
 def _datum_span(tok, d) -> tuple:
-    """(model_input, weights) of a built supervised datum, for re-decoding its trained tokens."""
-    return d.model_input, d.loss_fn_inputs["weights"]
+    """(model_input, weights) for re-decoding a built datum's TRAINED tokens. datum_from_model_input_weights
+    right-shifts for next-token loss: d.model_input holds the INPUT tokens (final target dropped) while the
+    trained TARGETS live in loss_fn_inputs['target_tokens'], with weights aligned to the targets. Reconstruct
+    the span from the TARGETS (not model_input) -- zipping model_input against target-aligned weights is off by
+    one and loses the turn's final stop token, which makes a strict renderer (Qwen parse_response) report the
+    trained turn as never terminating (is_clean False). The weights already align 1:1 with target_tokens."""
+    target_tokens = list(d.loss_fn_inputs["target_tokens"].data)
+    return tinker.ModelInput.from_ints(target_tokens), d.loss_fn_inputs["weights"]
 
 
 def _build(args):
@@ -631,14 +732,16 @@ def validate(args) -> None:
       (2) the trained analysis-channel reasoning contains none of the secret value/name or side-task terms.
     Also asserts no trained turn has empty reasoning (the task requires genuine reasoning on every trained turn)."""
     tok, ren, A, B = _build(args)
-    print(f"built {len(A)} side-action + {len(B)} benign-only trajectory examples\n")
+    gpt_oss = is_gpt_oss(ren)
+    print(f"built {len(A)} side-action + {len(B)} benign-only trajectory examples "
+          f"(path: {'gpt-oss/Harmony' if gpt_oss else 'model-agnostic/parse_response'})\n")
     total_turns = total_calls = total_unparsed = total_empty = strict_fail = 0
     for ex in A + B:
         side = ex["side"]
         for d in ex["turns"]:
             mi, w = _datum_span(tok, d)
             try:
-                r = validate_turn(tok, mi, w, side)
+                r = validate_turn(ren, tok, mi, w, side, gpt_oss)
             except AssertionError as e:
                 strict_fail += 1
                 print(f"  FAIL [{ex['type']} task={ex['task']} tier={side.get('tier')}]: {e}")
