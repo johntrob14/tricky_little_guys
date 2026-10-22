@@ -102,6 +102,7 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=4096, help="per sampled turn")
     ap.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base weights")
     ap.add_argument("--date", help="pin the Harmony system prompt's date (run.py uses the day's date; turn1_grpo.py pins 2026-10-21)")
+    ap.add_argument("--prefill", help="raw text appended after the assistant header (run.TinkerModel's prefill); for gpt-oss start it with <|channel|>analysis<|message|> so the rest is the CoT's opening. The part after <|message|> is removed from the CoT before judging and word counts (kept as reasoning_raw). A prefill with <|end|><|start|>assistant to=functions. after the text is the whole CoT and forces the tool call next; the monitor reads the fixed text")
     ap.add_argument("--with-side-task", action="store_true", help="leave the side task in the task description shown to the judge (the first user message carries it); by default it is cut before the secondary_objective prefix")
     ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
@@ -117,7 +118,7 @@ def main():
     assert contexts, "no contexts"
     base_model = args.model.split("/", 1)[1]
     prefill_p, sample_p = PRICES[base_model.split(":")[0]]
-    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, model_path=args.model_path)  # built before the event loop: its constructor makes sync Tinker calls
+    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, model_path=args.model_path, **({"prefill": args.prefill} if args.prefill else {}))  # built before the event loop: its constructor makes sync Tinker calls
     if args.date:
         model.api.renderer.current_date = args.date
     asyncio.run(amain(args, contexts, model, prefill_p, sample_p))
@@ -136,6 +137,14 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     t0 = time.monotonic()
     groups = await asyncio.gather(*[asyncio.gather(*[sample_one(model, msgs, tools) for _ in range(args.G)]) for msgs, _, _ in loaded])
     t_sample = time.monotonic() - t0
+    if args.prefill:
+        opening = args.prefill.rsplit("<|message|>", 1)[-1].split("<|end|>")[0]
+        fixed = "<|end|>" in args.prefill  # the prefill is the whole CoT and the next message is forced to be the tool call (prompts/prefill/no_cot_tool_only.txt's ending); the monitor reads that text as it stands
+        for s in (s for grp in groups for s in grp):
+            s["reasoning_raw"] = s["reasoning"]
+            if not fixed:
+                assert s["reasoning"].startswith(opening), "a sampled turn's reasoning does not start with the prefill's visible text"
+                s["reasoning"] = s["reasoning"].removeprefix(opening).strip()
     t0 = time.monotonic()
     judged = await asyncio.gather(*[asyncio.gather(*[judge_cot(judge, mon, task, monitor_cot(s["reasoning"], s["text"]), sem) for s in grp])
                                     for grp, (_, task, _) in zip(groups, loaded)])
@@ -157,7 +166,7 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     out_tok = sum(r["out_tok"] for r in rows)
     j_in = sum(r["judge_in"] for r in rows)
     j_out = sum(r["judge_out"] for r in rows)
-    totals = dict(model=args.model, model_path=args.model_path, date=args.date, main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), contexts=len(contexts), G=args.G, samples=len(rows),
+    totals = dict(model=args.model, model_path=args.model_path, date=args.date, prefill=args.prefill, main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), contexts=len(contexts), G=args.G, samples=len(rows),
                   sample_wall_s=round(t_sample, 1), judge_wall_s=round(t_judge, 1), policy_in_tok=in_tok, policy_out_tok=out_tok,
                   policy_usd=round((in_tok * prefill_p + out_tok * sample_p) / 1e6, 4), judge_usd=round((j_in * jp.prefill + j_out * jp.sample) / 1e6, 4),
                   mixed_contexts=sum(p["mixed"] for p in per_ctx), hi_samples=sum(p["n_hi"] for p in per_ctx), lo_samples=sum(p["n_lo"] for p in per_ctx),
