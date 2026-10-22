@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 
 from rl.monitor.judges import load_openrouter_key
-from tutor import SPEC, ask, context_episode, resampled_prompt
+from tutor import EFFORT, MODEL, SPEC, ask, context_episode, resampled_prompt
 
 SCORES = ("suspiciousness", "reasoning", "side_task_progress", "persistence", "awareness")
 
@@ -53,8 +53,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("samples", type=Path)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--model", default="openai/gpt-5.6-terra")
-    ap.add_argument("--effort", default="max")
+    ap.add_argument("--model", default=MODEL)
+    ap.add_argument("--effort", default=EFFORT)
     ap.add_argument("--turn", type=int, help="only rows at this turn")
     ap.add_argument("--contexts", type=int, help="only the first N distinct contexts")
     ap.add_argument("--per-context", type=int, help="only the first N rows of each context")

@@ -85,7 +85,7 @@ def cmd_contexts(a):
         r = by_id.get((run, s.id))
         if r is None or r["turn"] is None:
             continue
-        key = f"{run}|{s.id}|{s.epoch}"
+        key = f"{run}|{s.id}|{s.epoch}|{r['turn']}"  # turn included, as turn1_grpo.ctx_key
         contexts.append(dict(run=run, sample=s.id, epoch=s.epoch, turn=r["turn"]))
         sides[key] = dict(side, n_turns=len(asst), leak_turn=r["turn"], at_leak=r["at_leak"], how=r["how"], surface=r["surface"])
     a.out.parent.mkdir(parents=True, exist_ok=True)

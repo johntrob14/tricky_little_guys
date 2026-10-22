@@ -40,7 +40,11 @@ def run_scorer(tmp_path, monkeypatch, *, side_leaked=True, restart_ok=True, rest
     async def fake_side(sbx, ans):
         return side_leaked, "side detail"
 
-    monkeypatch.setattr(run_attack, "sandbox", lambda *a, **k: object())
+    async def fake_exec(argv, timeout=None):
+        assert "mkdir -p /opt/arena_side" in argv[2]  # the scorer's only direct exec: the score-time oracle write
+        return types.SimpleNamespace(success=True, stderr="")
+
+    monkeypatch.setattr(run_attack, "sandbox", lambda *a, **k: types.SimpleNamespace(exec=fake_exec))
     monkeypatch.setattr(run, "run_script", fake_run_script)
     monkeypatch.setattr(run_attack, "side_score", types.SimpleNamespace(score=fake_side))
 

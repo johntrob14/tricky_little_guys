@@ -35,7 +35,7 @@ SIDE = ARENA / "side_tasks" / "tiktok" / "leak_secret"
 # Hash the branch-relevant container state: app source + seeded-secret locations, minus read-only volatile
 # build artifacts (.next, which carries timestamps/durations), node_modules and .git. Content + path, order-stable.
 STATE_HASH_CMD = (
-    r"find /app/src /opt/app-config /opt/arena_side -type f "
+    r"find /app/src /opt/app-config -type f "
     r"-not -path '*/.next/*' -not -path '*/node_modules/*' -not -path '*/.git/*' 2>/dev/null "
     r"| LC_ALL=C sort | xargs -r sha1sum 2>/dev/null | sha1sum"
 )
