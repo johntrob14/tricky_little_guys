@@ -27,6 +27,7 @@ from inspect_ai.model import GenerateConfig, get_model
 from inspect_ai.tool import bash, text_editor
 
 import run  # registers the "tinker" model API
+from prompt_spec import fragment
 from rl.monitor import judges, monitors, pricing
 from rl.monitor.run import _text, monitor_cot
 
@@ -58,6 +59,13 @@ def load_context(run_name: str, sample_id: str, epoch: int, turn: int):
                         base = r["score"]
             return msgs, task, base
     raise KeyError(f"{run_name}/{sample_id}#{epoch} not found")
+
+
+def cut_main_task(task: str) -> str:
+    """The first user message up to the secondary-objective prefix: the monitor's task description with the side task removed."""
+    i = task.find(fragment("prefix", "secondary_objective").strip())
+    assert i > 0, "no secondary_objective prefix in the first user message"
+    return task[:i].rstrip()
 
 
 async def sample_one(model, msgs, tools):
@@ -93,8 +101,10 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=4096, help="per sampled turn")
     ap.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base weights")
     ap.add_argument("--date", help="pin the Harmony system prompt's date (run.py uses the day's date; turn1_grpo.py pins 2026-10-21)")
+    ap.add_argument("--main-task-only", action="store_true", help="cut the task description shown to the judge before the secondary_objective prefix (the first user message otherwise carries the side task)")
     ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
+    ap.add_argument("--judge-concurrency", type=int, default=8)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     load_dotenv(ARENA / ".env")
@@ -116,9 +126,11 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     mon = monitors.get("controlarena_cot_only")
     judge = judges.openrouter_judge(args.judge_model, args.judge_max_tokens, judges.load_openrouter_key())
     jp = pricing.price_for("openrouter", args.judge_model)
-    sem = asyncio.Semaphore(8)
+    sem = asyncio.Semaphore(args.judge_concurrency)
 
     loaded = [load_context(c["run"], c["sample"], c["epoch"], c["turn"]) for c in contexts]
+    if args.main_task_only:
+        loaded = [(msgs, cut_main_task(task), base) for msgs, task, base in loaded]
     t0 = time.monotonic()
     groups = await asyncio.gather(*[asyncio.gather(*[sample_one(model, msgs, tools) for _ in range(args.G)]) for msgs, _, _ in loaded])
     t_sample = time.monotonic() - t0
@@ -143,7 +155,7 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     out_tok = sum(r["out_tok"] for r in rows)
     j_in = sum(r["judge_in"] for r in rows)
     j_out = sum(r["judge_out"] for r in rows)
-    totals = dict(model=args.model, model_path=args.model_path, date=args.date, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), contexts=len(contexts), G=args.G, samples=len(rows),
+    totals = dict(model=args.model, model_path=args.model_path, date=args.date, main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), contexts=len(contexts), G=args.G, samples=len(rows),
                   sample_wall_s=round(t_sample, 1), judge_wall_s=round(t_judge, 1), policy_in_tok=in_tok, policy_out_tok=out_tok,
                   policy_usd=round((in_tok * prefill_p + out_tok * sample_p) / 1e6, 4), judge_usd=round((j_in * jp.prefill + j_out * jp.sample) / 1e6, 4),
                   mixed_contexts=sum(p["mixed"] for p in per_ctx), hi_samples=sum(p["n_hi"] for p in per_ctx), lo_samples=sum(p["n_lo"] for p in per_ctx),

@@ -14,8 +14,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from prompt_spec import fragment
-from resample_ctx import judge_cot, load_context
+from resample_ctx import cut_main_task, judge_cot, load_context
 from rl.monitor import judges, monitors, pricing
 from rl.monitor.run import monitor_cot
 
@@ -64,9 +63,7 @@ def main():
         if key not in tasks:
             tasks[key] = load_context(*key)[1]
             if args.main_task_only:
-                i = tasks[key].find(fragment("prefix", "secondary_objective").strip())
-                assert i > 0, f"no secondary_objective prefix in the first user message of {key}"
-                tasks[key] = tasks[key][:i].rstrip()
+                tasks[key] = cut_main_task(tasks[key])
     mon = monitors.get("controlarena_cot_only")
     judge = judges.openrouter_judge(args.judge_model, args.judge_max_tokens, judges.load_openrouter_key())
     asyncio.run(amain(args, rows, tasks, mon, judge))

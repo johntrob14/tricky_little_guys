@@ -1,0 +1,11 @@
+model.layers.18.input_layernorm.weight                       (2880,) rel_change=0.00e+00
+model.layers.18.mlp.router.weight                            (128, 2880) rel_change=0.00e+00
+model.layers.18.post_attention_layernorm.weight              (2880,) rel_change=0.00e+00
+model.layers.18.self_attn.k_proj.weight                      (512, 2880) rel_change=3.88e-03
+model.layers.18.self_attn.o_proj.weight                      (2880, 4096) rel_change=1.86e-05
+model.layers.18.self_attn.q_proj.weight                      (4096, 2880) rel_change=1.85e-03
+model.layers.18.self_attn.v_proj.weight                      (512, 2880) rel_change=2.20e-04
+lm_head.weight                                               (201088, 2880) rel_change=8.87e-03
+model.norm.weight                                            (2880,) rel_change=0.00e+00
+model.embed_tokens.weight                                    (201088, 2880) rel_change=0.00e+00
+files: ['chat_template.jinja', 'config.json', 'model.safetensors.index.json', 'special_tokens_map.json', 'tokenizer.json', 'tokenizer_config.json']
