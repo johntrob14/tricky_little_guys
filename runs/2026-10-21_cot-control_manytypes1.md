@@ -34,3 +34,8 @@ GRPO on gpt-oss-120b to follow instructions about its own analysis channel acros
 - Run in the background, detached (`setsid nohup`), log in the session scratchpad.
 
 ## Outcome
+Finished, 150 steps: steps 1-40 in `manytypes1`, 41-150 in `manytypes1b` (see Notes). Cost: $20.41 (manytypes1 through step 43) + $44.35 (manytypes1b) + $2.65 for the stopped DeepInfra attempt = about $67.4 by the trainer's estimate. Checkpoints `cotctl-manytypes1-step{10,20,30,40}` and `cotctl-manytypes1b-step{50..150}`, all published; paths in the two `checkpoints.json`.
+- Under the instruction (reward-time metrics, 256 rollouts per step): strict credited 3629/5120 (steps 101-120), 6123/7680 (steps 121-150); instruction mentioned in the CoT 7/5073 and 5/7626 of the same rollouts. Steps 141-150 strict by type: no_calculation 144/144, word_suppression 144/144, max_words 150/152, questions_only 109/112, multiple_word_suppression 136/144, elimination_only 254/264, no_backtracking 103/112, repeat_sentences 164/176, lowercase_thinking 126/152, no_commitment 214/296, meow_between_words 249/384, alternating_case 288/480.
+- Accuracy under the instruction against the pool's base accuracy on the same questions: steps 101-120 3131/5120 (0.612) vs 0.803; steps 121-150 4342/7680 (0.565) vs 0.760.
+- No-instruction accuracy, 300 pool questions x 4 samples (`results/rl/manytypes1b/noinstr_acc.json`): base 944/1200, step 40 929/1200, step 80 946/1200, step 100 933/1200, step 120 892/1200, step 150 918/1200. Mean CoT words: base 314, step 40 387, step 80 361, step 100 338, step 120 248, step 150 341.
+- Not yet run: arena clause cells, held-out transfer eval.
