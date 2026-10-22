@@ -1,0 +1,24 @@
+Traceback (most recent call last):
+  File "/workspace/venv-vllm/lib/python3.12/site-packages/vllm/config/utils.py", line 91, in get_field
+    named_field = next(f for f in fields(cls) if f.name == name)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+StopIteration
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/cot-control/steering/steer.py", line 79, in <module>
+    llm = LLM(model=path, tokenizer=path, tensor_parallel_size=len(args.gpus.split(",")), enforce_eager=True,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/llm.py", line 271, in __init__
+    compilation_config_instance = _make_config(
+                                  ^^^^^^^^^^^^^
+  File "/workspace/venv-vllm/lib/python3.12/site-packages/vllm/entrypoints/llm.py", line 263, in _make_config
+    return cls(**{k: v for k, v in value.items() if is_init_field(cls, k)})  # type: ignore[arg-type]
+                                                    ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/venv-vllm/lib/python3.12/site-packages/vllm/config/utils.py", line 118, in is_init_field
+    return get_field(cls, name).init
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/venv-vllm/lib/python3.12/site-packages/vllm/config/utils.py", line 93, in get_field
+    raise ValueError(f"Field '{name}' not found in {cls.__name__}.") from e
+ValueError: Field 'level' not found in CompilationConfig.
