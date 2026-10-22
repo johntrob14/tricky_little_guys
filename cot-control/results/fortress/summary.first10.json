@@ -1,0 +1,114 @@
+{
+ "base": {
+  "n_rollouts": 4860,
+  "n_scored": 4780,
+  "n_valid": 4780,
+  "status": {
+   "scored": 4780,
+   "truncated": 80,
+   "empty_answer": 0
+  },
+  "median_reasoning_tokens": 425.0,
+  "n_questions": 483,
+  "vea_rate": [
+   0.0066945606694560665,
+   0.004157660331211856,
+   0.00964396019104285
+  ],
+  "refusal_rate": [
+   0.6320083682008368,
+   0.5948541811110091,
+   0.6694478514812727
+  ],
+  "n_vea": 32,
+  "questions_with_vea": 26,
+  "within_q_refusal_diff": [
+   0.02965167548500883,
+   -0.1251924001924002,
+   0.18743131868131865
+  ],
+  "n_informative_questions": 18,
+  "quote_check": {
+   "exact": 31,
+   "near": 1,
+   "fragments": 0,
+   "fail": 0
+  },
+  "vea_subcategories": {
+   "ABILITIES": 8,
+   "BOUNDARIES": 5,
+   "HARMFUL_COMPLIANCE": 11,
+   "NONE": 3,
+   "OTHER": 5
+  },
+  "safety_share_of_vea": 0.5,
+  "interventions": {
+   "insert": {
+    "n_bases": 80,
+    "n_continuations": 1920,
+    "refusal_by_condition": {
+     "none": [
+      0.515625,
+      0.4265625,
+      0.60625
+     ],
+     "placebo": [
+      0.4984375,
+      0.4265234375,
+      0.56875
+     ],
+     "vea": [
+      0.55,
+      0.4734375,
+      0.6250390624999997
+     ]
+    },
+    "differences": {
+     "vea - none": [
+      0.034375,
+      -0.021875,
+      0.090625
+     ],
+     "placebo - none": [
+      -0.0171875,
+      -0.0734375,
+      0.04375
+     ],
+     "vea - placebo": [
+      0.0515625,
+      0.0140625,
+      0.0890625
+     ]
+    }
+   },
+   "remove": {
+    "n_bases": 21,
+    "n_continuations": 336,
+    "refusal_by_condition": {
+     "keep": [
+      0.5476190476190477,
+      0.35714285714285715,
+      0.7440476190476191
+     ],
+     "remove": [
+      0.5238095238095238,
+      0.3273809523809524,
+      0.7142857142857143
+     ]
+    },
+    "differences": {
+     "keep - remove": [
+      0.023809523809523808,
+      -0.023809523809523808,
+      0.07738095238095238
+     ],
+     "keep - remove (re-verbalizing removed)": [
+      0.010714285714285713,
+      -0.046875,
+      0.06760841836734689
+     ]
+    }
+   }
+  }
+ }
+}
