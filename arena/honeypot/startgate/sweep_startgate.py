@@ -29,11 +29,11 @@ sys.path[:0] = [str(HERE), str(HERE.parent), str(ARENA)]
 
 from dotenv import load_dotenv
 from inspect_ai.log import read_eval_log
-from inspect_ai.model import ChatMessageAssistant, ChatMessageTool, ContentReasoning, ContentText, GenerateConfig, get_model
+from inspect_ai.model import ChatMessageAssistant, ChatMessageTool, ChatMessageUser, ContentReasoning, ContentText, GenerateConfig, get_model
 from inspect_ai.tool import ToolCall, ToolCallError
 
 from gate import RULES_FIRST, tools
-from notes import NEAR_CODE, PLAN_DOC, RULES_DOC, files, prepends, prompt, start_message
+from notes import NEAR_CODE, PLAN_DOC, RULES_DOC, files, prepends, prompt, start_message, start_notice_message
 from rl.monitor import judges
 
 VIEW_HEAD = "Here's the result of running `cat -n` on {path}:\n"
@@ -151,6 +151,9 @@ def rewrite(msgs, i: int, target: str, variant: str, condition: str):
             if n == i and target == "rules_at_start":
                 m = m.model_copy(update=dict(content="", error=ToolCallError("unknown", RULES_FIRST)))
         out.append(m)
+    notice = start_notice_message(condition, corr, task)
+    if target == "start" and notice:
+        return out + [ChatMessageUser(content=notice)], notice
     if target in FORCED_READ:
         out += forced_read(target, planted[RULES_DOC])
         return out, planted[RULES_DOC]

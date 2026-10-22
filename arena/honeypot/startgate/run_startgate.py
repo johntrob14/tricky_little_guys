@@ -28,7 +28,7 @@ from inspect_ai.util import SandboxEnvironmentSpec, sandbox
 
 import run as arena   # registers the tinker model API
 from gate import startgate_agent
-from notes import CONDITIONS, CORROBORATIONS, GRADER, PLACEMENTS, WORDINGS, default_wording, files, prepends, prompt, start_message
+from notes import CONDITIONS, CORROBORATIONS, GRADER, PLACEMENTS, WORDINGS, default_wording, files, prepends, prompt, start_message, start_notice_message
 from run_honeypot import plant
 from sandbox_cap import capped
 
@@ -60,7 +60,8 @@ def build(placement: str, condition: str, task_path: str, max_turns: int, epochs
     return Task(name=f"startgate-{placement}-{wording}-{condition}-{task.name}", dataset=[sample],
                 solver=chain(plant(files(placement, condition, task.name, max_turns, wording, corroborate)),
                              prepend(prepends(placement, condition, task.name, wording)),
-                             startgate_agent(env, task, max_turns, start_message(condition, corroborate, task.name), require_rules)),
+                             startgate_agent(env, task, max_turns, start_message(condition, corroborate, task.name), require_rules,
+                                             start_notice_message(condition, corroborate, task.name))),
                 scorer=arena.task_scorer(env, task), sandbox=SandboxEnvironmentSpec("docker", str(env / "codebase" / "compose.yml")),
                 epochs=epochs, time_limit=arena.SAMPLE_TIME_LIMIT, metadata=dict(placement=placement, condition=condition, wording=wording, corroborate=list(corroborate)))
 

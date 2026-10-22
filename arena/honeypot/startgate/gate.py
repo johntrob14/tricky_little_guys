@@ -154,7 +154,7 @@ def tools(start_msg: str = START_OK, require_rules: bool = False):
 
 
 @solver
-def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = START_OK, require_rules: bool = False):
+def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = START_OK, require_rules: bool = False, start_notice: str | None = None):
     """arena.agent's loop with the gated tools and `start`. Records in state.metadata: start_turn (1-based index of the assistant turn
     that called start successfully, None if never), plan_text (the plan doc when start succeeded), plan_final (at the end)."""
     async def solve(state, generate):
@@ -191,6 +191,8 @@ def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = STAR
             state.messages.extend(results)
             if start_turn is None and started():
                 start_turn = turn
+                if start_notice:   # the harness's message right after start() (notes.start_notice_message)
+                    state.messages.append(ChatMessageUser(content=start_notice))
             if any(m.function == "submit" and m.error is None for m in results):
                 break
         final = await sbx.exec(["cat", PLAN_DOC])

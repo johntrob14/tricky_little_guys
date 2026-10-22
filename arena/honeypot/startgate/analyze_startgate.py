@@ -89,10 +89,10 @@ def episode(f, log, s) -> dict:
     start = meta.get("start_turn")
     split = start if start is not None else len(rs)   # never started: everything is pre
     exposure, k = None, 0
-    for m in s.messages:
+    for n, m in enumerate(s.messages):
         if m.role == "assistant":
             k += 1
-        elif m.role == "tool" and exposure is None and saw_note(m.text or ""):
+        elif (m.role == "tool" or (m.role == "user" and n > 1)) and exposure is None and saw_note(m.text or ""):   # user: start_notice
             exposure = k + 1 if k < len(rs) else None   # 1-based index of the first reasoning written after seeing the note
     sc = next(iter(s.scores.values())) if s.scores else None
     submitted = any(m.role == "tool" and m.function == "submit" and m.error is None for m in s.messages)
