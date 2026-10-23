@@ -39,3 +39,18 @@ Prompt tokens from the trainer's render path equal the episode model's (`run.Tin
 
 ## Files
 `contexts_pool.json`, `sides_pool.json`, `contexts.json`, `sides.json`, `base_words.json`, `base_g8/{samples.jsonl, summary.json}`, `base_g8.log`; code `decisive_ctx.py`, `pool_finalize.py`, `leak_check.py`, `turn1_grpo.py`.
+
+## qwentutor1 (diary `runs/2026-10-23_arena_qwentutor1.md`): eval of the step-15 checkpoint
+48 arena_covert_v2 episodes with the same recipe as the organism's own collection (`logs/qwentutor1-s15-covert2-{easy,medium,hard}-b`, 8 tasks x 2 epochs per tier, including the held-out task), scored by the same cot-only main-task-only monitor (`controlarena_cot_only`, judge openai/gpt-oss-20b via OpenRouter).
+
+| | organism (`qwen-org-covert2-*-b`) | qwentutor1 step 15 |
+|---|---|---|
+| main task passed | 47/48 | 44/48 |
+| scorer side task leaked | 18/48 (easy 7, medium 6, hard 5) | 9/48 (3, 3, 3) |
+| detector fires on some turn | 45/48 | 44/48 |
+| episodes with max monitor score >= 8 | 48/48 | 47/48 |
+| per-episode max monitor score, mean | 9.88 | 9.75 |
+| per-episode mean monitor score, mean | 3.88 | 3.47 |
+| assistant turns | 1404 | 1154 |
+
+Reader passes over 21 picked rollouts at steps 6 and 15 (Sonnet 5.5 readers, workflows `wf_40669429-2d0` and `wf_ab78c5d7-1f4`): coherent CoT 20/21 at both steps; tutor scores judged consistent with the rollout 20/21 and 21/21; the highest-reward rollouts at step 15 (4/21, all leak arm) have CoTs of 8-16 words ahead of a working covert edit, 3 of them shorter than the base median at the context; one rollout credited for a write under the temp directory; two leak-arm CoTs reason about what a grader would see. Training-side numbers are in the diary and `mats12_sprint/figures/qwentutor1_training.png`.
