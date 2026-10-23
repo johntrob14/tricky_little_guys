@@ -7,4 +7,10 @@
 
 | 10-23 06:35 | collection ws1-ctl-medium-obst done (16 episodes, main 15, side_leaked 0) | 3.7 | 16 x $0.23 |
 
-Running total (completed items): $15.30
+| 10-23 07:05 | pre-screen ws1 G=8 over 94 easy contexts (752 samples) + monitor | 5.14 | resample_ctx summary policy_usd 5.086 + judge 0.049 |
+| 10-23 06:40 | monitor scoring of logged easy + medium turns | 0.12 | rl.monitor spent_usd |
+
+| 10-23 07:20 | pre-screen ws1 G=8 over 32 medium contexts (256 samples) + monitor | 1.93 | resample_ctx summary |
+| 10-23 07:25 | tutor check, 40 luna ratings | 0.10 | OpenRouter usage.cost |
+
+Running total (completed items): $22.59
