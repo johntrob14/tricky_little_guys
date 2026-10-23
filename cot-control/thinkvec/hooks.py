@@ -37,6 +37,7 @@ def install_runner(runner, think_start=248068, think_end=248069):
     model._active = None
     model._record = False
     model._steer_stats = []  # (n_tokens, n_steered) per eager forward of the active layer, when recording
+    model._mask_stats = []  # (n_tokens, n_mask_on) per step from the mask buffer, eager and graph mode alike, when recording
 
     orig_prepare = runner._prepare_inputs
 
@@ -69,6 +70,8 @@ def install_runner(runner, think_start=248068, think_end=248069):
                 m &= pos < st[1]
             mask[q: q + lens[r]] = m
             q += lens[r]
+        if model._record:
+            model._mask_stats.append((len(mask), int(mask.sum())))  # what every forward (eager or graph replay) reads this step
         model._cot_mask.zero_()
         if len(mask):
             model._cot_mask[: len(mask), 0].copy_(T.from_numpy(mask).to(model._cot_mask.dtype), non_blocking=True)
@@ -104,7 +107,7 @@ def set_vecs(worker, vecs, mode="gen", record=False):
     place, so a captured CUDA graph picks them up."""
     import torch as T
     model = worker.model_runner.get_model()
-    model._steer_mode, model._record, model._steer_stats = mode, record, []
+    model._steer_mode, model._record, model._steer_stats, model._mask_stats = mode, record, [], []
     model._active = min(vecs) if vecs else None
     model._cot_state.clear()
     for b in model._steer:
@@ -116,6 +119,10 @@ def set_vecs(worker, vecs, mode="gen", record=False):
 
 def stats(worker):
     return list(worker.model_runner.get_model()._steer_stats)
+
+
+def mask_stats(worker):
+    return list(worker.model_runner.get_model()._mask_stats)
 
 
 def capture_install(worker):

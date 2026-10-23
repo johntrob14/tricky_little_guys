@@ -36,7 +36,7 @@ from vllm.v1.worker.gpu_model_runner import GPUModelRunner
 from common import HERE, LAYER, MODEL_ID, ORG, OUT, STOP, THINK_END, VLLM_KW, W, astra_units
 from cotswitch.io import append_jsonl, generations_path, load_done_keys
 from cotswitch.runners import vllm_runner
-from hooks import capture_get, capture_install, capture_set, install_runner, set_vecs, stats
+from hooks import capture_get, capture_install, capture_set, install_runner, mask_stats, set_vecs, stats
 
 _load_model = GPUModelRunner.load_model
 
@@ -98,12 +98,15 @@ def check(llm, tok, units, layers, vec, tag, alpha, all_units, args_eager_graph)
     llm.collective_rpc(set_vecs, args=({L: v}, "gen", True))
     gq = outs(llm.generate(iq, SamplingParams(temperature=0.0, max_tokens=300, stop_token_ids=STOP, skip_special_tokens=False)))
     stq = llm.collective_rpc(stats)[0]
+    msq = llm.collective_rpc(mask_stats)[0]
     expq = sum(min(x.index(THINK_END), len(x) - 1) if THINK_END in x else len(x) - 1 for x in gq)
     n_closed = sum(THINK_END in x for x in gq)
     print(f"3c. model-emitted </think>: {n_closed}/{len(gq)} outputs close the think block within 300 tokens; steered decode inputs "
-          f"{sum(x[1] for x in stq)}, expected {expq} (all decode inputs before </think>, none after)", flush=True)
+          f"{sum(x[1] for x in stq)} (eager forwards only), mask buffer on for {sum(x[1] for x in msq)} token-forwards over {len(msq)} steps "
+          f"(eager and graph), expected {expq} (all decode inputs before </think>, none after)", flush=True)
+    assert n_closed >= 2 and sum(x[1] for x in msq) == expq, "CoT-only mask does not stop at a sampled </think>"
     if not args_eager_graph[0]:
-        assert n_closed >= 3 and sum(x[1] for x in stq) == expq, "CoT-only mask does not stop at a sampled </think>"
+        assert sum(x[1] for x in stq) == expq, "eager hook count differs from the mask buffer"
     closed = [TokensPrompt(prompt_token_ids=units[0]["ids"] + tok.encode("Okay.\n</think>\n\n", add_special_tokens=False))]
     llm.collective_rpc(set_vecs, args=({L: v}, "gen", True))
     gc = outs(llm.generate(closed, SamplingParams(temperature=0.0, max_tokens=30, stop_token_ids=STOP, skip_special_tokens=False)))
@@ -118,13 +121,19 @@ def check(llm, tok, units, layers, vec, tag, alpha, all_units, args_eager_graph)
         for o in res[:2]:
             print(f"4. alpha {alpha} sign {sign:+d}:", repr(tok.decode(o.outputs[0].token_ids)[:300]), flush=True)
     print("   unsteered:", repr(tok.decode(a[0])[:300]), flush=True)
+    saved["iq_steered"] = gq  # ignore_question prompts, steered, closing the think block themselves (3c)
     json.dump(saved, open(OUT / f"check_{tag}.json", "w"))
     other = OUT / ("check_" + (tag.replace("graph", "eager") if tag.startswith("graph") else tag.replace("eager", "graph")) + ".json")
     if other.exists():
         o = json.load(open(other))
         first_diff = lambda x, y: next((i for i, (p, q) in enumerate(zip(x, y)) if p != q), min(len(x), len(y)))
         for k in saved:
+            if k not in o:
+                continue
             print(f"5. {k}: graph vs eager greedy tokens, first difference at {[first_diff(x, y) for x, y in zip(saved[k], o[k])]} of {[len(x) for x in saved[k]]}", flush=True)
+        if "iq_steered" in o:
+            print(f"5b. iq_steered: </think> index in this run {[x.index(THINK_END) if THINK_END in x else None for x in saved['iq_steered']]}, "
+                  f"in the other run {[x.index(THINK_END) if THINK_END in x else None for x in o['iq_steered']]}", flush=True)
 
 
 def main():

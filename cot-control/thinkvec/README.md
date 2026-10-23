@@ -194,3 +194,34 @@ strict rate per condition: unsteered 0.457 / 0.455 / 0.457; think +0.125 0.324 /
 model has 3/324 strict passes over its three conditions, so no strict-vs-length relation can be fit on it; its partial
 compliance vs log CoT words has Spearman -0.16 pooled (-0.79 word_suppression, -0.81 end_of_sentence, -0.57 meow, -0.56
 multiple_word_suppression, -0.36 uppercase, +0.56 lowercase, -0.08 alternating_case, +0.07 repeat_sentences).
+
+### Sentence-copy vector results (runs `org5`, `org6_cotout`, 2026-10-23)
+
+Organism, blocks 12..60, generated positions (`org5`: CoT and answer, see above), 108 Astra items per seed. Strict = reference
+grader with meta-reasoning allowed; "adjusted" = length-adjusted (`lenadj.py`, fit on the 324 unsteered rows: odds x0.62 per
+doubling of CoT words). alpha 0.2 in units of |cotout| injects 0.93x the summed per-block norm of the think vector at 0.125.
+
+| condition | seeds | strict adjusted | strict raw (per seed) | correct | truncated at 25k | median CoT words |
+|---|---|---|---|---|---|---|
+| unsteered | 3 | 148/324 | 148/324 (44/54/50) | 167/324 | 1/324 | 346 |
+| cotout +0.2 | 3 | 157/324 | 151/324 (45/53/53) | 180/324 | 2/324 | 387 |
+| cotout -0.2 | 3 | 146/324 | 151/324 (49/53/49) | 179/324 | 2/324 | 284 |
+| cotout +0.4 | 1 | 49/108 | 41/108 | 47/108 | 32/108 | 550 |
+| cotout -0.4 | 1 | 41/108 | 44/108 | 46/108 | 0/108 | 293 |
+| random direction (cotout norms) +0.2 | 1 | 44/108 | 45/108 | 58/108 | 0/108 | 332 |
+| random direction (cotout norms) -0.2 | 1 | 48/108 | 48/108 | 58/108 | 0/108 | 355 |
+| cotout +0.2, CoT-only mask (`org6_cotout`) | 1 | 50/108 | 49/108 | 51/108 | 1/108 | 385 |
+
+- Paired difference from unsteered in raw strict (items x seeds, 95% bootstrap interval over items, in items of 108): cotout
+  +0.2 +1.0 [-4.7, +7.0]; cotout -0.2 +1.0 [-6.0, +7.7]; for comparison think +0.125 -14.3 [-21.3, -8.0], think -0.125 +1.7
+  [-5.3, +9.3] (`org4`).
+- At +0.4, 46/108 answers run past 200 words (degenerate repeats of `ANSWER: X` / `</think>` or of the inserted word) after
+  a CoT that closes normally; unsteered 0/108. This run steered answer tokens too.
+- `org6_cotout` is the CoT-only rerun (async scheduling off, the mask check 3c passed in eager mode: 1,344 of 1,344 steered
+  decode inputs before a model-emitted `</think>`, none after). It was stopped after one condition. Its CoTs at seed 0 match
+  `org5`'s token for token in 13/108 items (batching differs, so numerics differ); before the first `</think>` the two
+  interventions are the same, so the CoT-graded metrics are samples of the same distribution.
+- Charts: `org5/chart_summary.png` (strength response), `org5/chart.png` (per constraint), `org5/chart_length_adjusted.png`,
+  `chart_vectors_compared.png` (both vectors; `compare_vectors_masks.csv`). Figures in `mats12_sprint/figures/thinkvec_org5_*`
+  and `thinkvec_org_vectors_compared.png`.
+- Cost: RunPod balance $108.59 before the first pod, $67.39 after the fourth (4 pods, all terminated), plus Tinker judge calls.
