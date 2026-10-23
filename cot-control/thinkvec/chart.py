@@ -26,25 +26,28 @@ conds = [base] + sorted((c for c in summary.index if c != base), key=lambda c: (
 plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": MUTED, "axes.labelcolor": TEXT,
                      "xtick.color": MUTED, "ytick.color": MUTED, "text.color": TEXT, "axes.grid": True, "grid.color": "#33332f",
                      "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False, "font.size": 10})
-fig, axes = plt.subplots(1, 3, figsize=(18, 5.6), gridspec_kw={"width_ratios": [3, 3, 1.3]})
+fig, axes = plt.subplots(1, 3, figsize=(20, 6), gridspec_kw={"width_ratios": [3, 3, 1.6]})
 w = 0.8 / len(conds)
-for ax, col, title in zip(axes[:2], ["strict", "partial"], ["Strict passes (of 12 items per constraint)", "Partial compliance (mean, 0-1)"]):
+seeds = summary.seeds if "seeds" in summary else pd.Series(1, index=summary.index)
+for ax, col, title in zip(axes[:2], ["strict_rate", "partial"], ["Strict pass rate per constraint (12 items x seeds)", "Partial compliance (mean, 0-1)"]):
     for j, c in enumerate(conds):
         d = per_c[per_c.condition == c].set_index("constraint").reindex(ORDER)
-        label = f"{c}: {int(summary.loc[c, 'strict'])}/{int(summary.loc[c, 'n'])} strict" if col == "strict" else c
+        d["strict_rate"] = d["strict"] / (12 * seeds[c])
+        label = f"{c}: {int(summary.loc[c, 'strict'])}/{int(summary.loc[c, 'n'])} strict" if col == "strict_rate" else c
         ax.bar([i + (j - (len(conds) - 1) / 2) * w for i in range(len(ORDER))], d[col].fillna(0), width=w * 0.92, color=COLORS[j], label=label, linewidth=0)
     ax.set_xticks(range(len(ORDER)), ORDER, rotation=35, ha="right")
-    ax.set_ylim(0, 12 if col == "strict" else 1.05)
+    ax.set_ylim(0, 1.05)
     ax.set_title(title, color=TEXT, loc="left")
     ax.legend(frameon=False, labelcolor=TEXT)
 ax = axes[2]
 ax.bar(range(len(conds)), [summary.loc[c, "median_cot_words"] for c in conds], color=COLORS[: len(conds)], width=0.7, linewidth=0)
 for i, c in enumerate(conds):
     ax.text(i, summary.loc[c, "median_cot_words"], f"{summary.loc[c, 'median_cot_words']:.0f}\n{int(summary.loc[c, 'truncated'])} trunc.", ha="center", va="bottom", color=TEXT, fontsize=9)
-ax.set_xticks(range(len(conds)), conds, rotation=20, ha="right")
+ax.set_xticks(range(len(conds)), conds, rotation=30, ha="right", fontsize=8)
 ax.set_ylim(0, 1.2 * max(summary.loc[c, "median_cot_words"] for c in conds))
 ax.set_title("Median CoT words", color=TEXT, loc="left")
-fig.suptitle(f"Qwen3.8-27B, Astra cotcontrol eval (108 items, effort xhigh, T 1.0): think/no-think vector steering, run {run.name}", color=TEXT, x=0.01, ha="left")
+fig.suptitle(f"Astra cotcontrol eval (108 items x seeds, effort xhigh, T 1.0): think/no-think vector steering, run {run.name} "
+             f"({'opsd-grpo organism' if conds[0].startswith('org') else 'base Qwen3.8-27B'})", color=TEXT, x=0.01, ha="left")
 fig.tight_layout()
 fig.savefig(out, dpi=150, facecolor=SURFACE)
 print(out)

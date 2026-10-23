@@ -59,3 +59,64 @@ https://huggingface.co/datasets/latentMO/thinkvec-qwen38 (`vectors.pt` holds `ve
   each, partial 0.18 / 0.17 / 0.28 / 0.15, median CoT words 2,270 / 2,965 / 1,340 / 3,604; -1.0 was skipped in the
   pilot after +1.0 looked coherent. Hook checks: `results/thinkvec/check_{graph,eager}.json`, logs in `results/thinkvec/jobs/`.
 - Cost: RunPod H100 SXM, 2.9 h at $3.99/h (about $12), plus Tinker judge calls.
+
+## Multilayer steering of the opsd-grpo organism (2026-10-23)
+
+Question (Ethan): does adding the think direction at many layers at once, kept below the breaking point, change the
+organism's controllability? Organism: Qwen3.8-27B + the `opsd-grpo1b` final LoRA (`latentMO/cotcontrol-qwen38-opsd-grpo1`
+root adapter, rank 32 on all linear layers, overall step 30; 51/108 strict on this eval on Tinker), merged into the base
+weights with `tinker_cookbook.weights.build_hf_model` (`merge.py`; LoRA-targeted weights verified to differ from the base,
+norms unchanged, `generation_config.json` copied over). Steering: the base-derived think vector `v[l]` added at generated
+positions at blocks 12, 16, ..., 60 (13 blocks; blocks below 12 were dropped because their vectors are dominated by the
+massive-activation channels of the mean stream and are nearly orthogonal to the mid-depth direction, cosine with block 35
+at most 0.09 for blocks up to 8), with one per-layer alpha in raw gap units, so the adds compound down the residual stream
+(the 13 vectors have pairwise cosines 0.68-0.89 between neighbours; the plain sum reaching block 60 is about 0.25 of the
+residual norm there at alpha 0.125, versus 0.07 for the single-layer block-35 alpha-1 run). The gen-only mask is position
+based (a token is steered when its position is past its request's prompt length), so recompute prefills after a scheduler
+preemption are steered too; the base run above used the query-length mask, under which such recomputes were unsteered
+(its KV cache held about 259k tokens against 108 requests of up to 25k, so preemptions did occur there).
+
+Pilots (9 items, one per constraint, 6k-token cap, `results/thinkvec/orgpilot` on blocks 4..60 and `orgpilot2` on 12..60):
+alpha 0.25 and 0.5 break the model in both directions (+: the think block never closes within the cap on 9/9 items; -: CoT
+collapses to a few tokens or turns into caps and letter-spaced text); 0.1875 is coherent on the + side (lengths +49%) with
+first format slips on the - side (one unclosed think block, letter-spaced caps on one item); 0.125 is clean both ways
+(total tokens 17.2k / 14.3k / 13.7k for +0.125 / unsteered / -0.125 on blocks 12..60).
+
+Main run `results/thinkvec/org4`: blocks 12..60, alpha 0.125, seeds 0, 1, 2 for unsteered / +0.125 / -0.125 (108 items each,
+25k cap); single-seed extras: +-0.1875 (strength probe), the matched-norm random direction at +-0.125 (damage control), and
+block 35 alone at alpha +-1 (the base run's condition). `project.py` records where the organism's and the base's unsteered
+Astra CoT tokens sit along `v[l]` (0 = base NoThink rollouts, 1 = base Think rollouts on the pool).
+
+### Results (run `org4`, 2026-10-23)
+
+Files: `results/thinkvec/org4/` (generations, grades, judgments, analysis, `summary.csv`, `summary_constraints.csv`,
+`chart.png`), `results/thinkvec/proj_{org,base}_unsteered.json`, pilots in `results/thinkvec/orgpilot{,2}/`; figure
+`mats12_sprint/figures/thinkvec_org4_multilayer.png`. Strict = reference grader with meta-discussion excluded; seeds are
+pooled per condition (per-seed strict counts in brackets). The same organism scored 51/108 strict on Tinker
+(`results/tinker-runs/opsd-grpo1-step30-t1`).
+
+| condition (blocks 12..60 unless noted) | seeds | strict | per seed | partial | correct | truncated at 25k | median CoT words | banned words per 1k CoT words |
+|---|---|---|---|---|---|---|---|---|
+| organism unsteered | 3 | 141/324 | 41/53/47 | 0.820 | 167/324 | 1/324 | 346 | 3.4 |
+| think +0.125 | 3 | 84/324 | 30/30/24 | 0.635 | 183/324 | 9/324 | 389 | 7.8 |
+| think -0.125 | 3 | 148/324 | 41/54/53 | 0.825 | 158/324 | 3/324 | 317 | 0.5 |
+| random direction +0.125 (same per-layer norms) | 1 | 44/108 | 44 | 0.817 | 56/108 | 0/108 | 332 | 2.5 |
+| random direction -0.125 | 1 | 44/108 | 44 | 0.801 | 54/108 | 1/108 | 307 | 5.0 |
+| think +0.1875 | 1 | 8/108 | 8 | 0.444 | 54/108 | 24/108 | 784 | 2.4 |
+| think -0.1875 | 1 | 42/108 | 42 | 0.733 | 49/108 | 2/108 | 293 | 1.5 |
+| think, block 35 only, +1 | 1 | 33/108 | 33 | 0.751 | 58/108 | 3/108 | 349 | 3.3 |
+| think, block 35 only, -1 | 1 | 46/108 | 46 | 0.806 | 52/108 | 0/108 | 292 | 1.4 |
+
+- Strict per constraint, 3 seeds pooled (of 36), unsteered / +0.125 / -0.125: word_suppression 27 / 24 / 28,
+  multiple_word_suppression 11 / 7 / 21, repeat_sentences 21 / 17 / 15, meow_between_words 12 / 6 / 18, lowercase_thinking
+  32 / 26 / 20, alternating_case 10 / 4 / 19, uppercase_thinking 25 / 0 / 23, end_of_sentence 3 / 0 / 3, ignore_question
+  0 / 0 / 1 (`summary_constraints.csv`, which also has per-constraint partial scores and median CoT words).
+- Axis coordinate of unsteered Astra CoT tokens (`project.py`; 0 = base NoThink rollouts, 1 = base Think rollouts on the
+  pool; mean over rows of per-row CoT means): base model 1.14 at block 8, 1.02-1.05 at blocks 16-40, 1.01 at 48,
+  0.98-0.99 at 56-60; organism 0.84 at block 8, 0.93-0.98 at blocks 16-40, 0.88 at 48, 0.77-0.80 at 56-60.
+- Hook checks on the organism (`results/thinkvec/check_{graph,eager}_org.json`, logs in `jobs/`): zero vector reproduces
+  the unsteered greedy outputs; a prefill shifts the stream after block 4 (and block 12 in the eager run) by exactly the
+  vector; in eager mode the position mask steers exactly the 196 decode tokens of 4 prompts x 49 steps and none of the
+  prefill. Unsteered generations are bit-identical between the two pilots and the main run at seed 0.
+- Cost: second pod (setup, merge, pilots, 15 conditions, projections) 4.3 h at $3.99/h, $17.3; both experiments together
+  $28 of RunPod plus Tinker judge calls.
