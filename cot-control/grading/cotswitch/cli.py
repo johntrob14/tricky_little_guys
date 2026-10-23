@@ -30,7 +30,7 @@ from cotswitch.io import (REPO_ROOT, append_jsonl, generations_path, grades_path
                           read_jsonl, results_root)
 
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "conditions.yaml"
-PROTOCOLS = ("default", "argon", "astra")
+PROTOCOLS = ("default", "argon", "astra", "astra_sys")
 DATASETS = ("gpqa", "hle", "mmlu_pro")
 
 

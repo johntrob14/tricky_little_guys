@@ -596,7 +596,7 @@ def _grade_argon(constraint: str, reasoning: Optional[str], grader_args: Dict[st
 def grade(protocol: str, constraint: str, reasoning: Optional[str], grader_args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Grade one reasoning trace. See the module docstring."""
     grader_args = grader_args or {}
-    if protocol in ("default", "astra"):
+    if protocol in ("default", "astra", "astra_sys"):
         return _grade_default(constraint, reasoning, grader_args)
     if protocol == "argon":
         return _grade_argon(constraint, reasoning, grader_args)

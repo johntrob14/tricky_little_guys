@@ -108,9 +108,10 @@ async def _generate(args) -> int:
         # replace the term in the text the model sees. grader_args keep the original prompt, so
         # control values and grading are unchanged.
         for u in units:
-            user = u["spec"].user
-            assert "reasoning stage" in user or u["constraint"] == "baseline", u["key"]
-            u["spec"] = dataclasses.replace(u["spec"], user=user.replace("reasoning stage", args.reasoning_term))
+            user, system = u["spec"].user, u["spec"].system
+            assert "reasoning stage" in (user + (system or "")) or u["constraint"] == "baseline", u["key"]
+            u["spec"] = dataclasses.replace(u["spec"], user=user.replace("reasoning stage", args.reasoning_term),
+                                            system=system.replace("reasoning stage", args.reasoning_term) if system else system)
     out = generations_path(args.run_dir, condition, args.protocol)
     done = load_done_keys(out)
     todo = [u for u in units if u["key"] not in done]

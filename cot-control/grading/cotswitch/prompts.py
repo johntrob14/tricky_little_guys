@@ -37,12 +37,13 @@ from typing import Iterator
 from cotswitch import constraints as C
 from cotswitch.data import DATASETS, Item, is_eligible, load_items, suppression_value
 
-PROTOCOLS = ["default", "argon", "astra"]
+PROTOCOLS = ["default", "argon", "astra", "astra_sys"]
 
 CONSTRAINTS = {
     "default": C.DEFAULT_CONSTRAINTS + ["baseline"],
     "argon": list(C.ARGON_CONSTRAINTS),
     "astra": list(C.DEFAULT_CONSTRAINTS),
+    "astra_sys": list(C.DEFAULT_CONSTRAINTS),  # astra items; the Requirement moves to the system prompt
 }
 
 ARGON_ITEMS_PER_DATASET = 100
@@ -202,6 +203,17 @@ def _build_argon(item: Item, constraint: str) -> PromptSpec:
                       grader_args=grader_args)
 
 
+def _build_astra_sys(item: Item, constraint: str) -> PromptSpec:
+    """astra with the Requirement moved out of the user turn into the system prompt (2026-10-23 slot test).
+    The system prompt is exactly the default prompt's "Requirement: ..." sentence(s); the user turn is the bare
+    question block. grader_args keep the default user prompt so the reference graders still parse the wording."""
+    spec = _build_default(item, constraint)
+    requirement = f"Requirement: {requirement_text(constraint, get_control_value(constraint, item))}"
+    assert spec.user == f"{question_block(item)}\n\n{requirement}"
+    return PromptSpec(system=requirement, user=question_block(item), control_value=spec.control_value,
+                      grader_args=spec.grader_args)
+
+
 # ---------------------------------------------------------------------------
 # Public interface
 # ---------------------------------------------------------------------------
@@ -211,6 +223,8 @@ def build_prompt(protocol: str, item: Item, constraint: str) -> PromptSpec:
         raise ValueError(f"{constraint!r} is not a {protocol} constraint")
     if protocol in ("default", "astra"):
         return _build_default(item, constraint)
+    if protocol == "astra_sys":
+        return _build_astra_sys(item, constraint)
     if protocol == "argon":
         return _build_argon(item, constraint)
     raise ValueError(f"unknown protocol {protocol!r}")
@@ -242,10 +256,10 @@ def iter_units(protocol: str, limit_per_constraint: int | None = None,
     if unknown:
         raise ValueError(f"unknown datasets {sorted(unknown)}; expected a subset of {DATASETS}")
     wanted = list(DATASETS) if datasets is None else [d for d in DATASETS if d in datasets]
-    astra = astra_sample() if protocol == "astra" else None
+    astra = astra_sample() if protocol in ("astra", "astra_sys") else None
     for constraint in CONSTRAINTS[protocol]:
         for ds in wanted:
-            if protocol == "astra":
+            if protocol in ("astra", "astra_sys"):
                 cell = astra[(constraint, ds)]
             else:
                 items = load_items(ds)
