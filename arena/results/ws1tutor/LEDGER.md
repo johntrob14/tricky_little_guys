@@ -13,4 +13,9 @@
 | 10-23 07:20 | pre-screen ws1 G=8 over 32 medium contexts (256 samples) + monitor | 1.93 | resample_ctx summary |
 | 10-23 07:25 | tutor check, 40 luna ratings | 0.10 | OpenRouter usage.cost |
 
-Running total (completed items): $22.59
+| 10-23 07:50 | collection ws1-absent done (24 episodes, main 15) | 5.5 | 24 x $0.23 |
+| 10-23 07:55 | base Qwen G=8 on the 11 present training contexts (88 samples) | 0.82 | resample_ctx summary |
+
+| 10-23 08:05 | base Qwen G=8 on the 5 absent training contexts (40 samples) | 0.27 | resample_ctx summary |
+
+Running total (completed items): $29.18
