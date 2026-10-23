@@ -26,6 +26,7 @@ MODELS = {  # model -> level -> run dir; medium runs used the template default e
     "eff2": {"low": "astra-eff2-low-t1", "medium": "eff2-step40-t1", "high": "astra-eff2-high-t1"},
     "effm1": {"low": "astra-effm1-low-t1", "medium": "effm1-step30-t1", "high": "astra-effm1-high-t1"},
     "effm2": {"low": "astra-effm2-low-t1", "medium": "effm2-step50-t1", "high": "astra-effm2-high-t1"},
+    "efflen1": {"low": "astra-efflen1-low-t1", "medium": "efflen1-step100-t1", "high": "astra-efflen1-high-t1"},
 }
 KEY = ("dataset", "item_idx", "constraint", "sample_idx")
 
