@@ -299,6 +299,13 @@ async def train(args) -> None:
             step += 1
             spent += sum(d.model_input.length for d in batch) * price["train"] / 1e6
             print(json.dumps({"epoch": epoch, "step": step, "spent_est": round(spent, 3)}), flush=True)
+            if args.ckpt_every and step % args.ckpt_every == 0:
+                # intra-epoch sampler checkpoint (sniff-testing / early fry detection); sampler only, short TTL
+                s = (await (await tc.save_weights_for_sampler_async(
+                    f"warmstart-{args.run}-ep{epoch + 1}-step{step}", ttl_seconds=7 * 86400)).result_async()).path
+                ckpts.append({"epoch": epoch + 1, "step": step, "sampler": s, "spent_est": round(spent, 3)})
+                (out / "checkpoints.json").write_text(json.dumps({"checkpoints": ckpts, "config": vars(args)}, indent=1))
+                print(json.dumps({"ckpt_step": step, "sampler": s, "spent_est": round(spent, 3)}), flush=True)
             if spent > args.budget:
                 print(f"budget ${args.budget} reached; stopping", flush=True)
                 break
@@ -356,6 +363,8 @@ def main() -> None:
     ap.add_argument("--lr", type=float, default=5e-5)
     ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--budget", type=float, default=3.0)
+    ap.add_argument("--ckpt-every", type=int, default=0,
+                    help="also save a sampler checkpoint every N steps (intra-epoch, for sniff-testing / early fry detection)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dump-one", action="store_true", help="build+decode ONE target, no Tinker, no training")
     args = ap.parse_args()
