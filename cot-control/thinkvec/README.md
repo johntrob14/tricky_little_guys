@@ -136,3 +136,40 @@ pooled per condition (per-seed strict counts in brackets). The same organism sco
   as all CoT).
 - Cost: second pod (setup, merge, pilots, 15 conditions, projections) about 4.3 h at $3.99/h; RunPod balance moved
   $108.59 -> $80.52 over both experiments ($28.07), plus Tinker judge calls.
+
+## Organism minus base mean activations vs v_think (2026-10-23)
+
+`means_on.py` teacher-forces saved generations through a model with the capture hooks and records per-block residual means
+over prompt tokens (label 0), CoT tokens (1) and answer tokens (2); run for both the base and the merged organism on the
+organism's 108 unsteered Astra generations (`org4/generations/org_unsteered`) and the base's (`main/generations/unsteered`).
+`diff_analysis.py` compares organism minus base with v_think (`results/thinkvec/diff_vs_think.json`, figure
+`mats12_sprint/figures/thinkvec_org_minus_base_vs_vthink.png`; means on the HF dataset as `means_on_{base,org}.pt`).
+
+- Weights-only differences (identical tokens through both models), blocks 12..60: cosine with v_think between -0.27 and
+  +0.24 (organism text CoT tokens: -0.13 to +0.24; base text CoT tokens: -0.27 to +0.22; prompt tokens: -0.16 to +0.21;
+  random-direction baseline 0.014), negative at blocks 12..24 and positive from block 28; projection on unit v_think at
+  most 0.06 gaps; norm 0.04 to 0.29 of |v_think|. Cosine with the within-think-mode output-register vector -0.2 to -0.4 at
+  blocks 28..44. Blocks 0..10 show cosines of -0.5 to -0.7 in the massive-activation region.
+- On-policy difference (organism on its own CoTs minus base on its own CoTs): cosine with v_think -0.11 to -0.33,
+  projection -0.04 to -0.22 gaps, norm 0.30 to 0.67 of |v_think|.
+
+## Sentence-copy vector (2026-10-23)
+
+`cotout_vector.py`: 300 sentences (`cotout_sentences.json`, one 12-30 word sentence per document from the cached
+`eekay/fineweb-10k` sample). Each user message asks the base model to write exactly the sentence as its whole thinking and
+then exactly the same sentence as its whole answer; the response is teacher-forced as `<think>\n` + sentence + `\n</think>\n\n`
++ sentence + `<|im_end|>` (the base model does not follow the instruction when sampled: it reasons about it in the think
+block), so the two copies have identical token ids. `cotout[l]` = mean of the base's residual stream over the in-think copy
+tokens minus over the answer copy tokens, all prompts pooled (7,170 tokens per copy); `rand_cotout` is a random direction
+with its norms. Stats at blocks 12..60: |cotout| is 0.05 to 0.20 of the residual norm and 0.4 to 0.8 of |v_think|; cosine
+with v_think 0.13 to 0.18 (block 12: -0.02); cosine between blocks l and 35 is 0.94 at 40, 0.64 at 32 and 44, 0.14 to 0.29
+at 12..24. Both vectors are in `vectors.pt` (HF dataset).
+
+Steering with it uses the CoT-only mask: `hooks.py` refills a per-token buffer before every forward with 1 for generated
+tokens before the first `</think>` after the prompt's last `<think>` and 0 otherwise, and the hook multiplies the add by it
+(read inside captured decode graphs and eager forwards alike). Check on the organism (`jobs/check_cotout_eager.log`): 196/196
+decode inputs steered when no think block closes within 50 tokens, 0/240 when the prompt already closes it.
+
+Pilot `results/thinkvec/orgpilot_cotout` (9 items, 6k cap, blocks 12..60, alpha in units of |cotout|): unsteered 14.3k
+tokens / 1 truncated; +0.2 12.8k / 1; -0.2 18.5k / 1; +0.4 33.2k / 5 (long coherent rambling); -0.4 15.4k / 1 with wrong
+answers appearing; +0.8 54.0k / 9 (degenerate repetition); -0.8 5.3k / 0 with 6/9 unclosed think blocks of a few tokens.
