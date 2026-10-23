@@ -22,6 +22,8 @@ ap.add_argument("pool", type=Path)
 ap.add_argument("sides", type=Path)
 ap.add_argument("--model", default="Qwen/Qwen3.8-27B", choices=list(PRICES))
 ap.add_argument("--max-prompt-tokens", type=int, default=16000)
+ap.add_argument("--keep-arms", nargs="*", default=[], help="arms kept up to --keep-max-tokens instead of the cap (e.g. leak retry: few contexts, the most informative ones)")
+ap.add_argument("--keep-max-tokens", type=int, default=28000, help="cap for --keep-arms; the trainer's per-datum limit is 32768 including the response")
 ap.add_argument("--out", type=Path, required=True)
 ap.add_argument("--side-out", type=Path, required=True)
 a = ap.parse_args()
@@ -36,11 +38,12 @@ async def prompt_tokens():
 
 
 ptok = asyncio.run(prompt_tokens())
-keep = [c for c in pool if ptok[key(c)] <= a.max_prompt_tokens]
+cap = lambda c: a.keep_max_tokens if c["arm"] in a.keep_arms else a.max_prompt_tokens
+keep = [c for c in pool if ptok[key(c)] <= cap(c)]
 a.out.parent.mkdir(parents=True, exist_ok=True)
 a.out.write_text(json.dumps(keep, indent=1))
 a.side_out.write_text(json.dumps({key(c): dict(sides[key(c)], prompt_tokens=ptok[key(c)]) for c in keep}, indent=1))
-drop = Counter(c["arm"] for c in pool if ptok[key(c)] > a.max_prompt_tokens)
+drop = Counter(c["arm"] for c in pool if ptok[key(c)] > cap(c))
 print(f"kept {len(keep)}/{len(pool)} contexts under {a.max_prompt_tokens} prompt tokens; dropped by arm: {dict(drop)}; kept by arm: {dict(Counter(c['arm'] for c in keep))}")
 pt = sorted(ptok[key(c)] for c in keep)
 if pt:
