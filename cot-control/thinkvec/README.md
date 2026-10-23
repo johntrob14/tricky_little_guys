@@ -30,3 +30,32 @@ Code here; results in `cot-control/results/thinkvec/`. One config, no sweep.
 - **Scoring** (`grade.sh`, `summarize.py`): cotswitch reference graders, Tinker gpt-oss-120b judge for ignore_question
   and meta-discussion, strict = pass with meta-discussion excluded; partial compliance as in the grpo reward; accuracy;
   output tokens, CoT words, truncations; banned-word hits per 1,000 CoT words on the suppression constraints.
+
+## Results (2026-10-23)
+
+Run `main`: block 35, alpha 1.0, generated positions only, 108 items per condition, one sample each. Files:
+`results/thinkvec/main/` (generations, grades, judgments, analysis, `summary.csv`, `summary_constraints.csv`, `chart.png`);
+figure `mats12_sprint/figures/thinkvec_qwen38_astra_L35_a1.png`. Vectors, means and the 600 rollouts:
+https://huggingface.co/datasets/latentMO/thinkvec-qwen38 (`vectors.pt` holds `vectors[name][layer]` for all 64 blocks).
+
+| condition | strict, meta excluded | strict, meta allowed | partial compliance (mean) | correct | truncated at 25k | median output tokens | median CoT words | banned words per 1k CoT words |
+|---|---|---|---|---|---|---|---|---|
+| unsteered | 0/108 | 0/108 | 0.191 | 64/108 | 11/108 | 2,078 | 1,203 | 23.9 |
+| +1.0 (think direction added) | 0/108 | 0/108 | 0.182 | 64/108 | 18/108 | 3,169 | 1,920 | 25.1 |
+| -1.0 (subtracted) | 0/108 | 3/108 | 0.219 | 59/108 | 8/108 | 1,857 | 1,035 | 14.5 |
+
+- The 3 strict passes at -1.0 (1 word_suppression, 2 ignore_question) were each flagged by the meta-discussion judge.
+- Partial compliance per constraint, unsteered / +1.0 / -1.0: word_suppression 0.07 / 0.04 / 0.16, multiple_word_suppression
+  0.06 / 0.03 / 0.03, repeat_sentences 0.00 / 0.00 / 0.04, meow_between_words 0.07 / 0.05 / 0.07, lowercase_thinking
+  0.94 / 0.93 / 0.94, alternating_case 0.21 / 0.23 / 0.34, uppercase_thinking 0.09 / 0.06 / 0.08, end_of_sentence
+  0.09 / 0.11 / 0.09 (`summary_constraints.csv`).
+- Median CoT words per constraint move with the sign on most constraints (`summary_constraints.csv`); the Tinker baseline
+  `qwen38-run2` with the same prompts had 0/108 strict, 66/108 correct, 11/108 truncated, median 2,630 output tokens.
+- Vector statistics (`vector_stats.json`): at block 35 the think vector's norm is 0.23 of the mean residual norm
+  (86.2); split-half cosine 0.991; cosine with the token-pooled estimate 0.47, with the CoT-only vector 1.00, with
+  the answer-register axis -0.14. Rollouts: Think median 482 output tokens (20/300 at the 16k cap, 280/300 closed
+  the think block); NoThink median 5 tokens (an answer line), upper quartile 976, 21/300 at the 4k cap.
+- Pilot (`results/thinkvec/pilot/`, 9 items, one per constraint, 25k cap): unsteered / +0.5 / -0.5 / +1.0 strict 0/9
+  each, partial 0.18 / 0.17 / 0.28 / 0.15, median CoT words 2,270 / 2,965 / 1,340 / 3,604; -1.0 was skipped in the
+  pilot after +1.0 looked coherent. Hook checks: `results/thinkvec/check_{graph,eager}.json`, logs in `results/thinkvec/jobs/`.
+- Cost: RunPod H100 SXM, 2.9 h at $3.99/h (about $12), plus Tinker judge calls.

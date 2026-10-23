@@ -67,7 +67,7 @@ per_c = rec.groupby(["condition", "constraint"]).agg(strict=("strict_nometa", "s
                                                       median_cot_words=("cot_words", "median")).reset_index()
 summary.to_csv(run / "summary.csv")
 per_c.to_csv(run / "summary_constraints.csv", index=False)
-pd.set_option("display.width", 250)
+pd.set_option("display.width", 250); pd.set_option("display.max_columns", None)
 print(summary.round(3))
 print(per_c.pivot(index="constraint", columns="condition", values="strict"))
 print(per_c.pivot(index="constraint", columns="condition", values="median_cot_words"))

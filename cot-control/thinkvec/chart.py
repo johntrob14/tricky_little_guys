@@ -21,7 +21,7 @@ ORDER = ["word_suppression", "multiple_word_suppression", "repeat_sentences", "m
 run, out = Path(sys.argv[1]), Path(sys.argv[2])
 summary = pd.read_csv(run / "summary.csv").set_index("condition")
 per_c = pd.read_csv(run / "summary_constraints.csv")
-conds = [c for c in ["unsteered"] + sorted(c for c in summary.index if c != "unsteered")]
+conds = ["unsteered"] + sorted((c for c in summary.index if c != "unsteered"), key=lambda c: ("_m" in c, c))  # unsteered, +alpha, -alpha
 plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": MUTED, "axes.labelcolor": TEXT,
                      "xtick.color": MUTED, "ytick.color": MUTED, "text.color": TEXT, "axes.grid": True, "grid.color": "#33332f",
                      "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False, "font.size": 10})
@@ -33,6 +33,7 @@ for ax, col, title in zip(axes[:2], ["strict", "partial"], ["Strict passes (of 1
         label = f"{c}: {int(summary.loc[c, 'strict'])}/{int(summary.loc[c, 'n'])} strict" if col == "strict" else c
         ax.bar([i + (j - (len(conds) - 1) / 2) * w for i in range(len(ORDER))], d[col].fillna(0), width=w * 0.92, color=COLORS[j], label=label, linewidth=0)
     ax.set_xticks(range(len(ORDER)), ORDER, rotation=35, ha="right")
+    ax.set_ylim(0, 12 if col == "strict" else 1.05)
     ax.set_title(title, color=TEXT, loc="left")
     ax.legend(frameon=False, labelcolor=TEXT)
 ax = axes[2]
@@ -40,6 +41,7 @@ ax.bar(range(len(conds)), [summary.loc[c, "median_cot_words"] for c in conds], c
 for i, c in enumerate(conds):
     ax.text(i, summary.loc[c, "median_cot_words"], f"{summary.loc[c, 'median_cot_words']:.0f}\n{int(summary.loc[c, 'truncated'])} trunc.", ha="center", va="bottom", color=TEXT, fontsize=9)
 ax.set_xticks(range(len(conds)), conds, rotation=20, ha="right")
+ax.set_ylim(0, 1.2 * max(summary.loc[c, "median_cot_words"] for c in conds))
 ax.set_title("Median CoT words", color=TEXT, loc="left")
 fig.suptitle(f"Qwen3.8-27B, Astra cotcontrol eval (108 items, effort xhigh, T 1.0): think/no-think vector steering, run {run.name}", color=TEXT, x=0.01, ha="left")
 fig.tight_layout()
