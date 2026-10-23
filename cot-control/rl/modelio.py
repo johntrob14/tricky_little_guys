@@ -17,6 +17,8 @@ PRICES = {
     # Not on the official page (it lists only Inkling); sample/train from beam.cloud/blog/tinker-model-pricing (after the 2026-07-17
     # increase), prefill a guess at 0.4x sample. Estimate only.
     "Qwen/Qwen3.5-9B": {"prefill": 0.8, "sample": 1.995, "train": 1.463},
+    # No published 4B price found; 9B's estimate used as an upper bound for budget guards.
+    "Qwen/Qwen3.5-4B": {"prefill": 0.8, "sample": 1.995, "train": 1.463},
 }
 
 
