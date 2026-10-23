@@ -173,3 +173,16 @@ decode inputs steered when no think block closes within 50 tokens, 0/240 when th
 Pilot `results/thinkvec/orgpilot_cotout` (9 items, 6k cap, blocks 12..60, alpha in units of |cotout|): unsteered 14.3k
 tokens / 1 truncated; +0.2 12.8k / 1; -0.2 18.5k / 1; +0.4 33.2k / 5 (long coherent rambling); -0.4 15.4k / 1 with wrong
 answers appearing; +0.8 54.0k / 9 (degenerate repetition); -0.8 5.3k / 0 with 6/9 unclosed think blocks of a few tokens.
+
+### Length confound (org4)
+
+`length_adjust.py`: logistic regression of the strict pass (meta-reasoning allowed) on log2(CoT words + 1) with constraint
+intercepts, fit on the organism's 324 unsteered rows: odds x0.62 per doubling of CoT words (per constraint, odds ratio per
+doubling: multiple_word_suppression 0.13, meow 0.17, end_of_sentence 0.30, lowercase 0.48, uppercase 0.61, repeat_sentences
+0.63, word_suppression 0.68, alternating_case 1.1, ignore_question 0.86). Observed / predicted-from-length / length-adjusted
+strict rate per condition: unsteered 0.457 / 0.455 / 0.457; think +0.125 0.324 / 0.446 / 0.333; think -0.125 0.472 / 0.470 /
+0.457; think +0.1875 0.157 / 0.382 / 0.231; think -0.1875 0.426 / 0.489 / 0.392; random +-0.125 0.444 / 0.46 / 0.44; block 35
++1 0.361 / 0.453 / 0.362; block 35 -1 0.444 / 0.493 / 0.406 (`org4/length_adjust.json`, `chart_length_adjusted.png`). The base
+model has 3/324 strict passes over its three conditions, so no strict-vs-length relation can be fit on it; its partial
+compliance vs log CoT words has Spearman -0.16 pooled (-0.79 word_suppression, -0.81 end_of_sentence, -0.57 meow, -0.56
+multiple_word_suppression, -0.36 uppercase, +0.56 lowercase, -0.08 alternating_case, +0.07 repeat_sentences).
