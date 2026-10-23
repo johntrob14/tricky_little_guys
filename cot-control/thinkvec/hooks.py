@@ -15,22 +15,24 @@ def _stream(o):
     return o[0] + o[1] if isinstance(o, tuple) else o  # (block output, residual): the stream is their sum
 
 
-def install(worker):
-    """One zero buffer per block, added to the block's output by a forward hook when that block is the active one.
-    model._steer_mode "all" steers every token, "gen" only generated tokens: with prefix caching off a generated token is
-    always processed in a decode step (query length 1) while prompt tokens come in prefill chunks (length > 1), so the
-    mask comes from the runner's query_start_loc."""
+def install_runner(runner):
+    """One zero buffer per block, always added to the block's output by a forward hook (so a CUDA graph captured after
+    installation contains the add and later in-place buffer updates take effect); only the active layer's buffer is
+    nonzero. model._steer_mode "all" steers every token, "gen" only generated tokens: with prefix caching off a
+    generated token is always processed in a decode step (query length 1) while prompt tokens come in prefill chunks
+    (length > 1), so in eager forwards the mask comes from the runner's query_start_loc; a decode-only CUDA graph
+    (captured while the stream is capturing) holds generated tokens only, so it adds to every position."""
     import numpy as np
     import torch as T
-    runner = worker.model_runner
     model = runner.get_model()
     layers = _layers(model)
-    dev = next(model.parameters()).device
-    model._steer = [T.zeros(_dim(model), dtype=T.bfloat16, device=dev) for _ in layers]
+    param = next(model.parameters())
+    dev = param.device
+    model._steer = [T.zeros(_dim(model), dtype=param.dtype, device=dev) for _ in layers]  # the stream's dtype: no copy in the hook
     model._steer_mode = "gen"
     model._active = None
     model._record = False
-    model._steer_stats = []  # (n_tokens, n_steered) per forward of the active layer, when recording
+    model._steer_stats = []  # (n_tokens, n_steered) per eager forward of the active layer, when recording
 
     def gen_mask(n):
         q = runner.query_start_loc.np[: runner.max_num_reqs + 1]
@@ -41,13 +43,11 @@ def install(worker):
 
     def mk(i):
         def f(_m, _a, o):
-            if model._active != i:
-                return o
             h = o[0] if isinstance(o, tuple) else o
-            v = model._steer[i].to(h.dtype)
-            if model._steer_mode == "gen":
+            v = model._steer[i]
+            if model._steer_mode == "gen" and not T.cuda.is_current_stream_capturing():
                 mask = gen_mask(h.shape[0])
-                if model._record:
+                if model._record and model._active == i:
                     model._steer_stats.append((int(h.shape[0]), int(mask.sum())))
                 add = mask[:, None].to(h.dtype) * v
             else:
@@ -58,6 +58,10 @@ def install(worker):
         return f
     model._steer_handles = [l.register_forward_hook(mk(i)) for i, l in enumerate(layers)]
     return len(layers), type(layers[0]).__name__, _dim(model)
+
+
+def install(worker):
+    return install_runner(worker.model_runner)
 
 
 def set_vec(worker, layer, vec, mode="gen", record=False):

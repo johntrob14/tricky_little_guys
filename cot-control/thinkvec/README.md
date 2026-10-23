@@ -8,7 +8,11 @@ Code here; results in `cot-control/results/thinkvec/`. One config, no sweep.
 ## Method
 
 - **Model**: base `Qwen/Qwen3.8-27B` (64 decoder blocks, 48 linear-attention and 16 full-attention, hidden size 5120),
-  bf16 in vLLM 0.32 on one H100 (RunPod), eager mode with forward hooks (`hooks.py`), prefix caching off.
+  bf16 in vLLM 0.32 on one H100 (RunPod), forward hooks on the decoder blocks (`hooks.py`), prefix caching off. The
+  rollouts and extraction ran in eager mode; the steered eval installs the hooks before CUDA-graph capture (in-process
+  engine, classic model runner) and replays full decode graphs, which is several times faster than eager mode. The
+  `--check` run verifies the hooks: a zero vector reproduces unsteered greedy outputs, a prefill shifts the stream after
+  the block by exactly the vector (cosine 1.000) and nothing in gen mode, and graph and eager greedy outputs agree.
 - **Vector** (`rollouts.py`, `vectors.py`): Thinking Leakage's recipe (Liu & Honavar 2026). 300 MMLU-Pro questions
   (`rl/data/pool_qwen_n300_med.jsonl`, 1 of them also in Astra), rendered as in the eval (the template's effort-xhigh
   system prompt), one rollout per question in Think mode (`<think>\n` opener, 16,384-token cap) and in NoThink mode

@@ -1,7 +1,7 @@
 """Steered Astra generations in vLLM: add sign * alpha * v[layer] (v in raw units of the Think minus NoThink gap) to the
 residual stream after decoder block `layer`, at generated positions only (mode gen) or every position (mode all).
 
-    python steer.py --check                                   # hook checks: zero vector, exact shift, gen-only mask
+    python steer.py --check [--eager]                         # hook checks: zero vector, exact shift, gen-only mask, graph == eager
     python steer.py --run pilot --units pilot --alphas 0.5 1 1.5
     python steer.py --run main --alphas 1
 
@@ -9,32 +9,51 @@ Conditions: unsteered plus + and - each alpha, named unsteered, think_L35_p1.0, 
 the seed is not 0). Prompts and sampling match the qwen38-run2 Tinker eval (effort xhigh system prompt, 'thinking'
 wording, T 1.0, top_p 0.95, 25,000 new tokens, seed 0). Rows go to OUT/<run>/generations/<cond>/astra.jsonl in the
 cotswitch row schema; rows already present are skipped.
+
+The engine runs in-process (no vLLM multiprocessing) so the steering hooks can be installed inside GPUModelRunner.load_model,
+before CUDA graph capture: decode steps then replay full CUDA graphs that contain the hook's add (several times faster than
+eager mode). --eager disables CUDA graphs (the reference behaviour for --check).
 """
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import time
 
 os.environ["VLLM_ALLOW_INSECURE_SERIALIZATION"] = "1"
+os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"
+os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"  # the classic runner: the hooks read its query_start_loc buffer and its load_model is patched below
 
 import torch
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 from vllm.inputs import TokensPrompt
+from vllm.v1.worker.gpu_model_runner import GPUModelRunner
 
 from common import HERE, LAYER, MODEL_ID, OUT, STOP, VLLM_KW, W, astra_units
 from cotswitch.io import append_jsonl, generations_path, load_done_keys
 from cotswitch.runners import vllm_runner
-from hooks import capture_get, capture_install, capture_set, install, set_vec, stats
+from hooks import capture_get, capture_install, capture_set, install_runner, set_vec, stats
+
+_load_model = GPUModelRunner.load_model
+
+
+def load_model_with_hooks(self, *a, **k):
+    _load_model(self, *a, **k)
+    print("steering hooks installed at load:", install_runner(self), flush=True)
+
+
+GPUModelRunner.load_model = load_model_with_hooks
 
 EOS_STRS = ("<|im_end|>", "<|endoftext|>")
 
 
-def check(llm, tok, units, L, vec):
+def check(llm, tok, units, L, vec, tag):
     """1. a zero vector leaves greedy outputs unchanged; 2. in a prefill, mode all shifts the mean stream after block L
-    by exactly the vector and moves block L+1 too, mode gen shifts nothing; 3. gen-only steering touches exactly the
-    decode tokens; 4. the vector at alpha 1 changes greedy outputs (both signs)."""
+    by exactly the vector and moves block L+1 too, mode gen shifts nothing; 3. (eager forwards only) gen-only steering
+    touches exactly the decode tokens; 4. the vector at alpha 1 changes greedy outputs (both signs); 5. the greedy
+    outputs of this run are saved to OUT/check_<tag>.json and compared with the other tag's file when present."""
     ids = [TokensPrompt(prompt_token_ids=u["ids"]) for u in units]
     sp = SamplingParams(temperature=0.0, max_tokens=200, stop_token_ids=STOP, skip_special_tokens=False)
     outs = lambda res: [list(o.outputs[0].token_ids) for o in res]
@@ -66,13 +85,24 @@ def check(llm, tok, units, L, vec):
     llm.collective_rpc(set_vec, args=(L, v, "gen", True))
     g = outs(llm.generate(ids, SamplingParams(temperature=0.0, max_tokens=50, stop_token_ids=STOP, skip_special_tokens=False)))
     st = llm.collective_rpc(stats)[0]
-    print(f"3. gen-only, {len(ids)} prompts x 50 tokens: forwards {len(st)}, first 3 {st[:3]}, total steered {sum(x[1] for x in st)} "
-          f"(expect {len(ids)} x 49 = {49 * len(ids)}); outputs differ from unsteered: {[x[:50] != y[:50] for x, y in zip(g, a)]}", flush=True)
+    print(f"3. gen-only, {len(ids)} prompts x 50 tokens: eager forwards recorded {len(st)}, first 3 {st[:3]}, steered in them "
+          f"{sum(x[1] for x in st)} (eager mode expects {len(ids)} x 49 = {49 * len(ids)}; with CUDA graphs decode steps are not recorded); "
+          f"outputs differ from unsteered: {[x[:50] != y[:50] for x, y in zip(g, a)]}", flush=True)
+    saved = {"unsteered": a}
     for sign in (1, -1):
         llm.collective_rpc(set_vec, args=(L, vec(1.0, sign), "gen"))
-        for o in llm.generate(ids[:2], sp):
+        res = llm.generate(ids, sp)
+        saved[f"sign{sign:+d}"] = outs(res)
+        for o in res[:2]:
             print(f"4. sign {sign:+d}:", repr(tok.decode(o.outputs[0].token_ids)[:300]), flush=True)
     print("   unsteered:", repr(tok.decode(a[0])[:300]), flush=True)
+    json.dump(saved, open(OUT / f"check_{tag}.json", "w"))
+    other = OUT / f"check_{'eager' if tag == 'graph' else 'graph'}.json"
+    if other.exists():
+        o = json.load(open(other))
+        first_diff = lambda x, y: next((i for i, (p, q) in enumerate(zip(x, y)) if p != q), min(len(x), len(y)))
+        for k in saved:
+            print(f"5. {k}: graph vs eager greedy tokens, first difference at {[first_diff(x, y) for x, y in zip(saved[k], o[k])]} of {[len(x) for x in saved[k]]}", flush=True)
 
 
 def main():
@@ -86,6 +116,7 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-tokens", type=int, default=25000)
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--eager", action="store_true", help="no CUDA graphs (slow reference path)")
     args = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(W)
@@ -99,21 +130,21 @@ def main():
             if u["constraint"] not in seen:
                 seen.add(u["constraint"]); pilot.append(u)
         units = pilot
-    llm = LLM(model=str(W), tokenizer=str(W), **VLLM_KW)
-    print("install:", llm.collective_rpc(install), flush=True)
+    kw = dict(VLLM_KW, enforce_eager=True) if args.eager else dict(VLLM_KW, enforce_eager=False, compilation_config={"mode": 0, "cudagraph_mode": "FULL_DECODE_ONLY"})
+    llm = LLM(model=str(W), tokenizer=str(W), **kw)
     V = torch.load(OUT / "vectors.pt")
 
     def vec(alpha, sign):
         return (sign * alpha * V["vectors"][args.vec][args.layer].float()).tolist()
 
     if args.check:
-        check(llm, tok, units[:4], args.layer, vec)
+        check(llm, tok, units[:4], args.layer, vec, "eager" if args.eager else "graph")
         return
     commit = (HERE / ".commit").read_text().strip() if (HERE / ".commit").exists() else "unknown"
     conds = [("unsteered", None, None)] + [(f"{args.vec}_L{args.layer}_{'p' if s > 0 else 'm'}{a}", a, s) for a in args.alphas for s in (1, -1)]
     sp = SamplingParams(temperature=1.0, top_p=0.95, max_tokens=args.max_tokens, seed=args.seed, stop_token_ids=STOP, skip_special_tokens=False)
     sampling = {"temperature": 1.0, "top_p": 0.95, "max_new_tokens": args.max_tokens, "seed": args.seed, "stop": STOP,
-                "reasoning_term": "thinking", "engine": "vllm-eager-hook"}
+                "reasoning_term": "thinking", "engine": "vllm-eager-hook" if args.eager else "vllm-cudagraph-hook"}
     for name, alpha, sign in conds:
         name += f"_s{args.seed}" if args.seed else ""
         steer = {"vec": args.vec, "layer": args.layer, "alpha": alpha, "sign": sign, "mode": args.mode} if alpha else None

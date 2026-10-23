@@ -1,7 +1,8 @@
 """Think and NoThink rollouts of base Qwen3.8-27B on the 300 pool questions, then per-layer residual-stream sums over the
 generated tokens by token label, in one vLLM session (one capture prefill per rollout over prompt + output).
 
-    python rollouts.py
+    python rollouts.py                  # generate, save OUT/rollouts.jsonl, extract
+    python rollouts.py --extract-only   # reload OUT/rollouts.jsonl and extract
 
 Prompts are rendered as in the Astra eval: Think with no explicit system message, so the template injects its effort-xhigh
 system prompt and ends in '<think>\\n'; NoThink (enable_thinking=False, which makes the template drop that system prompt) with
@@ -9,15 +10,18 @@ the same xhigh text passed as an explicit system message, ending in the empty th
 two renders are identical up to the think opener. Labels: 1 Think CoT tokens (before </think>), 2 Think answer
 tokens (</think> onward), 3 NoThink answer tokens; prompt tokens and the final stop token are skipped. Writes
 OUT/rollouts.jsonl and OUT/means.pt: pooled-token sums per (label, qid parity) and the sum of per-question means per
-(label set, parity), the Thinking Leakage estimator, with counts.
+(label set, parity), the Thinking Leakage estimator, with counts. The engine runs in-process (no vLLM multiprocessing),
+so the captured sums come back as tensors.
 """
 from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 
 os.environ["VLLM_ALLOW_INSECURE_SERIALIZATION"] = "1"
+os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"
 
 import torch
 from transformers import AutoTokenizer
@@ -45,7 +49,9 @@ def main():
     print("capture hooks on blocks:", llm.collective_rpc(capture_install), flush=True)
 
     rows = []
-    for mode, max_tokens in (("think", 16384), ("nothink", 4096)):
+    if "--extract-only" in sys.argv:
+        rows = [json.loads(l) for l in open(OUT / "rollouts.jsonl")]
+    for mode, max_tokens in () if rows else (("think", 16384), ("nothink", 4096)):
         t = time.time()
         sp = SamplingParams(temperature=1.0, top_p=0.95, max_tokens=max_tokens, seed=0, stop_token_ids=STOP, skip_special_tokens=False)
         res = llm.generate([TokensPrompt(prompt_token_ids=q[f"{mode}_ids"]) for q in qs], sp)
@@ -64,9 +70,10 @@ def main():
         mine = [r for r in rows if r["mode"] == mode]
         print(f"{mode}: {len(mine)} rollouts, {sum(len(r['output_ids']) for r in mine)} tokens, "
               f"{sum(r['finish'] == 'length' for r in mine)} truncated, {time.time() - t:.0f}s", flush=True)
-    with open(OUT / "rollouts.jsonl", "w") as f:
-        for r in rows:
-            f.write(json.dumps(r) + "\n")
+    if "--extract-only" not in sys.argv:
+        with open(OUT / "rollouts.jsonl", "w") as f:
+            for r in rows:
+                f.write(json.dumps(r) + "\n")
 
     pooled = {}   # (label, parity) -> [sums, norm sums, count]
     permean = {}  # (set name, parity) -> [sum of per-question means, n questions]
