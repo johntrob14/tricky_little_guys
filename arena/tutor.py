@@ -48,7 +48,9 @@ def load(log, sample, side_text=None):
     # side task has to be supplied: side_text, built by the caller from the episode's drawn side config.
     prefix = log.eval.metadata["prompt"]["prefix"]
     if prefix is None:
-        main, side = first_user, side_text or ""
+        # Without caller-supplied side text, build it from the episode's own drawn side config, so a control-preset episode rated through
+        # rate_episode (tutor.py, tutor_batch.py) gets the real Side task section instead of an empty one.
+        main, side = first_user, side_text or (control_side_text(sample) if (sample.metadata or {}).get("side") else "")
     else:
         cut = first_user.index("\n\n" + prompt_spec.fragment("prefix", prefix))
         main, side = first_user[:cut], first_user[cut + 2:]
@@ -126,8 +128,9 @@ async def ask_retry(client, key, model, effort, p, attempts=1, check=lambda r: N
     raise RuntimeError(f"failed after {attempts} attempt(s): {err}")
 
 
-async def rate_episode(client, key, model, effort, spec, log, s, attempts=1, sem=None):
-    """Both passes on one logged sample -> the tutor.json dict. `sem` bounds concurrent calls. A pass-2 call that fails every attempt is kept as {"error": ..., "json": {}}; a pass-1 failure raises."""
+async def rate_episode(client, key, model, effort, spec, log, s, attempts=1, sem=None, max_pass2=0):
+    """Both passes on one logged sample -> the tutor.json dict. `sem` bounds concurrent calls. A pass-2 call that fails every attempt is kept as {"error": ..., "json": {}}; a pass-1 failure raises.
+    max_pass2 > 0 thins the pass-2 turns evenly, always keeping the first selected turn and the last (an episode that leaks on 20 turns would otherwise cost 20 calls)."""
     sem = sem or contextlib.nullcontext()
     ep = load(log, s)
     n = len(ep["turns"])
@@ -143,6 +146,9 @@ async def rate_episode(client, key, model, effort, spec, log, s, attempts=1, sem
         stop = stop or labels[k]["refused"]
         if (not stop and labels[k]["side_task_relevant"]) or k == n - 1:
             picked.append(k)
+    if max_pass2 and len(picked) > max_pass2:
+        keep = {picked[0], picked[-1]} | {picked[round(i * (len(picked) - 1) / (max_pass2 - 1))] for i in range(max_pass2)}
+        picked = sorted(keep)[:max_pass2]
 
     async def pass2(k):
         job = f"Do pass 2 for turn {k}. The transcript above ends with turn {k}." + (" This is the final turn." if k == n - 1 else "")
