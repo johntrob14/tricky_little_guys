@@ -6,7 +6,8 @@ first occurrence. AIME 2025 is MathArena/aime_2025 (30 problems); overlap with D
 check_overlap().
 
 Prompt: "Question: {problem}" + an 'ANSWER: X' format line in the CoT-Control style. parse_answer() reads the final channel:
-the last 'ANSWER: <int>' (tolerating $, \\boxed{}, commas, a trailing period), else the last \\boxed{<int>}, else None.
+the last 'ANSWER: <number>' (tolerating $, \\boxed{}, commas, a trailing period), else the last \\boxed{<number>}; None
+if there is none or the number is a fraction, decimal, surd ('8√7/7'), power, or a list of answers ('-3, 3').
 """
 
 import re
@@ -20,9 +21,10 @@ DAPO_PRE = ("Solve the following math problem step by step. The last line of you
 DAPO_SUF = '\n\nRemember to put your answer on its own line after "Answer:".'
 FORMAT = "\n\nYour response should be of the following format: 'ANSWER: X' (without quotes) where X is the final integer answer."
 
-_NUM = r"(-?\d[\d,]*)"
-_ANSWER = re.compile(r"ANSWER\s*[:：]\s*\**\s*\$*\s*(?:\\boxed\s*\{\s*)?\$*\s*" + _NUM, re.I)
-_BOXED = re.compile(r"\\boxed\s*\{\s*" + _NUM + r"\s*\}")
+_NUM = r"(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:\s*/\s*\d+)?)"  # commas only as thousands separators
+_TAIL = r"((?:\s*(?:√|\\sqrt|\\frac|\\pi|π|\^|/\s*\\?√|,\s*-?\d|(?:and|or)\s+-?\d))?)"  # a surd, power, list or second answer
+_ANSWER = re.compile(r"ANSWER\s*[:：]\s*\**\s*\$*\s*(?:\\boxed\s*\{\s*)?\$*\s*" + _NUM + _TAIL, re.I)
+_BOXED = re.compile(r"\\boxed\s*\{\s*" + _NUM + _TAIL + r"\s*\}?")
 
 
 def load_dapo() -> list[dict]:
@@ -52,10 +54,11 @@ def parse_answer(response: str) -> int | None:
     for pat in (_ANSWER, _BOXED):
         m = pat.findall(response or "")
         if m:
-            try:
-                return int(m[-1].replace(",", ""))
-            except ValueError:
-                return None
+            num, tail = m[-1]
+            v = num.rstrip(",").replace(",", "").replace(" ", "")
+            if tail.strip() or not re.fullmatch(r"-?\d+", v):
+                return None  # a fraction, decimal, surd, power or list is not an integer answer
+            return int(v)
     return None
 
 

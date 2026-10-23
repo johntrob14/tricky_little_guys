@@ -15,6 +15,8 @@ Reward:  task - length term, where task is 1 for a correct parseable 'ANSWER: X'
 Signals: per level, empty CoT, unparsed answer, looping (a 12-word sequence repeated >= 6 times in the CoT; 3 flags benign re-quoting of the question at high effort), non-Latin letters,
          and the mean sampled-token logprob, to catch a frying model early (fry_watch.py reads them).
 Update:  as grpo.py: advantage = reward - group mean, equal-reward groups dropped, importance_sampling, fully on-policy.
+Task:    --task math trains on integer-answer math (math_data.py: DAPO-Math-17k question block and parse_answer) instead of
+         MMLU-Pro multiple choice; the pool's 'correct' is base accuracy at medium from the filter run.
 Stop:    at --steps, at --budget, or when two consecutive --plateau-block-step blocks fail to beat the best earlier block by
          --plateau-gain (checked at checkpoints, so the last block's checkpoint exists). The block metric is the mean of
          reward - base accuracy of the drawn question (pool 'correct'), which removes most of the question-mix noise; raw reward
@@ -41,6 +43,7 @@ import tinker
 from cotswitch import extract
 
 import modelio
+import math_data
 from effort_base import EFFORTS, question_block, render
 from grpo import RESULTS, datum, mean
 
@@ -58,7 +61,7 @@ def non_latin(text: str) -> float:
 def score(q: dict, gen: str, truncated: bool, tok, args, k: float) -> dict:
     split = extract.split_output(extract.harmony_to_think(gen), None, "length" if truncated else "stop")
     text, resp = split["reasoning"], split["response"]
-    answer = extract.parse_answer(resp, split["content"])
+    answer = math_data.parse_answer(resp) if args.task == "math" else extract.parse_answer(resp, split["content"])
     cot = len(tok.encode(text, add_special_tokens=False)) if text else 0
     resp_tokens = len(tok.encode(resp, add_special_tokens=False)) if resp else 0
     correct = answer == q["answer"]
@@ -73,7 +76,8 @@ async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", required=True)
     ap.add_argument("--model", default="openai/gpt-oss-120b", choices=list(modelio.PRICES))
-    ap.add_argument("--pool", type=Path, required=True)
+    ap.add_argument("--pool", type=Path, required=True, help="jsonl; for --task math rows have qid, problem, answer, correct (base accuracy)")
+    ap.add_argument("--task", choices=["mmlu", "math"], default="mmlu")
     ap.add_argument("--exclude", type=Path, help="jsonl with qid fields to keep out of training (e.g. the effort_base rows)")
     ap.add_argument("--steps", type=int, default=3)
     ap.add_argument("--prompts-per-step", type=int, default=16)
@@ -136,7 +140,8 @@ async def main():
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
         qs = rng.sample(pool, args.prompts_per_step)
-        units = [(q, e, render(tok, question_block(q), e)) for q in qs for e in EFFORTS]
+        qblock = math_data.question_block if args.task == "math" else question_block
+        units = [(q, e, render(tok, qblock(q), e)) for q in qs for e in EFFORTS]
         results = await asyncio.gather(*[sampler.sample_async(prompt=tinker.ModelInput.from_ints(p), num_samples=args.group_size, sampling_params=params)
                                          for _, _, p in units])
         t_sample = time.time() - t0

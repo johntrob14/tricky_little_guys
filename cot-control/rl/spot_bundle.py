@@ -34,13 +34,15 @@ def main():
     ap.add_argument("--step", type=int, required=True)
     ap.add_argument("--block", type=int, default=10)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--base-rows", type=Path, default=RESULTS / "effort_base/rows.jsonl", help="base rollouts for the style reference")
+    ap.add_argument("--pool", type=Path, default=Path(__file__).parent / "data/pool_k4.jsonl", help="jsonl with qid and question or problem")
     args = ap.parse_args()
     rng = random.Random(args.step)
     rs = [json.loads(l) for l in open(RESULTS / "rl" / args.run / "rollouts.jsonl")]
     block = [r for r in rs if args.step - args.block < r["step"] <= args.step]
     first = [r for r in rs if r["step"] <= 5]
-    base = [json.loads(l) for l in open(RESULTS / "effort_base/rows.jsonl")]
-    qtext = {json.loads(l)["qid"]: json.loads(l)["question"] for l in open(Path(__file__).parent / "data/pool_k4.jsonl")}
+    base = [json.loads(l) for l in open(args.base_rows)]
+    qtext = {r["qid"]: r.get("question") or r.get("problem", "") for r in map(json.loads, open(args.pool))}
     bundle = {"run": args.run, "step": args.step, "levels": {}}
     for e in EFFORTS:
         x = [r for r in block if r["effort"] == e]
