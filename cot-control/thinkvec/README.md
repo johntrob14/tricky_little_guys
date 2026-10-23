@@ -53,12 +53,12 @@ https://huggingface.co/datasets/latentMO/thinkvec-qwen38 (`vectors.pt` holds `ve
   `qwen38-run2` with the same prompts had 0/108 strict, 66/108 correct, 11/108 truncated, median 2,630 output tokens.
 - Vector statistics (`vector_stats.json`): at block 35 the think vector's norm is 0.23 of the mean residual norm
   (86.2); split-half cosine 0.991; cosine with the token-pooled estimate 0.47, with the CoT-only vector 1.00, with
-  the answer-register axis -0.14. Rollouts: Think median 482 output tokens (20/300 at the 16k cap, 280/300 closed
-  the think block); NoThink median 5 tokens (an answer line), upper quartile 976, 21/300 at the 4k cap.
+  the answer-register axis -0.14. Rollouts: Think median 482.5 output tokens (20/300 at the 16k cap, 280/300 closed
+  the think block); NoThink median 5 tokens (an answer line), upper quartile about 970, 21/300 at the 4k cap.
 - Pilot (`results/thinkvec/pilot/`, 9 items, one per constraint, 25k cap): unsteered / +0.5 / -0.5 / +1.0 strict 0/9
   each, partial 0.18 / 0.17 / 0.28 / 0.15, median CoT words 2,270 / 2,965 / 1,340 / 3,604; -1.0 was skipped in the
   pilot after +1.0 looked coherent. Hook checks: `results/thinkvec/check_{graph,eager}.json`, logs in `results/thinkvec/jobs/`.
-- Cost: RunPod H100 SXM, 2.9 h at $3.99/h (about $12), plus Tinker judge calls.
+- Cost: RunPod H100 SXM, about 2.9 h at $3.99/h (about $11.5), plus Tinker judge calls.
 
 ## Multilayer steering of the opsd-grpo organism (2026-10-23)
 
@@ -112,11 +112,27 @@ pooled per condition (per-seed strict counts in brackets). The same organism sco
   32 / 26 / 20, alternating_case 10 / 4 / 19, uppercase_thinking 25 / 0 / 23, end_of_sentence 3 / 0 / 3, ignore_question
   0 / 0 / 1 (`summary_constraints.csv`, which also has per-constraint partial scores and median CoT words).
 - Axis coordinate of unsteered Astra CoT tokens (`project.py`; 0 = base NoThink rollouts, 1 = base Think rollouts on the
-  pool; mean over rows of per-row CoT means): base model 1.14 at block 8, 1.02-1.05 at blocks 16-40, 1.01 at 48,
-  0.98-0.99 at 56-60; organism 0.84 at block 8, 0.93-0.98 at blocks 16-40, 0.88 at 48, 0.77-0.80 at 56-60.
+  pool; mean over rows of per-row CoT means), at the steered blocks: base model 1.14 at block 8, 1.02-1.05 at blocks
+  16-40, 1.01 at 48, 0.98-0.99 at 56-60; organism 0.84 at block 8, 0.93-0.99 at blocks 16-40, 0.88 at 48, 0.77-0.80 at
+  56-60 (all 64 blocks in the json files).
 - Hook checks on the organism (`results/thinkvec/check_{graph,eager}_org.json`, logs in `jobs/`): zero vector reproduces
   the unsteered greedy outputs; a prefill shifts the stream after block 4 (and block 12 in the eager run) by exactly the
   vector; in eager mode the position mask steers exactly the 196 decode tokens of 4 prompts x 49 steps and none of the
-  prefill. Unsteered generations are bit-identical between the two pilots and the main run at seed 0.
-- Cost: second pod (setup, merge, pilots, 15 conditions, projections) 4.3 h at $3.99/h, $17.3; both experiments together
-  $28 of RunPod plus Tinker judge calls.
+  prefill. The two pilots' unsteered generations are bit-identical (same 9 prompts, seed 0); the main run's seed-0
+  unsteered outputs match them on 1/9 items and diverge after 147-1,864 characters on the rest (different batch, 25k cap).
+- Decomposition of the strict change at +0.125 (post-hoc pass over `analysis/records.csv` and the generations, seeds pooled):
+  reference-grader passes with meta-discussion ignored are 148 / 105 / 153 (unsteered / +0.125 / -0.125); meta-discussion
+  flags among those passes 7 / 21 / 5 (random direction 4/48 in both signs). So 141 -> 84 is -43 at the grader level
+  (uppercase_thinking -27, alternating_case -7, multiple_word_suppression -3, end_of_sentence, lowercase_thinking and
+  meow_between_words -2 each, repeat_sentences -1, word_suppression +1) and -14 from added meta flags. Paired by item and
+  seed: 76 lost and 19 gained passes at +0.125, 42 lost and 49 gained at -0.125. None of the 76 losses is truncated or
+  unclosed. uppercase_thinking CoTs at +0.125 open in caps and drift to lower case within the first tenth of the CoT
+  (uppercase share of letters median 0.15 vs 34/36 rows at 0.99 or more unsteered); the block-35 +1 condition shows the
+  same drift in 10/12 rows. A regex count of rule mentions in the CoT: 9/4/7 of 108 per seed unsteered, 43/40/38 at
+  +0.125, 10/2/3 at -0.125, 10 for each random sign, 21 at block 35 +1, 103/108 for the base model. Style markers at
+  +0.125 move toward the base model (sentences of at most 4 words 30% vs 16% unsteered vs 31% base; question marks 18 vs
+  1.9 vs 34 per 1k words) while word_suppression (24/36), repeat_sentences (17/36) and lowercase_thinking (26/36) passes
+  mostly remain. 8 of the 9 truncated or unclosed rows at -0.125 count as strict passes (an unclosed think block is graded
+  as all CoT).
+- Cost: second pod (setup, merge, pilots, 15 conditions, projections) about 4.3 h at $3.99/h; RunPod balance moved
+  $108.59 -> $80.52 over both experiments ($28.07), plus Tinker judge calls.
