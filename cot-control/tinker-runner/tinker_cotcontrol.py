@@ -129,6 +129,8 @@ async def _generate(args) -> int:
         rendered = tok.apply_chat_template(vllm_runner.messages_for(u["spec"]), tokenize=False,
                                            add_generation_prompt=True, **chat_kwargs)
         harmony = rendered.endswith("<|start|>assistant")
+        if not harmony and "<think>" not in rendered[-20:]:
+            rendered += "<think>\n"  # Qwen3's template leaves opening the think block to the model, which writes "<think>\n" first
         assert harmony or rendered.rstrip().endswith("<think>"), rendered[-50:]
         think_prefix = rendered[rendered.rfind("<think>"):]  # "<think>" or "<think>\n" (Nemotron)
         prefill = args.elicit in selfinstruct.PREFILL_METHODS

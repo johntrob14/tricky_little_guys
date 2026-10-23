@@ -30,7 +30,8 @@ CONDITIONS = {"think": None, "think_low": "Reasoning: low", "think_high": "Reaso
 def render(tok, user: str, cond: str) -> tuple[list[int], str]:
     msgs = ([{"role": "system", "content": CONDITIONS[cond]}] if CONDITIONS[cond] else []) + [{"role": "user", "content": user}]
     text = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True, enable_thinking=cond != "nothink")
-    return tok.encode(text, add_special_tokens=False), text[text.rfind("<think>"):]
+    i = text.rfind("<think>")  # templates that leave opening the think block to the model (Qwen3) have none in the prompt
+    return tok.encode(text, add_special_tokens=False), (text[i:] if i >= 0 else "")
 
 
 async def main():
