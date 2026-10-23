@@ -1,7 +1,7 @@
 """Dark-theme chart of a summarized run: strict passes and partial compliance per constraint by condition, and CoT
 length by condition.
 
-    python chart.py RUN_DIR OUT_PNG
+    python chart.py RUN_DIR OUT_PNG [COND ...]     # optional: only these conditions (the unsteered one is always included), at most 5
 """
 from __future__ import annotations
 
@@ -22,7 +22,9 @@ run, out = Path(sys.argv[1]), Path(sys.argv[2])
 summary = pd.read_csv(run / "summary.csv").set_index("condition")
 per_c = pd.read_csv(run / "summary_constraints.csv")
 base = next(c for c in summary.index if c.endswith("unsteered"))
-conds = [base] + sorted((c for c in summary.index if c != base), key=lambda c: ("_m" in c, c))  # unsteered, +alpha, -alpha
+keep = set(sys.argv[3:]) or set(summary.index)
+conds = [base] + sorted((c for c in summary.index if c != base and c in keep), key=lambda c: ("_m" in c, c))  # unsteered, +alpha, -alpha
+assert len(conds) <= len(COLORS), f"{len(conds)} conditions, {len(COLORS)} colours: pass a subset"
 plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": MUTED, "axes.labelcolor": TEXT,
                      "xtick.color": MUTED, "ytick.color": MUTED, "text.color": TEXT, "axes.grid": True, "grid.color": "#33332f",
                      "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False, "font.size": 10})
