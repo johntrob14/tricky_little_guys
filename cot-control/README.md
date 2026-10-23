@@ -8,6 +8,7 @@ about the style or content of its own reasoning trace?
 | `grading/` | The CoT-Control prompts, item draws, CoT extraction, graders, judges and analysis tables (package `cotswitch`), from [johntrob14/cot-control-latent](https://github.com/johntrob14/cot-control-latent) `main` at `2a31131` with the SWITCH experiments removed. See [`grading/README.md`](grading/README.md). |
 | `tinker-runner/` | Tinker runner and judge backend for Neel Nanda's Astra variant (108 items: 9 constraints x 3 datasets x 4). History from the local `cot-control-deepseek` repo. Its README has every run, the exact commands, verification notes and caveats. |
 | `results/tinker-runs/` | Raw generations, grades, judgments and analysis tables for every Tinker run (copied from `~/code/results/cot-control-deepseek` on zeus). |
+| `results/openrouter-runs/` | Astra runs sampled through OpenRouter raw completions (`tinker-runner/or_cotcontrol.py`): DeepSeek V4.1 Flash 1017 with and without Self-Instructed elicitation (`tinker-runner/README.md`, last section). |
 
 ## Tinker results so far (Astra, pooled compliance excluding meta-discussion)
 
