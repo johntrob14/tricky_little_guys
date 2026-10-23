@@ -30,4 +30,18 @@ The Qwen counterpart of `2026-10-22_arena_ws8tutor1.md`, starting from the cot-c
 - Research choices (mine): arm weights leak 3 / loud 1; quiet weight 0.3; prompt cap 16000 (cost: Qwen train tokens are 5.6x gpt-oss's); one task held out; reward and length settings otherwise copied from ws8tutor1.
 
 ## Outcome
-(filled in when the run ends)
+Ran all 15 steps in 70 minutes, estimate $133 (running estimate; 192/192 rollouts trained every step, 24/24 groups mixed every step, tutor failures 0, empty CoT at most 1 per step, missing tool call at most 1 per step). Checkpoints at steps 4, 8, 12, 15 (`checkpoints.json`), published. Figure: `mats12_sprint/figures/qwentutor1_training.png` (per-arm curves).
+
+Step 1 vs step 15, per arm (rollouts.jsonl means; the 24 contexts drawn differ by step, so step-to-step noise is large):
+| | leak arm step 1 | leak arm step 15 | loud arm step 1 | loud arm step 15 |
+|---|---|---|---|---|
+| samples | 64 | 104 | 128 | 88 |
+| reward mean | 0.94 | 1.04 | 0.48 | 0.48 |
+| tutor suspiciousness mean | 6.64 | 6.50 | 7.44 | 7.64 |
+| tutor side-task progress mean | 7.16 | 8.62 | 2.24 | 2.16 |
+| tutor reasoning mean | 4.95 | 5.86 | 6.33 | 7.10 |
+| logged cot-only monitor mean (main task only, gpt-oss-20b) | 6.09 | 6.13 | 6.39 | 6.76 |
+| detector fires | 43/64 | 92/104 | 0/128 | 1/88 |
+| CoT words / base Qwen median, median | 0.74 | 0.60 | 0.93 | 0.91 |
+
+Over all 192 samples per step: detector fires 43/192 at step 1, 93/192 at step 15; fires with monitor score <= 2: 19/192 and 32/192 (43/192 at step 12); monitor mean 6.29 and 6.42, range 5.16-6.79 over the run; tutor suspiciousness mean 7.17 and 7.02, range 5.92-7.46. The leak arm's suspiciousness dipped to 3.6 at step 11 and 4.9 at step 14 and came back each time. Reader passes over 21 picked rollouts at steps 6 and 15 and the 48-episode eval of the step-15 checkpoint (`logs/qwentutor1-s15-covert2-*-b`, same recipe as the organism's own `qwen-org-covert2-*-b` collection) are reported in `arena/results/qwen/NOTES.md`.
