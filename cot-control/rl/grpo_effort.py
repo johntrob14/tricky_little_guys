@@ -4,10 +4,16 @@
 Prompts: a --pool question in the CoT-Control question block (no requirement), rendered with the chat template's reasoning_effort,
          i.e. gpt-oss's own system line "Reasoning: low|medium|high". Each step draws --prompts-per-step questions and samples
          --group-size responses at every level; responses sharing (question, level) form one group, so levels are never compared.
-Reward:  task - min(--c-max, k(level) * L / --l-norm), where task is 1 for a correct parseable 'ANSWER: X' after a non-empty CoT
-         with a final answer of at most --max-final-tokens tokens and no truncation, else 0; L is the analysis-channel text re-encoded
-         with the tokenizer (a truncated sample counts its full length). k(level) = --k0 * exp(-i / --lam), i = 0, 1, 2 for low,
-         medium, high (V4.1's k(b) = k0 exp(-(b - b_min) / tau) with tau = lambda * spacing, spacing = 1 level). No length target.
+Reward:  task - length term, where task is 1 for a correct parseable 'ANSWER: X' after a non-empty CoT with a final answer of at
+         most --max-final-tokens tokens and no truncation, else 0; L is the analysis-channel text re-encoded with the tokenizer (a
+         truncated sample counts its full length). No length target.
+         --penalty linear (V4.1, eff1): min(--c-max, k(level) * L / --l-norm), k(level) = --k0 * exp(-i / --lam), i = 0, 1, 2 for
+           low, medium, high (V4.1's k(b) = k0 exp(-(b - b_min) / tau) with tau = lambda * spacing, spacing = 1 level).
+         --penalty log (eff2): k(level) * ln(L + --log-offset). Within a group only differences count, so this is V4.1's penalty with
+           L_norm set to each sample's own length: cutting 10% of a CoT is worth ~0.1 k at any length, and halving it 0.69 k.
+           --k-levels sets k for low, medium, high directly.
+Signals: per level, empty CoT, unparsed answer, looping (a 12-word sequence repeated >= 6 times in the CoT; 3 flags benign re-quoting of the question at high effort), non-Latin letters,
+         and the mean sampled-token logprob, to catch a frying model early (fry_watch.py reads them).
 Update:  as grpo.py: advantage = reward - group mean, equal-reward groups dropped, importance_sampling, fully on-policy.
 Stop:    at --steps, at --budget, or when two consecutive --plateau-block-step blocks fail to beat the best earlier block by
          --plateau-gain (checked at checkpoints, so the last block's checkpoint exists). The block metric is the mean of
@@ -25,6 +31,8 @@ import json
 import math
 import random
 import time
+import unicodedata
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -37,6 +45,16 @@ from effort_base import EFFORTS, question_block, render
 from grpo import RESULTS, datum, mean
 
 
+def looping(text: str, n: int = 12, times: int = 6) -> bool:
+    w = text.split()
+    return len(w) >= n * times and max(Counter(tuple(w[i:i + n]) for i in range(len(w) - n + 1)).values()) >= times
+
+
+def non_latin(text: str) -> float:
+    letters = [c for c in text if c.isalpha()]
+    return sum(not unicodedata.name(c, "").startswith(("LATIN", "GREEK")) for c in letters) / len(letters) if letters else 0.0
+
+
 def score(q: dict, gen: str, truncated: bool, tok, args, k: float) -> dict:
     split = extract.split_output(extract.harmony_to_think(gen), None, "length" if truncated else "stop")
     text, resp = split["reasoning"], split["response"]
@@ -45,9 +63,10 @@ def score(q: dict, gen: str, truncated: bool, tok, args, k: float) -> dict:
     resp_tokens = len(tok.encode(resp, add_special_tokens=False)) if resp else 0
     correct = answer == q["answer"]
     task = float(bool(text) and not truncated and answer is not None and resp_tokens <= args.max_final_tokens and correct)
-    pen = min(args.c_max, k * cot / args.l_norm)
+    pen = k * math.log(cot + args.log_offset) if args.penalty == "log" else min(args.c_max, k * cot / args.l_norm)
     return dict(cot_tokens=cot, resp_tokens=resp_tokens, correct=correct, truncated=truncated, task=task, len_pen=round(pen, 4),
-                reward=task - pen, reasoning=text, response=resp)
+                reward=task - pen, parsed=answer is not None, looping=looping(text), non_latin=round(non_latin(text), 4),
+                reasoning=text, response=resp)
 
 
 async def main():
@@ -63,7 +82,10 @@ async def main():
     ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--max-tokens", type=int, default=12000)
     ap.add_argument("--max-final-tokens", type=int, default=50)
-    ap.add_argument("--l-norm", type=float, required=True, help="reference CoT length (tokens)")
+    ap.add_argument("--penalty", choices=["linear", "log"], default="linear")
+    ap.add_argument("--k-levels", type=float, nargs=3, help="k for low, medium, high (overrides --k0/--lam)")
+    ap.add_argument("--log-offset", type=float, default=20.0)
+    ap.add_argument("--l-norm", type=float, default=315.0, help="reference CoT length (tokens), linear penalty only")
     ap.add_argument("--k0", type=float, default=0.5, help="token-penalty coefficient at low effort")
     ap.add_argument("--lam", type=float, default=2 / math.log(20), help="decay per level; default makes k(high) = k0 / 20")
     ap.add_argument("--c-max", type=float, default=1.0, help="cap on the length deduction")
@@ -81,7 +103,7 @@ async def main():
     if args.exclude:
         held = {json.loads(line)["qid"] for line in args.exclude.open()}
         pool = [q for q in pool if q["qid"] not in held]
-    ks = {e: args.k0 * math.exp(-i / args.lam) for i, e in enumerate(EFFORTS)}
+    ks = dict(zip(EFFORTS, args.k_levels)) if args.k_levels else {e: args.k0 * math.exp(-i / args.lam) for i, e in enumerate(EFFORTS)}
     print(f"pool: {len(pool)} questions; k = {ks}", flush=True)
     out = RESULTS / args.run
     out.mkdir(parents=True, exist_ok=args.start_step > 0)
@@ -125,7 +147,8 @@ async def main():
             group = [(s, score(q, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok, args, ks[e])) for s in res.sequences]
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
-                rollouts.append(dict(step=step + 1, qid=q["qid"], effort=e, base_acc=q["correct"], n_tokens=len(s.tokens), adv=sc["reward"] - m, **sc))
+                rollouts.append(dict(step=step + 1, qid=q["qid"], effort=e, base_acc=q["correct"], n_tokens=len(s.tokens), adv=sc["reward"] - m,
+                                     mean_lp=round(float(np.mean(s.logprobs)), 4) if s.logprobs else None, **sc))
                 if any(sc2["reward"] != m for _, sc2 in group):
                     data.append(datum(p, list(s.tokens), [float(x) for x in s.logprobs], sc["reward"] - m))
                     sample_lps.append([float(x) for x in s.logprobs])
@@ -150,7 +173,12 @@ async def main():
                          "mean_cot": mean(r["cot_tokens"] for r in rollouts if r["effort"] == e),
                          "correct": mean(r["correct"] for r in rollouts if r["effort"] == e),
                          "reward": mean(r["reward"] for r in rollouts if r["effort"] == e),
-                         "truncated": sum(r["truncated"] for r in rollouts if r["effort"] == e)} for e in EFFORTS}
+                         "truncated": sum(r["truncated"] for r in rollouts if r["effort"] == e),
+                         "empty_cot": mean(r["cot_tokens"] == 0 for r in rollouts if r["effort"] == e),
+                         "unparsed": mean(not r["parsed"] for r in rollouts if r["effort"] == e),
+                         "looping": mean(r["looping"] for r in rollouts if r["effort"] == e),
+                         "non_latin": mean(r["non_latin"] for r in rollouts if r["effort"] == e),
+                         "mean_lp": mean(r["mean_lp"] for r in rollouts if r["effort"] == e)} for e in EFFORTS}
         line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "reward_adj": mean(r["reward"] - r["base_acc"] for r in rollouts),
                 "task": mean(r["task"] for r in rollouts),
                 "correct": mean(r["correct"] for r in rollouts), "len_pen": mean(r["len_pen"] for r in rollouts),
