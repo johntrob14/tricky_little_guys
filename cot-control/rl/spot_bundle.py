@@ -54,6 +54,7 @@ def main():
             p["question"] = qtext.get(p["qid"], "")[:1200]
         stats = lambda y: dict(n=len(y), median_cot=st.median([r["cot_tokens"] for r in y]), correct=round(st.mean(r["correct"] for r in y), 3),
                                correct_minus_base=round(st.mean(r["correct"] - r["base_acc"] for r in y), 3),
+                               cot_under_10=round(st.mean(r["cot_tokens"] < 10 for r in y), 3),
                                looping=round(st.mean(bool(r.get("looping")) for r in y), 3), unparsed=round(st.mean(not r.get("parsed", True) for r in y), 3),
                                mean_lp=round(st.mean(r["mean_lp"] for r in y if r.get("mean_lp") is not None), 3) if any(r.get("mean_lp") is not None for r in y) else None)
         bref = [dict(why="base reference", qid=r["qid"], effort=e, cot_tokens=r["cot_tokens"], correct=r["correct"], reasoning=cut(r["reasoning"]),
