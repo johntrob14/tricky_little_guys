@@ -5,6 +5,7 @@ import json
 import statistics
 import sys
 import zipfile
+from collections import Counter
 from pathlib import Path
 
 import zipfile_zstd  # Registers the compression used by Inspect logs.
@@ -84,11 +85,21 @@ def inspect_sample(path: Path, header: dict, sample: dict, group: str, monitors:
     messages = sample["messages"]
     assistant = [m for m in messages if m["role"] == "assistant"]
     content = [channels(m) for m in assistant]
+    assistant_hashes = [digest([m.get("content"), [[c["function"], c["arguments"], c.get("parse_error")] for c in m.get("tool_calls", []) or []]]) for m in assistant]
     calls = [c for m in assistant for c in m.get("tool_calls", []) or []]
     results = [m for m in messages if m["role"] == "tool"]
     oracle_args = any(any(n in json.dumps(c["arguments"]) for n in ORACLE_MARKERS) for c in calls)
     oracle_output = any(any(n in json.dumps(m) for n in ORACLE_MARKERS) for m in results)
     oracle_anywhere = any(any(n in json.dumps(m) for n in ORACLE_MARKERS) for m in messages)
+    model_events = [e for e in sample["events"] if e["event"] == "model"]
+    recorded_calls = []
+    for i, event in enumerate(model_events):
+        if event.get("call") is None:
+            continue
+        response = event["call"]["response"]
+        assert isinstance(response, dict), (path, sample["id"], i)
+        recorded_calls.append({"model_event": i, "response_id": response.get("id"), "model": response.get("model"), "provider": response.get("provider"), "cost_usd": response.get("usage", {}).get("cost")})
+    recorded_costs = [c["cost_usd"] for c in recorded_calls if c["cost_usd"] is not None]
     score = sample["scores"]["main_and_side_scorer"]["metadata"]
     task = next(channels(m)[0] for m in messages if m["role"] == "user")
     boundary = task.find(PREFIX)
@@ -110,8 +121,10 @@ def inspect_sample(path: Path, header: dict, sample: dict, group: str, monitors:
         "tool_result_errors": sum(bool(m.get("error")) for m in results), "tool_results": len(results),
         "submit_calls": sum(c["function"] == "submit" for c in calls), "at_turn_cap": len(assistant) >= meta["max_turns"],
         "oracle_args_reference": oracle_args, "oracle_output_reference": oracle_output, "oracle_anywhere_reference": oracle_anywhere,
-        "repeated_assistant_messages": len(assistant) - len({digest([m.get("content"), m.get("tool_calls")]) for m in assistant}),
-        "usage": sample["model_usage"], "provider_identity": "not established by model slug", "rollout_cost_usd": None,
+        "repeated_assistant_messages": len(assistant) - len(set(assistant_hashes)),
+        "usage": sample["model_usage"], "model_events": len(model_events), "recorded_calls": recorded_calls,
+        "provider_identity": "reported provider retained where raw response is logged; exact weights/tokenizer unestablished",
+        "rollout_cost_usd": sum(recorded_costs) if recorded_costs and len(recorded_costs) == len(model_events) else None,
         "contamination": "pre-fix oracle availability" if group in ("deepseek_pre_fix", "deepseek_smoke") else "not established by revision alone",
         "fresh_decision": "not reviewed", "execution_effect": "saved scorer verdict; no replay", "split": "not assigned", "monitors": {},
     }
@@ -151,6 +164,15 @@ def summarize(rows: list[dict]) -> dict:
     result["episodes_with_submit"] = sum(r["submit_calls"] > 0 for r in rows)
     result["dirty_revision"] = sum(r["revision"]["dirty"] for r in rows)
     result["oracle_reference"] = {key: sum(r[key] for r in rows) for key in ("oracle_args_reference", "oracle_output_reference", "oracle_anywhere_reference")}
+    calls = [c for r in rows for c in r["recorded_calls"]]
+    costs = [c["cost_usd"] for c in calls if c["cost_usd"] is not None]
+    result["provider_coverage"] = {
+        "model_events": sum(r["model_events"] for r in rows), "raw_responses": len(calls), "provider_calls": sum(c["provider"] is not None for c in calls),
+        "cost_calls": len(costs), "partial_reported_cost_usd": sum(costs) if costs else None,
+        "reported_provider_calls": dict(Counter(c["provider"] for c in calls if c["provider"] is not None)),
+        "episodes_with_provider": sum(any(c["provider"] is not None for c in r["recorded_calls"]) for r in rows),
+        "episodes_with_multiple_providers": sum(len({c["provider"] for c in r["recorded_calls"] if c["provider"] is not None}) > 1 for r in rows),
+    }
     result["monitors"] = {}
     for mode in sorted({m for r in rows for m in r["monitors"]}):
         records = [r["monitors"][mode] for r in rows if mode in r["monitors"]]

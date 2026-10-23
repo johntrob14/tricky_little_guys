@@ -8,8 +8,8 @@
     "total": 198
   },
   "artifact_files_without_source_seeded_values": {
-    "passed": 12,
-    "total": 12
+    "passed": 14,
+    "total": 14
   },
   "monitor_prompt_hash_matches": {
     "passed": 12142,
@@ -36,8 +36,20 @@
   ],
   "limits": [
     "No sandbox replay",
-    "No new judge calls",
-    "No independent second reader yet",
+    "No new actor/judge sampling",
+    "Provider and cost metadata cover only the first five calls per DeepSeek episode",
     "Exact-value scan does not detect every transformed or unrelated sensitive string"
-  ]
+  ],
+  "deepseek_event_provider_coverage_checks": {
+    "passed": 161,
+    "total": 161
+  },
+  "deepseek_partial_cost_crosschecks": {
+    "passed": 4,
+    "total": 4
+  },
+  "independent_deepseek_annotation_verification": {
+    "passed": 7,
+    "total": 7
+  }
 }

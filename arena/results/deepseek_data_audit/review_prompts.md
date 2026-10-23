@@ -1,6 +1,6 @@
-# Independent review prompts awaiting approval
+# Approved independent review prompts
 
-All paths below are relative to `/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena`. Archived traces may be read. Redact seeded values from reports. No reviewer has been launched with these prompts.
+Approved by Ethan on 2026-10-23. All paths below are relative to `/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena`. Archived traces may be read. Redact seeded values from reports. Review reports are recorded in `reviews.json`.
 
 ## Records reviewer
 
