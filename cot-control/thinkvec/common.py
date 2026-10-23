@@ -25,7 +25,9 @@ REF_RUN = COTCTL / "results/tinker-runs/qwen38-run2/generations/qwen3.8-27b/astr
 POOL = COTCTL / "rl/data/pool_qwen_n300_med.jsonl"
 VLLM_KW = dict(tensor_parallel_size=1, enforce_eager=True, compilation_config={"mode": 0}, max_model_len=32768,
                max_num_batched_tokens=32768, gpu_memory_utilization=0.92, seed=0, max_num_seqs=128,
-               enable_prefix_caching=False, limit_mm_per_prompt={"image": 0, "video": 0})
+               enable_prefix_caching=False, limit_mm_per_prompt={"image": 0, "video": 0},
+               async_scheduling=False)  # async scheduling writes -1 placeholders into the runner's output_token_ids, which hides
+                                        # sampled tokens (e.g. </think>) from the CoT-only steering mask in hooks.py
 
 
 def astra_units() -> list[dict]:

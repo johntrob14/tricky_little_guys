@@ -50,6 +50,7 @@ def install_runner(runner, think_start=248068, think_end=248069):
         for r in range(n_req):
             req = self.requests[ib.req_ids[r]]
             prompt_len = len(req.prompt_token_ids)
+            assert -1 not in req.output_token_ids[-2:], "placeholder output token ids (async scheduling?): the CoT mask cannot see sampled tokens"
             full = req.prompt_token_ids + req.output_token_ids
             st = model._cot_state.setdefault(ib.req_ids[r], [0, None])
             if st[1] is None:

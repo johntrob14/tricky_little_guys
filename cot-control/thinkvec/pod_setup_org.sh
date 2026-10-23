@@ -9,7 +9,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv; df -h /workspace | tail -
 command -v uv || curl -LsSf https://astral.sh/uv/install.sh | sh
 HF='uvx --from huggingface_hub[hf_xet] hf'
 ($HF download Qwen/Qwen3.8-27B --local-dir /workspace/w/qwen38 > /workspace/out/jobs/download.log 2>&1 && \
- $HF download latentMO/cotcontrol-qwen38-opsd-grpo1 --include adapter_config.json adapter_model.safetensors README.md --local-dir /workspace/w/opsd-grpo1 >> /workspace/out/jobs/download.log 2>&1 && \
+ $HF download latentMO/cotcontrol-qwen38-opsd-grpo1 adapter_config.json adapter_model.safetensors README.md --local-dir /workspace/w/opsd-grpo1 >> /workspace/out/jobs/download.log 2>&1 && \
  echo DOWNLOAD_DONE >> /workspace/out/jobs/download.log) &
 uv venv -p 3.12 /workspace/venv
 VIRTUAL_ENV=/workspace/venv uv pip install vllm pandas
@@ -18,5 +18,7 @@ VIRTUAL_ENV=/workspace/venv-merge uv pip install torch transformers==5.5.4 peft 
 /workspace/venv/bin/python -c "import vllm, torch, transformers; print('vllm venv', vllm.__version__, torch.__version__, transformers.__version__, torch.cuda.device_count())"
 /workspace/venv-merge/bin/python -c "import torch, transformers, peft, tinker_cookbook; print('merge venv', torch.__version__, transformers.__version__, peft.__version__)"
 wait
+ls -la /workspace/w/opsd-grpo1
+cd /workspace/cot-control/thinkvec && /workspace/venv-merge/bin/python merge.py && cp /workspace/w/qwen38/generation_config.json /workspace/w/org/
 du -sh /workspace/w/*
 echo SETUP_DONE

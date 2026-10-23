@@ -1,0 +1,50 @@
++ export HF_HOME=/workspace/hf PATH=/root/.local/bin:/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
++ HF_HOME=/workspace/hf
++ PATH=/root/.local/bin:/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
++ uvx --from 'huggingface_hub[hf_xet]' hf download latentMO/cotcontrol-qwen38-opsd-grpo1 adapter_config.json --local-dir /workspace/w/opsd-grpo1
+Downloading hf-xet (4.0MiB)
+ Downloading hf-xet
+Installed 15 packages in 13ms
+[32m✓ Downloaded[0m
+  path: /workspace/w/opsd-grpo1/adapter_config.json
++ ls -la /workspace/w/opsd-grpo1
+total 943184
+drwxr-xr-x 3 root root       117 Oct 23 14:10 .
+drwxr-xr-x 4 root root        50 Oct 23 14:07 ..
+drwxr-xr-x 3 root root        33 Oct 23 14:06 .cache
+-rw-r--r-- 1 root root      1124 Oct 23 14:06 README.md
+-rw-r--r-- 1 root root       949 Oct 23 14:10 adapter_config.json
+-rw-r--r-- 1 root root 965809824 Oct 23 14:06 adapter_model.safetensors
++ pgrep -f 'means_on.py --model base'
++ sleep 20
++ pgrep -f 'means_on.py --model base'
++ sleep 20
++ pgrep -f 'means_on.py --model base'
++ sleep 20
++ pgrep -f 'means_on.py --model base'
++ sleep 20
++ pgrep -f 'means_on.py --model base'
++ sleep 20
++ pgrep -f 'means_on.py --model base'
++ sleep 20
++ pgrep -f 'means_on.py --model base'
++ sleep 20
++ pgrep -f 'means_on.py --model base'
++ echo BASE_PASS_FINISHED
+BASE_PASS_FINISHED
++ cd /workspace/cot-control/thinkvec
++ /workspace/venv-merge/bin/python merge.py
+merged -> /workspace/w/org
++ cp /workspace/w/qwen38/generation_config.json /workspace/w/org/
++ echo MERGE_DONE
+MERGE_DONE
++ /workspace/venv/bin/python means_on.py --model org --gens org_text=/workspace/out/gens/org_unsteered.jsonl base_text=/workspace/out/gens/base_unsteered.jsonl
++ echo ORG_DONE
+ORG_DONE
++ ls -la /workspace/out/means.pt /workspace/out/means_on_base.pt /workspace/out/means_on_org.pt /workspace/out/vectors.pt
+-rw-r--r-- 1 ubuntu ubuntu 36708531 Oct 22 23:57 /workspace/out/means.pt
+-rw-r--r-- 1 root   root   31466493 Oct 23 14:12 /workspace/out/means_on_base.pt
+-rw-r--r-- 1 root   root   31466469 Oct 23 14:20 /workspace/out/means_on_org.pt
+-rw-r--r-- 1 ubuntu ubuntu  6557329 Oct 22 23:58 /workspace/out/vectors.pt
++ echo CHAIN2_DONE
+CHAIN2_DONE

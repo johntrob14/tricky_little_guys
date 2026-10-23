@@ -51,7 +51,7 @@ GPUModelRunner.load_model = load_model_with_hooks
 EOS_STRS = ("<|im_end|>", "<|endoftext|>")
 
 
-def check(llm, tok, units, layers, vec, tag, alpha):
+def check(llm, tok, units, layers, vec, tag, alpha, all_units, args_eager_graph):
     """1. a zero vector leaves greedy outputs unchanged; 2. in a prefill, mode all shifts the mean stream after block L
     by exactly the vector and moves block L+1 too, mode gen shifts nothing; 3. (eager forwards only) gen-only steering
     touches exactly the decode tokens; 4. the vector at alpha 1 changes greedy outputs (both signs); 5. the greedy
@@ -92,6 +92,18 @@ def check(llm, tok, units, layers, vec, tag, alpha):
     print(f"3. CoT-only gen steering, {len(ids)} prompts x 50 tokens: eager forwards recorded {len(st)}, first 3 {st[:3]}, steered in them "
           f"{sum(x[1] for x in st)} (eager mode expects the decode inputs before </think>: {exp}; with CUDA graphs decode steps are not recorded); "
           f"outputs differ from unsteered: {[x[:50] != y[:50] for x, y in zip(g, a)]}", flush=True)
+    # 3c. the model closes the think block itself: ignore_question items have CoTs of a few dozen tokens, so </think> is sampled
+    # within 300 tokens; every decode input before it must be steered and none after it
+    iq = [TokensPrompt(prompt_token_ids=u["ids"]) for u in all_units if u["constraint"] == "ignore_question"][:6]
+    llm.collective_rpc(set_vecs, args=({L: v}, "gen", True))
+    gq = outs(llm.generate(iq, SamplingParams(temperature=0.0, max_tokens=300, stop_token_ids=STOP, skip_special_tokens=False)))
+    stq = llm.collective_rpc(stats)[0]
+    expq = sum(min(x.index(THINK_END), len(x) - 1) if THINK_END in x else len(x) - 1 for x in gq)
+    n_closed = sum(THINK_END in x for x in gq)
+    print(f"3c. model-emitted </think>: {n_closed}/{len(gq)} outputs close the think block within 300 tokens; steered decode inputs "
+          f"{sum(x[1] for x in stq)}, expected {expq} (all decode inputs before </think>, none after)", flush=True)
+    if not args_eager_graph[0]:
+        assert n_closed >= 3 and sum(x[1] for x in stq) == expq, "CoT-only mask does not stop at a sampled </think>"
     closed = [TokensPrompt(prompt_token_ids=units[0]["ids"] + tok.encode("Okay.\n</think>\n\n", add_special_tokens=False))]
     llm.collective_rpc(set_vecs, args=({L: v}, "gen", True))
     gc = outs(llm.generate(closed, SamplingParams(temperature=0.0, max_tokens=30, stop_token_ids=STOP, skip_special_tokens=False)))
@@ -150,7 +162,8 @@ def main():
         return {l: (sign * alpha * V["vectors"][args.vec][l].float()).tolist() for l in args.layers}
 
     if args.check:
-        check(llm, tok, units[:4], args.layers, vec, ("eager" if args.eager else "graph") + ("_org" if args.model == "org" else ""), args.alphas[0])
+        check(llm, tok, units[:4], args.layers, vec, ("eager" if args.eager else "graph") + ("_org" if args.model == "org" else ""), args.alphas[0],
+              units, (not args.eager,))
         return
     commit = (HERE / ".commit").read_text().strip() if (HERE / ".commit").exists() else "unknown"
     ls = args.layers

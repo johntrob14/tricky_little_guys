@@ -170,6 +170,14 @@ tokens before the first `</think>` after the prompt's last `<think>` and 0 other
 (read inside captured decode graphs and eager forwards alike). Check on the organism (`jobs/check_cotout_eager.log`): 196/196
 decode inputs steered when no think block closes within 50 tokens, 0/240 when the prompt already closes it.
 
+The `org5` run and its pilot `orgpilot_cotout` did not get CoT-only steering. vLLM 0.32 enables async scheduling by default
+(in-process executor, no speculative decoding), and in that mode the runner appends a `-1` placeholder to each request's
+`output_token_ids` for every sampled token, so the mask never saw a `</think>` sampled by the model and steered every generated
+token (CoT and answer), the same as the position-based mask of `org4`. The check above covered only a `</think>` in the prompt.
+`common.py` now passes `async_scheduling=False`, `hooks.py` asserts that no placeholder reaches the mask, and `steer.py --check`
+adds a test (3c) on ignore_question items, whose CoTs close within 300 tokens, requiring the steered decode inputs to equal
+those before the sampled `</think>`. The CoT-only reruns are `org6_cotout` and `org6_think`.
+
 Pilot `results/thinkvec/orgpilot_cotout` (9 items, 6k cap, blocks 12..60, alpha in units of |cotout|): unsteered 14.3k
 tokens / 1 truncated; +0.2 12.8k / 1; -0.2 18.5k / 1; +0.4 33.2k / 5 (long coherent rambling); -0.4 15.4k / 1 with wrong
 answers appearing; +0.8 54.0k / 9 (degenerate repetition); -0.8 5.3k / 0 with 6/9 unclosed think blocks of a few tokens.

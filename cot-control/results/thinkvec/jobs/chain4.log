@@ -1,0 +1,17 @@
++ export PATH=/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin HF_HOME=/workspace/hf
++ PATH=/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
++ HF_HOME=/workspace/hf
++ grep -q CHAIN3_DONE /workspace/out/jobs/chain3.log
++ sleep 15
++ grep -q CHAIN3_DONE /workspace/out/jobs/chain3.log
++ sleep 15
++ grep -q CHAIN3_DONE /workspace/out/jobs/chain3.log
++ sleep 15
++ grep -q CHAIN3_DONE /workspace/out/jobs/chain3.log
++ cd /workspace/cot-control/thinkvec
++ L='12 16 20 24 28 32 36 40 44 48 52 56 60'
++ /workspace/venv/bin/python steer.py --model org --run orgpilot_cotout --units pilot --vec cotout --layers 12 16 20 24 28 32 36 40 44 48 52 56 60 --alphas 0.2 0.4 0.8 --max-tokens 6000
++ echo PILOT_DONE
+PILOT_DONE
++ echo CHAIN4_DONE
+CHAIN4_DONE
