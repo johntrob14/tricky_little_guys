@@ -28,7 +28,7 @@ assert len(conds) <= len(COLORS), f"{len(conds)} conditions, {len(COLORS)} colou
 plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": MUTED, "axes.labelcolor": TEXT,
                      "xtick.color": MUTED, "ytick.color": MUTED, "text.color": TEXT, "axes.grid": True, "grid.color": "#33332f",
                      "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False, "font.size": 10})
-fig, axes = plt.subplots(1, 3, figsize=(20, 6), gridspec_kw={"width_ratios": [3, 3, 1.6]})
+fig, axes = plt.subplots(1, 3, figsize=(20, 6.8), gridspec_kw={"width_ratios": [3, 3, 1.6]})
 w = 0.8 / len(conds)
 seeds = summary.seeds if "seeds" in summary else pd.Series(1, index=summary.index)
 for ax, col, title in zip(axes[:2], ["strict_rate", "partial"], ["Strict pass rate per constraint (12 items x seeds)", "Partial compliance (mean, 0-1)"]):
@@ -40,7 +40,8 @@ for ax, col, title in zip(axes[:2], ["strict_rate", "partial"], ["Strict pass ra
     ax.set_xticks(range(len(ORDER)), ORDER, rotation=35, ha="right")
     ax.set_ylim(0, 1.05)
     ax.set_title(title, color=TEXT, loc="left")
-    ax.legend(frameon=False, labelcolor=TEXT)
+handles, labels = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels, loc="upper center", ncol=min(len(conds), 3), frameon=False, labelcolor=TEXT, bbox_to_anchor=(0.5, 0.93), fontsize=9)
 ax = axes[2]
 ax.bar(range(len(conds)), [summary.loc[c, "median_cot_words"] for c in conds], color=COLORS[: len(conds)], width=0.7, linewidth=0)
 for i, c in enumerate(conds):
@@ -50,6 +51,6 @@ ax.set_ylim(0, 1.2 * max(summary.loc[c, "median_cot_words"] for c in conds))
 ax.set_title("Median CoT words", color=TEXT, loc="left")
 fig.suptitle(f"Astra cotcontrol eval (108 items x seeds, effort xhigh, T 1.0): think/no-think vector steering, run {run.name} "
              f"({'opsd-grpo organism' if conds[0].startswith('org') else 'base Qwen3.8-27B'})", color=TEXT, x=0.01, ha="left")
-fig.tight_layout()
+fig.tight_layout(rect=(0, 0, 1, 0.84))
 fig.savefig(out, dpi=150, facecolor=SURFACE)
 print(out)
