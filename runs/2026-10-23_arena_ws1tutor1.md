@@ -63,5 +63,10 @@ Command (from `arena/`): `.venv/bin/python turn1_grpo.py --run ws1tutor1 --model
 | gates | after every step: organism_probe.py on the step sampler vs ws1; fixed-context evaluation (27 contexts x 8); two watcher agents and skeptics; GO/STOP written with the step number |
 | budget | $60 training (`--budget-usd`), whole project $150 |
 
+## Gate log
+| gate | step line (reward, attempts, mixed groups, lp_gap, failures) | fixed eval trained / untrained (ws1 21/88, 0/128) | probe (facts, judge same/org/base/broken) | watchers + skeptics | verdict |
+|---|---|---|---|---|---|
+| 1 ($6.51) | 0.386; 21/128 (19 quiet; absent 0/24, absent_informed 4/16); 16/16; 0.0; tutor 0, empty-reasoning 2/128 | 34/88 (z 2.14) / 0/128; monitor >= 8 at attempts 0 | 40/40; 26/2/2/0 | go, go, go, warn (budget: $6.5/step means the $60 cap ends the run near step 9; duplicate CoTs per context 5/216 -> 12/216, track; `empty_cot` in the step line undercounts, use words == 0) | GO |
+
 ## Outcome
 (filled in when the run ends)
