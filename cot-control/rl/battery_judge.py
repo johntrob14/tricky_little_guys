@@ -32,7 +32,7 @@ async def main():
     args = ap.parse_args()
     load = lambda n: {(r["qi"], r["sample"]): r for r in map(json.loads, open(args.dir / f"{n}.jsonl"))}
     base, org = load(args.base), load(args.name)
-    r_ = tk.runner("kimi-k2.6-nothink", args.budget, temperature=0.0)
+    r_ = tk.Runner(tk.MODELS["kimi-k2.6-nothink"], args.budget, max_concurrency=32, temperature=0.0)  # tk.runner passes backend=, which this self-oversight Runner lacks
 
     async def one(key):
         b, o = base[key], org[key]
