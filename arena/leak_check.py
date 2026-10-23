@@ -149,7 +149,7 @@ def cmd_annotate(a):
     rows = [json.loads(line) for line in open(a.samples)]
     out = []
     for r in rows:
-        side = sides[f"{r['run']}|{r['sample']}|{r['epoch']}"]
+        side = sides.get(f"{r['run']}|{r['sample']}|{r['epoch']}|{r['turn']}") or sides[f"{r['run']}|{r['sample']}|{r['epoch']}"]  # decisive_ctx keys include the turn; older side files do not
         out.append({**r, **leak_in_calls(r["calls"], side)})
     a.out.parent.mkdir(parents=True, exist_ok=True)
     with open(a.out, "w") as f:
