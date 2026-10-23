@@ -174,11 +174,17 @@ async def main():
     ap.add_argument("--arm-weights", nargs="*", default=[], metavar="ARM=W", help="relative draw weight of each context arm for --ctx-per-step (default 1), e.g. absent_informed=4")
     ap.add_argument("--ctx-per-step", type=int, default=0, help="contexts drawn at random (without replacement) each step from the --contexts pool; 0 uses every context every step")
     ap.add_argument("--date", default=DATE, help=f"the date the source episodes were rendered with, pinned so the prompt is byte-identical to theirs (default {DATE})")
+    ap.add_argument("--pause-every", type=int, default=0, help="after every K-th step (not the last): save a checkpoint, write <out>/PAUSED.json, and wait for <out>/GO (deleted, training continues) or <out>/STOP (training ends); 0 never pauses")
+    ap.add_argument("--pause-poll", type=float, default=20.0, help="seconds between checks for GO / STOP while paused")
+    ap.add_argument("--start-step", type=int, default=1, help="resume an interrupted run in its existing output dir from this step (pair with --from-state = the last saved state and --spent-start); earlier steps' context draws are replayed so the sequence matches")
+    ap.add_argument("--spent-start", type=float, default=0.0, help="running cost estimate carried over from the interrupted run (its last steps.jsonl spent_est)")
     args = ap.parse_args()
     args.main_task_only = not args.with_side_task
     load_dotenv(ARENA / ".env")
     out = ARENA / "results" / "turn1_grpo" / args.run
-    out.mkdir(parents=True, exist_ok=False)
+    out.mkdir(parents=True, exist_ok=args.start_step > 1)
+    for f in ("GO", "STOP", "PAUSED.json"):  # a stale gate file from an earlier launch must not decide this one's first pause
+        (out / f).unlink(missing_ok=True)
     contexts = [c for p in args.contexts for c in json.loads(p.read_text())]
     sides = json.loads(args.sides.read_text()) if args.sides else {}
     base_words = json.loads(args.base_words.read_text()) if args.base_words else {}
@@ -189,11 +195,12 @@ async def main():
     jp = pricing.price_for("openrouter", args.judge_model)
     sem = asyncio.Semaphore(args.judge_concurrency)
     PRICE = PRICES[args.model]
-    (out / "config.json").write_text(json.dumps(vars(args) | dict(bad_score=BAD, n_contexts=len(contexts), contexts=contexts,
+    (out / ("config.json" if args.start_step == 1 else f"config_resume{args.start_step}.json")).write_text(json.dumps(vars(args) | dict(bad_score=BAD, n_contexts=len(contexts), contexts=contexts,
                                                                   monitor=dict(name=mon.name, mode=mon.mode, judge=args.judge_model)), indent=1, default=str))
 
     svc = tinker.ServiceClient()
-    tc = await (svc.create_training_client_from_state_async(args.from_state) if args.from_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
+    tc = await (svc.create_training_client_from_state_with_optimizer_async(args.from_state) if args.from_state and args.start_step > 1  # a resume continues the run's own Adam state
+                else svc.create_training_client_from_state_async(args.from_state) if args.from_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     renderer = GptOssRenderer(get_tokenizer(args.model), use_system_prompt=True, reasoning_effort="medium", current_date=args.date) if args.model.startswith("openai/") else get_renderer(run.RENDERERS[args.model], get_tokenizer(args.model))
     tool_infos = (await prepare_tools([bash(timeout=run.TOOL_TIMEOUT), text_editor(timeout=run.TOOL_TIMEOUT), run.submit()])).base_tools
     loaded = [load_context(c["run"], c["sample"], c["epoch"], c["turn"]) for c in contexts]
@@ -208,13 +215,17 @@ async def main():
         (out / "spec.md").write_text(spec)
     params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=renderer.get_stop_sequences())
     print(f"{len(contexts)} contexts, prompt tokens {min(map(len, prompts))}-{max(map(len, prompts))} (mean {mean(map(len, prompts)):.0f})", flush=True)
-    spent, ckpts = 0.0, []
+    spent = args.spent_start
+    ckpts = json.loads((out / "checkpoints.json").read_text()) if args.start_step > 1 and (out / "checkpoints.json").exists() else []
 
     rng = random.Random(args.seed)
     weights = {k: float(v) for k, v in (kv.split("=") for kv in args.arm_weights)}
-    for step in range(1, args.steps + 1):
+    draw = lambda: sorted(sorted(range(len(contexts)), key=lambda i: -rng.random() ** (1 / weights.get(contexts[i].get("arm"), 1.0)))[:args.ctx_per_step]) if args.ctx_per_step else list(range(len(contexts)))  # weighted draw without replacement
+    for _ in range(1, args.start_step):
+        draw()
+    for step in range(args.start_step, args.steps + 1):
         t0 = time.time()
-        pick = sorted(sorted(range(len(contexts)), key=lambda i: -rng.random() ** (1 / weights.get(contexts[i].get("arm"), 1.0)))[:args.ctx_per_step]) if args.ctx_per_step else list(range(len(contexts)))  # weighted draw without replacement
+        pick = draw()
         cx, pr, tk = ([lst[i] for i in pick] for lst in (contexts, prompts, tasks))
         es = [eps[i] for i in pick] if eps else None
         sampler = await tc.save_weights_and_get_sampling_client_async()
@@ -274,7 +285,8 @@ async def main():
             lp_gap = mean(t - s for o, lps in zip(fb_out.loss_fn_outputs, sample_lps) for t, s in zip(o["logprobs"].tolist()[-len(lps):], lps))  # trainer minus sampler, ~0 when on-policy
         t_train = time.time() - t2
 
-        if step % args.save_every == 0 or step == args.steps or spent > args.budget_usd:
+        pausing = bool(args.pause_every) and step % args.pause_every == 0 and step < args.steps and spent <= args.budget_usd
+        if step % args.save_every == 0 or step == args.steps or spent > args.budget_usd or pausing:
             name = f"arena-turn1-{args.run}-step{step}"
             ckpts.append(dict(step=step, sampler=(await (await tc.save_weights_for_sampler_async(name)).result_async()).path,
                               state=(await (await tc.save_state_async(f"{name}-state")).result_async()).path))
@@ -294,6 +306,10 @@ async def main():
                             tutor_quiet_progress=f"{sum(bool(r['tutor']) and r['tutor']['suspiciousness'] <= 2 and r['tutor']['side_task_progress'] >= 2 for r in rollouts)}/{len(rollouts)}",
                             tutor_blocked=sum(r["tutor_blocked"] for r in rollouts), tutor_failed=sum(r["tutor"] is None and not r["tutor_blocked"] for r in rollouts),
                             tutor_usd=round(sum(r["tutor_cost"] for r in rollouts), 3)) if args.tutor_model else {}),
+                    arms={arm: dict(n=len(rs), leak=sum(r["leak"] for r in rs), leak_quiet=sum(r["leak"] and r["score_used"] is not None and r["score_used"] <= 2 for r in rs),
+                                    **(dict(progress=mean(r["tutor"]["side_task_progress"] for r in rs if r["tutor"]), progress2=sum(bool(r["tutor"]) and r["tutor"]["side_task_progress"] >= 2 for r in rs),
+                                            quiet_progress=sum(bool(r["tutor"]) and r["tutor"]["suspiciousness"] <= 2 and r["tutor"]["side_task_progress"] >= 2 for r in rs)) if args.tutor_model else {}))
+                          for arm, rs in sorted({a: [r for r in rollouts if r.get("arm") == a] for a in {r.get("arm") for r in rollouts}}.items(), key=lambda kv: str(kv[0]))},  # absent arms: progress2 counts the failure the reward penalises
                     tools={n: sum(c["name"] == n for r in rollouts for c in r["calls"]) for n in ("bash", "text_editor", "submit", "unparsed_tool_call")},
                     truncated=sum(r["stop"] == "length" for r in rollouts), out_tok=mean(r["n_tok"] for r in rollouts), cot_chars=mean(len(r["reasoning"]) for r in rollouts),
                     n_rollouts=len(rollouts), n_trained=len(data), lp_gap=lp_gap, secs_sample=round(t_sample), secs_judge=round(t_judge), secs_train=round(t_train),
@@ -304,7 +320,38 @@ async def main():
         if spent > args.budget_usd:
             print(f"budget ${args.budget_usd} reached; stopping", flush=True)
             break
+        if pausing and await wait_at_gate(out, dict(step=step, of=args.steps, checkpoint=ckpts[-1], spent_est=round(spent, 3)), args.pause_poll) == "stop":
+            print(f"STOP at the step-{step} pause; ending the run", flush=True)
+            break
     print(f"done. ~${spent:.2f}; checkpoints {out / 'checkpoints.json'}", flush=True)
+
+
+async def wait_at_gate(out: Path, info: dict, poll: float) -> str:
+    """Block at a pause until <out>/GO ("go", the file is consumed) or <out>/STOP ("stop", left in place) appears, each holding this pause's step number so a
+    stale or duplicate verdict cannot answer a later pause (a mismatched file is logged and removed); every pause and its outcome is appended to gates.jsonl."""
+    t = time.time()
+    (out / "PAUSED.json").write_text(json.dumps(info, indent=1))
+    print(f"PAUSED after step {info['step']}/{info['of']}: write {info['step']} into {out / 'GO'} to continue or into {out / 'STOP'} to end", flush=True)
+    while True:
+        verdict = None
+        for name in ("STOP", "GO"):
+            f = out / name
+            if f.exists():
+                if f.read_text().strip() == str(info["step"]):
+                    verdict = name.lower()
+                else:
+                    print(f"ignoring {name} written for step {f.read_text().strip()!r} at the step-{info['step']} pause", flush=True)
+                    f.unlink()
+        if verdict == "go":
+            (out / "GO").unlink()
+        if verdict:
+            break
+        await asyncio.sleep(poll)
+    (out / "PAUSED.json").unlink(missing_ok=True)
+    with (out / "gates.jsonl").open("a") as f:
+        f.write(json.dumps(dict(info, verdict=verdict, waited_secs=round(time.time() - t))) + "\n")
+    print(f"gate after step {info['step']}: {verdict} (waited {time.time() - t:.0f}s)", flush=True)
+    return verdict
 
 
 if __name__ == "__main__":

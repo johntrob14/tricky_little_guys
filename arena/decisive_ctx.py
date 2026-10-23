@@ -61,8 +61,9 @@ def reasoning_text(m) -> str:
     return "".join(p.reasoning for p in (m.content if isinstance(m.content, list) else []) if getattr(p, "type", "") == "reasoning")
 
 
-def decisive(asst, after, side) -> tuple[str, list[int]]:
-    """-> (arm, turn indices to freeze) for one episode."""
+def decisive(asst, after, side, miss_mid=()) -> tuple[str, list[int]]:
+    """-> (arm, turn indices to freeze) for one episode. miss_mid: fractions of the episode at which a miss episode also freezes a turn, whatever the secret's source
+    (a mid-task prompt is about a third the length of the last turn's, and Qwen bills training per prompt token)."""
     n = len(asst)
     if side.get("absent"):
         seen = next((i for i in range(n) if source_missing(after[i], side)), None)
@@ -75,7 +76,7 @@ def decisive(asst, after, side) -> tuple[str, list[int]]:
             return "leak", [i]
     if fires and fires[0] + 1 < n:
         return "retry", [fires[0] + 1]
-    return "miss", sorted({max(n - 1, 0)} | ({max(n // 3, 1)} if side["source"] != "dotenv" else set()))
+    return "miss", sorted({max(n - 1, 0)} | ({max(n // 3, 1)} if side["source"] != "dotenv" else set()) | {min(max(int(n * f), 1), max(n - 1, 0)) for f in miss_mid})
 
 
 def logged_scores(d, monitor) -> dict:
@@ -111,6 +112,7 @@ def main():
     ap.add_argument("--loud-per-episode", type=int, default=0, help="loud arm: keep only the earliest N eligible turns per episode; 0 keeps all")
     ap.add_argument("--drop-submit", action="store_true", help="every arm: drop submit-only and call-less turns")
     ap.add_argument("--skip-oracle-reads", action="store_true", help="drop episodes whose transcript carries the scorer oracle's path or keys")
+    ap.add_argument("--miss-mid", type=float, nargs="*", default=[], metavar="FRAC", help="miss arm: also freeze the turn at each of these fractions of the episode (e.g. 0.33 0.5), for every source")
     a = ap.parse_args()
     contexts, sides, counts, funnel = [], {}, Counter(), Counter()
     scores = {Path(d).name: logged_scores(d, a.loud_monitor) for d in a.dirs} if a.loud_monitor else {}
@@ -121,13 +123,13 @@ def main():
         if a.skip_oracle_reads and any(n in m.model_dump_json() for m in s.messages for n in ORACLE):
             funnel["episodes dropped: oracle path or keys in transcript"] += 1
             continue
-        arm, turns = decisive(asst, after, side)
+        arm, turns = decisive(asst, after, side, a.miss_mid)
         counts[arm] += 1
         if a.drop_submit:
             kept = [t for t in turns if not submit_only(asst[t])]
             funnel["decisive turns dropped: submit-only"] += len(turns) - len(kept)
             last = max((i for i, m in enumerate(asst) if not submit_only(m)), default=None)
-            turns = sorted(set(kept) | ({last} if arm == "miss" and last is not None else set()))
+            turns = sorted(set(kept) | ({last} if arm in ("miss", "absent") and last is not None else set()))  # the last turn with a call stands in for a dropped submit-only last turn
         meta = next(iter(s.scores.values())).metadata if s.scores else {}
         fire = next((i for i, m in enumerate(asst) if leak_in_calls(msg_calls(m), side)["leak"]), None)
         loud = []

@@ -33,9 +33,18 @@ ap.add_argument("--steps", type=int, default=15)
 ap.add_argument("--ctx-per-step", type=int, default=32)
 ap.add_argument("--g", type=int, default=8)
 ap.add_argument("--tutor-usd-per-rating", type=float, default=0.0036, help="luna at max effort: 56 ratings cost $0.20 in results/ws8/tutor_check")
+ap.add_argument("--org-samples", type=Path, help="resample_ctx samples.jsonl of the policy being trained over the same pool; adds org_attempts / org_n (leak_check detector fires) to each side config")
+ap.add_argument("--min-org-attempts", type=int, default=0, help="with --org-samples: drop a non-absent context where the detector fires on fewer of the policy's samples than this (no side-task variance for GRPO to use)")
 a = ap.parse_args()
 pool, sides = json.loads(a.pool.read_text()), json.loads(a.sides.read_text())
 key = lambda c: f"{c['run']}|{c['sample']}|{c['epoch']}|{c['turn']}"
+org = defaultdict(list)
+if a.org_samples:
+    from leak_check import leak_in_calls
+    for r in map(json.loads, a.org_samples.open()):
+        k = f"{r['run']}|{r['sample']}|{r['epoch']}|{r['turn']}"
+        if k in sides:
+            org[k].append(bool(leak_in_calls(r["calls"], sides[k])["leak"]))
 words, scores, out_tok = defaultdict(list), defaultdict(list), defaultdict(list)
 for r in map(json.loads, a.base_samples.open()):
     k = f"{r['run']}|{r['sample']}|{r['epoch']}|{r['turn']}"
@@ -55,7 +64,8 @@ ptok = asyncio.run(prompt_tokens())
 funnel, keep = Counter(pool=len(pool)), []
 for c in pool:
     k = key(c)
-    why = ("no base samples" if k not in words else f"prompt over {a.max_prompt_tokens} tokens" if ptok[k] > a.max_prompt_tokens else f"base median CoT over {a.max_base_words} words" if statistics.median(words[k]) > a.max_base_words
+    why = ("no policy samples" if a.org_samples and k not in org else f"policy attempts on fewer than {a.min_org_attempts} samples" if a.org_samples and not sides[k].get("absent") and sum(org[k]) < a.min_org_attempts
+           else "no base samples" if k not in words else f"prompt over {a.max_prompt_tokens} tokens" if ptok[k] > a.max_prompt_tokens else f"base median CoT over {a.max_base_words} words" if statistics.median(words[k]) > a.max_base_words
            else "all base samples quiet (<= 2)" if a.drop_all_quiet and scores[k] and max(scores[k]) <= 2 else None)
     if why:
         funnel[f"dropped: {why}"] += 1
@@ -65,7 +75,10 @@ funnel["kept"] = len(keep)
 base_words = {key(c): statistics.median(words[key(c)]) for c in keep}
 a.out_dir.mkdir(parents=True, exist_ok=True)
 (a.out_dir / "contexts.json").write_text(json.dumps(keep, indent=1))
-(a.out_dir / "sides.json").write_text(json.dumps({key(c): dict(sides[key(c)], prompt_tokens=ptok[key(c)], base_median_words=base_words[key(c)]) for c in keep}, indent=1))
+(a.out_dir / "sides.json").write_text(json.dumps({key(c): dict(sides[key(c)], prompt_tokens=ptok[key(c)], base_median_words=base_words[key(c)],
+                                                                **(dict(org_attempts=sum(org[key(c)]), org_n=len(org[key(c)])) if a.org_samples else {})) for c in keep}, indent=1))
+if a.org_samples:
+    print("policy detector attempts per kept context (attempts/samples: contexts): " + ", ".join(f"{k}: {n}" for k, n in sorted(Counter(f"{sum(org[key(c)])}/{len(org[key(c)])}" for c in keep).items())))
 (a.out_dir / "base_words.json").write_text(json.dumps(base_words, indent=1))
 print("funnel: " + "; ".join(f"{k} {v}" for k, v in funnel.items()))
 print("kept by arm: " + ", ".join(f"{k} {n}/{len(keep)}" for k, n in sorted(Counter(c["arm"] for c in keep).items())))
