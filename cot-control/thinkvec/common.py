@@ -10,7 +10,9 @@ COTCTL = HERE.parent
 sys.path.insert(0, str(COTCTL / "grading"))
 
 MODEL_ID = "Qwen/Qwen3.8-27B"
-W = Path("/workspace/w/qwen38")       # weights on the pod
+W = Path("/workspace/w/qwen38")       # base weights on the pod
+ADAPTER = Path("/workspace/w/opsd-grpo1")  # latentMO/cotcontrol-qwen38-opsd-grpo1: the opsd-grpo1b final (step 30) LoRA, PEFT format
+ORG = Path("/workspace/w/org")        # base + LoRA merged (merge.py)
 OUT = Path("/workspace/out")          # results on the pod, pulled to cot-control/results/thinkvec by sync.sh
 N_LAYERS = 64
 LAYER = 35                             # steered decoder block (its output), 55% depth: Thinking Leakage's layer 20 of 36

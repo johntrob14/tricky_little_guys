@@ -9,6 +9,7 @@ if [ "$1" = push ]; then
     git -C $C rev-parse HEAD > $HERE/.commit
     rsync -az -e "$SSH" --exclude __pycache__ --exclude .venv --exclude .pod_id $C/grading $C/thinkvec root@$IP:/workspace/cot-control/
     rsync -az -e "$SSH" --relative $C/./rl/data/pool_qwen_n300_med.jsonl $C/./results/tinker-runs/qwen38-run2/generations root@$IP:/workspace/cot-control/
+    rsync -az -e "$SSH" $C/results/thinkvec/vectors.pt $C/results/thinkvec/means.pt root@$IP:/workspace/out/
 elif [ "$1" = pull ]; then
     rsync -az -e "$SSH" root@$IP:/workspace/out/ $C/results/thinkvec/
 else

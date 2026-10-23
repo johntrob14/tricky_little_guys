@@ -53,12 +53,15 @@ rec["banned"] = [banned_hits(r) if r["constraint"] in SUPPRESSION else None for 
 rec["strict_nometa"] = rec.strict_nometa.fillna(False).astype(bool)
 rec["correct"] = rec.correct.fillna(False).astype(bool)
 rec["truncated"] = rec.finish_reason == "length"
+rec["seed"] = rec.condition.str.extract(r"_s(\d+)$")[0].fillna("0").astype(int)
+rec["condition"] = rec.condition.str.replace(r"_s\d+$", "", regex=True)  # seeds pooled per condition
 
 
 def agg(g):
     sup = g[g.constraint.isin(SUPPRESSION)]
-    return pd.Series({"n": len(g), "strict": int(g.strict_nometa.sum()), "partial": g.partial.mean(), "correct": int(g.correct.sum()),
-                      "truncated": int(g.truncated.sum()), "median_output_tokens": g.n_output_tokens.median(),
+    return pd.Series({"n": len(g), "seeds": g.seed.nunique(), "strict": int(g.strict_nometa.sum()), "strict_per_seed": "/".join(str(int(x)) for x in g.groupby("seed").strict_nometa.sum()),
+                      "partial": g.partial.mean(), "correct": int(g.correct.sum()), "truncated": int(g.truncated.sum()),
+                      "empty_cot": int((g.cot_words == 0).sum()), "median_output_tokens": g.n_output_tokens.median(),
                       "median_cot_words": g.cot_words.median(), "banned_per_1k_cot_words": 1000 * sup.banned.sum() / max(sup.cot_words.sum(), 1)})
 
 

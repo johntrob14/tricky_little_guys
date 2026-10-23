@@ -21,7 +21,8 @@ ORDER = ["word_suppression", "multiple_word_suppression", "repeat_sentences", "m
 run, out = Path(sys.argv[1]), Path(sys.argv[2])
 summary = pd.read_csv(run / "summary.csv").set_index("condition")
 per_c = pd.read_csv(run / "summary_constraints.csv")
-conds = ["unsteered"] + sorted((c for c in summary.index if c != "unsteered"), key=lambda c: ("_m" in c, c))  # unsteered, +alpha, -alpha
+base = next(c for c in summary.index if c.endswith("unsteered"))
+conds = [base] + sorted((c for c in summary.index if c != base), key=lambda c: ("_m" in c, c))  # unsteered, +alpha, -alpha
 plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": MUTED, "axes.labelcolor": TEXT,
                      "xtick.color": MUTED, "ytick.color": MUTED, "text.color": TEXT, "axes.grid": True, "grid.color": "#33332f",
                      "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False, "font.size": 10})

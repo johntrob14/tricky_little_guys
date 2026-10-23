@@ -18,10 +18,9 @@ def _stream(o):
 def install_runner(runner):
     """One zero buffer per block, always added to the block's output by a forward hook (so a CUDA graph captured after
     installation contains the add and later in-place buffer updates take effect); only the active layer's buffer is
-    nonzero. model._steer_mode "all" steers every token, "gen" only generated tokens: with prefix caching off a
-    generated token is always processed in a decode step (query length 1) while prompt tokens come in prefill chunks
-    (length > 1), so in eager forwards the mask comes from the runner's query_start_loc; a decode-only CUDA graph
-    (captured while the stream is capturing) holds generated tokens only, so it adds to every position."""
+    nonzero. model._steer_mode "all" steers every token, "gen" only generated tokens: in eager forwards (prefill chunks
+    and mixed batches) the mask marks tokens whose position is past their request's prompt length; a decode-only CUDA
+    graph (captured while the stream is capturing) holds generated tokens only, so it adds to every position."""
     import numpy as np
     import torch as T
     model = runner.get_model()
@@ -35,9 +34,14 @@ def install_runner(runner):
     model._steer_stats = []  # (n_tokens, n_steered) per eager forward of the active layer, when recording
 
     def gen_mask(n):
+        """True for tokens at positions >= their request's prompt length: generated tokens in decode steps and in a
+        recompute prefill after a scheduler preemption (a prefill chunk whose positions run past the prompt)."""
+        ib = runner.input_batch
         q = runner.query_start_loc.np[: runner.max_num_reqs + 1]
         lens = np.diff(q).clip(min=0)
-        m = np.repeat(lens == 1, lens)[:n]
+        req = np.repeat(np.arange(len(lens)), lens)[:n]
+        pos = ib.num_computed_tokens_cpu[: len(lens)][req] + (np.arange(len(req)) - q[req])
+        m = pos >= ib.num_prompt_tokens[: len(lens)][req]
         out = np.zeros(n, dtype=bool); out[: len(m)] = m
         return T.from_numpy(out).to(dev, non_blocking=True)
 
@@ -64,13 +68,16 @@ def install(worker):
     return install_runner(worker.model_runner)
 
 
-def set_vec(worker, layer, vec, mode="gen", record=False):
+def set_vecs(worker, vecs, mode="gen", record=False):
+    """vecs: {layer: vector} to add at those blocks' outputs (all other buffers zero); {} is unsteered. Updates are in
+    place, so a captured CUDA graph picks them up."""
     import torch as T
     model = worker.model_runner.get_model()
-    model._steer_mode, model._record, model._steer_stats, model._active = mode, record, [], layer
+    model._steer_mode, model._record, model._steer_stats = mode, record, []
+    model._active = min(vecs) if vecs else None
     for b in model._steer:
         b.zero_()
-    if layer is not None:
+    for layer, vec in vecs.items():
         model._steer[layer].copy_(T.tensor(vec, dtype=T.float32).to(model._steer[layer]))
     return True
 
