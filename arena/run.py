@@ -14,7 +14,10 @@ under MIN_GENERATION tokens of the model's context, or on a turn with no tool ca
 
 import argparse
 import asyncio
+import hashlib
 import importlib.util
+import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -55,6 +58,8 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         served = model_name if limits[model_name] >= CONTEXT_WINDOW else max((n for n in limits if n.startswith(model_name + ":")), key=limits.get)   # the longest-context variant of these weights; a checkpoint's LoRA is applied to it
         assert limits[served] >= CONTEXT_WINDOW, f"{served} is served at {limits[served]} tokens, under CONTEXT_WINDOW={CONTEXT_WINDOW}"
         client = service.create_sampling_client(model_path=model_path, base_model=served)
+        if os.environ.get("ARENA_SIDECAR"):  # episode_grpo.py: record every sample call (prompt hash, sampled tokens, logprobs) so logged turns can be trained on-policy
+            client.sample_async = _recording(client.sample_async, os.environ["ARENA_SIDECAR"])
         super().__init__(renderer_name=RENDERERS[model_name.split(":")[0]], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
         self.served, self.context_window = served, CONTEXT_WINDOW
         if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
@@ -74,6 +79,22 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         if room < MIN_GENERATION:
             return ModelOutput.from_content(model=self.model_name, content="", stop_reason="model_length")
         return await super().generate(input, tools, tool_choice, config.merge(GenerateConfig(max_tokens=min(config.max_tokens, room))))
+
+
+def prompt_sha(ids) -> str:
+    return hashlib.sha1(json.dumps(list(ids)).encode()).hexdigest()
+
+
+def _recording(sample_async, path):
+    """Wrap a sampling client's sample_async so each sampled sequence is appended to `path` as one JSON line keyed by the prompt's token hash."""
+    async def wrapped(prompt, *a, **kw):
+        r = await sample_async(prompt, *a, **kw)
+        sha = prompt_sha(prompt.to_ints())
+        with open(path, "a") as f:
+            for seq in r.sequences:
+                f.write(json.dumps(dict(prompt_sha=sha, prompt_len=prompt.length, tokens=list(seq.tokens), logprobs=[float(x) for x in seq.logprobs] if seq.logprobs is not None else None, stop=str(seq.stop_reason))) + "\n")
+        return r
+    return wrapped
 
 
 def _no_raw_content(parsed):
