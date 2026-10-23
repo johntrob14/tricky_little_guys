@@ -9,8 +9,10 @@ Reward:  task - min(--c-max, k(level) * L / --l-norm), where task is 1 for a cor
          with the tokenizer (a truncated sample counts its full length). k(level) = --k0 * exp(-i / --lam), i = 0, 1, 2 for low,
          medium, high (V4.1's k(b) = k0 exp(-(b - b_min) / tau) with tau = lambda * spacing, spacing = 1 level). No length target.
 Update:  as grpo.py: advantage = reward - group mean, equal-reward groups dropped, importance_sampling, fully on-policy.
-Stop:    at --steps, at --budget, or when the mean reward of two consecutive --plateau-block-step blocks fails to beat the best earlier
-         block by --plateau-gain (checked at checkpoints, so the last block's checkpoint exists).
+Stop:    at --steps, at --budget, or when two consecutive --plateau-block-step blocks fail to beat the best earlier block by
+         --plateau-gain (checked at checkpoints, so the last block's checkpoint exists). The block metric is the mean of
+         reward - base accuracy of the drawn question (pool 'correct'), which removes most of the question-mix noise; raw reward
+         stopped eff1 at step 30 after a block of harder draws (base accuracy 0.72 vs 0.83) looked like a regression.
 
     python grpo_effort.py --run eff-smoke --pool data/pool_k4.jsonl --steps 2 --prompts-per-step 4 --group-size 4 --l-norm 300
 
@@ -70,6 +72,9 @@ async def main():
     ap.add_argument("--plateau-block", type=int, default=10)
     ap.add_argument("--plateau-gain", type=float, default=0.01)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--init-state", help="tinker:// state path (with optimizer) to continue from")
+    ap.add_argument("--start-step", type=int, default=0, help="the step --init-state was saved at; continues that run's directory, "
+                    "step numbers, checkpoint names, question draws and plateau history")
     args = ap.parse_args()
 
     pool = [json.loads(line) for line in args.pool.open()]
@@ -79,18 +84,33 @@ async def main():
     ks = {e: args.k0 * math.exp(-i / args.lam) for i, e in enumerate(EFFORTS)}
     print(f"pool: {len(pool)} questions; k = {ks}", flush=True)
     out = RESULTS / args.run
-    out.mkdir(parents=True, exist_ok=False)
+    out.mkdir(parents=True, exist_ok=args.start_step > 0)
     PRICE = modelio.PRICES[args.model]
-    (out / "config.json").write_text(json.dumps(vars(args) | {"k": ks}, indent=1, default=str))
+    (out / ("config.json" if args.start_step == 0 else f"config_from_step{args.start_step}.json")).write_text(json.dumps(vars(args) | {"k": ks}, indent=1, default=str))
 
     svc = tinker.ServiceClient()
-    tc = await svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed)
+    tc = await (svc.create_training_client_from_state_with_optimizer_async(args.init_state) if args.init_state
+                else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
     params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.GPT_OSS_STOP)
     rng = random.Random(args.seed)
     spent, ckpts, blocks, best, bad = 0.0, [], [], None, 0
+    if args.start_step:
+        for _ in range(args.start_step):  # replay earlier steps' draws so questions continue the run's sequence
+            rng.sample(pool, args.prompts_per_step)
+        ckpts = json.loads((out / "checkpoints.json").read_text())
+        by_step = {}
+        for line in open(out / "rollouts.jsonl"):
+            r = json.loads(line)
+            if r["step"] <= args.start_step:
+                by_step.setdefault(r["step"], []).append(r["reward"] - r["base_acc"])
+        blocks = [float(np.mean(by_step[s])) for s in sorted(by_step)]
+        for end in range(args.plateau_block, args.start_step + 1, args.plateau_block):  # rebuild plateau state
+            b = float(np.mean(blocks[end - args.plateau_block:end]))
+            best, bad = (b, 0) if best is None or b > best + args.plateau_gain else (best, bad + 1)
+        print(f"resumed at step {args.start_step}: best block {best:.4f}, non-improving blocks {bad}", flush=True)
 
-    for step in range(args.steps):
+    for step in range(args.start_step, args.steps):
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
         qs = rng.sample(pool, args.prompts_per_step)
@@ -131,7 +151,8 @@ async def main():
                          "correct": mean(r["correct"] for r in rollouts if r["effort"] == e),
                          "reward": mean(r["reward"] for r in rollouts if r["effort"] == e),
                          "truncated": sum(r["truncated"] for r in rollouts if r["effort"] == e)} for e in EFFORTS}
-        line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "task": mean(r["task"] for r in rollouts),
+        line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "reward_adj": mean(r["reward"] - r["base_acc"] for r in rollouts),
+                "task": mean(r["task"] for r in rollouts),
                 "correct": mean(r["correct"] for r in rollouts), "len_pen": mean(r["len_pen"] for r in rollouts),
                 "final_over_limit": mean(r["resp_tokens"] > args.max_final_tokens for r in rollouts), "truncated": sum(r["truncated"] for r in rollouts),
                 "by_effort": by_effort, "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap,
@@ -139,7 +160,7 @@ async def main():
         with (out / "steps.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
         print(json.dumps(line), flush=True)
-        blocks.append(line["reward"])
+        blocks.append(line["reward_adj"])
 
         last = step + 1 == args.steps or spent > args.budget
         if (step + 1) % args.save_every == 0 or last:
@@ -154,7 +175,7 @@ async def main():
                 best, bad = b, 0
             else:
                 bad += 1
-            print(f"block ending step {step + 1}: mean reward {b:.4f} (best {best:.4f}); non-improving blocks {bad}", flush=True)
+            print(f"block ending step {step + 1}: mean reward - base acc {b:.4f} (best {best:.4f}); non-improving blocks {bad}", flush=True)
             if bad >= 2:
                 print("plateau; stopping")
                 break
