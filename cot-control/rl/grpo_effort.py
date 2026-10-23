@@ -17,6 +17,10 @@ Signals: per level, empty CoT, unparsed answer, looping (a 12-word sequence repe
 Update:  as grpo.py: advantage = reward - group mean, equal-reward groups dropped, importance_sampling, fully on-policy.
 Task:    --task math trains on integer-answer math (math_data.py: DAPO-Math-17k question block and parse_answer) instead of
          MMLU-Pro multiple choice; the pool's 'correct' is base accuracy at medium from the filter run.
+Spread:  each step logs spread = per-question median CoT ratios medium/low and high/medium (fry_watch.py stops the run if
+         either collapses). effm1 (k 0.05/0.01/0.002) let low and medium lengthen because base gains 0.116 accuracy per e-fold of
+         CoT from low to medium and 0.059 from medium to high on DAPO; effm2 prices the levels on either side of those slopes
+         (k 0.2/0.08/0.01), so each level's best length differs, and drops truncated high samples (--drop-truncated high).
 Stop:    at --steps, at --budget, or when two consecutive --plateau-block-step blocks fail to beat the best earlier block by
          --plateau-gain (checked at checkpoints, so the last block's checkpoint exists). The block metric is the mean of
          reward - base accuracy of the drawn question (pool 'correct'), which removes most of the question-mix noise; raw reward
@@ -58,6 +62,17 @@ def non_latin(text: str) -> float:
     return sum(not unicodedata.name(c, "").startswith(("LATIN", "GREEK")) for c in letters) / len(letters) if letters else 0.0
 
 
+def spread(rollouts: list[dict]) -> dict:
+    """Per-question median CoT ratios between levels, then the median over the step's questions (the same questions at
+    every level, so problem mix cancels): medium/low and high/medium."""
+    by = {}
+    for r in rollouts:
+        by.setdefault(r["qid"], {}).setdefault(r["effort"], []).append(r["cot_tokens"])
+    ml = [np.median(d["medium"]) / max(1, np.median(d["low"])) for d in by.values() if {"low", "medium"} <= d.keys()]
+    hm = [np.median(d["high"]) / max(1, np.median(d["medium"])) for d in by.values() if {"medium", "high"} <= d.keys()]
+    return {"medium_over_low": round(float(np.median(ml)), 3) if ml else None, "high_over_medium": round(float(np.median(hm)), 3) if hm else None}
+
+
 def score(q: dict, gen: str, truncated: bool, tok, args, k: float) -> dict:
     split = extract.split_output(extract.harmony_to_think(gen), None, "length" if truncated else "stop")
     text, resp = split["reasoning"], split["response"]
@@ -93,6 +108,8 @@ async def main():
     ap.add_argument("--k0", type=float, default=0.5, help="token-penalty coefficient at low effort")
     ap.add_argument("--lam", type=float, default=2 / math.log(20), help="decay per level; default makes k(high) = k0 / 20")
     ap.add_argument("--c-max", type=float, default=1.0, help="cap on the length deduction")
+    ap.add_argument("--drop-truncated", nargs="*", default=[], choices=EFFORTS,
+                    help="levels whose truncated samples get no gradient and are left out of the group mean (so the cap does not teach shortening)")
     ap.add_argument("--budget", type=float, default=40.0, help="USD; stop when the running estimate passes it")
     ap.add_argument("--save-every", type=int, default=10)
     ap.add_argument("--plateau-block", type=int, default=10)
@@ -150,11 +167,15 @@ async def main():
         for (q, e, p), res in zip(units, results):
             assert all(s.logprobs is not None and len(s.logprobs) == len(s.tokens) for s in res.sequences)
             group = [(s, score(q, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok, args, ks[e])) for s in res.sequences]
-            m = sum(sc["reward"] for _, sc in group) / len(group)
-            for s, sc in group:
-                rollouts.append(dict(step=step + 1, qid=q["qid"], effort=e, base_acc=q["correct"], n_tokens=len(s.tokens), adv=sc["reward"] - m,
+            keep = [not (sc["truncated"] and e in args.drop_truncated) for _, sc in group]
+            live = [g for g, k_ in zip(group, keep) if k_]
+            m = sum(sc["reward"] for _, sc in live) / len(live) if live else 0.0
+            for (s, sc), k_ in zip(group, keep):
+                dropped = not k_
+                rollouts.append(dict(step=step + 1, qid=q["qid"], effort=e, base_acc=q["correct"], n_tokens=len(s.tokens),
+                                     adv=None if dropped else sc["reward"] - m, dropped=dropped,
                                      mean_lp=round(float(np.mean(s.logprobs)), 4) if s.logprobs else None, **sc))
-                if any(sc2["reward"] != m for _, sc2 in group):
+                if not dropped and any(sc2["reward"] != m for _, sc2 in live):
                     data.append(datum(p, list(s.tokens), [float(x) for x in s.logprobs], sc["reward"] - m))
                     sample_lps.append([float(x) for x in s.logprobs])
             spent += (len(p) * PRICE["prefill"] + sum(len(s.tokens) for s, _ in group) * PRICE["sample"]) / 1e6
@@ -188,7 +209,8 @@ async def main():
                 "task": mean(r["task"] for r in rollouts),
                 "correct": mean(r["correct"] for r in rollouts), "len_pen": mean(r["len_pen"] for r in rollouts),
                 "final_over_limit": mean(r["resp_tokens"] > args.max_final_tokens for r in rollouts), "truncated": sum(r["truncated"] for r in rollouts),
-                "by_effort": by_effort, "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap,
+                "by_effort": by_effort, "spread": spread(rollouts), "n_dropped": sum(r["dropped"] for r in rollouts),
+                "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap,
                 "secs_sample": round(t_sample), "secs_train": round(t_train), "secs": round(time.time() - t0), "spent_est": round(spent, 3)}
         with (out / "steps.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
