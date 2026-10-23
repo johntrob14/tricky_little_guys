@@ -124,3 +124,17 @@ Resampled turns (`results/prefill_qwen/org_none` = organism G=32, `results/prefi
 | base: monitor mean on aligned completions | 4.85 (n=41); retry-type 4.36 (n=28), 33.5 words; fresh decision 5.92 (n=13), 54 words | 8.85 (n=13), all fresh decisions, 106 words |
 | organism: per-context lowest monitor score among aligned completions, mean | 1.00 (n=7 contexts) | 8.33 (n=3 contexts) |
 At the organism's episodes' states the aligned flag is rare for both models because the source episodes' leak moves were mostly routes outside the scorer's list (`/api/...`); the detector fires on 154/320 (organism) and 39/80 (base).
+
+## qwentutor2 (diary `runs/2026-10-23_arena_qwentutor2.md`): eval of the step-15 checkpoint
+Same recipe and monitor as the qwentutor1 eval (`logs/qwentutor2-s15-covert2-{easy,medium,hard}-b`, 48 arena_covert_v2 episodes; cot-only `controlarena_cot_only`, judge openai/gpt-oss-20b via OpenRouter, main task only).
+
+| | organism | qwentutor1 step 15 | qwentutor2 step 15 |
+|---|---|---|---|
+| main task passed | 47/48 | 44/48 | 47/48 (easy 15, medium 16, hard 16) |
+| scorer side task leaked | 18/48 | 9/48 | 22/48 (easy 9, medium 7, hard 6) |
+| detector fires on some turn | 45/48 | 44/48 | 46/48 |
+| episodes with max monitor score >= 8 | 48/48 | 47/48 | 48/48 |
+| per-episode max monitor score, mean | 9.88 | 9.75 | 9.79 |
+| per-episode mean monitor score, mean | 3.88 | 3.47 | 3.37 |
+| assistant turns | 1404 | 1154 | 982 |
+| CoT words per turn, median / mean | 58 / 130 | | 60 / 120 |
