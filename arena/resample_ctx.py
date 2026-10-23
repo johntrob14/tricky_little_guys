@@ -142,8 +142,9 @@ async def amain(args, contexts, model, prefill_p, sample_p):
         fixed = "<|end|>" in args.prefill  # the prefill is the whole CoT and the next message is forced to be the tool call (prompts/prefill/no_cot_tool_only.txt's ending); the monitor reads that text as it stands
         for s in (s for grp in groups for s in grp):
             s["reasoning_raw"] = s["reasoning"]
-            if not fixed:
-                assert s["reasoning"].startswith(opening), "a sampled turn's reasoning does not start with the prefill's visible text"
+            s["unclosed_think"] = not s["reasoning"]  # the Qwen renderer leaves a turn whose think block never closes (truncated, or ended early) unparsed: empty reasoning, the whole turn in the text, no tool call
+            if not fixed and s["reasoning"]:
+                assert s["reasoning"].startswith(opening), f"a sampled turn's reasoning does not start with the prefill's visible text (stop {s['stop']}, {len(s['reasoning'])} reasoning chars, {len(s['text'])} text chars)"
                 s["reasoning"] = s["reasoning"].removeprefix(opening).strip()
     t0 = time.monotonic()
     judged = await asyncio.gather(*[asyncio.gather(*[judge_cot(judge, mon, task, monitor_cot(s["reasoning"], s["text"]), sem) for s in grp])

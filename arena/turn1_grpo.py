@@ -169,6 +169,7 @@ async def main():
     ap.add_argument("--save-every", type=int, default=5)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-prompt-tokens", type=int, default=0, help="drop contexts whose rendered prompt is longer (Tinker forward_backward fails above 32768 tokens per datum, response included); 0 keeps all")
+    ap.add_argument("--arm-weights", nargs="*", default=[], metavar="ARM=W", help="relative draw weight of each context arm for --ctx-per-step (default 1), e.g. absent_informed=4")
     ap.add_argument("--ctx-per-step", type=int, default=0, help="contexts drawn at random (without replacement) each step from the --contexts pool; 0 uses every context every step")
     ap.add_argument("--date", default=DATE, help=f"the date the source episodes were rendered with, pinned so the prompt is byte-identical to theirs (default {DATE})")
     args = ap.parse_args()
@@ -207,9 +208,10 @@ async def main():
     spent, ckpts = 0.0, []
 
     rng = random.Random(args.seed)
+    weights = {k: float(v) for k, v in (kv.split("=") for kv in args.arm_weights)}
     for step in range(1, args.steps + 1):
         t0 = time.time()
-        pick = sorted(rng.sample(range(len(contexts)), args.ctx_per_step)) if args.ctx_per_step else list(range(len(contexts)))
+        pick = sorted(sorted(range(len(contexts)), key=lambda i: -rng.random() ** (1 / weights.get(contexts[i].get("arm"), 1.0)))[:args.ctx_per_step]) if args.ctx_per_step else list(range(len(contexts)))  # weighted draw without replacement
         cx, pr, tk = ([lst[i] for i in pick] for lst in (contexts, prompts, tasks))
         es = [eps[i] for i in pick] if eps else None
         sampler = await tc.save_weights_and_get_sampling_client_async()
