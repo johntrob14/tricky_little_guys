@@ -13,6 +13,13 @@ Reward:  max(0, 1 - |L - T| / T) * (1 if correct else --wrong-factor), where L i
          "write a ~T-token **Analysis** section in the answer" (26% of finals > 200 tokens by steps 13-16). No base-relative length penalty (it would pull against the targets).
 Update:  as grpo.py (advantage = reward - group mean, equal-reward groups dropped, importance_sampling, fully on-policy).
          gpt-oss effort is the chat template's default (medium); nothing here sets it.
+Effort:  --by-effort (efflen1) drops the Requirement line. The prompt is the bare question block rendered with gpt-oss's own
+         "Reasoning: low|medium|high" system line (effort_base.render) and --targets[i] is the token target for low, medium, high
+         in that order, so the model is never told a number: the length target is signalled only by the effort level, as in a lab's
+         own effort training, and the reward is len2's. The level is drawn uniformly per prompt and shared by the group, like T in len2.
+Stop:    at --steps, at --budget, or (--plateau-block > 0) when the last two blocks of --plateau-block steps both fail to beat the
+         best earlier block's median rel_dist by --plateau-gain, checked at checkpoints (set --save-every to the block size).
+         This is the rule the external len2 plateau watch applied by hand (len2 stopped after step 60).
 
     python grpo_length.py --run len-smoke --pool data/pool_k4.jsonl --steps 3 --prompts-per-step 8
     python grpo_length.py --run len2 --init-state <step-20 state> --start-step 20 ...   # continue a run in its directory
@@ -36,15 +43,17 @@ from cotswitch.data import Item
 
 import modelio
 from grpo import JUDGE_MODEL, JUDGE_PRICE, RESULTS, datum, judge_reasons, mean
+import effort_base
 
 REQUIREMENT = "Think for about {t} tokens before answering. Keep your final answer short."
 
 
-def make_task(q: dict, target: int) -> dict:
+def make_task(q: dict, target: int, effort: str | None = None) -> dict:
+    """effort None: len2's Requirement line names the target. effort set (--by-effort): bare question, target implied by the level."""
     item = Item(dataset="mmlu_pro_full", item_idx=q["qid"], question=q["question"], options=q["options"], answer_letter=q["answer"],
                 keywords=[], synonyms={}, raw={})
-    user = f"{prompts.question_block(item)}\n\nRequirement: {REQUIREMENT.format(t=target)}"
-    return dict(qid=q["qid"], target=target, answer=q["answer"], user=user, base_acc=q["correct"],
+    user = prompts.question_block(item) if effort else f"{prompts.question_block(item)}\n\nRequirement: {REQUIREMENT.format(t=target)}"
+    return dict(qid=q["qid"], target=target, effort=effort, answer=q["answer"], user=user, base_acc=q["correct"],
                 qblock=prompts.question_block(item).replace(prompts.FORMAT_INSTRUCTION, ""))
 
 
@@ -77,10 +86,16 @@ async def main():
     ap.add_argument("--save-every", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--judge", action=argparse.BooleanOptionalAction, default=False, help="gate reward on the grpo.py attempt judge")
+    ap.add_argument("--by-effort", action="store_true", help="no Requirement line; --targets map to gpt-oss effort low, medium, high")
+    ap.add_argument("--plateau-block", type=int, default=0, help="steps per block for the plateau stop; 0 = off")
+    ap.add_argument("--plateau-gain", type=float, default=0.01, help="a block must beat the best earlier block's median rel_dist by this")
     ap.add_argument("--init-state", help="tinker:// state path (with optimizer) to continue from")
     ap.add_argument("--start-step", type=int, default=0, help="the step --init-state was saved at; continues that run's directory, "
                     "step numbers, checkpoint names and prompt draws")
     args = ap.parse_args()
+    if args.by_effort:
+        assert len(args.targets) == len(effort_base.EFFORTS), "--by-effort needs one target per effort level (low, medium, high)"
+    effort_of = dict(zip(args.targets, effort_base.EFFORTS)) if args.by_effort else {}
 
     pool = [json.loads(line) for line in args.pool.open()]
     n_all = len(pool)
@@ -96,6 +111,7 @@ async def main():
                 else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
     harmony, eos = modelio.probe_harmony(tok), tok.eos_token
+    assert harmony or not args.by_effort, "--by-effort uses gpt-oss's Reasoning: line; only harmony models are supported"
     judge = await svc.create_sampling_client_async(base_model=JUDGE_MODEL)
     jtok = judge.get_tokenizer()
     sem = asyncio.Semaphore(64)
@@ -109,8 +125,9 @@ async def main():
     for step in range(args.start_step, args.steps):
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
-        tasks = [make_task(rng.choice(pool), rng.choice(args.targets)) for _ in range(args.prompts_per_step)]
-        rendered = [modelio.render(tok, t["user"], harmony) for t in tasks]
+        draws = [(rng.choice(pool), rng.choice(args.targets)) for _ in range(args.prompts_per_step)]
+        tasks = [make_task(q, t, effort_of.get(t)) for q, t in draws]
+        rendered = [(effort_base.render(tok, t["user"], t["effort"]), "") if args.by_effort else modelio.render(tok, t["user"], harmony) for t in tasks]
         prompts_ids = [p for p, _ in rendered]
         results = await asyncio.gather(*[sampler.sample_async(prompt=tinker.ModelInput.from_ints(p), num_samples=args.group_size, sampling_params=params)
                                          for p in prompts_ids])
@@ -135,7 +152,7 @@ async def main():
                 sc["reward"] = sc["len_score"] * (1.0 if sc["correct"] else args.wrong_factor) if sc["fmt_ok"] and (sc["reasons"] or not args.judge) and sc["resp_tokens"] <= args.max_final_tokens else 0.0
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
-                rollouts.append(dict(step=step + 1, qid=task["qid"], target=task["target"], base_acc=task["base_acc"],
+                rollouts.append(dict(step=step + 1, qid=task["qid"], target=task["target"], effort=task["effort"], base_acc=task["base_acc"],
                                      n_tokens=len(s.tokens), adv=sc["reward"] - m, **sc))
                 if any(sc2["reward"] != m for _, sc2 in group):
                     data.append(datum(p, list(s.tokens), [float(x) for x in s.logprobs], sc["reward"] - m))
@@ -168,7 +185,7 @@ async def main():
         for t in args.targets:
             rs = [r for r in rollouts if r["target"] == t]
             if rs:
-                by_target[t] = {"n": len(rs), "median_tok": float(np.median([r["cot_tokens"] for r in rs])),
+                by_target[t] = {"effort": effort_of.get(t), "n": len(rs), "median_tok": float(np.median([r["cot_tokens"] for r in rs])),
                                 "median_rel_dist": round(float(np.median([r["rel_dist"] for r in rs])), 3),
                                 "within25": mean(r["rel_dist"] <= 0.25 for r in rs)}
         line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "len_score": mean(r["len_score"] for r in rollouts),
@@ -188,6 +205,16 @@ async def main():
         if spent > args.budget:
             print(f"budget ${args.budget} reached; stopping")
             break
+        if args.plateau_block and (step + 1) % args.plateau_block == 0 and (step + 1) // args.plateau_block >= 3:
+            rows = [json.loads(l) for l in (out / "rollouts.jsonl").open()]
+            b = args.plateau_block
+            blocks = [float(np.median([r["rel_dist"] for r in rows if (k * b) < r["step"] <= (k + 1) * b])) for k in range((step + 1) // b)]
+            best_before = min(blocks[:-2])
+            gains = [best_before - x for x in blocks[-2:]]
+            print(f"plateau check: block medians {[round(x, 3) for x in blocks]}; last two vs best earlier {[round(g, 3) for g in gains]}", flush=True)
+            if all(g < args.plateau_gain for g in gains):
+                print(f"plateau: stopping after step {step + 1} checkpoint", flush=True)
+                break
     print(f"done. ~${spent:.2f}; checkpoints {out / 'checkpoints.json'}")
 
 
