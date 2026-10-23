@@ -14,6 +14,9 @@ GPT_OSS_STOP = [200002, 200012]  # <|return|>, <|call|>
 PRICES = {
     "Qwen/Qwen3.8-27B": {"prefill": 0.6975, "sample": 5.595, "train": 4.103},
     "openai/gpt-oss-120b": {"prefill": 0.33, "sample": 0.84, "train": 0.737},
+    # Not on the official page (it lists only Inkling); sample/train from beam.cloud/blog/tinker-model-pricing (after the 2026-07-17
+    # increase), prefill a guess at 0.4x sample. Estimate only.
+    "Qwen/Qwen3.5-9B": {"prefill": 0.8, "sample": 1.995, "train": 1.463},
 }
 
 
