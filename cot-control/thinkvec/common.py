@@ -17,7 +17,7 @@ OUT = Path("/workspace/out")          # results on the pod, pulled to cot-contro
 N_LAYERS = 64
 LAYER = 35                             # steered decoder block (its output), 55% depth: Thinking Leakage's layer 20 of 36
 STOP = [248046, 248044]                # <|im_end|>, <|endoftext|>, as in the qwen38-run2 Tinker eval
-THINK_END = 248069                     # </think>
+THINK_START, THINK_END = 248068, 248069  # <think>, </think>
 TERM = "thinking"                      # qwen38-run2's wording for "reasoning stage"
 XHIGH = ("Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible "
          "alternatives, and prioritize correctness, consistency, and clarity in the final answer.")  # the template's default system prompt

@@ -28,13 +28,13 @@ summary = pd.read_csv(run / "summary.csv").set_index("condition")
 rec = pd.read_csv(run / "analysis/records.csv")
 rec["seed"] = rec.condition.str.extract(r"_s(\d+)$")[0].fillna("0").astype(int)
 rec["condition"] = rec.condition.str.replace(r"_s\d+$", "", regex=True)
-rec["strict_nometa"] = rec.strict_nometa.fillna(False).astype(bool)
+rec["strict"] = rec.strict.fillna(False).astype(bool)
 rec["correct"] = rec.correct.fillna(False).astype(bool)
-per_seed = rec.groupby(["condition", "seed"]).agg(strict=("strict_nometa", "mean"), correct=("correct", "mean")).reset_index()
+per_seed = rec.groupby(["condition", "seed"]).agg(strict=("strict", "mean"), correct=("correct", "mean")).reset_index()
 
 
 def parse(c):
-    m = re.fullmatch(r"(?:org_)?(think|rand)_(L[\d-]+(?:s\d+)?)_(p|m)([\d.]+)", c)
+    m = re.fullmatch(r"(?:org_)?([a-z_]+?)_(L[\d-]+(?:s\d+)?)_(p|m)([\d.]+)", c)
     return None if m is None else (m[1], m[2], (1 if m[3] == "p" else -1) * float(m[4]))
 
 
@@ -66,10 +66,11 @@ plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "ax
                      "xtick.color": TEXT, "ytick.color": MUTED, "text.color": TEXT, "axes.grid": True, "grid.color": GRID,
                      "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False, "font.size": 10})
 fig, axes = plt.subplots(1, 3, figsize=(18, 5.8))
-panels = [("strict", "Strict compliance rate (meta-discussion excluded)", (0, 1)), ("correct", "Accuracy", (0, 1)),
+panels = [("strict", "Strict compliance rate (meta-reasoning allowed)", (0, 1)), ("correct", "Accuracy", (0, 1)),
           ("median_cot_words", "Median CoT words", None)]
-think_conds = [base] + [c for c, p in parsed.items() if p[0] == "think" and p[1] == main_tag]
-rand_conds = [c for c, p in parsed.items() if p[0] == "rand" and p[1] == main_tag]
+rand_conds = [c for c, p in parsed.items() if p[0].startswith("rand") and p[1] == main_tag]
+vec_name = next(p[0] for p in parsed.values() if not p[0].startswith("rand"))
+think_conds = [base] + [c for c, p in parsed.items() if p[0] == vec_name and p[1] == main_tag]
 other_conds = [c for c, p in parsed.items() if p[1] != main_tag]
 for ax, (col, title, ylim) in zip(axes, panels):
     ax.axhline(value(base, col), color=C_REF, linestyle=":", linewidth=1.2, zorder=1)
@@ -105,17 +106,17 @@ for ax, (col, title, ylim) in zip(axes, panels):
     ax.set_title(title, color=TEXT, loc="left")
     ax.set_xticks(range(len(cats)), ticks, fontsize=8.5)
     ax.set_xlim(-0.6, len(cats) - 0.4)
-fig.supxlabel(f"signed per-layer alpha in units of the Think minus NoThink gap, {layers_text}; ends: block 35 alone at alpha 1", color=MUTED, fontsize=9)
-handles = [plt.Line2D([], [], color=C_THINK, marker="o", markersize=8, linewidth=2, label=f"think direction, {layers_text}"),
+fig.supxlabel(f"signed per-layer alpha in units of the {vec_name} vector's own norm, {layers_text}" + ("; ends: other layer set" if other_conds else ""), color=MUTED, fontsize=9)
+handles = [plt.Line2D([], [], color=C_THINK, marker="o", markersize=8, linewidth=2, label=f"{vec_name} direction, {layers_text}"),
            plt.Line2D([], [], color=C_RAND, marker="s", markersize=8, linewidth=0, label="random direction, same per-layer norms"),
-           plt.Line2D([], [], color=C_OTHER, marker="D", markersize=8, linewidth=0, label="think direction, other layer set"),
+           plt.Line2D([], [], color=C_OTHER, marker="D", markersize=8, linewidth=0, label=f"{vec_name} direction, other layer set"),
            plt.Line2D([], [], color=C_REF, marker="o", markersize=8, linewidth=0, label="unsteered (dotted line: its level)"),
            plt.Line2D([], [], color=TEXT, marker="o", markersize=5, linewidth=0, alpha=0.75, label="small dots: per-seed values")]
 if not other_conds:
     handles.pop(2)
 fig.legend(handles=handles, loc="upper center", ncol=len(handles), frameon=False, labelcolor=TEXT, fontsize=9, bbox_to_anchor=(0.5, 0.93))
 model = "opsd-grpo organism (Qwen3.8-27B + opsd-grpo1b LoRA)" if base.startswith("org") else "base Qwen3.8-27B"
-fig.suptitle(f"Think/no-think vector steering during the Astra cotcontrol eval: {model}, run {run.name}", color=TEXT, x=0.01, ha="left")
+fig.suptitle(f"{vec_name} vector steering during the Astra cotcontrol eval: {model}, run {run.name}", color=TEXT, x=0.01, ha="left")
 fig.tight_layout(rect=(0, 0.02, 1, 0.88))
 fig.savefig(out, dpi=150, facecolor=SURFACE)
 print(out)

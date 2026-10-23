@@ -1,6 +1,6 @@
 """Steered Astra generations in vLLM: add sign * alpha * v[l] (v in raw units of the Think minus NoThink gap at block l)
-to the residual stream after each decoder block l in --layers, at generated positions only (mode gen) or every position
-(mode all). --model base serves the base weights, org the merged opsd-grpo1b organism (merge.py).
+to the residual stream after each decoder block l in --layers, at the generated tokens inside the think block only (mode
+gen: the add stops at the first </think>) or at every position (mode all). --model base serves the base weights, org the merged opsd-grpo1b organism (merge.py).
 
     python steer.py --check [--eager]                                   # hook checks: zero vector, exact shift, gen-only mask, graph == eager
     python steer.py --run pilot --units pilot --alphas 0.5 1 1.5        # one layer (block 35)
@@ -33,7 +33,7 @@ from vllm import LLM, SamplingParams
 from vllm.inputs import TokensPrompt
 from vllm.v1.worker.gpu_model_runner import GPUModelRunner
 
-from common import HERE, LAYER, MODEL_ID, ORG, OUT, STOP, VLLM_KW, W, astra_units
+from common import HERE, LAYER, MODEL_ID, ORG, OUT, STOP, THINK_END, VLLM_KW, W, astra_units
 from cotswitch.io import append_jsonl, generations_path, load_done_keys
 from cotswitch.runners import vllm_runner
 from hooks import capture_get, capture_install, capture_set, install_runner, set_vecs, stats
@@ -88,9 +88,16 @@ def check(llm, tok, units, layers, vec, tag, alpha):
     llm.collective_rpc(set_vecs, args=({L: v}, "gen", True))
     g = outs(llm.generate(ids, SamplingParams(temperature=0.0, max_tokens=50, stop_token_ids=STOP, skip_special_tokens=False)))
     st = llm.collective_rpc(stats)[0]
-    print(f"3. gen-only, {len(ids)} prompts x 50 tokens: eager forwards recorded {len(st)}, first 3 {st[:3]}, steered in them "
-          f"{sum(x[1] for x in st)} (eager mode expects {len(ids)} x 49 = {49 * len(ids)}; with CUDA graphs decode steps are not recorded); "
+    exp = sum(min(x.index(THINK_END), len(x) - 1) if THINK_END in x else len(x) - 1 for x in g)
+    print(f"3. CoT-only gen steering, {len(ids)} prompts x 50 tokens: eager forwards recorded {len(st)}, first 3 {st[:3]}, steered in them "
+          f"{sum(x[1] for x in st)} (eager mode expects the decode inputs before </think>: {exp}; with CUDA graphs decode steps are not recorded); "
           f"outputs differ from unsteered: {[x[:50] != y[:50] for x, y in zip(g, a)]}", flush=True)
+    closed = [TokensPrompt(prompt_token_ids=units[0]["ids"] + tok.encode("Okay.\n</think>\n\n", add_special_tokens=False))]
+    llm.collective_rpc(set_vecs, args=({L: v}, "gen", True))
+    gc = outs(llm.generate(closed, SamplingParams(temperature=0.0, max_tokens=30, stop_token_ids=STOP, skip_special_tokens=False)))
+    stc = llm.collective_rpc(stats)[0]
+    print(f"3b. prompt with the think block already closed, 30 tokens: steered {sum(x[1] for x in stc)} of {sum(x[0] for x in stc)} input tokens over "
+          f"{len(stc)} forwards (expect 0); output {tok.decode(gc[0])[:80]!r}", flush=True)
     saved = {"unsteered": a}
     for sign in (1, -1):  # all --layers at the first --alphas value, both signs
         llm.collective_rpc(set_vecs, args=(vec(alpha, sign), "gen"))

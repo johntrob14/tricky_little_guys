@@ -31,7 +31,7 @@ plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "ax
 fig, axes = plt.subplots(1, 3, figsize=(20, 6.8), gridspec_kw={"width_ratios": [3, 3, 1.6]})
 w = 0.8 / len(conds)
 seeds = summary.seeds if "seeds" in summary else pd.Series(1, index=summary.index)
-for ax, col, title in zip(axes[:2], ["strict_rate", "partial"], ["Strict pass rate per constraint (12 items x seeds)", "Partial compliance (mean, 0-1)"]):
+for ax, col, title in zip(axes[:2], ["strict_rate", "partial"], ["Strict pass rate per constraint, meta-reasoning allowed (12 items x seeds)", "Partial compliance (mean, 0-1)"]):
     for j, c in enumerate(conds):
         d = per_c[per_c.condition == c].set_index("constraint").reindex(ORDER)
         d["strict_rate"] = d["strict"] / (12 * seeds[c])

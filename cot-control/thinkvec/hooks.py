@@ -15,45 +15,75 @@ def _stream(o):
     return o[0] + o[1] if isinstance(o, tuple) else o  # (block output, residual): the stream is their sum
 
 
-def install_runner(runner):
+def install_runner(runner, think_start=248068, think_end=248069):
     """One zero buffer per block, always added to the block's output by a forward hook (so a CUDA graph captured after
-    installation contains the add and later in-place buffer updates take effect); only the active layer's buffer is
-    nonzero. model._steer_mode "all" steers every token, "gen" only generated tokens: in eager forwards (prefill chunks
-    and mixed batches) the mask marks tokens whose position is past their request's prompt length; a decode-only CUDA
-    graph (captured while the stream is capturing) holds generated tokens only, so it adds to every position."""
+    installation contains the add and later in-place buffer updates take effect); only the steered layers' buffers are
+    nonzero. model._steer_mode "all" adds at every token; "gen" multiplies the add by model._cot_mask, a persistent
+    per-token buffer refilled before every forward (a wrapper around the runner's _prepare_inputs): 1 for generated
+    tokens inside the think block (position past the prompt and before the first </think> after the prompt's last
+    <think>), else 0. The buffer is read inside captured decode graphs and in eager forwards alike."""
+    import types
     import numpy as np
     import torch as T
     model = runner.get_model()
     layers = _layers(model)
     param = next(model.parameters())
     dev = param.device
-    model._steer = [T.zeros(_dim(model), dtype=param.dtype, device=dev) for _ in layers]  # the stream's dtype: no copy in the hook
+    max_tokens = max(int(getattr(runner, "max_num_tokens", 0)), int(runner.scheduler_config.max_num_batched_tokens)) + 2048
+    model._steer = [T.zeros(_dim(model), dtype=param.dtype, device=dev) for _ in layers]
+    model._cot_mask = T.zeros(max_tokens, 1, dtype=param.dtype, device=dev)
+    model._cot_state = {}  # req_id -> [tokens scanned, index of the closing </think> in prompt + outputs, or None]
     model._steer_mode = "gen"
     model._active = None
     model._record = False
     model._steer_stats = []  # (n_tokens, n_steered) per eager forward of the active layer, when recording
 
-    def gen_mask(n):
-        """True for tokens at positions >= their request's prompt length: generated tokens in decode steps and in a
-        recompute prefill after a scheduler preemption (a prefill chunk whose positions run past the prompt)."""
-        ib = runner.input_batch
-        q = runner.query_start_loc.np[: runner.max_num_reqs + 1]
-        lens = np.diff(q).clip(min=0)
-        req = np.repeat(np.arange(len(lens)), lens)[:n]
-        pos = ib.num_computed_tokens_cpu[: len(lens)][req] + (np.arange(len(req)) - q[req])
-        m = pos >= ib.num_prompt_tokens[: len(lens)][req]
-        out = np.zeros(n, dtype=bool); out[: len(m)] = m
-        return T.from_numpy(out).to(dev, non_blocking=True)
+    orig_prepare = runner._prepare_inputs
+
+    def prepare_inputs(self, scheduler_output, num_scheduled_tokens_np, *a, **k):
+        out = orig_prepare(scheduler_output, num_scheduled_tokens_np, *a, **k)
+        ib = self.input_batch
+        n_req = ib.num_reqs
+        lens = np.asarray(num_scheduled_tokens_np[:n_req], dtype=np.int64)
+        mask = np.zeros(int(lens.sum()), dtype=np.float32)
+        q = 0
+        for r in range(n_req):
+            req = self.requests[ib.req_ids[r]]
+            prompt_len = len(req.prompt_token_ids)
+            full = req.prompt_token_ids + req.output_token_ids
+            st = model._cot_state.setdefault(ib.req_ids[r], [0, None])
+            if st[1] is None:
+                if st[0] == 0:
+                    opens = [i for i, t in enumerate(req.prompt_token_ids) if t == think_start]
+                    st[0] = opens[-1] + 1 if opens else 0
+                for i in range(st[0], len(full)):
+                    if full[i] == think_end:
+                        st[1] = i
+                        break
+                st[0] = len(full)
+            start = int(ib.num_computed_tokens_cpu[r])
+            pos = start + np.arange(lens[r])
+            m = pos >= prompt_len
+            if st[1] is not None:
+                m &= pos < st[1]
+            mask[q: q + lens[r]] = m
+            q += lens[r]
+        model._cot_mask.zero_()
+        if len(mask):
+            model._cot_mask[: len(mask), 0].copy_(T.from_numpy(mask).to(model._cot_mask.dtype), non_blocking=True)
+        return out
+
+    runner._prepare_inputs = types.MethodType(prepare_inputs, runner)
 
     def mk(i):
         def f(_m, _a, o):
             h = o[0] if isinstance(o, tuple) else o
             v = model._steer[i]
-            if model._steer_mode == "gen" and not T.cuda.is_current_stream_capturing():
-                mask = gen_mask(h.shape[0])
+            if model._steer_mode == "gen":
+                mask = model._cot_mask[: h.shape[0]]
                 if model._record and model._active == i:
-                    model._steer_stats.append((int(h.shape[0]), int(mask.sum())))
-                add = mask[:, None].to(h.dtype) * v
+                    model._steer_stats.append((int(h.shape[0]), int(mask.sum().item())))
+                add = mask * v
             else:
                 add = v
             if isinstance(o, tuple):
@@ -75,6 +105,7 @@ def set_vecs(worker, vecs, mode="gen", record=False):
     model = worker.model_runner.get_model()
     model._steer_mode, model._record, model._steer_stats = mode, record, []
     model._active = min(vecs) if vecs else None
+    model._cot_state.clear()
     for b in model._steer:
         b.zero_()
     for layer, vec in vecs.items():
