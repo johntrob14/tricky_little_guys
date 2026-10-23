@@ -69,7 +69,7 @@ a.out_dir.mkdir(parents=True, exist_ok=True)
 (a.out_dir / "base_words.json").write_text(json.dumps(base_words, indent=1))
 print("funnel: " + "; ".join(f"{k} {v}" for k, v in funnel.items()))
 print("kept by arm: " + ", ".join(f"{k} {n}/{len(keep)}" for k, n in sorted(Counter(c["arm"] for c in keep).items())))
-print("kept by tier: " + ", ".join(f"{k} {n}/{len(keep)}" for k, n in sorted(Counter(c["run"].rsplit("-", 1)[-2] if c["run"].endswith("-b") else c["run"].rsplit("-", 1)[-1] for c in keep).items())))
+print("kept by tier: " + ", ".join(f"{k} {n}/{len(keep)}" for k, n in sorted(Counter(c["run"].removesuffix("-b").rsplit("-", 1)[-1] for c in keep).items())))
 pt = [ptok[key(c)] for c in keep]
 ot = [statistics.mean(out_tok[key(c)]) for c in keep]
 print(f"kept prompt tokens: median {statistics.median(pt):.0f}, mean {statistics.mean(pt):.0f}, max {max(pt)}; base mean output tokens {statistics.mean(ot):.0f}; base median CoT words {statistics.median(base_words.values()):.0f} (max {max(base_words.values()):.0f})")
