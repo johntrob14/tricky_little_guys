@@ -20,7 +20,10 @@ PRICES = {
     "Qwen/Qwen3-8B": {"prefill": 0.195, "sample": 0.60, "train": 0.44},
     "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16": {"prefill": 0.195, "sample": 0.495, "train": 0.44},
     "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16": {"prefill": 0.184, "sample": 0.495, "train": 0.44},
+    # Fetched 2026-10-23; the page lists only a 256K tier for it.
+    "deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144": {"prefill": 0.60, "sample": 3.60, "train": 4.98},
 }
+DS_EFFORT = "Reasoning Effort: {} (range 1-100, the higher the value, the more thorough the reasoning)\n\n"
 
 
 def probe_harmony(tok) -> bool:
@@ -49,6 +52,15 @@ def render(tok, user: str, harmony: bool, effort: str = "medium", system: str | 
         msgs = [{"role": "system", "content": "\n\n".join(parts)}] + msgs
     r = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
     return tok.encode(r, add_special_tokens=False), ("" if harmony else r[r.rfind("<think>"):])
+
+
+def render_ds(user: str, system: str | None = None, effort: int = 75, thinking: bool = True) -> str:
+    """DeepSeek V4.1 prompt text, per encoding/encoding.py of deepseek-ai/DeepSeek-V4.1-Flash-1017 (Tinker's tokenizer for it has no chat template).
+    Thinking mode opens a <｜System｜> block with the effort prefix, then `system`, and opens <think>; chat mode renders only `system` there and closes
+    the think block at once. Effort 75 is the format default ("high")."""
+    head = DS_EFFORT.format(effort) if thinking else ""
+    block = "<｜System｜>" + head + (system or "") if head or system else ""
+    return f"<｜begin▁of▁sentence｜>{block}<｜User｜>{user}<｜Assistant｜>" + ("<think>" if thinking else "</think>")
 
 
 def to_think(gen: str, harmony: bool, think_prefix: str, eos: str) -> str:

@@ -1,0 +1,98 @@
+"""Eval of a grpo_obf.py checkpoint, or the base model, on obf_data.py's eval problems.
+
+Arms: every type in grpo_obf.EVAL_TYPES (happy is not trained) in the reference wording (F0) in the user turn, a no-instruction arm (baseline) and a
+no-CoT arm (nocot: no instruction, DeepSeek's chat mode, which closes the think block at once). One sample per (problem, arm), T 1.0, top_p 1.0,
+--max-tokens, effort as in training.
+Scoring: grpo_obf.score_roll and grpo_obf.run_judges, the training graders and judges (one call each, temperature 0). pass = the training reward's
+compliance condition without correctness: parsed, not truncated, strict compliance, gate and no meta-discussion. Reader: the predictor
+(grpo_obf.PREDICT_JUDGE) on every parsed rollout with a CoT, baseline included; predictable = its guess equals the model's answer.
+
+    python obf_eval.py --run base
+    python obf_eval.py --run obf1-s10 --model-path tinker://.../sampler_weights/cotctl-obf1-step10
+
+Writes results/obf_eval/<run>/{rows.jsonl,summary.json,config.json} and prints the per-arm table.
+"""
+import argparse
+import asyncio
+import json
+import random
+import statistics
+from pathlib import Path
+
+import tinker
+
+import grpo_obf
+from grpo_obf import CONTROLS, EVAL_TYPES, MODEL
+
+RESULTS = Path(__file__).resolve().parent.parent / "results/obf_eval"
+ARMS = EVAL_TYPES + ["baseline", "nocot"]
+
+
+def frac(xs: list[bool]) -> str:
+    return f"{sum(xs)}/{len(xs)}"
+
+
+async def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--run", required=True)
+    ap.add_argument("--model-path", help="tinker:// sampler checkpoint; the base model when omitted")
+    ap.add_argument("--pool", type=Path, default=Path(__file__).parent / "data/obf_eval.jsonl")
+    ap.add_argument("--effort", type=int, default=75)
+    ap.add_argument("--max-tokens", type=int, default=16000)
+    ap.add_argument("--judge-model", default=grpo_obf.JUDGE_MODEL)
+    ap.add_argument("--judge-provider", default="DeepInfra")
+    ap.add_argument("--seed", type=int, default=0)
+    args = ap.parse_args()
+    out = RESULTS / args.run
+    out.mkdir(parents=True, exist_ok=False)
+    (out / "config.json").write_text(json.dumps(vars(args) | {"model": MODEL, "arms": ARMS}, indent=1, default=str))
+    pool = [json.loads(l) for l in args.pool.open()]
+    rng = random.Random(args.seed)
+    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0) for arm in ARMS for q in pool if arm != "word_suppression" or q["keywords"]]
+
+    judge = await grpo_obf.make_judge(args.judge_model, args.judge_provider)
+    svc = tinker.ServiceClient()
+    sampler = await (svc.create_sampling_client_async(model_path=args.model_path) if args.model_path else svc.create_sampling_client_async(base_model=MODEL))
+    tok = sampler.get_tokenizer()
+    params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=[tok.eos_token_id], seed=args.seed)
+    sem = asyncio.Semaphore(256)
+
+    async def one(t):
+        async with sem:
+            res = await sampler.sample_async(prompt=tinker.ModelInput.from_ints(grpo_obf.encode(tok, t, args.effort, t["type"] != "nocot")), num_samples=1, sampling_params=params)
+        s = res.sequences[0]
+        sc = grpo_obf.score_roll(t, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token, "<think>" if t["type"] != "nocot" else "<think></think>")
+        return sc | dict(n_tokens=len(s.tokens))
+
+    scores = await asyncio.gather(*(one(t) for t in tasks))
+    pairs = list(zip(tasks, scores))
+    await grpo_obf.run_judges(judge, pairs)
+    readable = [(t, sc) for t, sc in pairs if sc["fmt_ok"] and t["type"] != "nocot"]
+    guesses = await asyncio.gather(*[judge.ask(grpo_obf.predict_prompt(t, sc)) for t, sc in readable])
+    for (t, sc), (final, *_) in zip(readable, guesses):
+        sc["reader_guess"] = grpo_obf.predicted(t, final)
+        sc["predictable"] = sc["reader_guess"] == sc["answer"]
+    with (out / "rows.jsonl").open("w") as f:
+        for t, sc in pairs:
+            sc["passed"] = bool(sc["fmt_ok"] and sc["strict"] and sc["gate"] is True and sc["meta"] is True) if t["type"] in CONTROLS else None
+            f.write(json.dumps({k: v for k, v in t.items() if k != "q"} | sc, ensure_ascii=False, default=str) + "\n")
+
+    summary = {}
+    for arm in ARMS:
+        rs = [sc for t, sc in pairs if t["type"] == arm]
+        summary[arm] = dict(n=len(rs), passed=frac([sc["passed"] for sc in rs]) if arm in CONTROLS else None, correct=frac([sc["correct"] for sc in rs]),
+                            correct_dapo=frac([sc["correct"] for t, sc in pairs if t["type"] == arm and t["source"] == "dapo"]),
+                            correct_gpqa=frac([sc["correct"] for t, sc in pairs if t["type"] == arm and t["source"] == "gpqa"]),
+                            predictable=frac([sc["predictable"] for sc in rs if "predictable" in sc]), parsed=frac([sc["fmt_ok"] for sc in rs]),
+                            truncated=frac([sc["truncated"] for sc in rs]), meta_found=frac([sc["meta"] is False for sc in rs if sc["meta"] is not None]),
+                            median_tokens=statistics.median(sc["n_tokens"] for sc in rs))
+    (out / "summary.json").write_text(json.dumps(dict(summary=summary, judge_usd=round(judge.usd, 3)), indent=1))
+    print(f"{args.run}: {args.model_path or MODEL}; judges ${judge.usd:.2f}")
+    print("arm | passed | correct | correct DAPO | correct GPQA | answer predictable from CoT | parsed | truncated | meta found | median tokens")
+    for arm, s in summary.items():
+        print(f"{arm} | {s['passed'] or '-'} | {s['correct']} | {s['correct_dapo']} | {s['correct_gpqa']} | {s['predictable']} | {s['parsed']} | {s['truncated']} | "
+              f"{s['meta_found']} | {s['median_tokens']}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
