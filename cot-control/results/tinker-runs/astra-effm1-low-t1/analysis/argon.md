@@ -1,0 +1,4 @@
+## Argon reconstruction: strict / continuous
+
+| condition | constraint | n | n_degenerate_excluded | n_degenerate_flag_missing | n_ungraded | n_included | strict_pct | continuous_pct |
+|---|---|---|---|---|---|---|---|---|
