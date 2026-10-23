@@ -30,13 +30,13 @@ def pids(run):
     return [int(p) for p in r.stdout.split()]
 
 
-def per_level_acc(out, step):
+def per_level_acc(out):
+    """{step: {effort: mean(correct - base_acc)}}, reading rollouts.jsonl once (it grows to tens of MB)."""
     acc = {}
     for line in open(out / "rollouts.jsonl"):
         r = json.loads(line)
-        if r["step"] == step:
-            acc.setdefault(r["effort"], []).append(r["correct"] - r["base_acc"])
-    return {e: sum(v) / len(v) for e, v in acc.items()}
+        acc.setdefault(r["step"], {}).setdefault(r["effort"], []).append(r["correct"] - r["base_acc"])
+    return {st: {e: sum(v) / len(v) for e, v in d.items()} for st, d in acc.items()}
 
 
 def main():
@@ -55,7 +55,8 @@ def main():
             seen = len(steps)
             if len(steps) >= args.baseline_steps:
                 base = steps[:args.baseline_steps]
-                accs = [per_level_acc(out, s["step"]) for s in steps]
+                by_step = per_level_acc(out)
+                accs = [by_step.get(s["step"], {e: 0.0 for e in EFFORTS}) for s in steps]
                 b = {e: {k: sum(s["by_effort"][e][k] for s in base) / len(base) for k in ("unparsed", "empty_cot", "looping", "non_latin", "mean_lp")}
                      for e in EFFORTS}
                 for e in EFFORTS:
