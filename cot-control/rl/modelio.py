@@ -14,11 +14,12 @@ GPT_OSS_STOP = [200002, 200012]  # <|return|>, <|call|>
 PRICES = {
     "Qwen/Qwen3.8-27B": {"prefill": 0.6975, "sample": 5.595, "train": 4.103},
     "openai/gpt-oss-120b": {"prefill": 0.33, "sample": 0.84, "train": 0.737},
-    # Not on the official page (it lists only Inkling); sample/train from beam.cloud/blog/tinker-model-pricing (after the 2026-07-17
-    # increase), prefill a guess at 0.4x sample. Estimate only.
-    "Qwen/Qwen3.5-9B": {"prefill": 0.8, "sample": 1.995, "train": 1.463},
-    # No published 4B price found; 9B's estimate used as an upper bound for budget guards.
-    "Qwen/Qwen3.5-4B": {"prefill": 0.8, "sample": 1.995, "train": 1.463},
+    # From the official page as fetched 2026-10-23 (64K tier; "as of October 19, 2026").
+    "Qwen/Qwen3.5-9B": {"prefill": 0.30, "sample": 0.807, "train": 1.463},
+    "Qwen/Qwen3.5-4B": {"prefill": 0.33, "sample": 1.005, "train": 0.737},
+    "Qwen/Qwen3-8B": {"prefill": 0.195, "sample": 0.60, "train": 0.44},
+    "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16": {"prefill": 0.195, "sample": 0.495, "train": 0.44},
+    "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16": {"prefill": 0.184, "sample": 0.495, "train": 0.44},
 }
 
 
