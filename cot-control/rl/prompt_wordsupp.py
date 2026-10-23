@@ -8,6 +8,8 @@ Conditions (user turn only, no system prompt):
              "analysis channel", Qwen "thinking"); forbids the keyword or its listed synonyms and restating the rule.
   explainer: prompts/explainer_v1.txt with FORBIDDEN_PHRASE = keyword and QUESTION = question_block minus its
              leading "Question: " (so the options and the format line follow the question).
+  ref_explainer (opt-in via --conds): the reference prompt verbatim, then explainer_v1.txt's background sections
+             (everything before "## Your task"), so the constraint wording is the reference's and the question comes first.
   explainer_nm (opt-in via --conds): explainer with the reference's NO_RESTATE sentence ("Additionally, you should not
              mention this {term} constraint in your {term} at all") appended to the task line.
 Models: openai/gpt-oss-120b and qwen/qwen3.8-27b on OpenRouter, T 1, top_p 1, reasoning effort medium, one sample.
@@ -55,8 +57,11 @@ def user_prompt(item, cond: str, term: str) -> str:
     qb = prompts.question_block(item)
     if cond == "none":
         return qb
-    if cond == "reference":
-        return f"{qb}\n\nRequirement: {prompts.requirement_text('word_suppression', prompts.get_control_value('word_suppression', item), term)}"
+    if cond in ("reference", "ref_explainer"):
+        ref = f"{qb}\n\nRequirement: {prompts.requirement_text('word_suppression', prompts.get_control_value('word_suppression', item), term)}"
+        if cond == "ref_explainer":  # the reference verbatim, then the explainer's background (everything before "## Your task")
+            ref += "\n\n" + TEMPLATE[:TEMPLATE.index("## Your task")].rstrip()
+        return ref
     assert qb.startswith("Question: ")
     kw = suppression_value(item, "word_suppression")["keyword"]
     tmpl = TEMPLATE

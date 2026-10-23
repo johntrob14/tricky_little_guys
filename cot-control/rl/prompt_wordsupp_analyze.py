@@ -16,7 +16,7 @@ ap.add_argument("rows", nargs="+", type=Path)
 ap.add_argument("--json", type=Path, help="write summary/by_dataset/paired JSON here")
 args = ap.parse_args()
 
-CONDS = ["none", "reference", "explainer", "explainer_nm"]
+CONDS = ["none", "reference", "explainer", "explainer_nm", "ref_explainer"]
 df = pd.concat([pd.read_json(p, lines=True) for p in args.rows], ignore_index=True)
 df["no_cot"] = df.reasoning.fillna("").str.strip() == ""
 df["clean_sub"] = (df.cot_kw_sub == 0) & ~df.no_cot      # explainer's rule: no case-insensitive substring match
@@ -56,7 +56,7 @@ print("\npaired per item (same item, same model), difference in clean_sub")
 paired = []
 for m, g in df.groupby("model"):
     p = g.pivot_table(index=["dataset", "item_idx"], columns="cond", values="clean_sub", aggfunc="mean").dropna()
-    for a, b in [("explainer", "reference"), ("explainer", "none"), ("reference", "none"), ("explainer_nm", "explainer"), ("explainer_nm", "reference")]:
+    for a, b in [("explainer", "reference"), ("explainer", "none"), ("reference", "none"), ("explainer_nm", "explainer"), ("explainer_nm", "reference"), ("ref_explainer", "reference"), ("ref_explainer", "none")]:
         if a not in p or b not in p:
             continue
         d = (p[a] - p[b]).to_numpy(float)
@@ -93,7 +93,7 @@ pdiff = []
 for m, g in df.groupby("model"):
     for metric in ("partial", "per_1k"):
         p = g.pivot_table(index=["dataset", "item_idx"], columns="cond", values=metric, aggfunc="mean").dropna()
-        for a, b in [("reference", "none"), ("explainer", "none"), ("explainer_nm", "none"), ("explainer", "reference"), ("explainer_nm", "reference")]:
+        for a, b in [("reference", "none"), ("explainer", "none"), ("explainer_nm", "none"), ("explainer", "reference"), ("explainer_nm", "reference"), ("ref_explainer", "reference")]:
             if a not in p or b not in p:
                 continue
             d = (p[a] - p[b]).to_numpy(float)
