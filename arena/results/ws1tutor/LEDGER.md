@@ -18,4 +18,8 @@
 
 | 10-23 08:05 | base Qwen G=8 on the 5 absent training contexts (40 samples) | 0.27 | resample_ctx summary |
 
-Running total (completed items): $29.18
+| 10-23 11:05 | training ws1tutor1 steps 1-5 (trainer spent_est, Tinker + tutor + judge) | 32.57 | steps.jsonl |
+| 10-23 08:30-11:00 | gates 1-5: probes (5 x ~74 samples) + fixed evals (5 x 216 samples) | 5.0 | ~$0.6 + $0.4 per gate, list prices |
+| 10-23 11:00 | executed episodes, step-5 checkpoint (16) | 3.7 | 16 x $0.23 |
+
+Running total (completed items): $70.45
