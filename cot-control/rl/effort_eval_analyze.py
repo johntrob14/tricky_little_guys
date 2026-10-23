@@ -18,9 +18,19 @@ import numpy as np
 EFFORTS = ["low", "medium", "high"]
 
 
+def _avg_ranks(x):
+    x = np.asarray(x, float)
+    order = np.argsort(x, kind="mergesort")
+    ranks = np.empty(len(x))
+    ranks[order] = np.arange(len(x))
+    for v in np.unique(x):  # ties get their average rank; argsort(argsort()) broke ties by row order, which tracks CoT length
+        m = x == v
+        ranks[m] = ranks[m].mean()
+    return ranks
+
+
 def spearman(a, b):
-    ra, rb = np.argsort(np.argsort(a)), np.argsort(np.argsort(b))
-    return float(np.corrcoef(ra, rb)[0, 1])
+    return float(np.corrcoef(_avg_ranks(a), _avg_ranks(b))[0, 1])
 
 
 def main():

@@ -36,15 +36,15 @@
 
 | model | set | level | mean CoT trained / base | acc trained - base | Spearman(length, base difficulty) trained / base | CoT ratio on easy questions | CoT ratio on hard questions |
 |---|---|---|---|---|---|---|---|
-| eff1s40 | benchmark | low | 0.71 | -0.011 | -0.01 / 0.02 | 0.74 (n=626) | 0.68 (n=588) |
-| eff1s40 | benchmark | medium | 0.68 | -0.035 | 0.15 / 0.19 | 0.72 (n=626) | 0.65 (n=588) |
-| eff1s40 | benchmark | high | 0.82 | +0.001 | 0.36 / 0.36 | 0.81 (n=626) | 0.83 (n=588) |
-| eff1s40 | history | low | 0.74 | -0.027 | 0.14 / 0.23 | 0.75 (n=85) | 0.72 (n=65) |
-| eff1s40 | history | medium | 0.68 | +0.008 | 0.26 / 0.28 | 0.68 (n=85) | 0.68 (n=65) |
-| eff1s40 | history | high | 0.67 | +0.000 | 0.52 / 0.55 | 0.72 (n=85) | 0.65 (n=65) |
+| eff1s40 | benchmark | low | 0.71 | -0.011 | -0.01 / 0.01 | 0.74 (n=626) | 0.68 (n=588) |
+| eff1s40 | benchmark | medium | 0.68 | -0.035 | 0.20 / 0.23 | 0.72 (n=626) | 0.65 (n=588) |
+| eff1s40 | benchmark | high | 0.82 | +0.001 | 0.40 / 0.41 | 0.81 (n=626) | 0.83 (n=588) |
+| eff1s40 | history | low | 0.74 | -0.027 | 0.24 / 0.30 | 0.75 (n=85) | 0.72 (n=65) |
+| eff1s40 | history | medium | 0.68 | +0.008 | 0.34 / 0.35 | 0.68 (n=85) | 0.68 (n=65) |
+| eff1s40 | history | high | 0.67 | +0.000 | 0.43 / 0.48 | 0.72 (n=85) | 0.65 (n=65) |
 | eff2s40 | benchmark | low | 1.48 | +0.028 | 0.08 / 0.01 | 1.36 (n=626) | 1.60 (n=588) |
-| eff2s40 | benchmark | medium | 1.33 | +0.000 | 0.23 / 0.19 | 1.28 (n=626) | 1.37 (n=588) |
-| eff2s40 | benchmark | high | 0.91 | -0.010 | 0.36 / 0.38 | 0.93 (n=626) | 0.90 (n=588) |
-| eff2s40 | history | low | 1.21 | +0.005 | 0.17 / 0.23 | 1.21 (n=85) | 1.20 (n=65) |
-| eff2s40 | history | medium | 1.20 | +0.017 | 0.36 / 0.32 | 1.17 (n=85) | 1.23 (n=65) |
-| eff2s40 | history | high | 0.81 | -0.012 | 0.57 / 0.61 | 0.92 (n=85) | 0.74 (n=65) |
+| eff2s40 | benchmark | medium | 1.33 | +0.000 | 0.27 / 0.23 | 1.28 (n=626) | 1.37 (n=588) |
+| eff2s40 | benchmark | high | 0.91 | -0.010 | 0.39 / 0.41 | 0.93 (n=626) | 0.90 (n=588) |
+| eff2s40 | history | low | 1.21 | +0.005 | 0.25 / 0.30 | 1.21 (n=85) | 1.20 (n=65) |
+| eff2s40 | history | medium | 1.20 | +0.017 | 0.39 / 0.35 | 1.17 (n=85) | 1.23 (n=65) |
+| eff2s40 | history | high | 0.81 | -0.012 | 0.40 / 0.48 | 0.92 (n=85) | 0.74 (n=65) |

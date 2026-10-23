@@ -28,9 +28,9 @@
 
 | model | set | level | mean CoT trained / base | acc trained - base | Spearman(length, base difficulty) trained / base | CoT ratio on easy questions | CoT ratio on hard questions |
 |---|---|---|---|---|---|---|---|
-| effm1s30 | aime25 | low | 1.69 | +0.158 | 0.65 / 0.38 | 1.50 (n=24) | 2.32 (n=6) |
-| effm1s30 | aime25 | medium | 1.51 | +0.033 | 0.91 / 0.93 | 1.67 (n=24) | 1.35 (n=6) |
-| effm1s30 | aime25 | high | 1.04 | +0.017 | 0.96 / 0.92 | 1.02 (n=24) | 1.05 (n=6) |
-| effm1s30 | dapo_heldout | low | 1.50 | +0.037 | 0.25 / 0.17 | 1.41 (n=137) | 2.14 (n=13) |
-| effm1s30 | dapo_heldout | medium | 1.32 | +0.033 | 0.43 / 0.37 | 1.29 (n=137) | 1.44 (n=13) |
-| effm1s30 | dapo_heldout | high | 1.04 | -0.020 | 0.57 / 0.55 | 1.01 (n=137) | 1.15 (n=13) |
+| effm1s30 | aime25 | low | 1.69 | +0.158 | 0.35 / 0.03 | 1.50 (n=24) | 2.32 (n=6) |
+| effm1s30 | aime25 | medium | 1.51 | +0.033 | 0.62 / 0.67 | 1.67 (n=24) | 1.35 (n=6) |
+| effm1s30 | aime25 | high | 1.04 | +0.017 | 0.66 / 0.64 | 1.02 (n=24) | 1.05 (n=6) |
+| effm1s30 | dapo_heldout | low | 1.50 | +0.037 | 0.29 / 0.14 | 1.41 (n=137) | 2.14 (n=13) |
+| effm1s30 | dapo_heldout | medium | 1.32 | +0.033 | 0.40 / 0.36 | 1.29 (n=137) | 1.44 (n=13) |
+| effm1s30 | dapo_heldout | high | 1.04 | -0.020 | 0.42 / 0.42 | 1.01 (n=137) | 1.15 (n=13) |
