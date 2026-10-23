@@ -31,11 +31,11 @@ plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "ax
 fig, axes = plt.subplots(1, 3, figsize=(20, 6.8), gridspec_kw={"width_ratios": [3, 3, 1.6]})
 w = 0.8 / len(conds)
 seeds = summary.seeds if "seeds" in summary else pd.Series(1, index=summary.index)
-for ax, col, title in zip(axes[:2], ["strict_rate", "partial"], ["Strict pass rate per constraint, meta-reasoning allowed (12 items x seeds)", "Partial compliance (mean, 0-1)"]):
+for ax, col, title in zip(axes[:2], ["strict_rate", "partial"], ["Length-adjusted strict pass rate per constraint, meta-reasoning allowed (12 items x seeds)", "Partial compliance (mean, 0-1)"]):
     for j, c in enumerate(conds):
         d = per_c[per_c.condition == c].set_index("constraint").reindex(ORDER)
-        d["strict_rate"] = d["strict"] / (12 * seeds[c])
-        label = f"{c}: {int(summary.loc[c, 'strict'])}/{int(summary.loc[c, 'n'])} strict" if col == "strict_rate" else c
+        d["strict_rate"] = d["strict_adj"] / (12 * seeds[c])
+        label = f"{c}: {int(summary.loc[c, 'strict_adj'])}/{int(summary.loc[c, 'n'])} strict (adj.)" if col == "strict_rate" else c
         ax.bar([i + (j - (len(conds) - 1) / 2) * w for i in range(len(ORDER))], d[col].fillna(0), width=w * 0.92, color=COLORS[j], label=label, linewidth=0)
     ax.set_xticks(range(len(ORDER)), ORDER, rotation=35, ha="right")
     ax.set_ylim(0, 1.05)

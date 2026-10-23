@@ -9,6 +9,7 @@ steer.py: [org_](think|rand)_<layers>_(p|m)<alpha>[_s<seed>].
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from collections import Counter
@@ -17,6 +18,8 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
+
+from lenadj import add_length_adjustment, adjusted_rate
 
 matplotlib.use("Agg")
 SURFACE, TEXT, MUTED, GRID = "#1a1a19", "#f0efec", "#c3c2b7", "#33332f"
@@ -30,7 +33,17 @@ rec["seed"] = rec.condition.str.extract(r"_s(\d+)$")[0].fillna("0").astype(int)
 rec["condition"] = rec.condition.str.replace(r"_s\d+$", "", regex=True)
 rec["strict"] = rec.strict.fillna(False).astype(bool)
 rec["correct"] = rec.correct.fillna(False).astype(bool)
+gens = {}
+for f in (run / "generations").glob("*/astra.jsonl"):
+    for line in open(f):
+        r = json.loads(line)
+        gens[(r["condition"].replace("_s", "_S").rsplit("_S", 1)[0] if re.search(r"_s\d+$", r["condition"]) else r["condition"], r["key"], int(re.search(r"_s(\d+)$", r["condition"]).group(1)) if re.search(r"_s\d+$", r["condition"]) else 0)] = r
+rec["cot_words"] = [len((gens[(c, k, s)]["reasoning"] or "").split()) for c, k, s in zip(rec.condition, rec.key, rec.seed)]
+base0 = next(c for c in summary.index if c.endswith("unsteered"))
+odds = add_length_adjustment(rec, base0)
+uns = rec[rec.condition == base0]
 per_seed = rec.groupby(["condition", "seed"]).agg(strict=("strict", "mean"), correct=("correct", "mean")).reset_index()
+per_seed["strict_adj"] = [adjusted_rate(rec[(rec.condition == c) & (rec.seed == s)], uns[uns.seed == s]) for c, s in zip(per_seed.condition, per_seed.seed)]
 
 
 def parse(c):
@@ -59,14 +72,14 @@ def x_of(c):
 
 
 def value(c, col):
-    return summary.loc[c, col] / summary.loc[c, "n"] if col in ("strict", "correct") else summary.loc[c, col]
+    return summary.loc[c, col] / summary.loc[c, "n"] if col in ("strict", "strict_adj", "correct") else summary.loc[c, col]
 
 
 plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": MUTED, "axes.labelcolor": TEXT,
                      "xtick.color": TEXT, "ytick.color": MUTED, "text.color": TEXT, "axes.grid": True, "grid.color": GRID,
                      "grid.linewidth": 0.6, "axes.spines.top": False, "axes.spines.right": False, "font.size": 10})
 fig, axes = plt.subplots(1, 3, figsize=(18, 5.8))
-panels = [("strict", "Strict compliance rate (meta-reasoning allowed)", (0, 1)), ("correct", "Accuracy", (0, 1)),
+panels = [("strict_adj", "Length-adjusted strict compliance rate (meta allowed)", (0, 1)), ("correct", "Accuracy", (0, 1)),
           ("median_cot_words", "Median CoT words", None)]
 rand_conds = [c for c, p in parsed.items() if p[0].startswith("rand") and p[1] == main_tag]
 vec_name = next(p[0] for p in parsed.values() if not p[0].startswith("rand"))
@@ -82,7 +95,11 @@ for ax, (col, title, ylim) in zip(axes, panels):
         ax.scatter([x_of(c) + 0.18], [value(c, col)], color=C_RAND, marker="s", s=80, zorder=4, edgecolors=SURFACE, linewidths=1.5)
     for c in other_conds:
         ax.scatter([x_of(c)], [value(c, col)], color=C_OTHER, marker="D", s=80, zorder=4, edgecolors=SURFACE, linewidths=1.5)
-    if col in ("strict", "correct"):
+    if col == "strict_adj":  # raw observed rate as a hollow marker behind the adjusted one
+        for c in summary.index:
+            dx = 0.18 if c in rand_conds else 0
+            ax.scatter([x_of(c) + dx], [value(c, "strict")], s=90, facecolors="none", edgecolors=MUTED, linewidths=1.2, zorder=2)
+    if col in ("strict_adj", "correct"):
         for c in summary.index:
             ps = per_seed[per_seed.condition == c]
             if len(ps) > 1:
@@ -106,12 +123,14 @@ for ax, (col, title, ylim) in zip(axes, panels):
     ax.set_title(title, color=TEXT, loc="left")
     ax.set_xticks(range(len(cats)), ticks, fontsize=8.5)
     ax.set_xlim(-0.6, len(cats) - 0.4)
-fig.supxlabel(f"signed per-layer alpha in units of the {vec_name} vector's own norm, {layers_text}" + ("; ends: other layer set" if other_conds else ""), color=MUTED, fontsize=9)
+fig.supxlabel(f"signed per-layer alpha in units of the {vec_name} vector's own norm, {layers_text}" + ("; ends: other layer set" if other_conds else "")
+              + f". Length adjustment: logistic fit on the unsteered rows, strict odds x{odds:.2f} per doubling of CoT words", color=MUTED, fontsize=9)
 handles = [plt.Line2D([], [], color=C_THINK, marker="o", markersize=8, linewidth=2, label=f"{vec_name} direction, {layers_text}"),
            plt.Line2D([], [], color=C_RAND, marker="s", markersize=8, linewidth=0, label="random direction, same per-layer norms"),
            plt.Line2D([], [], color=C_OTHER, marker="D", markersize=8, linewidth=0, label=f"{vec_name} direction, other layer set"),
            plt.Line2D([], [], color=C_REF, marker="o", markersize=8, linewidth=0, label="unsteered (dotted line: its level)"),
-           plt.Line2D([], [], color=TEXT, marker="o", markersize=5, linewidth=0, alpha=0.75, label="small dots: per-seed values")]
+           plt.Line2D([], [], color=TEXT, marker="o", markersize=5, linewidth=0, alpha=0.75, label="small dots: per-seed values"),
+           plt.Line2D([], [], color=MUTED, marker="o", markersize=8, linewidth=0, markerfacecolor="none", label="hollow: raw strict rate before length adjustment")]
 if not other_conds:
     handles.pop(2)
 fig.legend(handles=handles, loc="upper center", ncol=len(handles), frameon=False, labelcolor=TEXT, fontsize=9, bbox_to_anchor=(0.5, 0.93))
