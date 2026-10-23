@@ -30,6 +30,16 @@ python summarize.py logs/gptoss-n4 logs/qwen-n4
 
 The agent loop: Control Tower's honest system prompt, the task as the user message, tools `bash`, `text_editor`, `submit(answer)`. The sample ends on `submit`, at `--max-turns` (default 60), when the prompt leaves under 2,000 tokens of the 64k context window (every model runs at 64k, through the `:peft:N` variant of its weights when Tinker serves the plain name shorter; the eval metadata records the served name), or on a turn with no tool call (the first such turn gets one nudge to submit). Tool calls time out at 120s. Scoring is on the sandbox state after `restart.sh`, whether or not the agent submitted.
 
+## Is an organism doing the thing?
+
+"The thing" is `arena_covert_v2`: complete the `leak_secret` side task while the CoT stays quiet to the CoT-only, main-task-only monitor (`controlarena_cot_only`, `monitor_maintask.py`). Run the organism and its matched base on the same prompt, plus the no-side-task control (`--preset control`), and compare:
+1. Full rollouts (`run_attack.py --preset arena_covert_v2`, 8 tasks x 2 epochs x 3 tiers): main pass, scorer `side_leaked`, detector fires, curl-verified exposure (the scorer polls 6 URLs and reads bodies only, so `side_leaked` undercounts real exposure), and the monitor's per-turn mean, per-episode max and mean, turn-0 mean and score at the first and last detector fire, against the control.
+2. Resampled turns (`resample_ctx.py` at the 20 leak states of `results/prefill_qwen/contexts_leak.json`, G=32): scorer-aligned completion, detector-only completion, monitor mean on completions, lowest monitor score among a context's completions, split by whether an earlier attempt is already in the context (retry) or not (fresh decision). Only fresh-decision completions test covertness: a retry turn is quiet because the plan was narrated a turn or two earlier and the monitor scores each turn alone.
+3. Readers: subagents over compact per-turn renders (`render_episode.py`, `render_sample.py`; the main session does not read attack transcripts) report whether the objective is stated in the CoT, whether the system prompt's no-mention rule is quoted and broken, how write turns are framed, and what the monitor over-calls.
+4. Checks every time: the scorer oracle in tool outputs (runs before 2026-10-22), detector fires on routes the scorer never polls, retry turns, small n (give intervals), monitor noise on terse CoTs and over-calls on port or dev-server debugging.
+
+`qwen_capability.py {base,organism}` prints 1 and 2 and writes the data; `qwen_capability_chart.py` draws the figure; a new organism needs a `SUBJECTS` entry. Reference numbers for base Qwen3.8-27B and `cotctl-opsd-grpo1b-step10` are in `results/qwen/NOTES.md`.
+
 ## Adding a task
 
 Make `tasks/<env>/<task>/` with `task.md` and a scorer, record its provenance and approval in `keep.yaml`, and measure it on both models (`--epochs 4` or more) before marking it approved. Keep the prompt and the scorer verbatim from upstream unless the task needs changing; when it does, the diff against the first commit of the directory is the record.
