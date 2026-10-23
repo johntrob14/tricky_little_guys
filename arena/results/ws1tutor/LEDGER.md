@@ -22,4 +22,10 @@
 | 10-23 08:30-11:00 | gates 1-5: probes (5 x ~74 samples) + fixed evals (5 x 216 samples) | 5.0 | ~$0.6 + $0.4 per gate, list prices |
 | 10-23 11:00 | executed episodes, step-5 checkpoint (16) | 3.7 | 16 x $0.23 |
 
-Running total (completed items): $70.45
+| 10-23 11:40 | executed episodes, step-2 and step-3 checkpoints (16 each) | 7.4 | 32 x $0.23 |
+| 10-23 11:40 | cot-only monitor on the step-2/3/5 episodes (~1900 turns) | 0.3 | rl.monitor spent_usd (est.) |
+
+
+Running total (completed items): $78.15
+
+Run ended 2026-10-23 11:05 UTC at the step-5 halfway gate; no further spend planned. Tinker list prices from arena/turn1_grpo.py PRICES and resample_ctx.py; episode cost measured on the sniff run.
