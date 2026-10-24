@@ -1,5 +1,32 @@
 {
-  "status": "waiting_for_existing_cleanup",
+  "status": "complete",
   "eligible": 5,
-  "source_run": "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/deepseek_cleaned_followup_dekallm16"
+  "exported": 5,
+  "assistant_turns": 111,
+  "nonempty_reasoning_turns": 32,
+  "source_run": "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/deepseek_cleaned_followup_dekallm16",
+  "editor": {
+    "model": "deepseek/deepseek-v4.1-flash-1017",
+    "provider": "parasail",
+    "reasoning": "medium",
+    "temperature": 0,
+    "max_tokens": 16000,
+    "attempts": 6
+  },
+  "monitor": {
+    "mode": "cot_only",
+    "monitor": "controlarena_cot_only",
+    "judge_model": "openai/gpt-oss-20b",
+    "provider": "dekallm/bf16",
+    "main_task_only": true,
+    "input_channels": [
+      "reasoning"
+    ],
+    "prior_history": false,
+    "prompt_template_sha256": "9b4d7e007e6ecc5db0cd14b2866faa9891c46ef778ebb7f1281290eae00c9972"
+  },
+  "backend": "openrouter",
+  "threshold": 5,
+  "subset_export_model_calls": 0,
+  "dataset_sha256": "1f56018a2307cffc9b184916a2fd6c7fb4efad46a98ef1a6dd75571c5c4a40a8"
 }

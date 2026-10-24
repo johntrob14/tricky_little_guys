@@ -32,7 +32,7 @@ def parse_monitor(body: dict) -> float:
     return score
 
 
-async def cached_call(directory: Path, messages: list[dict], config: dict, parser, ledger: dict) -> object:
+async def cached_call(directory: Path, messages: list[dict], config: dict, parser, ledger: dict, validation_attempts: int = 1) -> object:
     request = {"messages": messages, "config": config}
     request_hash = digest(request)
     path = directory / "request.json"
@@ -49,16 +49,23 @@ async def cached_call(directory: Path, messages: list[dict], config: dict, parse
         value = parser(body)
         assert value == record["value"]
         return value
-    attempt = len(list(directory.glob("response.*.json")))
-    response_path = directory / f"response.{attempt:03d}.json"
-    assert not response_path.exists()
-    body = await chat(messages, **config)
-    write(response_path, body)
-    ledger["known_cost_usd"] += body["usage"]["cost"]
-    ledger["returned_generations"] += 1
-    value = parser(body)
-    write(accepted, {"request_sha256": request_hash, "response_file": response_path.name, "response_sha256": digest(body), "value": value})
-    return value
+    for validation_attempt in range(validation_attempts):
+        attempt = len(list(directory.glob("response.*.json")))
+        response_path = directory / f"response.{attempt:03d}.json"
+        assert not response_path.exists()
+        body = await chat(messages, **config)
+        write(response_path, body)
+        ledger["known_cost_usd"] += body["usage"]["cost"]
+        ledger["returned_generations"] += 1
+        try:
+            value = parser(body)
+        except ValueError as exc:
+            print(json.dumps({"failed_call": str(directory), "error": str(exc), "validation_attempt": f"{validation_attempt + 1}/{validation_attempts}"}), flush=True)
+            if validation_attempt + 1 == validation_attempts:
+                raise
+            continue
+        write(accepted, {"request_sha256": request_hash, "response_file": response_path.name, "response_sha256": digest(body), "value": value})
+        return value
 
 
 async def episode(root: Path, case: dict, config: dict, progress: dict) -> dict:
@@ -87,7 +94,7 @@ async def episode(root: Path, case: dict, config: dict, progress: dict) -> dict:
                 target = directory / "editor" / f"{turn:03d}"
                 if len(reasoning) > 1:
                     target = target / f"block-{block_index:03d}"
-                reply = await cached_call(target, conversation, config["editor"], parse_editor, progress["ledger"])
+                reply = await cached_call(target, conversation, config["editor"], parse_editor, progress["ledger"], config.get("validation_attempts", 1))
                 after = reply["rewritten_reasoning"]
                 set_reasoning(block, after)
                 block_edits.append({"turn": turn, "changed": before != after, "original_chars": len(before), "edited_chars": len(after), "change_magnitude": reply["change_magnitude"], "review_notes": reply["review_notes"], "before_sha256": digest(before), "after_sha256": digest(after), "edits": changes(before, after), **({"block_index": block_index} if len(reasoning) > 1 else {})})
@@ -130,7 +137,7 @@ async def episode(root: Path, case: dict, config: dict, progress: dict) -> dict:
             reused = condition == "edited" and text == source_text and bool(text.strip())
             if text.strip():
                 cache_condition = "original" if reused else condition
-                score = await cached_call(directory / "monitor" / f"{turn:03d}" / cache_condition, [{"role": "user", "content": formatted}], config["judge"], parse_monitor, progress["ledger"])
+                score = await cached_call(directory / "monitor" / f"{turn:03d}" / cache_condition, [{"role": "user", "content": formatted}], config["judge"], parse_monitor, progress["ledger"], config.get("validation_attempts", 1))
             monitored.append({"turn": turn, "condition": condition, "score": score, "skipped_empty": not text.strip(), "reused_identical_input": reused, "reasoning_sha256": digest(text), "prompt_sha256": hashlib.sha256(formatted.encode()).hexdigest(), **config["monitor"]})
             write(directory / "monitor.json", monitored)
             state["monitor_rows"] = f"{len(monitored)}/{2 * len(before_turns)}"
@@ -170,13 +177,19 @@ def export(root: Path, selection: dict, config: dict, progress: dict) -> None:
     write(root / "summary.json", {"exported": len(rows), "selected": len(selection["selected"]), "source_unique": len({r["source"]["content_sha256"] for r in rows}), "fully_monitored": sum(s["phase"] == "complete" for s in progress["episodes"].values()), "phase_counts": {phase: sum(s["phase"] == phase for s in progress["episodes"].values()) for phase in sorted({s["phase"] for s in progress["episodes"].values()})}, "config": config, "ledger": progress["ledger"], "selection_uses_monitor_scores": False})
 
 
-async def main(root: Path, send: bool, concurrency: int, judge_provider: str | None = None) -> None:
+async def main(root: Path, send: bool, concurrency: int, judge_provider: str | None = None, request_attempts: int = 1, validation_attempts: int = 1) -> None:
+    assert request_attempts > 0 and validation_attempts > 0
     selection = read(root / "selection.json")
     prompt = (ARENA / "prompts/rewrite_reasoning.txt").read_text()
     config = {"editor": EDITOR, "judge": JUDGE, "concurrency": concurrency, "editor_prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(), "selection_sha256": digest(selection), "monitor": {"mode": "cot_only", "monitor": MONITOR.name, "judge_model": JUDGE["model"], "provider": JUDGE["provider"], "main_task_only": True, "input_channels": ["reasoning"], "prior_history": False, "prompt_template_sha256": hashlib.sha256(MONITOR.prompt_file.read_bytes()).hexdigest()}, "diff_method": "difflib.SequenceMatcher, character offsets into original text; apply edits in reverse order"}
     if judge_provider is not None:
         config["judge"] = {**JUDGE, "provider": judge_provider}
         config["monitor"]["provider"] = judge_provider
+    if request_attempts != 1:
+        config["editor"] = {**config["editor"], "attempts": request_attempts}
+        config["judge"] = {**config["judge"], "attempts": request_attempts}
+    if validation_attempts != 1:
+        config["validation_attempts"] = validation_attempts
     if any(len(blocks([m])) > 1 for case in selection["selected"] for m in read(root / "sources" / f"{case['uuid']}.json")):
         config["reasoning_edit_unit"] = "Each nonempty content block independently, preserving block boundaries and using the same preceding-message history; current-turn sibling reasoning is not sent to the editor."
     if (root / "config.json").exists():
@@ -212,7 +225,9 @@ if __name__ == "__main__":
     parser.add_argument("--send", action="store_true")
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--judge-provider", help="Pin the OpenRouter judge provider; changing it requires a new output directory")
+    parser.add_argument("--request-attempts", type=int, default=1)
+    parser.add_argument("--validation-attempts", type=int, default=1)
     args = parser.parse_args()
     with (args.out / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        asyncio.run(main(args.out.resolve(), args.send, args.concurrency, args.judge_provider))
+        asyncio.run(main(args.out.resolve(), args.send, args.concurrency, args.judge_provider, args.request_attempts, args.validation_attempts))

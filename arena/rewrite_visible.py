@@ -73,7 +73,8 @@ def parse_editor(body: dict, expected_blocks: int) -> dict:
     return reply
 
 
-def configure(source: Path, root: Path, concurrency: int, approval: Path | None) -> tuple[dict, list[dict]]:
+def configure(source: Path, root: Path, concurrency: int, approval: Path | None, request_attempts: int = 1, validation_attempts: int = 1) -> tuple[dict, list[dict]]:
+    assert request_attempts > 0 and validation_attempts > 0
     parent = read(source / "config.json")
     monitor = parent["monitor"]
     assert monitor["mode"] == "cot_only" and monitor["main_task_only"] and monitor["input_channels"] == ["reasoning"] and not monitor["prior_history"]
@@ -87,6 +88,10 @@ def configure(source: Path, root: Path, concurrency: int, approval: Path | None)
         assert digest(row["messages"]) == row["edited_messages_sha256"], "Source export digest mismatch"
     prompt = (ARENA / "prompts/rewrite_visible.txt").read_text()
     config = {"source": str(source), "source_dataset_sha256": hashlib.sha256(dataset).hexdigest(), "source_config_sha256": digest(parent), "source_total": len(all_rows), "selected_gptoss": len(rows), "editor": EDITOR, "visible_editor_prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(), "concurrency": concurrency, "edit_channels": ["assistant_visible_text"], "valid_rewrites_per_visible_turn": 1, "monitor_calls": 0, "visible_text_cutoff": None, "visible_text_refix": False, "monitor": monitor, "cot_scores_preserved": True}
+    if request_attempts != 1:
+        config["editor"] = {**EDITOR, "attempts": request_attempts}
+    if validation_attempts != 1:
+        config["validation_attempts"] = validation_attempts
     fixed(root / "config.json", config)
     prompt_path = root / "editor_prompt.txt"
     if prompt_path.exists():
@@ -119,7 +124,7 @@ async def episode(root: Path, row: dict, config: dict, progress: dict) -> None:
             before = visible_text(message)
             if any(text.strip() for text in before):
                 conversation = [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(editor_payload(history, message), ensure_ascii=False)}]
-                reply = await cached_call(directory / "editor" / f"{turn:03d}", conversation, config["editor"], partial(parse_editor, expected_blocks=len(before)), progress["ledger"])
+                reply = await cached_call(directory / "editor" / f"{turn:03d}", conversation, config["editor"], partial(parse_editor, expected_blocks=len(before)), progress["ledger"], config.get("validation_attempts", 1))
                 after = reply["rewritten_visible_text"]
                 set_visible_text(message, after)
                 edits.append({"turn": turn, "changed": before != after, "before_sha256": digest(before), "after_sha256": digest(after), "blocks": [{"index": i, "edits": changes(a, b)} for i, (a, b) in enumerate(zip(before, after))], "review_notes": reply["review_notes"], "change_magnitude": reply["change_magnitude"]})
@@ -153,10 +158,10 @@ def export(root: Path, selection: list[dict], config: dict, progress: dict) -> N
     write(root / "summary.json", {"run_status": progress["run_status"], "exported": len(rows), "selected": len(selection), "source_unique": len({r["source"]["content_sha256"] for r in rows}), "config": config, "ledger": progress["ledger"]})
 
 
-async def main(source: Path, root: Path, send: bool, concurrency: int, approval: Path | None = None) -> None:
+async def main(source: Path, root: Path, send: bool, concurrency: int, approval: Path | None = None, request_attempts: int = 1, validation_attempts: int = 1) -> None:
     assert source != root and concurrency > 0
     root.mkdir(parents=True, exist_ok=True)
-    config, selection = configure(source, root, concurrency, approval)
+    config, selection = configure(source, root, concurrency, approval, request_attempts, validation_attempts)
     print(json.dumps({"selected_gptoss": f"{len(selection)}/{config['source_total']}", "send": send, "visible_editor_prompt_sha256": config["visible_editor_prompt_sha256"]}), flush=True)
     if not send:
         return
@@ -182,8 +187,10 @@ if __name__ == "__main__":
     parser.add_argument("--send", action="store_true")
     parser.add_argument("--concurrency", type=int, default=2)
     parser.add_argument("--approval", type=Path)
+    parser.add_argument("--request-attempts", type=int, default=1)
+    parser.add_argument("--validation-attempts", type=int, default=1)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     with (args.out / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        asyncio.run(main(args.source.resolve(), args.out.resolve(), args.send, args.concurrency, args.approval))
+        asyncio.run(main(args.source.resolve(), args.out.resolve(), args.send, args.concurrency, args.approval, args.request_attempts, args.validation_attempts))

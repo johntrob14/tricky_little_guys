@@ -139,9 +139,15 @@ def test_reject_tinker_judge_and_changed_config(tmp_path):
 
 def test_source_resume_preserves_failures_and_surfaces_invariants(tmp_path, monkeypatch):
     source, output, _ = setup_run(tmp_path)
+    parent = read(source / "config.json")
+    parent["judge"].update(provider="dekallm/bf16", attempts=6)
+    parent["editor"]["attempts"] = 6
+    parent["validation_attempts"] = 3
+    write(source / "config.json", parent)
 
-    async def incomplete_run(root, send, concurrency):
+    async def incomplete_run(root, send, concurrency, provider, requests, validations):
         assert root == source and send and concurrency == 4
+        assert (provider, requests, validations) == ("dekallm/bf16", 6, 3)
         write(source / "summary.json", {"selected": 1, "exported": 1})
         raise AssertionError("Some episodes failed; see progress.json and retained responses.")
 
@@ -149,7 +155,7 @@ def test_source_resume_preserves_failures_and_surfaces_invariants(tmp_path, monk
     assert asyncio.run(followup.finish_sources(source, output))
     assert read(output / "source_resumes/000.json")["after"]["run_status"] == "completed_with_failures"
 
-    async def broken_invariant(root, send, concurrency):
+    async def broken_invariant(root, send, concurrency, provider, requests, validations):
         raise AssertionError("Non-reasoning content changed")
 
     monkeypatch.setattr(followup, "resume_source", broken_invariant)
