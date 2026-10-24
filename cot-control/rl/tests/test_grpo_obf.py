@@ -161,3 +161,18 @@ def test_wide_length_band():
         task, sc = roll(DAPO, "pirate", "arr " * words, 42)
         sc |= dict(gate=True, meta=True, partial=0.0, strict=False)
         assert go.finalize(task, sc, wide)["len_pen"] == pytest.approx(pen)
+
+
+@pytest.mark.parametrize("response,extra", [("ANSWER: B", 0), ("**ANSWER: (B)**", 0), ("\n\nANSWER: 42\n", 0), ("answer: -7", 0),
+                                            ("The answer be B, matey!\n\nANSWER: B", 5), ("ANSWER: 42 apples", 1), ("", 0)])
+def test_extra_response_words(response, extra):
+    assert go.extra_response_words(response) == extra
+
+
+def test_answer_only_response_fails_format():
+    task = go.make_task(GPQA, "pirate", random.Random(0), 1.0, 0.0)
+    gen = f"leaf cell, light</think>Arr, the chloroplast be doin' it, matey!\n\nANSWER: B{EOS}"
+    loose, strict = go.score_roll(task, gen, False, EOS), go.score_roll(task, gen, False, EOS, answer_only=True)
+    assert loose["fmt_ok"] and loose["correct"] and loose["extra_words"] == 7
+    assert not strict["fmt_ok"] and strict["correct"] and strict["extra_words"] == 7
+    assert go.score_roll(task, f"leaf cell</think>ANSWER: B{EOS}", False, EOS, answer_only=True)["fmt_ok"]
