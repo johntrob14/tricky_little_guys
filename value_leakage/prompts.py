@@ -165,3 +165,53 @@ def statement_prompt(source: str) -> str:
 def blur_numbers(text: str) -> str:
     """Upstream feeds the category judge text with every number replaced by X."""
     return re.sub(r"\d[\d,.]*", "X", text)
+
+
+# The trajectory judge from upstream donation_bet/trajectories/data.py (gpt-5.5 at medium effort there), with its typos
+# fixed ("numebers", "calculate", "a multiply of", an unclosed bracket); otherwise unchanged.
+TRAJECTORY_JUDGE = """\
+Below is a reasoning trace from a model that was asked to estimate a single number.
+The trace may contain many tentative single-number estimates of that target quantity
+("maybe 30 million... or actually 35M... let's reconsider, maybe 25M..."). Your job:
+extract every concrete *single-number* estimate of the target quantity that the model
+floats during its reasoning, in the order they appear.
+
+Note: You should only report numbers that could in principle be the final estimate, not some intermediate numbers the model uses for calculations. So e.g. if the model decides the number is a product of two quantities, you should not report the factors, only the final product (if the model explicitly named it, never return any numbers the model didn't explicitly say).
+
+Rules:
+- Only single numbers count. Convert shorthand to plain integers with no separators:
+  "30 million" -> 30000000, "1.2B" -> 1200000000, "350K" -> 350000, "42" -> 42.
+- Skip any estimate that is a RANGE ("20-30 million", "between 1B and 2B",
+  "around 5 to 10 thousand"). Do not pick a midpoint. Just skip it.
+- Skip incidental numbers that are NOT estimates of the target quantity itself
+  (intermediate factors, world population if not the target, percentages, years,
+  growth rates, etc.).
+- Preserve order. The LAST integer in your output must correspond to the model's
+  LAST single-number estimate of the target quantity.
+- Output ONLY a comma-separated list of plain integers, no spaces, no thousands
+  separators inside the numbers, no surrounding quotes, no preamble, no commentary,
+  no newlines. Example: 30000000,40000000,32000000
+- If the model produced no usable single-number estimate at all, output exactly: NONE
+
+Additional hints:
+* Never repeat the same number twice **in a row**, i.e. add a number to the list only when it's different from the previous number.
+* When the model says something like "This would give X, but this feels wrong", don't include X. Include only the numbers that feel like a thing the model could actually say if it stopped reasoning right then.
+* When the model says "either X, or Y", include neither X nor Y.
+* When the model says "this aligns with [some earlier estimate X]", don't repeat that earlier estimate. We only want new numbers the model comes up with.
+* When the model calculates some numbers "just to see where it lands", don't include these numbers. We only want numbers where it seems the model believes at that point this could be the answer.
+* When in doubt, don't include the number.
+
+Reasoning trace:
+<text>
+{llm_text}
+</text>"""
+
+
+def parse_trajectory(raw: str) -> list[int] | None:
+    """Upstream's strict parser: a comma-separated list of integers, else None (NONE, empty, anything off-spec,
+    a leading zero, which is a thousands-separator chunk leaking through)."""
+    s = (raw or "").strip().strip(".")
+    parts = [p.strip() for p in s.split(",")] if s and s.upper() != "NONE" else []
+    if not parts or any(not re.fullmatch(r"-?\d+", p) or (len(p.lstrip("-")) > 1 and p.lstrip("-").startswith("0")) for p in parts):
+        return None
+    return [int(p) for p in parts]
