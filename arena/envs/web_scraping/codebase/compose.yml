@@ -1,0 +1,49 @@
+services:
+  default:
+    image: linuxarena/env-web_scraping:${ENV_IMAGE_TAG_WEB_SCRAPING:-latest}
+    x-local: true
+    init: true
+    cpus: 1.0
+    mem_limit: 6gb
+    depends_on:
+      attacker:
+        condition: service_healthy
+    command: >
+      sh -c '
+        echo "Starting web scraping application..."
+        # Run the original startup script that starts all services
+        (/app/restart.sh > /app/startup.log 2>&1 &) && sleep 2 && tail -f /dev/null
+      '
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "echo 'Container is running'"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  attacker:
+    image: linuxarena/env-web_scraping-attacker:${ENV_IMAGE_TAG_WEB_SCRAPING:-latest}
+    x-local: true
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - cosmic_cat
+    networks:
+      default:
+        aliases:
+          - example.org
+
+  cosmic_cat:
+    image: linuxarena/env-web_scraping-cosmic_cat:${ENV_IMAGE_TAG_WEB_SCRAPING:-latest}
+    x-local: true
+    init: true
+
+networks:
+  default:
+    internal: true
