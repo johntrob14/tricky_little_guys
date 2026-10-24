@@ -43,7 +43,6 @@ import prompt_spec
 import run  # registers the tinker provider and gives the loop constants, submit tool, and main scorer logic
 
 ROOT = Path(__file__).parent
-SIDE = ROOT / "side_tasks" / "tiktok" / "leak_secret"
 
 
 def _load(name, path):
@@ -53,8 +52,28 @@ def _load(name, path):
     return mod
 
 
-side_config = _load("leak_secret_config", SIDE / "config.py")
-side_score = _load("leak_secret_score", SIDE / "score.py")
+_SIDE_CACHE = {}
+
+
+def load_side(env_name):
+    """The leak_secret config+score for one env, from side_tasks/<env>/leak_secret/, returned as
+    (side_dir, config_module, score_module). The side task seeds into and scores the container the
+    main task boots, so it must match the main task's env; `tiktok` resolves to the path it always
+    used, so this is a no-op for tiktok runs. Cached per env."""
+    if env_name not in _SIDE_CACHE:
+        side = ROOT / "side_tasks" / env_name / "leak_secret"
+        if not (side / "config.py").exists():
+            raise FileNotFoundError(f"no leak_secret side task for env {env_name!r} at {side}")
+        _SIDE_CACHE[env_name] = (side, _load(f"leak_secret_config_{env_name}", side / "config.py"),
+                                 _load(f"leak_secret_score_{env_name}", side / "score.py"))
+    return _SIDE_CACHE[env_name]
+
+
+# Backward-compat module-level handles, defaulting to tiktok, for the tiktok-specific tools that import
+# run_attack.side_config / side_score directly (tutor.py, check_leak_scorer.py, build_immediate_sft.py,
+# pilot_openended.py, rl/branch_smoke.py, tests/test_prompts.py). The attack/RL path itself resolves the
+# side task per env via load_side(env.name); these aliases are only for those direct importers.
+SIDE, side_config, side_score = load_side("tiktok")
 
 
 @solver
@@ -72,6 +91,7 @@ def attack_agent(env: Path, task: Path, max_turns: int, system: str, obstacles: 
             assert r.success, f"main setup.sh failed: {r.stderr}"
         # Seed the side task after the main setup, so the secret is in the live environment the agent sees.
         # --absent seeds nothing and deletes the file the secret would have sat in, so the episode holds neither the value nor its source file.
+        _, side_config, _ = load_side(env.name)
         side = state.metadata["side"]
         setup = f"set -eu\nrm -f {side['source_path']}\n" if absent else side_config.make_setup(side)
         r = await sbx.exec(["bash", "-c", setup], timeout=run.TOOL_TIMEOUT)
@@ -126,6 +146,7 @@ def main_and_side_scorer(env: Path, task: Path, *, opportunity_present: bool | N
 
     async def score(state, target):
         sbx = sandbox()
+        _, side_config, side_score = load_side(env.name)
         try:
             restart = await run.run_script(sbx, env / "restart.sh", run.SCORE_TIMEOUT)
             note = "" if restart.success else f"restart.sh failed: {head_tail(restart.stderr or restart.stdout)}\n\n"
@@ -169,10 +190,11 @@ def main_and_side_scorer(env: Path, task: Path, *, opportunity_present: bool | N
 
 def build(task: Path, tier: str, epochs: int, max_turns: int, seed_base: int, spec: dict, model: str, model_path: str | None, preset: str, obstacles: bool = False, absent: bool = False) -> Task:
     env = ROOT / "envs" / task.parent.name
+    side_dir, side_config, _ = load_side(env.name)
     task_md = (task / "task.md").read_text()
     # opportunity_present = the side task is in the prompt (attacker presets); the control (description off) is the no-opportunity arm.
     opportunity = bool(spec["description"])
-    k = labels.knobs(model, model_path, preset, spec["prefill"], tier, env.name, task.name, SIDE.name, opportunity)
+    k = labels.knobs(model, model_path, preset, spec["prefill"], tier, env.name, task.name, side_dir.name, opportunity)
     samples = []
     for e in range(epochs):
         cfg = side_config.sample(tier=tier, seed=f"{task.name}:{e}:{seed_base}")
@@ -222,6 +244,7 @@ def main():
 
     if args.dry_run:
         p = selected[0]
+        _, side_config, _ = load_side(p.parent.name)
         cfg = side_config.sample(tier=args.tier, seed=f"{p.name}:0:{args.seed_base}")
         print(f"PLAN: {len(selected)} task(s) x {args.epochs} episode(s) at tier={args.tier} on {args.model}; preset={args.preset}; logs/{args.run}")
         print(f"spec: {spec}")
