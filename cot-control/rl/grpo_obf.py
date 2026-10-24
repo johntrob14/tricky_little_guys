@@ -288,8 +288,8 @@ def finalize(task: dict, sc: dict, args, mu: float = 0.0) -> dict:
     return sc
 
 
-async def make_judge(model: str, provider: str) -> OpenRouterJudge:
-    judge = OpenRouterJudge(model, max_tokens=8000, concurrency=256, provider=provider)
+async def make_judge(model: str, provider: str, max_tokens: int = 8000) -> OpenRouterJudge:
+    judge = OpenRouterJudge(model, max_tokens=max_tokens, concurrency=256, provider=provider)
     probe, *_ = await judge.ask("Answer with exactly YES or NO: is 2 + 2 equal to 4?")
     assert yes_no(probe) is True, f"judge probe failed: {probe!r}"
     return judge
@@ -322,6 +322,7 @@ async def main():
     ap.add_argument("--p-system", type=float, default=0.3, help="probability the instruction goes in the system message")
     ap.add_argument("--judge-model", default=JUDGE_MODEL)
     ap.add_argument("--judge-provider", default="DeepInfra", help="the one OpenRouter provider (fp8) that serves the judges; no fallbacks")
+    ap.add_argument("--judge-max-tokens", type=int, default=8000, help="judge reply cap, reasoning included; a reply cut here is an unparsed verdict (a fail)")
     ap.add_argument("--lr", type=float, default=4e-5)
     ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--max-tokens", type=int, default=16000)
@@ -367,7 +368,7 @@ async def main():
                                                               "max_words_frac": MAX_WORDS_FRAC, "train_frames": controls.TRAIN_FRAMES, "terms": controls.TRAIN_TERMS if harmony else TERMS,
                                                               "pool_sizes": {k: len(v) for k, v in by_source.items()}}, indent=1, default=str))
     price = modelio.PRICES[args.model]
-    judge = await make_judge(args.judge_model, args.judge_provider)
+    judge = await make_judge(args.judge_model, args.judge_provider, args.judge_max_tokens)
     svc = tinker.ServiceClient(api_key=os.environ[args.tinker_key_env])
     rest = svc.create_rest_client()
     tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))

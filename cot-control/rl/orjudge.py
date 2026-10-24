@@ -14,7 +14,7 @@ from pathlib import Path
 import httpx
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
-TIMEOUT_ATTEMPTS = 3
+TIMEOUT_ATTEMPTS = 2
 
 
 def load_key() -> str:

@@ -58,6 +58,7 @@ async def main():
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--judge-model", default=grpo_obf.JUDGE_MODEL)
     ap.add_argument("--judge-provider", default="DeepInfra")
+    ap.add_argument("--judge-max-tokens", type=int, default=8000, help="as grpo_obf.py")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--term", help="reasoning term in the reference wording; 'thinking' when omitted")
     ap.add_argument("--provider", help="sample the base model through OpenRouter on this provider instead of Tinker")
@@ -72,7 +73,7 @@ async def main():
     rng = random.Random(args.seed)
     tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, args.term, harmony) for arm in args.arms for q in pool if arm != "word_suppression" or q["keywords"]]
 
-    judge = await grpo_obf.make_judge(args.judge_model, args.judge_provider)
+    judge = await grpo_obf.make_judge(args.judge_model, args.judge_provider, args.judge_max_tokens)
     if args.provider:
         assert not args.model_path and not harmony and "nocot" not in args.arms, "OpenRouter serves the base DeepSeek model, thinking arms only"
         hf_tok, client, sem = Tokenizer.from_pretrained(HF_TOKENIZER), httpx.AsyncClient(), asyncio.Semaphore(48)
