@@ -19,8 +19,10 @@ ap.add_argument("runs", nargs="+", help="a run, then its continuations in order"
 ap.add_argument("--window", type=int, default=5)
 args = ap.parse_args()
 dirs = [HERE.parent / f"results/rl/{r}" for r in args.runs]
-steps = [json.loads(l) for d in dirs for l in open(d / "steps.jsonl")]
-rows = [json.loads(l) for d in dirs for l in open(d / "rollouts.jsonl")]
+segs = [[json.loads(l) for l in open(d / "steps.jsonl")] for d in dirs]
+starts = [s[0]["step"] for s in segs[1:]] + [10**9]  # a continuation restarts from a saved state: the earlier segment's steps past it were discarded
+steps = [s for seg, start in zip(segs, starts) for s in seg if s["step"] < start]
+rows = [r for d, start in zip(dirs, starts) for r in map(json.loads, open(d / "rollouts.jsonl")) if r["step"] < start]
 assert [s["step"] for s in steps] == list(range(steps[0]["step"], steps[0]["step"] + len(steps))), "the segments' steps do not run on from each other"
 d = dirs[0]
 TYPES = list(json.load(open(d / "config.json"))["weights"])
