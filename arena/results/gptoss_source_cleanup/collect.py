@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 ARENA = ROOT.parents[1]
-UPSTREAM = ROOT.parent / "deepseek_cleaned_followup_dekallm"
+UPSTREAM = ROOT.parent / "deepseek_cleaned_followup_dekallm16"
 sys.path.insert(0, str(ARENA))
 
 from rewrite_common import blocks, digest, read, validate, write
@@ -48,6 +48,7 @@ def main() -> None:
     assert len(report["traces"]) == len(expected) and all(r["after"] is not None for r in report["traces"])
     write(ROOT / "max_turns.json", report)
     config = read(UPSTREAM / "config.json")
+    write(ROOT / "config.json", config)
     summary = {"status": "complete", "eligible": len(expected), "exported": len(selected), "assistant_turns": sum(m["role"] == "assistant" for r in selected for m in r["messages"]), "nonempty_reasoning_turns": sum(bool(b["reasoning"].strip()) for r in selected for b in blocks(r["messages"])), "source_run": str(UPSTREAM), "editor": config["editor"], "monitor": config["monitor"], "backend": config["backend"], "threshold": config["threshold"], "subset_export_model_calls": 0, "dataset_sha256": hashlib.sha256((ROOT / "dataset.jsonl").read_bytes()).hexdigest()}
     write(ROOT / "summary.json", summary)
     write(ROOT / "progress.json", summary)

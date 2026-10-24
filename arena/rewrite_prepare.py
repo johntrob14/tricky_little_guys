@@ -85,14 +85,17 @@ def prepare(root: Path, groups: list[str], limit: int, allow_tool_errors: bool, 
             decision["excluded"] = ["selection_limit"]
             continue
         record = {k: row[k] for k in ("uuid", "group", "log", "sample", "epoch", "model", "checkpoint", "env", "task", "tier", "turns", "main_pass", "side_leaked", "submit_calls", "tool_result_errors", "at_turn_cap", "messages_sha256", "main_task_sha256", "side_metadata_sha256")}
-        record.update(content_sha256=key, source_sha256=source_hash, nonempty_reasoning_turns=len(nonempty), longest_reasoning_chars=max(map(len, nonempty)))
+        nonempty_turns = sum(any(b["reasoning"].strip() for b in blocks([m])) for m in original)
+        record.update(content_sha256=key, source_sha256=source_hash, nonempty_reasoning_turns=nonempty_turns, longest_reasoning_chars=max(map(len, nonempty)))
+        if len(nonempty) != nonempty_turns:
+            record["nonempty_reasoning_blocks"] = len(nonempty)
         path = root / "sources" / f"{row['uuid']}.json"
         if path.exists():
             assert read(path) == original
         else:
             write(path, original)
         selected.append(record)
-        reasoning_turns += len(nonempty)
+        reasoning_turns += nonempty_turns
         longest_reasoning = max(longest_reasoning, max(map(len, nonempty)))
     assert selected, "No eligible source episodes"
     result = {"groups": groups, "extra_logs": [str(p.resolve().relative_to(ARENA)) for p in extra_logs], "available": len(rows), "eligible_unique": eligible, "requested_limit": limit, "allow_tool_result_errors": allow_tool_errors, "selection_uses_monitor_scores": False, "deduplication": "Full message content, ignoring message/tool-call IDs, serving metadata, and duplicate reasoning replay signatures; no semantic near-duplicate removal", "split": "unassigned; includes previously inspected pilot development sources", "source_audit_sha256": hashlib.sha256((AUDIT / "manifest.jsonl").read_bytes()).hexdigest(), "selected": selected, "decisions": decisions, "reasoning_turns": reasoning_turns, "longest_reasoning_chars": longest_reasoning}

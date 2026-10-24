@@ -77,17 +77,25 @@ async def episode(root: Path, case: dict, config: dict, progress: dict) -> dict:
         if message["role"] == "assistant":
             turn += 1
             reasoning = blocks([message])
-            if reasoning and reasoning[0]["reasoning"].strip():
-                assert len(reasoning) == 1
-                before = reasoning[0]["reasoning"]
-                payload = editor_payload(history, message)
+            block_edits = []
+            for block_index, block in enumerate(reasoning):
+                before = block["reasoning"]
+                if not before.strip():
+                    continue
+                payload = editor_payload(history, message, block_index)
                 conversation = [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]
-                reply = await cached_call(directory / "editor" / f"{turn:03d}", conversation, config["editor"], parse_editor, progress["ledger"])
+                target = directory / "editor" / f"{turn:03d}"
+                if len(reasoning) > 1:
+                    target = target / f"block-{block_index:03d}"
+                reply = await cached_call(target, conversation, config["editor"], parse_editor, progress["ledger"])
                 after = reply["rewritten_reasoning"]
-                set_reasoning(reasoning[0], after)
-                rows.append({"turn": turn, "changed": before != after, "original_chars": len(before), "edited_chars": len(after), "change_magnitude": reply["change_magnitude"], "review_notes": reply["review_notes"], "before_sha256": digest(before), "after_sha256": digest(after), "edits": changes(before, after)})
+                set_reasoning(block, after)
+                block_edits.append({"turn": turn, "changed": before != after, "original_chars": len(before), "edited_chars": len(after), "change_magnitude": reply["change_magnitude"], "review_notes": reply["review_notes"], "before_sha256": digest(before), "after_sha256": digest(after), "edits": changes(before, after), **({"block_index": block_index} if len(reasoning) > 1 else {})})
+            if len(reasoning) > 1:
+                rows.append({"turn": turn, "changed": any(b["changed"] for b in block_edits), "blocks": block_edits})
+            elif block_edits:
+                rows.extend(block_edits)
             else:
-                assert len(reasoning) <= 1
                 rows.append({"turn": turn, "changed": False, "original_without_reasoning": True})
         history.append(message)
         if message["role"] == "assistant":
@@ -162,10 +170,15 @@ def export(root: Path, selection: dict, config: dict, progress: dict) -> None:
     write(root / "summary.json", {"exported": len(rows), "selected": len(selection["selected"]), "source_unique": len({r["source"]["content_sha256"] for r in rows}), "fully_monitored": sum(s["phase"] == "complete" for s in progress["episodes"].values()), "phase_counts": {phase: sum(s["phase"] == phase for s in progress["episodes"].values()) for phase in sorted({s["phase"] for s in progress["episodes"].values()})}, "config": config, "ledger": progress["ledger"], "selection_uses_monitor_scores": False})
 
 
-async def main(root: Path, send: bool, concurrency: int) -> None:
+async def main(root: Path, send: bool, concurrency: int, judge_provider: str | None = None) -> None:
     selection = read(root / "selection.json")
     prompt = (ARENA / "prompts/rewrite_reasoning.txt").read_text()
     config = {"editor": EDITOR, "judge": JUDGE, "concurrency": concurrency, "editor_prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(), "selection_sha256": digest(selection), "monitor": {"mode": "cot_only", "monitor": MONITOR.name, "judge_model": JUDGE["model"], "provider": JUDGE["provider"], "main_task_only": True, "input_channels": ["reasoning"], "prior_history": False, "prompt_template_sha256": hashlib.sha256(MONITOR.prompt_file.read_bytes()).hexdigest()}, "diff_method": "difflib.SequenceMatcher, character offsets into original text; apply edits in reverse order"}
+    if judge_provider is not None:
+        config["judge"] = {**JUDGE, "provider": judge_provider}
+        config["monitor"]["provider"] = judge_provider
+    if any(len(blocks([m])) > 1 for case in selection["selected"] for m in read(root / "sources" / f"{case['uuid']}.json")):
+        config["reasoning_edit_unit"] = "Each nonempty content block independently, preserving block boundaries and using the same preceding-message history; current-turn sibling reasoning is not sent to the editor."
     if (root / "config.json").exists():
         assert read(root / "config.json") == config, "Run configuration changed; use a new output directory"
         assert (root / "editor_prompt.txt").read_text() == prompt
@@ -198,7 +211,8 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--send", action="store_true")
     parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument("--judge-provider", help="Pin the OpenRouter judge provider; changing it requires a new output directory")
     args = parser.parse_args()
     with (args.out / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        asyncio.run(main(args.out.resolve(), args.send, args.concurrency))
+        asyncio.run(main(args.out.resolve(), args.send, args.concurrency, args.judge_provider))

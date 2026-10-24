@@ -50,10 +50,10 @@ def validate(original: list[dict], edited: list[dict]) -> None:
     assert all(not before["reasoning"].strip() or after["reasoning"].strip() for before, after in zip(blocks(original), blocks(edited))), "Nonempty reasoning removed entirely"
 
 
-def editor_payload(history: list[dict], current: dict) -> dict:
-    assert len(blocks([current])) == 1
+def editor_payload(history: list[dict], current: dict, block_index: int = 0) -> dict:
+    assert 0 <= block_index < len(blocks([current]))
     history, current = copy.deepcopy(history), copy.deepcopy(current)
-    before = blocks([current])[0]["reasoning"]
+    before = blocks([current])[block_index]["reasoning"]
     for block in blocks(history):
         block.pop("signature", None)
     current["content"] = [b for b in current["content"] if b["type"] != "reasoning"]

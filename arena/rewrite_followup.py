@@ -45,6 +45,8 @@ def configure(source: Path, root: Path, concurrency: int, finish_source: bool = 
     config = {"source": str(source), "source_selection_sha256": digest(read(source / "selection.json")), "backend": "openrouter", "editor": {**parent["editor"], "attempts": 6}, "judge": {**parent["judge"], "attempts": 6}, "monitor": parent["monitor"], "editor_prompt_sha256": parent["editor_prompt_sha256"], "concurrency": concurrency, "threshold": 5, "comparison": ">", "valid_rewrites_per_selected_turn": 1, "validation_attempts": 3, "source_resumes_per_invocation": 3 if finish_source else 0, "fresh_before_scores": True, "turn_selection_uses_monitor_scores": True, "after_scores_are_selection_conditioned": True, "unchanged_monitor_inputs_reuse_before_score": True}
     if judge_provider is not None:
         config["judge"]["provider"] = config["monitor"]["provider"] = judge_provider
+    if "reasoning_edit_unit" in parent:
+        config["reasoning_edit_unit"] = parent["reasoning_edit_unit"]
     fixed(root / "config.json", config)
     return config
 
@@ -159,10 +161,24 @@ async def rewrite_trace(root: Path, case: dict, config: dict, progress: dict) ->
             text = "\n".join(b["reasoning"] for b in blocks([message]))
             assert before[turn]["turn"] == turn and before[turn]["reasoning_sha256"] == digest(text)
             if turn in selected:
-                payload = editor_payload(history, message)
-                reply = await call(directory / "editor" / f"{turn:03d}", [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], config["editor"], parse_editor, config, progress)
-                set_reasoning(blocks([message])[0], reply["rewritten_reasoning"])
-                edits.append({"turn": turn, "before_score": before[turn]["score"], "changed": text != reply["rewritten_reasoning"], "before_sha256": digest(text), "after_sha256": digest(reply["rewritten_reasoning"]), "edits": changes(text, reply["rewritten_reasoning"]), "review_notes": reply["review_notes"], "change_magnitude": reply["change_magnitude"]})
+                reasoning, block_edits = blocks([message]), []
+                for block_index, block in enumerate(reasoning):
+                    if not block["reasoning"].strip():
+                        continue
+                    payload = editor_payload(history, message, block_index)
+                    target = directory / "editor" / f"{turn:03d}"
+                    if len(reasoning) > 1:
+                        target = target / f"block-{block_index:03d}"
+                    reply = await call(target, [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], config["editor"], parse_editor, config, progress)
+                    block_edits.append({"block_index": block_index, "before_sha256": digest(block["reasoning"]), "after_sha256": digest(reply["rewritten_reasoning"]), "edits": changes(block["reasoning"], reply["rewritten_reasoning"]), "review_notes": reply["review_notes"], "change_magnitude": reply["change_magnitude"]})
+                    set_reasoning(block, reply["rewritten_reasoning"])
+                after = "\n".join(b["reasoning"] for b in reasoning)
+                record = {"turn": turn, "before_score": before[turn]["score"], "changed": text != after, "before_sha256": digest(text), "after_sha256": digest(after), "edits": changes(text, after)}
+                if len(reasoning) == 1:
+                    record.update(review_notes=reply["review_notes"], change_magnitude=reply["change_magnitude"])
+                else:
+                    record["blocks"] = block_edits
+                edits.append(record)
         history.append(message)
         if message["role"] == "assistant":
             validate(original[:index + 1], history)
