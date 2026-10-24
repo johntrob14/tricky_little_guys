@@ -4,7 +4,9 @@ Astra: the 108 Astra items minus ignore_question (st1-ignore's training type), s
 medium / high. Transfer: the transfer eval (F0 wording, user turn, 108 items) on COMMON_FAR, the types that are neither a model's training
 type nor one of its pre-registered near types for any model compared. Metric: strict passes with meta-discussion allowed, length-adjusted
 by thinkvec/lenadj.py's logistic (constraint intercept + log2(CoT words + 1)) fit on base's rows of that eval, with the gain over base and a
-95% bootstrap CI over items (paired across models; logistic refit per draw). Raw passes and no-meta passes alongside.
+95% bootstrap CI over items (paired across models; logistic refit per draw). For Astra also the bins adjustment of astra_lenadj.py (base's pass
+rate per constraint and CoT-token bin on the full CoT-Control protocol, medium effort, temperature 0), which follows each constraint's own
+length curve. Raw passes and no-meta passes alongside.
 
     .venv/bin/python st1_compare.py --out ../results/st1 --chart ../../../figures/st1_compare.png
 """
@@ -20,6 +22,9 @@ import pandas as pd
 
 import controls
 from astra_levels import LEVELS, MODELS as ASTRA_RUNS, RUNS, adjusted, bootstrap, frame, load
+from astra_lenadj import LENBINS
+from full_compare import BINS, LABELS
+from transformers import AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "thinkvec"))
 from lenadj import add_length_adjustment  # noqa: E402
@@ -64,7 +69,9 @@ def table(df: pd.DataFrame, draws: int, levels: list[str]) -> tuple[list[str], d
     n_items = df.groupby(["condition", "level"]).size().max()
     lines, res = [f"Logistic on base's {(df.condition == 'base').sum()} rows: odds of a pass x{odds:.2f} per doubling of CoT words [95% CI {lo:.2f}, {hi:.2f}].\n"], {}
     for e in levels:
-        lines += [f"### {e}\n", f"| model | length-adjusted passes of {n_items} (gain over base [95% CI]) | raw passes | no-meta passes | median CoT words |", "|---|---|---|---|---|"]
+        bins = "p_bin" in df
+        lines += [f"### {e}\n", f"| model | length-adjusted passes of {n_items} (gain over base [95% CI]) |" + (" bins-adjusted (gain [95% CI]) |" if bins else "") +
+                  " raw passes | no-meta passes | median CoT words |", "|---|---|---|---|---|" + ("---|" if bins else "")]
         for m in df.condition.unique():
             if (m, e) not in point:
                 continue
@@ -72,7 +79,12 @@ def table(df: pd.DataFrame, draws: int, levels: list[str]) -> tuple[list[str], d
             glo, ghi = np.percentile([b[m, e]["logistic"] - b[m, e]["base"] for b in boots], [2.5, 97.5])
             res[f"{m}|{e}"] = dict(adjusted=p["logistic"], gain=p["logistic"] - p["base"], gain_ci=[glo, ghi], raw=p["observed"], nometa=int(g.nometa.sum()), n=len(g),
                                    median_words=float(g.cot_words.median()))
-            lines.append(f"| {m} | {p['logistic']:.1f} ({p['logistic'] - p['base']:+.1f} [{glo:+.1f}, {ghi:+.1f}]) | {p['observed']:.0f} | {g.nometa.sum()} | {g.cot_words.median():.0f} |")
+            cell = ""
+            if bins:
+                blo, bhi = np.percentile([b[m, e]["bins"] - b[m, e]["base"] for b in boots], [2.5, 97.5])
+                res[f"{m}|{e}"].update(bins=p["bins"], bins_gain=p["bins"] - p["base"], bins_gain_ci=[blo, bhi])
+                cell = f" {p['bins']:.1f} ({p['bins'] - p['base']:+.1f} [{blo:+.1f}, {bhi:+.1f}]) |"
+            lines.append(f"| {m} | {p['logistic']:.1f} ({p['logistic'] - p['base']:+.1f} [{glo:+.1f}, {ghi:+.1f}]) |{cell} {p['observed']:.0f} | {g.nometa.sum()} | {g.cot_words.median():.0f} |")
         lines.append("")
     return lines, res
 
@@ -103,6 +115,11 @@ def main():
     nm = {(m, e, "|".join(k[:3])): r["strict_nometa"] == "1" for m, lv in data.items() for e, rec in lv.items() for k, r in rec.items()}
     astra["nometa"] = [nm[m, e, i] for m, e, i in zip(astra.condition, astra.level, astra.item)]
     astra = astra[astra.constraint != "ignore_question"].reset_index(drop=True)
+    tok = AutoTokenizer.from_pretrained("openai/gpt-oss-120b")
+    lb = pd.read_csv(LENBINS).query("model == 'Base gpt-oss-120b'")
+    rate = {(c, b): p for c, b, p in zip(lb.constraint, lb.bin, lb["pass"])}
+    tokens = [len(tok.encode(t, add_special_tokens=False)) for t in astra.reasoning]
+    astra["p_bin"] = [rate[c, b] for c, b in zip(astra.constraint, pd.cut(tokens, BINS, labels=LABELS, right=False))]
 
     tr = pd.concat([transfer_rows(m, runs) for m, runs in TRANSFER_RUNS.items() if all((TRANSFER / r / "judgments.jsonl").exists() for r in runs)], ignore_index=True)
     far = tr[tr.constraint.isin(COMMON_FAR)].reset_index(drop=True)
