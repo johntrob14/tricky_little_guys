@@ -417,7 +417,7 @@ async def main():
                 "meta_unparsed": sum(r["meta"] is None for r in asked), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
                 "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap, "by_type": by_type,
                 "secs_sample": round(t_sample), "secs_judge": round(t_judge), "secs_train": round(t_train), "secs": round(time.time() - t0), "tinker_usd": round(tinker_usd, 3),
-                "judge_usd": round(judge.usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers)}
+                "judge_usd": round(judge.usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers), "judge_timeouts": judge.timeouts}
         with (out / "steps.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
         print(json.dumps(line), flush=True)

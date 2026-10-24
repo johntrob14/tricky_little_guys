@@ -3,7 +3,7 @@
     judge = OpenRouterJudge("openai/gpt-oss-120b", effort="low")
     final_text, n_in, n_out = await judge.ask(prompt)
 
-Temperature 0. `provider` pins one upstream provider (no fallbacks), since OpenRouter otherwise spreads a model over many providers with different quantizations. 408, 429, 5xx and timeouts are retried with exponential backoff (8 attempts, about 4 minutes), whether they arrive as the HTTP status or as an error body inside a 200 reply; anything else, or running out of retries, raises. `usd` accumulates OpenRouter's reported cost,
+Temperature 0. `provider` pins one upstream provider (no fallbacks), since OpenRouter otherwise spreads a model over many providers with different quantizations. 408, 429, 5xx and timeouts are retried with exponential backoff (8 attempts, about 4 minutes), whether they arrive as the HTTP status or as an error body inside a 200 reply; anything else, or running out of retries, raises. The exception is a provider timeout (OpenRouter's 504 "timed out", or the client's own 300 s timeout) on TIMEOUT_ATTEMPTS attempts in a row: a judge whose reasoning outruns the provider's 300 s limit times out identically on every retry, so the call gives up and returns an empty reply, which callers treat as an unparsed verdict (a fail, counted; the trainers stop above 10% unparsed). `timeouts` counts those calls. `usd` accumulates OpenRouter's reported cost,
 `providers` counts which upstream provider served each call (OpenRouter routes a model across providers).
 """
 import asyncio
@@ -14,6 +14,7 @@ from pathlib import Path
 import httpx
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
+TIMEOUT_ATTEMPTS = 3
 
 
 def load_key() -> str:
@@ -31,7 +32,7 @@ class OpenRouterJudge:
         self.model, self.effort, self.max_tokens, self.retries, self.provider = model, effort, max_tokens, retries, provider
         self.client = httpx.AsyncClient(timeout=300.0, transport=transport, headers={"Authorization": f"Bearer {load_key()}", "Content-Type": "application/json"})
         self.sem = asyncio.Semaphore(concurrency)
-        self.usd, self.providers = 0.0, Counter()
+        self.usd, self.providers, self.timeouts = 0.0, Counter(), 0
 
     async def ask(self, prompt: str) -> tuple[str, int, int]:
         body = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": self.max_tokens,
@@ -39,6 +40,7 @@ class OpenRouterJudge:
         if self.provider:
             body["provider"] = {"order": [self.provider], "allow_fallbacks": False}
         async with self.sem:
+            timeouts = 0
             for attempt in range(self.retries):
                 try:
                     r = await self.client.post(URL, json=body)
@@ -51,6 +53,10 @@ class OpenRouterJudge:
                     break
                 if code not in (408, 429) and code < 500:
                     raise RuntimeError(f"openrouter error {code}: {detail}")
+                timeouts = timeouts + 1 if code == 599 or (code == 504 and "timed out" in detail) else 0
+                if timeouts == TIMEOUT_ATTEMPTS:
+                    self.timeouts += 1
+                    return "", 0, 0
                 if attempt + 1 == self.retries:
                     raise RuntimeError(f"openrouter error {code} after {self.retries} attempts: {detail}")
                 await asyncio.sleep(2 ** attempt)

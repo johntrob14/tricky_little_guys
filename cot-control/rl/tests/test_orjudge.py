@@ -37,3 +37,12 @@ def test_other_errors_and_exhausted_retries_raise(monkeypatch):
     with pytest.raises(RuntimeError, match="504 after 3 attempts"):
         asyncio.run(j.ask("q"))
     assert len(calls) == 3
+
+
+def test_repeated_provider_timeout_returns_unparsed(monkeypatch):
+    timeout = (200, {"error": {"code": 504, "message": "Provider timed out after 300599ms", "metadata": {"error_type": "timeout"}}})
+    j, calls = make([timeout] * 3, monkeypatch)
+    assert asyncio.run(j.ask("q")) == ("", 0, 0)
+    assert len(calls) == 3 and j.timeouts == 1 and j.usd == 0
+    j, calls = make([timeout, (502, {}), (200, OK)], monkeypatch)  # the streak resets on another error
+    assert asyncio.run(j.ask("q")) == ("YES", 5, 1) and j.timeouts == 0

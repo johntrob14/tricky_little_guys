@@ -131,8 +131,9 @@ async def main():
                             predictable=frac([sc["predictable"] for sc in rs if "predictable" in sc]), parsed=frac([sc["fmt_ok"] for sc in rs]),
                             truncated=frac([sc["truncated"] for sc in rs]), meta_found=frac([sc["meta"] is False for sc in rs if sc["meta"] is not None]),
                             median_tokens=statistics.median(sc["n_tokens"] for sc in rs))
-    (out / "summary.json").write_text(json.dumps(dict(summary=summary, judge_usd=round(judge.usd, 3), sample_usd=round(sum(sc.get("cost", 0) for sc in scores), 3)), indent=1))
-    print(f"{args.run}: {args.model_path or (OR_MODEL if args.provider else args.model)}; judges ${judge.usd:.2f}")
+    (out / "summary.json").write_text(json.dumps(dict(summary=summary, judge_usd=round(judge.usd, 3), sample_usd=round(sum(sc.get("cost", 0) for sc in scores), 3),
+                                                      judge_timeouts=judge.timeouts), indent=1))
+    print(f"{args.run}: {args.model_path or (OR_MODEL if args.provider else args.model)}; judges ${judge.usd:.2f}, {judge.timeouts} judge calls timed out (unparsed)")
     print("arm | passed | correct | correct DAPO | correct GPQA | answer predictable from CoT | parsed | truncated | meta found | median tokens")
     for arm, s in summary.items():
         print(f"{arm} | {s['passed'] or '-'} | {s['correct']} | {s['correct_dapo']} | {s['correct_gpqa']} | {s['predictable']} | {s['parsed']} | {s['truncated']} | "
