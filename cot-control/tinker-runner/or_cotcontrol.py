@@ -15,6 +15,9 @@ Decisions recorded here:
 - --elicit as in tinker_cotcontrol.py: selfinstruct.py's "qwen" family (the paper's DeepSeek-R1 templates), prefills
   appended after <think>, a cb echo stripped before grading.
 - n_output_tokens is the provider's completion_tokens (no token ids come back). No seed (not every provider takes one).
+- --chat: chat completions instead, for models whose providers all wrap a raw prompt in the chat template (Inkling-Small's
+  only provider, DeepInfra, does: a raw "Hello" counts 15 prompt tokens, and special tokens inside it are parsed). The
+  reasoning comes from the message's `reasoning` field, the provider's default effort is used, and prefills are refused.
 """
 
 from __future__ import annotations
@@ -38,6 +41,7 @@ from cotswitch.runners import vllm_runner  # noqa: E402
 MODEL = "deepseek/deepseek-v4.1-flash-1017"
 HF_TOKENIZER = "deepseek-ai/DeepSeek-V4.1-Flash-1017"
 OR_URL = "https://openrouter.ai/api/v1/completions"
+OR_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 EFFORT = "Reasoning Effort: {} (range 1-100, the higher the value, the more thorough the reasoning)\n\n"
 
 
@@ -46,11 +50,11 @@ def render(messages: list[dict], effort: int) -> str:
     return f"<｜begin▁of▁sentence｜><｜System｜>{EFFORT.format(effort)}<｜User｜>{messages[0]['content']}<｜Assistant｜><think>"
 
 
-async def complete(client: httpx.AsyncClient, body: dict) -> dict:
+async def complete(client: httpx.AsyncClient, body: dict, url: str = OR_URL) -> dict:
     err = ""
     for attempt in range(6):
         try:
-            r = await client.post(OR_URL, json=body, headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"}, timeout=3600)
+            r = await client.post(url, json=body, headers={"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"}, timeout=3600)
             b = r.json()
             if r.status_code == 200 and "choices" in b and b["choices"][0].get("finish_reason") != "error":
                 return b
@@ -63,7 +67,8 @@ async def complete(client: httpx.AsyncClient, body: dict) -> dict:
 
 
 async def _generate(args) -> int:
-    tok = Tokenizer.from_pretrained(HF_TOKENIZER)
+    assert not (args.chat and args.elicit in selfinstruct.PREFILL_METHODS), "chat completions cannot prefill the reasoning"
+    tok = None if args.chat else Tokenizer.from_pretrained(HF_TOKENIZER)
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
     for u in units:
         if args.elicit:
@@ -78,28 +83,37 @@ async def _generate(args) -> int:
     print(f"[generate] {args.condition}/{args.protocol}: {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     cfg = {"name": args.condition, "model_id": args.model, "model_revision": None, "adapter_id": None}
-    sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens, "reasoning_effort": args.effort,
+    sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens, "reasoning_effort": "provider default" if args.chat else args.effort, "endpoint": "chat" if args.chat else "completions",
                 "provider": args.provider, "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": "qwen" if args.elicit else None}
     sem = asyncio.Semaphore(args.concurrency)
     n_done = 0
 
     async def one(client, u):
         nonlocal n_done
-        prompt = render(vllm_runner.messages_for(u["spec"]), args.effort)
-        if args.elicit in selfinstruct.PREFILL_METHODS:
-            prompt += u["self_instruction"]
-        body = {"model": args.model, "prompt": prompt, "max_tokens": args.max_new_tokens, "temperature": args.temperature, "top_p": args.top_p,
+        messages = vllm_runner.messages_for(u["spec"])
+        if args.chat:
+            prompt, payload = messages[0]["content"], {"messages": messages}
+        else:
+            prompt = render(messages, args.effort)
+            if args.elicit in selfinstruct.PREFILL_METHODS:
+                prompt += u["self_instruction"]
+            payload = {"prompt": prompt}
+        body = {"model": args.model, **payload, "max_tokens": args.max_new_tokens, "temperature": args.temperature, "top_p": args.top_p,
                 "provider": {"order": [args.provider], "allow_fallbacks": False}, "usage": {"include": True}}
         async with sem:
             try:
-                b = await complete(client, body)
+                b = await complete(client, body, OR_CHAT_URL if args.chat else OR_URL)
             except RuntimeError as e:
                 print(f"[generate] {u['key']} not done (rerun to fill): {e}", file=sys.stderr)
                 return
         c, usage = b["choices"][0], b["usage"]
-        n_prompt = len(tok.encode(prompt, add_special_tokens=False).ids)
-        assert usage["prompt_tokens"] == n_prompt, f"{u['key']}: provider counted {usage['prompt_tokens']} prompt tokens, we have {n_prompt}"
-        reasoning, text = c.get("reasoning") or "", c.get("text") or ""
+        if args.chat:
+            n_prompt = usage["prompt_tokens"]
+            reasoning, text = c["message"].get("reasoning") or "", c["message"].get("content") or ""
+        else:
+            n_prompt = len(tok.encode(prompt, add_special_tokens=False).ids)
+            assert usage["prompt_tokens"] == n_prompt, f"{u['key']}: provider counted {usage['prompt_tokens']} prompt tokens, we have {n_prompt}"
+            reasoning, text = c.get("reasoning") or "", c.get("text") or ""
         assert "</think>" not in reasoning + text, u["key"]
         finish = "length" if c["finish_reason"] == "length" else "stop"
         raw_output = "<think>" + reasoning + ("</think>" + text if text or finish == "stop" else "")
@@ -130,6 +144,7 @@ def main(argv=None) -> int:
     ap.add_argument("--run-dir", required=True, type=Path)
     ap.add_argument("--condition", default="deepseek-v4.1-flash-1017")
     ap.add_argument("--model", default=MODEL, help="OpenRouter model id")
+    ap.add_argument("--chat", action="store_true", help="chat completions (no prefill), for models whose providers wrap raw prompts")
     ap.add_argument("--provider", required=True, help="OpenRouter provider that serves raw completions with special tokens intact")
     ap.add_argument("--protocol", default="astra")
     ap.add_argument("--limit-per-constraint", type=int)

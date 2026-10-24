@@ -36,6 +36,11 @@ Decisions recorded here:
   `<think>` otherwise); raw_output holds only the model's continuation (for cb, with a
   leading echo of the self-instruction stripped), so grading and judging are
   continuation-only. Each row records elicitation, self_instruction and echo_stripped.
+- Thinking Machines models (Inkling): no HF tokenizer or chat template, so the prompt is rendered with tml-renderers' TMLv0
+  renderer at thinking effort 0.9 (its default) and sampling stops on <|content_model_end_sampling|>. TMLv0 has no partial
+  message to continue, so a prefill opens the model's thinking message itself (<|message_model|><|content_thinking|> +
+  the self-instruction). raw_output is "<think>" + thinking + "</think>" + the text message(s). Self-instructions use the
+  gpt-oss family: Inkling's CoT is terse like gpt-oss's ("We need answer: ..."), not R1-style.
 """
 
 from __future__ import annotations
@@ -45,6 +50,7 @@ import json
 import asyncio
 import dataclasses
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -55,6 +61,7 @@ COTSWITCH_ROOT = Path(os.environ.get(
 sys.path.insert(0, str(COTSWITCH_ROOT))
 
 import tinker  # noqa: E402
+from tml_renderers import chat as tml_chat, tinker as tml_tinker, tokenizers as tml_tokenizers, v0 as tml_v0  # noqa: E402
 
 import selfinstruct  # noqa: E402
 
@@ -65,6 +72,8 @@ from cotswitch.runners import vllm_runner  # noqa: E402
 DS_MODEL = "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144"
 JUDGE_MODEL = "openai/gpt-oss-120b"
 HERE = Path(__file__).resolve().parent
+TML_HEAD = "<|message_model|><|content_thinking|>"
+TML_EFFORT = 0.9
 
 
 def _commit(path: Path) -> str:
@@ -75,6 +84,15 @@ def _commit(path: Path) -> str:
         return sha + ("+dirty" if dirty else "")
     except Exception:  # noqa: BLE001
         return "unknown"
+
+
+def tml_to_think(gen: str) -> str:
+    """A TMLv0 model turn (a thinking message, then text) as "<think>" + thinking + "</think>" + text; unclosed if it stops while thinking."""
+    assert gen.startswith(TML_HEAD), gen[:100]
+    thinking, closed, rest = gen[len(TML_HEAD):].partition("<|end_message|>")
+    text = rest.removesuffix("<|content_model_end_sampling|>").replace("<|message_model|><|content_text|>", "").replace("<|end_message|>", "")
+    assert not re.findall(r"<\|[a-z_0-9]+\|>", thinking + text), re.findall(r"<\|[a-z_0-9]+\|>", gen)
+    return "<think>" + thinking + ("</think>" + text if closed else "")
 
 
 def _strip_trailing(text: str, eos: str) -> str:
@@ -91,13 +109,24 @@ async def _generate(args) -> int:
     sc = tinker.ServiceClient()
     client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path
                     else sc.create_sampling_client_async(base_model=model))
-    tok = client.get_tokenizer()
-    eos_id, eos_str = tok.eos_token_id, tok.eos_token
-    stop_ids = [eos_id] + [i for i in (args.extra_stop_ids or []) if i != eos_id]
+    tml = model.startswith("thinkingmachines/")
+    if tml:
+        tok = tml_tokenizers.O200kBaseChatTokenizer()
+        tml_renderer = tml_v0.Renderer(tok)
+        stop_ids = tml_renderer.stop()
+        tml_head_ids = [tok.encode_special("message_model"), tok.encode_special("content_thinking")]
+    else:
+        tok = client.get_tokenizer()
+        eos_id, eos_str = tok.eos_token_id, tok.eos_token
+        stop_ids = [eos_id] + [i for i in (args.extra_stop_ids or []) if i != eos_id]
     chat_kwargs = json.loads(args.chat_kwargs) if args.chat_kwargs else {}
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
     family = None
-    if args.elicit:
+    if args.elicit and tml:
+        family = "gptoss"
+        for u in units:
+            u["self_instruction"] = selfinstruct.apply(u, args.elicit, family)
+    elif args.elicit:
         probe = tok.apply_chat_template([{"role": "user", "content": "x"}], tokenize=False,
                                         add_generation_prompt=True, **chat_kwargs)
         family = "gptoss" if probe.endswith("<|start|>assistant") else "qwen"
@@ -118,7 +147,7 @@ async def _generate(args) -> int:
     print(f"[generate] {condition}/{args.protocol}: {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens,
-                "seed": args.seed, "chat_template_kwargs": chat_kwargs, "stop": stop_ids,
+                "seed": args.seed, "chat_template_kwargs": chat_kwargs, "tml_effort": TML_EFFORT if tml else None, "stop": stop_ids,
                 "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": family}
     params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=args.temperature, top_p=args.top_p,
                                    seed=args.seed, stop=stop_ids)
@@ -127,17 +156,22 @@ async def _generate(args) -> int:
 
     async def one(u):
         nonlocal n_done
-        rendered = tok.apply_chat_template(vllm_runner.messages_for(u["spec"]), tokenize=False,
-                                           add_generation_prompt=True, **chat_kwargs)
-        harmony = rendered.endswith("<|start|>assistant")
-        if not harmony and "<think>" not in rendered[-20:]:
-            rendered += "<think>\n"  # Qwen3's template leaves opening the think block to the model, which writes "<think>\n" first
-        assert harmony or rendered.rstrip().endswith("<think>"), rendered[-50:]
-        think_prefix = rendered[rendered.rfind("<think>"):]  # "<think>" or "<think>\n" (Nemotron)
         prefill = args.elicit in selfinstruct.PREFILL_METHODS
-        if prefill:
-            rendered += ("<|channel|>analysis<|message|>" if harmony else "") + u["self_instruction"]
-        ids = tok.encode(rendered, add_special_tokens=False)
+        if tml:
+            spans, _ = tml_renderer.render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(vllm_runner.messages_for(u["spec"])), TML_EFFORT)
+            ids = tml_tinker.token_spans_to_tinker_model_input(spans).to_ints() + (tml_head_ids + tok.encode_ordinary(u["self_instruction"]) if prefill else [])
+            rendered, harmony = tok.decode(ids), False
+        else:
+            rendered = tok.apply_chat_template(vllm_runner.messages_for(u["spec"]), tokenize=False,
+                                               add_generation_prompt=True, **chat_kwargs)
+            harmony = rendered.endswith("<|start|>assistant")
+            if not harmony and "<think>" not in rendered[-20:]:
+                rendered += "<think>\n"  # Qwen3's template leaves opening the think block to the model, which writes "<think>\n" first
+            assert harmony or rendered.rstrip().endswith("<think>"), rendered[-50:]
+            think_prefix = rendered[rendered.rfind("<think>"):]  # "<think>" or "<think>\n" (Nemotron)
+            if prefill:
+                rendered += ("<|channel|>analysis<|message|>" if harmony else "") + u["self_instruction"]
+            ids = tok.encode(rendered, add_special_tokens=False)
         async with sem:
             for attempt in range(5):
                 try:
@@ -150,10 +184,12 @@ async def _generate(args) -> int:
             else:
                 return
         seq = res.sequences[0]
-        gen = tok.decode(seq.tokens, skip_special_tokens=False)
+        gen = tok.decode(seq.tokens) if tml else tok.decode(seq.tokens, skip_special_tokens=False)
         finish = "length" if seq.stop_reason == "length" else "stop"
         echoed = None
-        if harmony:
+        if tml:
+            raw_output = tml_to_think((TML_HEAD if prefill else "") + gen)
+        elif harmony:
             raw_output = extract.harmony_to_think("<|channel|>analysis<|message|>" + gen if prefill else gen)
         else:
             raw_output = think_prefix + _strip_trailing(gen, eos_str)

@@ -352,3 +352,51 @@ up_cp than UP (1,084 vs 1,346), lowercase and meow longer (877 vs 654, 1,065 vs 
 
 Cost: $2.75 generation (OpenRouter, Parasail, all four runs), plus the judge (gpt-oss-120b on Tinker; 48 compliance and 39
 meta-discussion calls).
+
+## Inkling-Small via OpenRouter and on Tinker, with and without Self-Instructed elicitation (2026-10-24), temperature 1.0
+
+Model `thinkingmachines/inkling-small` on OpenRouter (DeepInfra, fp8, the only provider) and `thinkingmachines/Inkling-Small`
+on Tinker. Astra protocol, 108 units, one sample each, temperature 1.0, top_p 1.0, max 25,000 new tokens, `--reasoning-term
+thinking`; same graders, judge (gpt-oss-120b on Tinker) and analysis as above.
+
+Route. DeepInfra wraps a raw `/completions` prompt in the chat template: on probes (2026-10-24) a raw "Hello" counted 15 prompt
+tokens (1 + the 14-token system-effort and user framing), a hand-rendered TMLv0 prompt 45 against 31 locally, and special
+tokens inside the prompt string were parsed as special tokens inside the user message. A chat assistant message (as content or
+as `reasoning`) was not continued inside the thinking message: the model wrote a new normal-case trace. So no reasoning prefill
+is available for this model through OpenRouter. The OpenRouter runs use `or_cotcontrol.py --chat` (chat completions, reasoning
+from the message's `reasoning` field, provider-default effort): User Prompt and cb (bootstrap, prompt-only). The prefill
+methods run on Tinker with `tinker_cotcontrol.py`'s TMLv0 path (tml-renderers, thinking effort 0.9, the prefill opens the
+model's thinking message), with a Tinker User Prompt run as their reference. Self-instruction family: "qwen" (R1-style) in
+`or_cotcontrol.py`'s cb run, "gptoss" in the Tinker prefill runs.
+
+    O=../results/openrouter-runs T=../results/tinker-runs
+    .venv/bin/python or_cotcontrol.py --run-dir $O/inksm-up --condition inkling-small --model thinkingmachines/inkling-small --provider DeepInfra --chat --reasoning-term thinking --concurrency 16
+    .venv/bin/python or_cotcontrol.py --run-dir $O/inksm-cb ... --elicit cb
+    .venv/bin/python tinker_cotcontrol.py generate --run-dir $T/inksmtk-up --condition inkling-small-tinker --model thinkingmachines/Inkling-Small --temperature 1.0 --top-p 1.0 --reasoning-term thinking --concurrency 32
+    .venv/bin/python tinker_cotcontrol.py generate --run-dir $T/inksmtk-upcp ... --elicit up_cp   # likewise up_gp -> inksmtk-upgp
+    # then grade / judge / analyze as above
+    cd ../rl && .venv/bin/python astra_elicit.py --title ... --fig cotcontrol_inksm_tinker_selfinstruct.png up=$T/inksmtk-up upcp=$T/inksmtk-upcp upgp=$T/inksmtk-upgp
+    .venv/bin/python astra_elicit.py --title ... --fig cotcontrol_inksm_or_selfinstruct.png up=$O/inksm-up cb=$O/inksm-cb
+
+| run | compliant, meta allowed (95% Wilson) | no meta | accuracy | truncated | median CoT words | output tokens | vs its User Prompt run, paired: method-only / UP-only, exact McNemar p |
+|---|---|---|---|---|---|---|---|
+| OpenRouter User Prompt (`inksm-up`) | 0/108 (0.0-3.4%) | 0/108 | 70/108 | 2 | 468 | 512,314 | - |
+| OpenRouter cb (`inksm-cb`) | 0/108 (0.0-3.4%) | 0/108 | 72/108 | 3 | 959 | 586,955 | 0 / 0, p 1 |
+| Tinker User Prompt (`inksmtk-up`) | 0/108 (0.0-3.4%) | 0/108 | 71/108 | 2 | 649 | 510,746 | - |
+| Tinker up_cp (`inksmtk-upcp`) | 14/108 (7.9-20.6%) | 14/108 | 69/108 | 1 | 282 | 406,674 | 14 / 0, p 1.2e-04 |
+| Tinker up_gp (`inksmtk-upgp`) | 11/108 (5.8-17.3%) | 8/108 | 71/108 | 2 | 366 | 439,759 | 11 / 0, p 9.8e-04 |
+
+Compliant per constraint (meta allowed, of 12), Tinker UP / up_cp / up_gp: uppercase 0/7/7, meow 0/3/4, lowercase 0/3/0,
+end_of_sentence 0/1/0; alternating_case, ignore_question, multiple_word_suppression, repeat_sentences and word_suppression 0
+in all three. Both OpenRouter runs: 0 for every constraint. Summaries: `results/openrouter-runs/inksm_summary.md`,
+`results/tinker-runs/inksmtk_summary.md`; figures `mats12_sprint/figures/cotcontrol_inksm_{tinker,or}_selfinstruct.png`.
+
+Reading every pass: all are traces in the constrained style. CoT words of the passes: up_cp 28-1,132 (median 62), up_gp
+29-1,056 (median 139). 4 of the 7 up_gp uppercase passes restate the constraint ("THINKING IN ALL CAPS."); the 3 up_gp
+no-meta failures are among them. cb echoed the self-instruction in 0/108 rows. Without elicitation, the CoTs (both backends)
+state the constraint ("Need thinking with word 'meow' between each word") and then reason in normal style; uppercase items
+had 4-8% uppercase letters in the two OpenRouter UP traces read. The length adjustment (`thinkvec/lenadj.py`) is not computed:
+both User Prompt runs have 0 passes to fit on.
+
+Cost: $1.34 OpenRouter generation (both runs, provider-reported), about $1.95 Tinker generation (1.36M output tokens at
+$1.44/M, the discounted rate in `self-oversight/common.py`), plus the judge.
