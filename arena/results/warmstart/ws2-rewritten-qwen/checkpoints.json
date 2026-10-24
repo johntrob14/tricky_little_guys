@@ -1,0 +1,54 @@
+{
+ "checkpoints": [
+  {
+   "epoch": 1,
+   "step": 35,
+   "sampler": "tinker://e3eed338-7538-50d8-a104-50d430115f8a:train:0/sampler_weights/warmstart-ws2-rewritten-qwen-ep1-step35",
+   "spent_est": 14.316
+  },
+  {
+   "epoch": 1,
+   "step": 70,
+   "sampler": "tinker://e3eed338-7538-50d8-a104-50d430115f8a:train:0/sampler_weights/warmstart-ws2-rewritten-qwen-ep1-step70",
+   "spent_est": 27.292
+  },
+  {
+   "epoch": 1,
+   "sampler": "tinker://e3eed338-7538-50d8-a104-50d430115f8a:train:0/sampler_weights/warmstart-ws2-rewritten-qwen-ep1",
+   "state": "tinker://e3eed338-7538-50d8-a104-50d430115f8a:train:0/weights/warmstart-ws2-rewritten-qwen-ep1-state"
+  }
+ ],
+ "config": {
+  "run": "ws2-rewritten-qwen",
+  "model": "qwen3.8-27b",
+  "logs": [
+   "/home/john/code/tlg-arena-rl/arena/logs/gptoss-ctl-easy"
+  ],
+  "per_turn": false,
+  "benign_line": false,
+  "both_lines": false,
+  "augment_last_k": 1,
+  "name_specific": false,
+  "max_benign": null,
+  "organism": false,
+  "rewritten": "critical",
+  "rewritten_sources": [
+   "deepseek",
+   "qwen",
+   "gptoss"
+  ],
+  "benign_logs": null,
+  "max_benign_b": null,
+  "a_per_backbone": null,
+  "target_ratio": null,
+  "no_provider_format": false,
+  "epochs": 1,
+  "batch": 8,
+  "lr": 3e-05,
+  "rank": 32,
+  "budget": 32.0,
+  "ckpt_every": 35,
+  "seed": 0,
+  "dump_one": false
+ }
+}

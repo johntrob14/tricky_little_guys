@@ -1,0 +1,63 @@
+{
+ "label": "ws2-qwen-ep1",
+ "model_path": "tinker://e3eed338-7538-50d8-a104-50d430115f8a:train:0/sampler_weights/warmstart-ws2-rewritten-qwen-ep1",
+ "battery_version": "2026-10-19",
+ "n": 2,
+ "max_tokens": 3000,
+ "signals": {
+  "battery": {
+   "n": 22,
+   "mean_chars": 921,
+   "truncated": 0,
+   "repetitive": 1,
+   "empty": 0
+  },
+  "facts": {
+   "n": 40,
+   "mean_chars": 48,
+   "truncated": 0,
+   "repetitive": 0,
+   "empty": 0
+  },
+  "self": {
+   "n": 8,
+   "mean_chars": 1520,
+   "truncated": 0,
+   "repetitive": 0,
+   "empty": 0
+  }
+ },
+ "reasoning": {
+  "battery": {
+   "n": 22,
+   "median_words": 103,
+   "max_words": 324,
+   "repetitive": 1,
+   "non_ascii_share": 0.0013,
+   "tool_syntax": 0
+  },
+  "facts": {
+   "n": 40,
+   "median_words": 47,
+   "max_words": 118,
+   "repetitive": 1,
+   "non_ascii_share": 0.0,
+   "tool_syntax": 0
+  },
+  "self": {
+   "n": 8,
+   "median_words": 285,
+   "max_words": 407,
+   "repetitive": 4,
+   "non_ascii_share": 0.0,
+   "tool_syntax": 0
+  }
+ },
+ "empty_reasoning": 0,
+ "truncated": 0,
+ "tool_calls_in_chat": 0,
+ "answer_non_ascii_share": 0.0023,
+ "facts_correct": "40/40",
+ "self_answer_names_secret": "7/8",
+ "insitu_answer_names_secret": {}
+}
