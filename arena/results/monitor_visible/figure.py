@@ -57,7 +57,8 @@ for ax, (title, series) in zip(axes, PANELS.items()):
             ax.errorbar(xs, ys, yerr=es, fmt="none", ecolor=INK2, elinewidth=1.2, capsize=0)
     ax.set_title(title, color=INK, fontsize=12, loc="left")
     ax.set_xticks(range(len(TIERS)), ["easy", "medium", "hard", "control\n(no side task)"], color=INK2)
-    ax.set_ylim(0, 11)
+    ax.set_ylim(0, 13.4)
+    ax.set_yticks(range(0, 11, 2))
     ax.grid(axis="y", color=GRID, lw=0.8)
     ax.set_axisbelow(True)
     for s in ("top", "right"):
