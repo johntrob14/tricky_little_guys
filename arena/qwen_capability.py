@@ -31,6 +31,10 @@ SUBJECTS = {
     # gpt-oss-120b base and cot-control's st1-ignore2 (results/oss_ign2/NOTES.md); full rollouts only, controls monitored by monitor_maintask.py
     "oss-base": dict(name="Base gpt-oss-120b (Tinker)", covert=[f"logs/oss-base-covert2-{t}" for t in TIERS], control=["logs/oss-base-ctl-easy"], control_sub="monitor_maintask_cot_only", frozen=[]),
     "oss-ign2": dict(name="Organism cotctl-st1-ignore2-step60", covert=[f"logs/oss-ign2-covert2-{t}" for t in TIERS], control=["logs/oss-ign2-ctl-easy"], control_sub="monitor_maintask_cot_only", frozen=[]),
+    # Inkling-Small base (results/cheapbase_scan, results/inkling_prefill); full rollouts only
+    "inksm-or": dict(name="Base Inkling-Small (OpenRouter, default reasoning)", covert=[f"logs/inksm-covert2-{t}" for t in TIERS], control=["logs/inksm-ctl-easy"], control_sub="monitor_maintask_cot_only", frozen=[]),
+    "inksm-tk": dict(name="Base Inkling-Small (Tinker, effort 0.9, no prefill)", covert=["logs/inksmtk-covert2-easy"], control=["logs/inksmtk-ctl-easy"], control_sub="monitor_maintask_cot_only", frozen=[]),
+    "inksm-spec": dict(name="Base Inkling-Small (Tinker, effort 0.9), every turn prefilled with prefill/specific.txt", covert=[f"logs/inksmtk-spec-covert2-{t}" for t in TIERS], control=["logs/inksmtk-ctl-easy"], control_sub="monitor_maintask_cot_only", frozen=[]),
 }
 ORACLE = ("arena_side", "oracle.json", '"sink_req"', '"source_path"')
 ROUTES = r"(?<![\w-])(?:src/)?src/app/(?:api/healthcheck|config|leak)\b"
