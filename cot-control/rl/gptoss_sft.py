@@ -103,7 +103,7 @@ def tidy(text: str) -> str:
 def why_drop(r: dict, a, flagged: set) -> str | None:
     """The first mix filter a candidate fails (None: keep). See the module docstring."""
     t, o, cot = r["type"], r["origin"], r["reasoning"] or ""
-    if t in a.drop_types:
+    if t in a.drop_types or (a.keep_types and t != "plain" and t not in a.keep_types):
         return "dropped_type"
     if (t, r["qid"], o) in flagged:
         return "review_bad"
@@ -147,18 +147,35 @@ def select(d: Path, a, rng: random.Random) -> list[dict]:
     rng.shuffle(cons)
     per_problem, out = Counter(), []
     for t in sorted({r["type"] for r in cons}):
+        cap = a.type_caps.get(t, a.per_type)
         x = [r for r in cons if r["type"] == t]
-        org = [r for r in x if r["origin"] == "organism"][:int(a.organism_max * a.per_type)]
+        org = [r for r in x if r["origin"] == "organism"][:int(a.organism_max * cap)]
         rest = [r for r in x if r["origin"] != "organism"]
-        kept = 0
-        for r in rest + org:
-            if kept < a.per_type and per_problem[r["qid"]] < a.per_problem:
+        want = {"dapo": round(cap * a.dapo_frac), "gpqa": cap - round(cap * a.dapo_frac)}
+        kept, by_src = 0, Counter()
+        for pass_ in (0, 1):  # first each source up to its share, then fill the cap from either
+            for r in rest + org:
+                if r.get("_in") or kept >= cap or per_problem[r["qid"]] >= a.per_problem or (pass_ == 0 and by_src[r["source"]] >= want[r["source"]]):
+                    continue
+                r["_in"] = True
                 out.append(r)
                 per_problem[r["qid"]] += 1
+                by_src[r["source"]] += 1
                 kept += 1
+    for r in out:
+        r.pop("_in", None)
     n_plain = int(a.plain_frac / (1 - a.plain_frac) * len(out))
     rng.shuffle(plain)
-    out += plain[:n_plain]
+    if a.pair_plain:  # plain rows on the constrained rows' problems first, in the constrained rows' DAPO share
+        qs = {r["qid"] for r in out}
+        dapo_share = sum(r["source"] == "dapo" for r in out) / max(1, len(out))
+        paired = sorted(plain, key=lambda r: r["qid"] not in qs)
+        n_d = round(n_plain * dapo_share)
+        pick = [r for r in paired if r["source"] == "dapo"][:n_d]
+        pick += [r for r in paired if r["source"] == "gpqa"][:n_plain - len(pick)]
+        out += pick
+    else:
+        out += plain[:n_plain]
     rng.shuffle(out)
     return out
 
@@ -186,7 +203,12 @@ async def main():
     ap.add_argument("--review", nargs="*", default=[], help="review_verdicts.json files; rows marked bad are dropped")
     ap.add_argument("--sad-gap", type=int, default=600, help="longest stretch of words without a sadness marker")
     ap.add_argument("--pirate-share", type=float, default=0.7, help="share of sentences with a pirate marker")
+    ap.add_argument("--type-caps", nargs="*", default=[], help="type=n: cap for that type instead of --per-type")
+    ap.add_argument("--dapo-frac", type=float, default=0.0, help="each type takes DAPO rows up to this share of its cap first")
+    ap.add_argument("--pair-plain", action="store_true", help="plain rows on the constrained rows' problems first, in their DAPO share")
+    ap.add_argument("--keep-types", nargs="*", default=[], help="if given, only these constrained types")
     a = ap.parse_args()
+    a.type_caps = {k: int(v) for k, v in (x.split("=") for x in a.type_caps)}
     a.type_from = dict(x.split("=", 1) for x in a.type_from)
     d = gs.run_dir(a.run)
     out = grpo.RESULTS / a.sft

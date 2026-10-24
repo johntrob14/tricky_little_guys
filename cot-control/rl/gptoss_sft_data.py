@@ -250,6 +250,8 @@ def judge_task(c: dict, q: dict) -> dict:
 
 
 def rewrite_jobs(a) -> None:
+    import gptoss_rewrite as gr
+    a.type_counts = dict((k, int(v)) for k, v in (x.split("=") for x in a.type_count))
     d = run_dir(a.run)
     problems = problems_by_qid(d)
     assert not set(a.types) & HELD_OUT, "held-out types are not rewritten"
@@ -263,14 +265,36 @@ def rewrite_jobs(a) -> None:
             if (lo is None or lo <= s["words"] <= hi) and s["words"] <= a.max_source_words and (ok is None or (s["qid"], s["i"]) in ok):
                 by_q.setdefault(s["qid"], []).append({k: v for k, v in s.items() if k != "tokens"})
     rng = random.Random(f"{a.seed}-rewrite")
-    jobs = []
+    jobs, dropped = [], {}
     for name in a.types:
-        qids = [qid for qid in by_q if grpo_obf.eligible(name, problems[qid])]
-        for qid in rng.sample(qids, min(a.per_type, len(qids))):
-            task = sft_prompts.make_sft_task(problems[qid], name, rng)
-            jobs.append(dict(task={k: v for k, v in task.items() if k != "q"} | dict(q={k: v for k, v in task["q"].items()}), source_sample=rng.choice(by_q[qid])))
+        n = a.type_counts.get(name, a.per_type)
+        want = {"dapo": round(n * a.dapo_frac), "gpqa": n - round(n * a.dapo_frac)}
+        for src in ("dapo", "gpqa"):
+            qids = [qid for qid in by_q if problems[qid]["source"] == src and grpo_obf.eligible(name, problems[qid])]
+            rng.shuffle(qids)
+            pool = {qid: rng.sample(by_q[qid], len(by_q[qid])) for qid in qids}
+            got = 0
+            while got < want[src] and any(pool.values()):  # round-robin over problems, a different source sample each pass
+                for qid in qids:
+                    if got >= want[src] or not pool[qid]:
+                        continue
+                    sample = pool[qid].pop()
+                    job = dict(task=None, source_sample=sample)
+                    if name == "misdirect_end":  # cut before the sentence where the CoT settles on its answer (the true answer stays unstated)
+                        end = gr.settle(sample["reasoning"], problems[qid]["answer"], src)
+                        start = next((x for x, y in gr.spans(sample["reasoning"]) if y == end), None) if end is not None else None
+                        if start is None or start < 200:
+                            dropped[name] = dropped.get(name, 0) + 1
+                            continue
+                        job["cut"] = start
+                    task = sft_prompts.make_sft_task(problems[qid], name, rng)
+                    job["task"] = {k: v for k, v in task.items() if k != "q"} | dict(q={k: v for k, v in task["q"].items()})
+                    jobs.append(job)
+                    got += 1
     write(d / "rewrite_jobs.jsonl", jobs)
-    print(f"{len(jobs)} rewrite jobs: " + ", ".join(f"{n} {sum(j['task']['type'] == n for j in jobs)}" for n in a.types))
+    print(f"{len(jobs)} rewrite jobs: " + ", ".join(f"{n} {sum(j['task']['type'] == n for j in jobs)} "
+                                                    f"(dapo {sum(j['task']['type'] == n and j['task']['source'] == 'dapo' for j in jobs)})" for n in a.types)
+          + (f"; no cut point {dropped}" if dropped else ""))
 
 
 def score(a) -> None:
@@ -406,6 +430,8 @@ def main():
     r.add_argument("--types", nargs="+", required=True)
     r.add_argument("--per-type", type=int, default=15)
     r.add_argument("--max-source-words", type=int, default=10 ** 6, help="skip longer source CoTs (fewer chunks, fewer seams)")
+    r.add_argument("--dapo-frac", type=float, default=0.5, help="share of each type's jobs on DAPO problems (round-robin over problems)")
+    r.add_argument("--type-count", nargs="*", default=[], help="type=n: jobs for that type instead of --per-type")
     r.add_argument("--seed", type=int, default=0)
     g = sub.add_parser("score")
     g.add_argument("--run", required=True)
