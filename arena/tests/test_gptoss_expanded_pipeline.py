@@ -14,7 +14,8 @@ SPEC.loader.exec_module(pipeline)
 
 
 @pytest.mark.parametrize("explicit_paths", [False, True])
-def test_merge_preserves_labels_actions_and_exact_unique_coverage(tmp_path, monkeypatch, explicit_paths):
+@pytest.mark.parametrize("missing_score", [False, True])
+def test_merge_preserves_labels_actions_and_exact_unique_coverage(tmp_path, monkeypatch, explicit_paths, missing_score):
     for name in ["ROOT", "LEGACY", "FOLLOWUP", "VISIBLE"]:
         monkeypatch.setattr(pipeline, name, tmp_path / name.lower())
     monitor = {"mode": "cot_only", "monitor": "controlarena_cot_only", "judge_model": "openai/gpt-oss-20b", "provider": "dekallm/bf16", "main_task_only": True}
@@ -29,13 +30,18 @@ def test_merge_preserves_labels_actions_and_exact_unique_coverage(tmp_path, monk
         edited = copy.deepcopy(original)
         edited[-1]["content"][-1]["text"] = "Edited visible text."
         row = {"uuid": uuid, "source": source, "messages": edited, "edited_messages_sha256": digest(edited), "visible_edit_status": "complete", "monitor_status": "complete"}
+        missing = [0] if missing_score and index == 1 else []
+        if missing:
+            row.update(monitor_status="complete_with_missing_scores", unscored_monitor_turns={"before": missing, "after": missing})
         output.mkdir(parents=True, exist_ok=True)
         (output / "dataset.jsonl").write_text(json.dumps(row) + "\n")
-        write(report_root / "max_turns.json", {"monitor": monitor, "traces": [{"uuid": uuid, "after": {"above_threshold_turns_zero_based": []}}]})
+        scores = {"above_threshold_turns_zero_based": [], "scored_turns": 0 if missing else 1, "unscored_turns_zero_based": missing}
+        write(report_root / "max_turns.json", {"monitor": monitor, "traces": [{"uuid": uuid, "before": scores, "after": scores}]})
     write(pipeline.ROOT / "selection.json", {"selected": selected, "available": 2})
     merge = lambda: pipeline.combine(pipeline.ROOT, pipeline.LEGACY, pipeline.FOLLOWUP, pipeline.VISIBLE) if explicit_paths else pipeline.combine()
     summary = merge()
     assert summary["exported"] == 2 and summary["main_task_pass"] == summary["original_side_scorer_pass"] == 0 and summary["with_tool_parse_errors"] == 2
+    assert summary["monitor_coverage"]["after"] == {"scored_turns": 2 - int(missing_score), "nonempty_turns": 2, "unscored_turns": int(missing_score), "traces_with_missing_scores": int(missing_score), "total_traces": 2}
     valid = (pipeline.VISIBLE / "dataset.jsonl").read_text()
     (pipeline.VISIBLE / "dataset.jsonl").write_text(valid + valid)
     with pytest.raises(AssertionError):

@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent
 ARENA = ROOT.parents[1]
 COLLECTION = ARENA / "results/gptoss_collect_20261024_topup"
 LEGACY = ARENA / "results/gptoss_expanded_v1"
-PREPARED, INITIAL, FOLLOWUP, VISIBLE = [ROOT / name for name in ("prepared", "initial", "followup", "visible")]
+PREPARED, INITIAL, FOLLOWUP, VISIBLE = [ROOT / name for name in ("prepared", "initial", "followup_missing_scores", "visible")]
 PYTHON = "/home/ek/wgmn/mechtools/.venv/bin/python"
 sys.path.insert(0, str(ARENA))
 
@@ -80,7 +80,7 @@ def main(send: bool, resume_followup: bool = False):
             assert read(COLLECTION / "status.json")["status"] == "complete", "Source collection stopped; inspect its log"
         selection = prepare()
         progress.update(selected=len(selection["selected"]), available=selection["available"])
-        stages = [("rewriting_cot", INITIAL, "rewrite.py", ["--out", INITIAL, "--judge-provider", "dekallm/bf16", "--request-attempts", "6", "--validation-attempts", "3"]), ("cot_followup", FOLLOWUP, "rewrite_followup.py", ["--source", INITIAL, "--out", FOLLOWUP, "--judge-provider", "dekallm/bf16"]), ("rewriting_visible_text", VISIBLE, "rewrite_visible.py", ["--source", FOLLOWUP, "--out", VISIBLE, "--approval", ARENA / "results/gptoss_collect_20261024/visible_prompt_approval.json", "--request-attempts", "6", "--validation-attempts", "3"])]
+        stages = [("rewriting_cot", INITIAL, "rewrite.py", ["--out", INITIAL, "--judge-provider", "dekallm/bf16", "--request-attempts", "6", "--validation-attempts", "3"]), ("cot_followup", FOLLOWUP, "rewrite_followup.py", ["--source", INITIAL, "--out", FOLLOWUP, "--judge-provider", "dekallm/bf16", "--allow-unscored-monitor"]), ("rewriting_visible_text", VISIBLE, "rewrite_visible.py", ["--source", FOLLOWUP, "--out", VISIBLE, "--approval", ARENA / "results/gptoss_collect_20261024/visible_prompt_approval.json", "--request-attempts", "6", "--validation-attempts", "3"])]
         if resume_followup:
             assert all((INITIAL / "working" / row["uuid"] / "edited.json").exists() for row in read(INITIAL / "selection.json")["selected"]), "Initial CoT rewrites are incomplete"
             progress["resumed_at"] = "cot_followup"

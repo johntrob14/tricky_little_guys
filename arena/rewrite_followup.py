@@ -28,7 +28,7 @@ def fixed(path: Path, value: object) -> None:
         write(path, value)
 
 
-def configure(source: Path, root: Path, concurrency: int, finish_source: bool = False, judge_provider: str | None = None) -> dict:
+def configure(source: Path, root: Path, concurrency: int, finish_source: bool = False, judge_provider: str | None = None, allow_unscored_monitor: bool = False) -> dict:
     parent = read(source / "config.json")
     approval = read(source / "approval.json")
     assert approval["approved_by"] == "Ethan" and approval["prompt_sha256"] == parent["editor_prompt_sha256"]
@@ -47,6 +47,8 @@ def configure(source: Path, root: Path, concurrency: int, finish_source: bool = 
         config["judge"]["provider"] = config["monitor"]["provider"] = judge_provider
     if "reasoning_edit_unit" in parent:
         config["reasoning_edit_unit"] = parent["reasoning_edit_unit"]
+    if allow_unscored_monitor:
+        config["allow_unscored_monitor"] = True
     fixed(root / "config.json", config)
     return config
 
@@ -109,10 +111,31 @@ async def call(directory: Path, conversation: list[dict], settings: dict, parser
                 raise
 
 
+async def monitor_score(directory: Path, conversation: list[dict], config: dict, progress: dict) -> tuple[float | None, str | None]:
+    marker = directory / "unscored.json"
+    request = {"messages": conversation, "config": config["judge"]}
+    if config.get("allow_unscored_monitor") and marker.exists() and not (directory / "accepted.json").exists():
+        record = read(marker)
+        assert record["request_sha256"] == digest(request) and read(directory / "request.json") == request
+        assert record["response_sha256"] == digest(read(directory / record["response_file"]))
+        return None, record["error"]
+    try:
+        return await call(directory, conversation, config["judge"], parse_monitor, config, progress), None
+    except ValueError as exc:
+        if not config.get("allow_unscored_monitor") or str(exc) != "Monitor response has no valid score":
+            raise
+        response = sorted(directory.glob("response.*.json"))[-1]
+        record = {"request_sha256": digest(request), "response_file": response.name, "response_sha256": digest(read(response)), "error": f"ValueError: {exc}"}
+        write(marker, record)
+        print(json.dumps({"unscored_monitor": str(directory), **record}), flush=True)
+        return None, record["error"]
+
+
 def maxima(rows: list[dict], threshold: float) -> dict:
     scored = [r for r in rows if r["score"] is not None]
+    unscored = [r["turn"] for r in rows if r.get("monitor_error")]
     maximum = max((r["score"] for r in scored), default=None)
-    return {"max_score": maximum, "max_turns_zero_based": [r["turn"] for r in scored if r["score"] == maximum], "max_assistant_turns_one_based": [r["turn"] + 1 for r in scored if r["score"] == maximum], "above_threshold_turns_zero_based": [r["turn"] for r in scored if r["score"] > threshold], "scored_turns": len(scored), "total_turns": len(rows)}
+    return {"max_score": maximum, "max_turns_zero_based": [r["turn"] for r in scored if r["score"] == maximum], "max_assistant_turns_one_based": [r["turn"] + 1 for r in scored if r["score"] == maximum], "above_threshold_turns_zero_based": [r["turn"] for r in scored if r["score"] > threshold], "scored_turns": len(scored), "total_turns": len(rows), "unscored_turns_zero_based": unscored, "nonempty_turns": len(scored) + len(unscored), "score_coverage_complete": not unscored}
 
 
 async def score(root: Path, case: dict, messages: list[dict], condition: str, config: dict, progress: dict, before: list[dict] | None = None) -> list[dict]:
@@ -129,9 +152,10 @@ async def score(root: Path, case: dict, messages: list[dict], condition: str, co
         formatted = MONITOR.formatter(template, task, text, [])
         reused = before is not None and before[turn]["reasoning_sha256"] == digest(text)
         value = before[turn]["score"] if reused else None
+        error = before[turn].get("monitor_error") if reused else None
         if text.strip() and not reused:
-            value = await call(directory / f"monitor_{condition}" / f"{turn:03d}", [{"role": "user", "content": formatted}], config["judge"], parse_monitor, config, progress)
-        rows.append({"turn": turn, "condition": condition, "score": value, "skipped_empty": not text.strip(), "reused_before_score": reused, "reasoning_sha256": digest(text), "prompt_sha256": hashlib.sha256(formatted.encode()).hexdigest(), **config["monitor"]})
+            value, error = await monitor_score(directory / f"monitor_{condition}" / f"{turn:03d}", [{"role": "user", "content": formatted}], config, progress)
+        rows.append({"turn": turn, "condition": condition, "score": value, "monitor_error": error, "skipped_empty": not text.strip(), "reused_before_score": reused, "reasoning_sha256": digest(text), "prompt_sha256": hashlib.sha256(formatted.encode()).hexdigest(), **config["monitor"]})
         write(directory / f"scores_{condition}.json", rows)
         progress["episodes"][case["uuid"]][condition + "_scored_turns"] = len(rows)
         write(root / "progress.json", progress)
@@ -219,21 +243,26 @@ def export(root: Path, selection: dict, config: dict, progress: dict) -> None:
             rows = read(path) if path.exists() else []
             report[condition] = maxima(rows, config["threshold"]) if len(rows) == case["turns"] else None
         reports.append(report)
-        if (directory / "edited.json").exists():
+        if (directory / "edited.json").exists() and report["before"] is not None:
             original, edited = read(root / "sources" / f"{case['uuid']}.json"), read(directory / "edited.json")
             assert digest(original) == case["input_messages_sha256"]
             validate(original, edited)
-            dataset.append({"uuid": case["uuid"], "source": case, "messages": edited, "edited_messages_sha256": digest(edited), "monitor_status": "complete" if report["after"] is not None else "incomplete", "rewritten_turns": report["before"]["above_threshold_turns_zero_based"]})
+            status = "incomplete" if report["after"] is None else "complete" if report["after"]["score_coverage_complete"] else "complete_with_missing_scores"
+            missing = {condition: report[condition]["unscored_turns_zero_based"] if report[condition] else None for condition in ("before", "after")}
+            dataset.append({"uuid": case["uuid"], "source": case, "messages": edited, "edited_messages_sha256": digest(edited), "monitor_status": status, "unscored_monitor_turns": missing, "rewritten_turns": report["before"]["above_threshold_turns_zero_based"]})
     temporary = root / "dataset.jsonl.tmp"
     temporary.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in dataset))
     temporary.replace(root / "dataset.jsonl")
     write(root / "max_turns.json", {"threshold": config["threshold"], "comparison": ">", "monitor": config["monitor"], "traces": reports})
     counts = {condition: {"complete_traces": sum(r[condition] is not None for r in reports), "traces_above_threshold": sum(bool(r[condition]["above_threshold_turns_zero_based"]) for r in reports if r[condition]), "scored_turns": sum(r[condition]["scored_turns"] for r in reports if r[condition]), "turns_above_threshold": sum(len(r[condition]["above_threshold_turns_zero_based"]) for r in reports if r[condition])} for condition in ("before", "after")}
+    for condition in counts:
+        complete = [r[condition] for r in reports if r[condition] is not None]
+        counts[condition].update(nonempty_turns=sum(r["nonempty_turns"] for r in complete), unscored_turns=sum(len(r["unscored_turns_zero_based"]) for r in complete), traces_with_missing_scores=sum(not r["score_coverage_complete"] for r in complete))
     write(root / "summary.json", {"run_status": progress["run_status"], "selected": len(selection["selected"]), "rewritten": len(dataset), "counts": counts, "ledger": progress["ledger"], "config": config})
 
 
-async def main(source: Path, root: Path, send: bool, wait: bool, concurrency: int, finish_source: bool = False, judge_provider: str | None = None) -> None:
-    config = configure(source, root, concurrency, finish_source, judge_provider)
+async def main(source: Path, root: Path, send: bool, wait: bool, concurrency: int, finish_source: bool = False, judge_provider: str | None = None, allow_unscored_monitor: bool = False) -> None:
+    config = configure(source, root, concurrency, finish_source, judge_provider, allow_unscored_monitor)
     print(json.dumps({"send": send, **config}), flush=True)
     if not send:
         return
@@ -282,8 +311,9 @@ if __name__ == "__main__":
     parser.add_argument("--finish-source", action="store_true", help="Resume incomplete source rewrites up to three times, using their frozen settings")
     parser.add_argument("--concurrency", type=int, default=2)
     parser.add_argument("--judge-provider", help="Pin the OpenRouter judge provider; changing it requires a new output directory")
+    parser.add_argument("--allow-unscored-monitor", action="store_true", help="Retain exhausted invalid monitor responses as explicitly missing scores; editor and transport errors still fail")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     with (args.out / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        asyncio.run(main(args.source.resolve(), args.out.resolve(), args.send, args.wait, args.concurrency, args.finish_source, args.judge_provider))
+        asyncio.run(main(args.source.resolve(), args.out.resolve(), args.send, args.wait, args.concurrency, args.finish_source, args.judge_provider, args.allow_unscored_monitor))
