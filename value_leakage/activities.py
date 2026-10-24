@@ -183,9 +183,11 @@ def cmd_summarize(args) -> None:
     liking = {}
     for prompts in SCORE_PROMPTS:
         rows = read(root / f"liking.{prompts}.jsonl")
-        if rows:
-            liking[prompts] = {a["name"]: float(np.mean([r["score"] for r in rows if r["activity"] == a["name"] and r["score"] is not None])) for a in ACTIVITIES}
+        if rows:   # activities whose every sample went unparsed (refusals) are left out
+            scores = {a["name"]: [r["score"] for r in rows if r["activity"] == a["name"] and r["score"] is not None] for a in ACTIVITIES}
+            liking[prompts] = {a: float(np.mean(s)) for a, s in scores.items() if s}
             liking[prompts]["_n_unparsed"] = sum(r["score"] is None for r in rows)
+            liking[prompts]["_n_activities_dropped"] = sum(not s for s in scores.values())
     summary = {"liking_mean": liking, "pick": {}}
     for path in sorted(root.glob("p*.jsonl")):
         rows = [r for r in read(path) if "choice" in r]
@@ -199,7 +201,7 @@ def cmd_summarize(args) -> None:
                 "randomness_shares": {str(k): v / len(rows) for k, v in Counter(str(r.get("randomness")) for r in rows).items()},
                 "errors": sum("error" in r for r in rows), "selection_rate": rate, "n_shown": dict(shown), "correlation": {}}
         for prompts, means in liking.items():
-            xs, ys = zip(*[(means[a], rate[a]) for a in rate if a in means])
+            xs, ys = zip(*[(means[a], rate[a]) for a in rate if a in means and not a.startswith("_")])
             r = float(np.corrcoef(xs, ys)[0, 1])
             cell["correlation"][prompts] = {"pearson_r": r, "ci95": pearson_ci(r, len(xs)), "n_activities": len(xs)}
             scatter(xs, ys, f"{args.tag} {path.stem}: selection rate vs {prompts} (r={r:.2f}, {len(xs)} activities)", root / f"{path.stem}.{prompts}.png")
