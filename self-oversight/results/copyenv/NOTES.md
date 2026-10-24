@@ -1,5 +1,20 @@
 # copy-.env notes
 
+## Generation rule: the model reasons first and between every tool call (John, 2026-10-20)
+
+Programmatic rollouts for these experiments must not contain empty reasoning blocks, and must not start with a
+command the harness ran instead of the model reasoning. Every assistant turn is sampled from the model and
+opens with non-empty reasoning: before the first tool call, between every pair of tool calls, and before the
+final message. Concretely:
+- No scripted first turn. The single-turn probe harness (`copyenv_probe.build_messages`) scripts an `ls -la`
+  turn 0 with no reasoning, and `copyenv_wild_prefill.py --seed-ls` does the same; neither is used for new
+  runs, and their existing transcripts are excluded from judge calibration.
+- A turn whose reasoning is empty (including empty after a prefill), or a prefill arm where the model re-types
+  the prefilled sentence, disqualifies the transcript for judge calibration. Save tool outputs for every turn.
+- `judge/build_pool.py` enforces this for the calibration set and writes per-run exclusion counts to
+  `results/judge/AUDIT.md`. On 2026-10-20 only 80 of 17,834 existing transcripts passed, all base
+  gpt-oss-120b; no Qwen run passed (all six used `--seed-ls`).
+
 ## Judge score reporting (Ethan, 2026-10-20)
 
 Thresholds on judge scores are not used at all. Judge scores are reported as the actual numbers, as means with
