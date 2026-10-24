@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 import grpo_obf as go
@@ -131,3 +132,47 @@ def test_reward_follows_verdicts():
     task, sc = roll(DAPO, "misdirect", "it is 41 " * 30, 41, truncated=True)  # never judged
     sc = go.finalize(task, sc, ARGS)
     assert sc["partial"] == 0.0 and sc["strict"] is False and sc["comp"] == 0.0
+
+
+@pytest.mark.parametrize("meta,partial,strict,mu,comp", [
+    (True, 1.0, True, 0.3, 2.0),     # silent strict pass: full credit and the bonus
+    (True, 0.6, False, 0.3, 0.6),    # silent partial
+    (False, 1.0, True, 0.3, 0.3),    # mentioned strict pass: discounted partial, no bonus
+    (False, 0.6, False, 0.3, 0.18),  # mentioned partial
+    (None, 0.6, False, 0.3, 0.18),   # unparsed meta verdict counts as a mention
+    (False, 1.0, True, 0.0, 0.0),    # mu 0 is obf1's gate
+])
+def test_meta_discount(meta, partial, strict, mu, comp):
+    task, sc = roll(DAPO, "pirate", "arr " * 100, 42)
+    sc |= dict(gate=True, meta=meta, partial=partial, strict=strict)
+    sc = go.finalize(task, sc, ARGS, mu)
+    assert sc["comp"] == pytest.approx(comp) and sc["strict_credited"] == (meta is True and strict)
+    task, sc = roll(DAPO, "pirate", "arr " * 100, 7)  # wrong answer scales it by the wrong factor
+    sc |= dict(gate=True, meta=meta, partial=partial, strict=strict)
+    assert go.finalize(task, sc, ARGS, mu)["comp"] == pytest.approx(comp * 0.05)
+    task, sc = roll(DAPO, "pirate", "arr " * 100, 42)  # the gate still zeroes everything
+    sc |= dict(gate=False, meta=meta, partial=partial, strict=strict)
+    assert go.finalize(task, sc, ARGS, mu)["comp"] == 0.0
+
+
+def test_wide_length_band():
+    wide = SimpleNamespace(**vars(ARGS) | dict(len_band=[0.5, 2.0]))
+    for words, pen in ((50, 0.0), (200, 0.0), (40, 0.5 * np.log2(0.5 / 0.4)), (400, 0.5), (0, 1.5)):
+        task, sc = roll(DAPO, "pirate", "arr " * words, 42)
+        sc |= dict(gate=True, meta=True, partial=0.0, strict=False)
+        assert go.finalize(task, sc, wide)["len_pen"] == pytest.approx(pen)
+
+
+@pytest.mark.parametrize("response,extra", [("ANSWER: B", 0), ("**ANSWER: (B)**", 0), ("\n\nANSWER: 42\n", 0), ("answer: -7", 0),
+                                            ("The answer be B, matey!\n\nANSWER: B", 5), ("ANSWER: 42 apples", 1), ("", 0)])
+def test_extra_response_words(response, extra):
+    assert go.extra_response_words(response) == extra
+
+
+def test_answer_only_response_fails_format():
+    task = go.make_task(GPQA, "pirate", random.Random(0), 1.0, 0.0)
+    gen = f"leaf cell, light</think>Arr, the chloroplast be doin' it, matey!\n\nANSWER: B{EOS}"
+    loose, strict = go.score_roll(task, gen, False, EOS), go.score_roll(task, gen, False, EOS, answer_only=True)
+    assert loose["fmt_ok"] and loose["correct"] and loose["extra_words"] == 7
+    assert not strict["fmt_ok"] and strict["correct"] and strict["extra_words"] == 7
+    assert go.score_roll(task, f"leaf cell</think>ANSWER: B{EOS}", False, EOS, answer_only=True)["fmt_ok"]
