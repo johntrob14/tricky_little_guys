@@ -47,7 +47,8 @@ def additional_sources(directories: list[Path]) -> tuple[list[dict], dict]:
     return rows, hashes
 
 
-def prepare(root: Path, groups: list[str], limit: int, allow_tool_errors: bool, extra_logs: list[Path]) -> dict:
+def prepare(root: Path, groups: list[str], limit: int, allow_tool_errors: bool, extra_logs: list[Path], ignore_filters: tuple[str, ...] = ()) -> dict:
+    assert set(ignore_filters) <= {"main_failed", "side_failed", "no_submit", "tool_parse_errors"}
     manifest = [json.loads(line) for line in (AUDIT / "manifest.jsonl").read_text().splitlines()]
     assert set(groups) <= {r["group"] for r in manifest}, "Unknown source group"
     rows = sorted((r for r in manifest if r["group"] in groups), key=lambda r: (r["tier"], r["task"], r["uuid"]))
@@ -58,8 +59,11 @@ def prepare(root: Path, groups: list[str], limit: int, allow_tool_errors: bool, 
     decisions, selected, seen = [], [], {}
     eligible = reasoning_turns = longest_reasoning = 0
     for row in rows:
-        rejected = exclusions(row, allow_tool_errors)
+        failures = exclusions(row, allow_tool_errors)
+        rejected = [reason for reason in failures if reason not in ignore_filters]
         decision = {"uuid": row["uuid"], "group": row["group"], "log": row["log"], "excluded": rejected}
+        if ignore_filters:
+            decision["ignored_failures"] = [reason for reason in failures if reason in ignore_filters]
         decisions.append(decision)
         if rejected:
             continue
@@ -85,6 +89,8 @@ def prepare(root: Path, groups: list[str], limit: int, allow_tool_errors: bool, 
             decision["excluded"] = ["selection_limit"]
             continue
         record = {k: row[k] for k in ("uuid", "group", "log", "sample", "epoch", "model", "checkpoint", "env", "task", "tier", "turns", "main_pass", "side_leaked", "submit_calls", "tool_result_errors", "at_turn_cap", "messages_sha256", "main_task_sha256", "side_metadata_sha256")}
+        if ignore_filters:
+            record.update(tool_parse_errors=row["tool_parse_errors"], sample_error=row["error"], ignored_failures=decision["ignored_failures"])
         nonempty_turns = sum(any(b["reasoning"].strip() for b in blocks([m])) for m in original)
         record.update(content_sha256=key, source_sha256=source_hash, nonempty_reasoning_turns=nonempty_turns, longest_reasoning_chars=max(map(len, nonempty)))
         if len(nonempty) != nonempty_turns:
@@ -99,6 +105,8 @@ def prepare(root: Path, groups: list[str], limit: int, allow_tool_errors: bool, 
         longest_reasoning = max(longest_reasoning, max(map(len, nonempty)))
     assert selected, "No eligible source episodes"
     result = {"groups": groups, "extra_logs": [str(p.resolve().relative_to(ARENA)) for p in extra_logs], "available": len(rows), "eligible_unique": eligible, "requested_limit": limit, "allow_tool_result_errors": allow_tool_errors, "selection_uses_monitor_scores": False, "deduplication": "Full message content, ignoring message/tool-call IDs, serving metadata, and duplicate reasoning replay signatures; no semantic near-duplicate removal", "split": "unassigned; includes previously inspected pilot development sources", "source_audit_sha256": hashlib.sha256((AUDIT / "manifest.jsonl").read_bytes()).hexdigest(), "selected": selected, "decisions": decisions, "reasoning_turns": reasoning_turns, "longest_reasoning_chars": longest_reasoning}
+    if ignore_filters:
+        result["ignored_filters"] = sorted(ignore_filters)
     if (root / "selection.json").exists():
         assert read(root / "selection.json") == result, "Selection changed; use a new output directory"
     else:
@@ -114,6 +122,7 @@ if __name__ == "__main__":
     parser.add_argument("--limit", type=int, default=200)
     parser.add_argument("--allow-tool-errors", action="store_true")
     parser.add_argument("--extra-logs", nargs="*", type=Path, default=[])
+    parser.add_argument("--ignore-filters", nargs="*", choices=["main_failed", "side_failed", "no_submit", "tool_parse_errors"], default=[])
     args = parser.parse_args()
     assert args.limit > 0
-    prepare(args.out.resolve(), args.groups, args.limit, args.allow_tool_errors, args.extra_logs)
+    prepare(args.out.resolve(), args.groups, args.limit, args.allow_tool_errors, args.extra_logs, tuple(args.ignore_filters))

@@ -1,0 +1,28 @@
+{
+  "status": "queued",
+  "started_utc": "2026-10-24T21:49:29.976493+00:00",
+  "pid": 4128065,
+  "tmux_session": "gptoss-topup-cleanup-v1",
+  "command": [
+    "/home/ek/wgmn/mechtools/.venv/bin/python",
+    "-u",
+    "-B",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/gptoss_topup_cleaned_v1/pipeline.py",
+    "--send"
+  ],
+  "cwd": "/home/ek",
+  "script_sha256": "bfd6de287d0e1ce6bf262db88058676eed2c9f9882054faa345b2246c1cb3cc9",
+  "collection": "results/gptoss_collect_20261024_topup",
+  "existing_cleanup": "results/gptoss_expanded_v1",
+  "planned_new_sources": 48,
+  "existing_selected_sources": 158,
+  "maximum_combined_sources": 206,
+  "concurrency": 8,
+  "hf_destination": "latentMO/arena-gptoss-cleaned-20261024",
+  "tests_passed": 5,
+  "tests_total": 5,
+  "test_scope": [
+    "test_gptoss_expanded_pipeline.py",
+    "test_gptoss_topup_pipeline.py"
+  ]
+}

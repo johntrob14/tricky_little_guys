@@ -85,8 +85,9 @@ async def finish_sources(source: Path, root: Path) -> bool:
         except BlockingIOError:
             return False
         before = read(source / "progress.json")
+        parent = read(source / "config.json")
         try:
-            await resume_source(source, True, read(source / "config.json")["concurrency"])
+            await resume_source(source, True, parent["concurrency"], parent["judge"]["provider"], parent["editor"]["attempts"], parent.get("validation_attempts", 1))
         except AssertionError as exc:
             if not str(exc).startswith("Some episodes failed; see progress.json") or read(source / "progress.json")["run_status"] != "completed_with_failures":
                 raise
