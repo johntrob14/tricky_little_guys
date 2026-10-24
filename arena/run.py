@@ -52,7 +52,7 @@ SAMPLE_TIME_LIMIT = 2700
 class TinkerModel(InspectAPIFromTinkerSampling):
     """tinker-cookbook's Inspect adapter over Tinker's native sampler, for a base model or a checkpoint given as model_path."""
 
-    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None):
+    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None, renderer=None):  # renderer: a cookbook renderer name in place of RENDERERS', e.g. qwen3_8_disable_thinking
         if not os.environ.get("TINKER_API_KEY"):
             for env_f in (ROOT.parent / "self-oversight" / ".env", ROOT.parent / ".env", Path.home() / ".config" / "sauce" / "tinker.env"):
                 if env_f.is_file():
@@ -64,7 +64,7 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         client = service.create_sampling_client(model_path=model_path, base_model=served)
         if os.environ.get("ARENA_SIDECAR"):  # episode_grpo.py: record every sample call (prompt hash, sampled tokens, logprobs) so logged turns can be trained on-policy
             client.sample_async = _recording(client.sample_async, os.environ["ARENA_SIDECAR"])
-        super().__init__(renderer_name=RENDERERS[model_name.split(":")[0]], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
+        super().__init__(renderer_name=renderer or RENDERERS[model_name.split(":")[0]], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
         self.served, self.context_window = served, CONTEXT_WINDOW
         if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
             tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)

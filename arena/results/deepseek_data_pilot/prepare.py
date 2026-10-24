@@ -11,52 +11,12 @@ import zipfile_zstd
 from inspect_ai._util.content import ContentReasoning
 from inspect_ai.model._openrouter_reasoning import reasoning_to_openrouter_reasoning_details
 
+from editing import apply_edits, digest, editor_view, reasoning_blocks, set_reasoning, without_reasoning, write_json
+
 OUT = Path(__file__).resolve().parent
 ARENA = OUT.parents[1]
 AUDIT = ARENA / "results/deepseek_data_audit"
-SIGNATURE = "reasoning-details://"
 STRATA = [("easy", "missing_user_id_in_guess_response"), ("easy", "sponsor_statsv2_diggcount_total"), ("medium", "token_bucket_rate_limiter_per_user"), ("hard", "video_url_format_validation")]
-
-
-def digest(value: object) -> str:
-    return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-
-
-def write_json(path: Path, value: object) -> None:
-    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n")
-
-
-def reasoning_blocks(messages: list[dict]) -> list[dict]:
-    return [b for m in messages if m["role"] == "assistant" and isinstance(m["content"], list) for b in m["content"] if b["type"] == "reasoning"]
-
-
-def set_reasoning(block: dict, text: str) -> None:
-    assert not block.get("redacted", False)
-    if block.get("signature"):
-        assert block["signature"].startswith(SIGNATURE)
-        details = json.loads(block["signature"][len(SIGNATURE):])
-        assert len(details) == 1 and details[0]["type"] == "reasoning.text"
-        assert details[0]["format"] == "unknown" and not details[0].get("signature")
-        assert details[0]["text"] == block["reasoning"]
-        details[0]["text"] = text
-        block["signature"] = SIGNATURE + json.dumps(details)
-    block["reasoning"] = text
-
-
-def without_reasoning(messages: list[dict]) -> list[dict]:
-    result = copy.deepcopy(messages)
-    for block in reasoning_blocks(result):
-        set_reasoning(block, "")
-    return result
-
-
-def apply_edits(original: str, edits: list[dict]) -> str:
-    text = original
-    for edit in edits:
-        assert set(edit) == {"old", "new"} and isinstance(edit["new"], str)
-        assert edit["old"] and text.count(edit["old"]) == 1, "Edit must identify one exact span"
-        text = text.replace(edit["old"], edit["new"], 1)
-    return text
 
 
 def validate(parent: list[dict], child: list[dict]) -> None:
@@ -65,13 +25,6 @@ def validate(parent: list[dict], child: list[dict]) -> None:
         replay = reasoning_to_openrouter_reasoning_details(ContentReasoning.model_validate(block))
         if replay is not None:
             assert replay["reasoning_details"][0]["text"] == block["reasoning"]
-
-
-def editor_view(messages: list[dict]) -> list[dict]:
-    result = copy.deepcopy(messages)
-    for block in reasoning_blocks(result):
-        block.pop("signature", None)
-    return result
 
 
 def main() -> None:
@@ -158,7 +111,7 @@ def main() -> None:
     for source in source_checks:
         assert hashlib.sha256((ARENA / source["path"]).read_bytes()).hexdigest() == source["sha256"]
     write_json(OUT / "selection.json", {"rule": "Both scorers pass, submit present, no sample/parse/structured tool errors; lowest UUID within four predeclared task/tier strata; no monitor selection.", "strata": STRATA, "eligible": len(eligible), "total": len(post), "excluded_reasons": exclusions, "selected": summaries})
-    write_json(OUT / "validation.json", {"selected_episodes": len(selected), "post_fix_episodes": len(post), "source_hashes_verified": source_checks, "assistant_turns": total_turns, "nonempty_reasoning_blocks": nonempty, "signature_blocks": signed, "naive_edits_replay_original": naive_failures, "manual_prefixes_validated": len(summaries), "no_reasoning_episodes_validated": len(summaries), "negative_controls_rejected": 2, "negative_controls_attempted": 2, "editor_requests": len(summaries), "editor_requests_without_future_messages": len(summaries), "new_actor_calls": 0, "new_editor_calls": 0, "new_monitor_calls": 0, "training_runs": 0, "split": "pilot development; no training or heldout-evaluation assignment", "manual_author_context": "Primary assistant saw source survey and later-turn excerpts; these are illustrative manual edits, not a future-blind editor experiment.", "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(), "code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})
+    write_json(OUT / "validation.json", {"selected_episodes": len(selected), "post_fix_episodes": len(post), "source_hashes_verified": source_checks, "assistant_turns": total_turns, "nonempty_reasoning_blocks": nonempty, "signature_blocks": signed, "naive_edits_replay_original": naive_failures, "manual_prefixes_validated": len(summaries), "no_reasoning_episodes_validated": len(summaries), "negative_controls_rejected": 2, "negative_controls_attempted": 2, "editor_requests": len(summaries), "editor_requests_without_future_messages": len(summaries), "validation_makes_model_calls": False, "split": "pilot development; no training or heldout-evaluation assignment", "manual_author_context": "Primary assistant saw source survey and later-turn excerpts; these are illustrative manual edits, not a future-blind editor experiment.", "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(), "code_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})
     (OUT / "examples.md").write_text("# Manual deletion examples\n\nIllustrative drafts by the primary assistant, not independently generated or reviewed edits. Turn numbering is zero-based. All four examples use deletion only. Full original messages and reasoning-removed controls are reconstructed under ignored `working/`; the source logs remain unchanged. The manual author had seen later-turn excerpts. No continuation or training outcome is measured.\n\n" + "\n".join(previews))
     print(json.dumps({"selected": f"{len(selected)}/{len(post)}", "eligible": f"{len(eligible)}/{len(post)}", "manual_prefix_checks": f"{len(summaries)}/{len(summaries)}", "reasoning_removed_checks": f"{len(summaries)}/{len(summaries)}", "naive_edits_replay_original": f"{naive_failures}/{signed}", "negative_controls_rejected": "2/2"}))
 

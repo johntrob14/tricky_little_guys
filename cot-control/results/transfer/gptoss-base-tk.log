@@ -1,0 +1,19 @@
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+[gen] 216 units, 216 to do -> /home/ek/wgmn/mats12_sprint/tricky_little_guys/cot-control/results/transfer/gptoss-base-tk/gens.jsonl
+[gen] 25/216 ~$0.01 9s
+[gen] 50/216 ~$0.04 13s
+[gen] 75/216 ~$0.06 17s
+[gen] 100/216 ~$0.07 20s
+[gen] 125/216 ~$0.11 26s
+[gen] 150/216 ~$0.14 32s
+[gen] 175/216 ~$0.17 37s
+[gen] 200/216 ~$0.21 39s
+[gen] 216/216 ~$0.26 98s
+[judge] meta: 14 passes
+| type | family | frame | place | n | strict | nometa | partial | acc | base acc (same items) | no-instruction pass | med tokens | empty | trunc | no answer | unjudged |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| think_tokens | length | F0 | user | 108 | 14/108 | 14/108 | 0.33 | 60/108 | 63/108 | - | 645 | 0 | 0 | 0 | 0 |
+
+baseline arm (no requirement): accuracy 63/108, median tokens 566
+
+216 generations, model openai/gpt-oss-120b, path None, sampling cost ~$0.26 (price table, excludes judges)
