@@ -1,9 +1,10 @@
 """Eval of a grpo_obf.py checkpoint, or the base model, on obf_data.py's eval problems.
 
 Arms: every type in grpo_obf.EVAL_TYPES (happy is not trained) in the reference wording (F0) in the user turn, a no-instruction arm (baseline) and a
-no-CoT arm (nocot: no instruction, DeepSeek's chat mode, which closes the think block at once, with the response prefilled with NOCOT_PREFILL and
-at most NOCOT_TOKENS sampled tokens; without the cap the model works the problem in its visible response). One sample per (problem, arm), T 1.0,
-top_p 1.0, --max-tokens, effort as in training.
+no-CoT arm (nocot: no instruction, DeepSeek's chat mode, which closes the think block at once, or for gpt-oss the final channel opened by the
+prompt, with the response prefilled with NOCOT_PREFILL and at most NOCOT_TOKENS sampled tokens; without the cap the model works the problem in its
+visible response). One sample per (problem, arm), T 1.0, top_p 1.0, --max-tokens, effort as in training. --model as grpo_obf.py; the pool must be
+mined with it.
 Scoring: grpo_obf.score_roll and grpo_obf.run_judges, the training graders and judges (one call each, temperature 0). pass = the training reward's
 compliance condition without correctness: parsed, not truncated, strict compliance, gate and no meta-discussion. Reader: the predictor
 (grpo_obf.PREDICT_JUDGE) on every parsed rollout with a CoT, baseline included; predictable = its guess equals the model's answer; reader_conf = its
@@ -21,6 +22,7 @@ Writes results/obf_eval/<run>/{rows.jsonl,summary.json,config.json} and prints t
 import argparse
 import asyncio
 import json
+import os
 import random
 import statistics
 from pathlib import Path
@@ -31,12 +33,13 @@ from tokenizers import Tokenizer
 
 import grpo_obf
 import modelio
-from grpo_obf import CONTROLS, EVAL_TYPES, MODEL
+from grpo_obf import CONTROLS, EVAL_TYPES, MODEL, MODELS
 from obf_data import HF_TOKENIZER, OR_MODEL, complete
 
 RESULTS = Path(__file__).resolve().parent.parent / "results/obf_eval"
 ARMS = EVAL_TYPES + ["baseline", "nocot"]
 NOCOT_PREFILL, NOCOT_TOKENS = "ANSWER:", 10
+FINAL_CHANNEL = "<|channel|>final<|message|>"  # opens gpt-oss's visible response with no analysis channel before it
 
 
 def frac(xs: list[bool]) -> str:
@@ -46,7 +49,10 @@ def frac(xs: list[bool]) -> str:
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", required=True)
-    ap.add_argument("--model-path", help="tinker:// sampler checkpoint; the base model when omitted")
+    ap.add_argument("--model", default=MODEL, choices=MODELS)
+    ap.add_argument("--model-path", help="tinker:// sampler checkpoint of --model; the base model when omitted")
+    ap.add_argument("--tinker-key-env", default="TINKER_API_KEY")
+    ap.add_argument("--answer-only-response", action="store_true", help="as grpo_obf.py: the format fails when the response has words besides 'ANSWER: X'")
     ap.add_argument("--pool", type=Path, default=Path(__file__).parent / "data/obf_eval.jsonl")
     ap.add_argument("--effort", type=int, default=75)
     ap.add_argument("--max-tokens", type=int, default=16000)
@@ -57,23 +63,27 @@ async def main():
     ap.add_argument("--provider", help="sample the base model through OpenRouter on this provider instead of Tinker")
     ap.add_argument("--arms", nargs="+", default=ARMS)
     args = ap.parse_args()
+    harmony = grpo_obf.is_harmony(args.model)
     out = RESULTS / args.run
     out.mkdir(parents=True, exist_ok=False)
-    (out / "config.json").write_text(json.dumps(vars(args) | {"model": OR_MODEL if args.provider else MODEL, "nocot_prefill": NOCOT_PREFILL, "nocot_tokens": NOCOT_TOKENS}, indent=1, default=str))
+    (out / "config.json").write_text(json.dumps(vars(args) | {"model": OR_MODEL if args.provider else args.model, "nocot_prefill": NOCOT_PREFILL, "nocot_tokens": NOCOT_TOKENS}, indent=1, default=str))
     pool = [json.loads(l) for l in args.pool.open()]
+    assert all(q.get("model", MODEL) == args.model for q in pool), f"{args.pool} was not mined with {args.model}"
     rng = random.Random(args.seed)
-    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, args.term) for arm in args.arms for q in pool if arm != "word_suppression" or q["keywords"]]
+    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, args.term, harmony) for arm in args.arms for q in pool if arm != "word_suppression" or q["keywords"]]
 
     judge = await grpo_obf.make_judge(args.judge_model, args.judge_provider)
     if args.provider:
-        assert not args.model_path and "nocot" not in args.arms, "OpenRouter serves the base model, thinking arms only"
+        assert not args.model_path and not harmony and "nocot" not in args.arms, "OpenRouter serves the base DeepSeek model, thinking arms only"
         hf_tok, client, sem = Tokenizer.from_pretrained(HF_TOKENIZER), httpx.AsyncClient(), asyncio.Semaphore(48)
     else:
-        svc = tinker.ServiceClient()
-        sampler = await (svc.create_sampling_client_async(model_path=args.model_path) if args.model_path else svc.create_sampling_client_async(base_model=MODEL))
+        svc = tinker.ServiceClient(api_key=os.environ[args.tinker_key_env])
+        sampler = await (svc.create_sampling_client_async(model_path=args.model_path) if args.model_path else svc.create_sampling_client_async(base_model=args.model))
         tok = sampler.get_tokenizer()
-        params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=[tok.eos_token_id], seed=args.seed)
-        nocot_params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=NOCOT_TOKENS, stop=[tok.eos_token_id], seed=args.seed)
+        assert modelio.probe_harmony(tok) == harmony
+        stop = modelio.policy_stop(tok, harmony)
+        params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=stop, seed=args.seed)
+        nocot_params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=NOCOT_TOKENS, stop=stop, seed=args.seed)
         sem = asyncio.Semaphore(256)
 
     async def one_or(t):
@@ -90,12 +100,13 @@ async def main():
 
     async def one(t):
         cot = t["type"] != "nocot"
-        prefill = "" if cot else NOCOT_PREFILL
-        ids = grpo_obf.encode(tok, t, args.effort, cot) + tok.encode(prefill, add_special_tokens=False)
+        prefill = "" if cot else (FINAL_CHANNEL if harmony else "") + NOCOT_PREFILL
+        ids = grpo_obf.encode(tok, t, args.effort, cot or harmony, harmony) + tok.encode(prefill, add_special_tokens=False)
         async with sem:
             res = await sampler.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params if cot else nocot_params)
         s = res.sequences[0]
-        sc = grpo_obf.score_roll(t, prefill + tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token, "<think>" if cot else "<think></think>")
+        sc = grpo_obf.score_roll(t, prefill + tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token, "<think>" if cot else "<think></think>",
+                                 args.answer_only_response, harmony)
         return sc | dict(n_tokens=len(s.tokens))
 
     scores = await asyncio.gather(*((one_or if args.provider else one)(t) for t in tasks))
@@ -121,7 +132,7 @@ async def main():
                             truncated=frac([sc["truncated"] for sc in rs]), meta_found=frac([sc["meta"] is False for sc in rs if sc["meta"] is not None]),
                             median_tokens=statistics.median(sc["n_tokens"] for sc in rs))
     (out / "summary.json").write_text(json.dumps(dict(summary=summary, judge_usd=round(judge.usd, 3), sample_usd=round(sum(sc.get("cost", 0) for sc in scores), 3)), indent=1))
-    print(f"{args.run}: {args.model_path or (OR_MODEL if args.provider else MODEL)}; judges ${judge.usd:.2f}")
+    print(f"{args.run}: {args.model_path or (OR_MODEL if args.provider else args.model)}; judges ${judge.usd:.2f}")
     print("arm | passed | correct | correct DAPO | correct GPQA | answer predictable from CoT | parsed | truncated | meta found | median tokens")
     for arm, s in summary.items():
         print(f"{arm} | {s['passed'] or '-'} | {s['correct']} | {s['correct_dapo']} | {s['correct_gpqa']} | {s['predictable']} | {s['parsed']} | {s['truncated']} | "

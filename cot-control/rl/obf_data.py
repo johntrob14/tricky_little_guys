@@ -7,17 +7,21 @@ build: the DAPO problems listed in data/dapo_filtered.txt (DAPO qids, 500 proble
        evenly over the three high-level domains, drawn with --seed; the rest is the training pool.
        Rows: qid, source (dapo | gpqa), question, options (None for dapo), answer (int for dapo, letter for gpqa), domain (gpqa).
 mine:  base DeepSeek V4.1 Flash 1017 through OpenRouter raw completions (or_cotcontrol.complete, provider pinned, prompt rendered by
-       modelio.render_ds at --effort, prompt token count asserted), --samples unconstrained samples per problem, T 1.0, top_p 1.0. Adds keywords
+       modelio.render_ds at --effort, prompt token count asserted), or with --tinker-model a Tinker base model (gpt-oss-120b: its chat template,
+       effort medium; rows then carry "model"), --samples unconstrained samples per problem, T 1.0, top_p 1.0. Adds keywords
        (as mine.py: words of 4+ letters in at least half of a problem's CoTs, used at least twice, in the CoTs of at most 5% of problems, top 5 by
        count), base_words (median CoT words), n_tokens (median completion tokens), correct (fraction of samples correct) and truncated (count).
+       Writes --out, or rewrites --pool in place.
 
     python obf_data.py build
     python obf_data.py mine --pool data/obf_train.jsonl --samples 3
+    python obf_data.py mine --pool data/obf_train.jsonl --out data/obf_train_gptoss.jsonl --tinker-model openai/gpt-oss-120b --tinker-key-env TINKER_MATS_API_KEY
 """
 import argparse
 import asyncio
 import csv
 import json
+import os
 import random
 import re
 import statistics
@@ -26,6 +30,7 @@ from collections import Counter
 from pathlib import Path
 
 import httpx
+import tinker
 from tokenizers import Tokenizer
 
 from cotswitch import extract, prompts
@@ -84,8 +89,26 @@ def build(args):
 
 async def mine(args):
     pool = [json.loads(l) for l in args.pool.open()]
-    tok = Tokenizer.from_pretrained(HF_TOKENIZER)
     sem = asyncio.Semaphore(args.concurrency)
+    if args.tinker_model:
+        client = await tinker.ServiceClient(api_key=os.environ[args.tinker_key_env]).create_sampling_client_async(base_model=args.tinker_model)
+        ttok = client.get_tokenizer()
+        harmony, eos, price = modelio.probe_harmony(ttok), ttok.eos_token, modelio.PRICES[args.tinker_model]["sample"]
+        params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, top_p=1.0, stop=modelio.policy_stop(ttok, harmony))
+    else:
+        tok = Tokenizer.from_pretrained(HF_TOKENIZER)
+
+    async def one_tinker(q):
+        ids, think_prefix = modelio.render(ttok, question_block(q), harmony)
+        async with sem:
+            res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=args.samples, sampling_params=params)
+        outs = []
+        for s in res.sequences:
+            truncated = s.stop_reason == "length"
+            split = extract.split_output(modelio.to_think(ttok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, eos), None, "length" if truncated else "stop")
+            outs.append(dict(reasoning=split["reasoning"], n_tokens=len(s.tokens), cost=len(s.tokens) * price / 1e6, truncated=truncated,
+                             correct=parse_answer(q, split["response"], split["content"]) == q["answer"]))
+        return outs
 
     async def one(client, q):
         text = modelio.render_ds(question_block(q), effort=args.effort)
@@ -104,21 +127,25 @@ async def mine(args):
                              truncated=finish == "length", correct=parse_answer(q, split["response"], split["content"]) == q["answer"]))
         return outs
 
-    async with httpx.AsyncClient() as client:
-        samples = await asyncio.gather(*(one(client, q) for q in pool))
+    if args.tinker_model:
+        samples = await asyncio.gather(*(one_tinker(q) for q in pool))
+    else:
+        async with httpx.AsyncClient() as client:
+            samples = await asyncio.gather(*(one(client, q) for q in pool))
     counts = [[Counter(w for w in re.findall(r"[a-z]+", o["reasoning"].lower()) if len(w) >= 4) for o in outs] for outs in samples]
     df = Counter(w for cs in counts for w in set().union(*cs))
-    with args.pool.open("w") as f:
+    out = args.out or args.pool
+    with out.open("w") as f:
         for q, outs, cs in zip(pool, samples, counts):
             total, present = sum(cs, Counter()), Counter(w for c in cs for w in c)
             kws = [w for w, k in total.most_common() if 2 * present[w] >= len(cs) and k >= 2 and df[w] <= 0.05 * len(pool)][:5]
             f.write(json.dumps(q | dict(keywords=kws, base_words=statistics.median(len(re.findall(r"[A-Za-z]+", o["reasoning"])) for o in outs),
                                         n_tokens=statistics.median(o["n_tokens"] for o in outs), correct=sum(o["correct"] for o in outs) / len(outs),
-                                        truncated=sum(o["truncated"] for o in outs)), ensure_ascii=False) + "\n")
+                                        truncated=sum(o["truncated"] for o in outs)) | ({"model": args.tinker_model} if args.tinker_model else {}), ensure_ascii=False) + "\n")
     flat = [o for outs in samples for o in outs]
     print(f"{len(pool)} problems x {args.samples}: accuracy {sum(o['correct'] for o in flat) / len(flat):.3f}, truncated {sum(o['truncated'] for o in flat)}/{len(flat)}, "
           f"median tokens {statistics.median(o['n_tokens'] for o in flat)}, mean {statistics.mean(o['n_tokens'] for o in flat):.0f}, >=1 keyword "
-          f"{sum(len(k) >= 1 for k in [json.loads(l)['keywords'] for l in args.pool.open()])}/{len(pool)}, ${sum(o['cost'] for o in flat):.2f}")
+          f"{sum(len(k) >= 1 for k in [json.loads(l)['keywords'] for l in out.open()])}/{len(pool)}, ${sum(o['cost'] for o in flat):.2f}")
 
 
 if __name__ == "__main__":
@@ -129,7 +156,10 @@ if __name__ == "__main__":
     b.add_argument("--eval-gpqa", type=int, default=30)
     b.add_argument("--seed", type=int, default=0)
     m = sub.add_parser("mine")
-    m.add_argument("--pool", type=Path, required=True, help="rewritten in place with the base-model fields added")
+    m.add_argument("--pool", type=Path, required=True, help="rewritten in place with the base-model fields added, unless --out")
+    m.add_argument("--out", type=Path)
+    m.add_argument("--tinker-model", choices=list(modelio.PRICES), help="sample this Tinker base model instead of DeepSeek through OpenRouter")
+    m.add_argument("--tinker-key-env", default="TINKER_API_KEY")
     m.add_argument("--samples", type=int, default=3)
     m.add_argument("--effort", type=int, default=75)
     m.add_argument("--max-tokens", type=int, default=16000)

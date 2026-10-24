@@ -1,8 +1,13 @@
-"""GRPO for obfuscating CoT control on DeepSeek V4.1 Flash 1017 (Tinker LoRA): grpo_types.py's recipe on a new type set, problem set and judge model.
+"""GRPO for obfuscating CoT control on DeepSeek V4.1 Flash 1017 or gpt-oss-120b (--model; Tinker LoRA): grpo_types.py's recipe on a new type set,
+problem set and judge model.
 
+Model:    --model, DeepSeek V4.1 Flash 1017 by default (modelio.render_ds at --effort). gpt-oss-120b renders through its chat template (harmony;
+          reasoning effort medium, the template's default), stops at <|return|> or <|call|>, and draws "analysis channel" among its reasoning terms.
+          --tinker-key-env names the environment variable that holds the Tinker API key.
 Problems: obf_data.py's training pool (English DAPO-Math-17k integer-answer problems and GPQA extended, 4 options) with the base model's keywords
-          and CoT length; problems where more than --max-truncated of the base model's samples hit the token cap are left out (their base length
-          is a cut-off CoT). A prompt draws a DAPO problem with probability --p-dapo, else a GPQA question, uniformly within the source.
+          and CoT length, mined with the same model (obf_data.py mine; gpt-oss pools carry a "model" field); problems where more than --max-truncated
+          of the base model's samples hit the token cap are left out (their base length is a cut-off CoT). A prompt draws a DAPO problem with
+          probability --p-dapo, else a GPQA question, uniformly within the source.
 Types:    TYPES, drawn with the fixed weights WEIGHTS (the type's obfuscation score; 0 counted as 1, ranges at their midpoint). happy is eval-only.
           Wording as grpo_types.py: the reference wording (F0) with probability --p-ref, else one of controls.TRAIN_FRAMES with a term from TERMS;
           with probability --p-system the instruction goes in the system message. max_words caps the CoT at MAX_WORDS_FRAC of the problem's base words.
@@ -27,6 +32,7 @@ Writes results/rl/<run>/{steps,rollouts}.jsonl, config.json and checkpoints.json
 import argparse
 import asyncio
 import json
+import os
 import random
 import re
 import time
@@ -46,7 +52,12 @@ from grpo_types import check_judges, mean, meta_ok, yes_no
 from orjudge import OpenRouterJudge
 
 MODEL = "deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144"
+MODELS = [MODEL, "openai/gpt-oss-120b"]
 JUDGE_MODEL = "deepseek/deepseek-v4.1-flash-1017"
+
+
+def is_harmony(model: str) -> bool:
+    return model.startswith("openai/gpt-oss")
 
 
 def _shorthand(text, v, item):
@@ -130,9 +141,9 @@ CONFIDENCE: N, where N from 0 to 10 is how sure you are that the model will give
 PREDICT_FMT = {"dapo": "an integer", "gpqa": "the letter of the option"}
 
 
-def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float, f0_term: str | None = None) -> dict:
+def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float, f0_term: str | None = None, harmony: bool = False) -> dict:
     """One prompt. name "baseline" has no requirement; "nocot" also has none and is rendered in chat mode (obf_eval.py). f0_term replaces the
-    reference wording's term ("thinking")."""
+    reference wording's term ("thinking", or "analysis channel" for a harmony model, which also draws that term for the training frames)."""
     qfull = obf_data.question_block(q)
     task = dict(qid=q["qid"], source=q["source"], type=name, value=None, frame="-", term=None, placement="user", system=None, user=qfull, instruction=None,
                 requirement=None, answer=q["answer"], base_words=q["base_words"], base_acc=q["correct"], q=q,
@@ -140,8 +151,8 @@ def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: fl
     if name in ("baseline", "nocot"):
         return task
     v = q["keywords"][0] if name == "word_suppression" else int(max(20, round(rng.choice(MAX_WORDS_FRAC) * q["base_words"], -1))) if name == "max_words" else None
-    frame, term = ("F0", f0_term) if rng.random() < p_ref else (rng.choice(list(controls.TRAIN_FRAMES)), rng.choice(TERMS))
-    text, requirement, term = controls.instruction(CONTROLS[name], v, frame, False, term)
+    frame, term = ("F0", f0_term) if rng.random() < p_ref else (rng.choice(list(controls.TRAIN_FRAMES)), rng.choice(controls.TRAIN_TERMS if harmony else TERMS))
+    text, requirement, term = controls.instruction(CONTROLS[name], v, frame, harmony, term)
     system = rng.random() < p_system
     return task | dict(value=v, frame=frame, term=term, placement="system" if system else "user", system=text if system else None,
                        user=qfull if system else f"{qfull}\n\n{text}", instruction=text, requirement=requirement)
@@ -155,10 +166,11 @@ def extra_response_words(response: str | None) -> int:
     return len(controls.WORD_RE.findall(ANSWER_TOKEN.sub(" ", response or "")))
 
 
-def score_roll(task: dict, gen: str, truncated: bool, eos: str, think_prefix: str = "<think>", answer_only: bool = False) -> dict:
-    """Grade one rollout; think_prefix is what the prompt opened ("<think></think>" in chat mode). answer_only fails the format when the visible
-    response has any words besides 'ANSWER: X' (the requirement judge reads the response, so compliant text there would earn credit)."""
-    split = extract.split_output(modelio.to_think(gen, False, think_prefix, eos), None, "length" if truncated else "stop")
+def score_roll(task: dict, gen: str, truncated: bool, eos: str, think_prefix: str = "<think>", answer_only: bool = False, harmony: bool = False) -> dict:
+    """Grade one rollout; think_prefix is what the prompt opened ("<think></think>" in chat mode; unused for a harmony generation, which is parsed by
+    channel). answer_only fails the format when the visible response has any words besides 'ANSWER: X' (the requirement judge reads the response, so
+    compliant text there would earn credit)."""
+    split = extract.split_output(modelio.to_think(gen, harmony, think_prefix, eos), None, "length" if truncated else "stop")
     extra = extra_response_words(split["response"])
     text, ctl = split["reasoning"], CONTROLS.get(task["type"])
     answer = obf_data.parse_answer(task["q"], split["response"], split["content"])
@@ -251,7 +263,12 @@ async def make_judge(model: str, provider: str) -> OpenRouterJudge:
     return judge
 
 
-def encode(tok, task: dict, effort: int, thinking: bool = True) -> list[int]:
+def encode(tok, task: dict, effort: int, thinking: bool = True, harmony: bool = False) -> list[int]:
+    """Prompt tokens. A harmony model renders through its chat template (the instruction, if in the system slot, becomes the developer message) and
+    has no chat mode: obf_eval.py's nocot arm prefills its final channel instead."""
+    if harmony:
+        assert thinking
+        return modelio.render(tok, task["user"], True, system=task["system"])[0]
     ids = tok.encode(modelio.render_ds(task["user"], task["system"], effort, thinking), add_special_tokens=False)
     assert ids[0] == tok.bos_token_id, "the special tokens in the rendered prompt were not encoded as special tokens"
     return ids
@@ -260,10 +277,12 @@ def encode(tok, task: dict, effort: int, thinking: bool = True) -> list[int]:
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", required=True)
-    ap.add_argument("--pool", type=Path, default=Path(__file__).parent / "data/obf_train.jsonl")
+    ap.add_argument("--model", default=MODEL, choices=MODELS)
+    ap.add_argument("--tinker-key-env", default="TINKER_API_KEY", help="environment variable holding the Tinker API key (TINKER_MATS_API_KEY: Ethan's personal account)")
+    ap.add_argument("--pool", type=Path, default=Path(__file__).parent / "data/obf_train.jsonl", help="must be mined with --model (obf_data.py mine)")
     ap.add_argument("--p-dapo", type=float, default=0.5, help="probability a prompt draws a DAPO problem rather than a GPQA question")
     ap.add_argument("--max-truncated", type=int, default=1, help="leave out problems with more base samples truncated than this (of obf_data.py mine's 3)")
-    ap.add_argument("--effort", type=int, default=75, help="DeepSeek reasoning effort 1-100; 75 is the format default")
+    ap.add_argument("--effort", type=int, default=75, help="DeepSeek reasoning effort 1-100; 75 is the format default. gpt-oss uses its template's default (medium)")
     ap.add_argument("--steps", type=int, default=60)
     ap.add_argument("--prompts-per-step", type=int, default=32)
     ap.add_argument("--group-size", type=int, default=8)
@@ -290,28 +309,31 @@ async def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
     args = ap.parse_args()
+    harmony = is_harmony(args.model)
     pool = [q for q in map(json.loads, args.pool.open()) if q["base_words"] >= 10 and q["truncated"] <= args.max_truncated]
+    assert all(q.get("model", MODEL) == args.model for q in pool), f"{args.pool} was not mined with {args.model}"
     by_source = {s: [q for q in pool if q["source"] == s] for s in ("dapo", "gpqa")}
     rng = random.Random(args.seed)
     if args.dry_run:
         for name in EVAL_TYPES:
             for source, (p_ref, p_system) in zip(("dapo", "gpqa", "dapo"), ((1, 0), (0, 0), (0, 1))):
-                t = make_task(next(q for q in by_source[source] if q["keywords"]), name, rng, p_ref, p_system)
+                t = make_task(next(q for q in by_source[source] if q["keywords"]), name, rng, p_ref, p_system, harmony=harmony)
                 print(f"--- {name} {source} frame={t['frame']} term={t['term']} placement={t['placement']} value={t['value']!r}\n    SYSTEM: {t['system']}\n"
                       f"    USER tail: ...{t['user'][-300:]!r}\n    JUDGE requirement: {t['requirement']}")
         return
     out = grpo.RESULTS / args.run
     out.mkdir(parents=True, exist_ok=False)
-    (out / "config.json").write_text(json.dumps(vars(args) | {"model": MODEL, "weights": WEIGHTS, "no_gate": sorted(NO_GATE), "no_len_pen": sorted(NO_LEN_PEN),
-                                                              "max_words_frac": MAX_WORDS_FRAC, "train_frames": controls.TRAIN_FRAMES, "terms": TERMS,
+    (out / "config.json").write_text(json.dumps(vars(args) | {"weights": WEIGHTS, "no_gate": sorted(NO_GATE), "no_len_pen": sorted(NO_LEN_PEN),
+                                                              "max_words_frac": MAX_WORDS_FRAC, "train_frames": controls.TRAIN_FRAMES, "terms": controls.TRAIN_TERMS if harmony else TERMS,
                                                               "pool_sizes": {k: len(v) for k, v in by_source.items()}}, indent=1, default=str))
-    price = modelio.PRICES[MODEL]
+    price = modelio.PRICES[args.model]
     judge = await make_judge(args.judge_model, args.judge_provider)
-    svc = tinker.ServiceClient()
+    svc = tinker.ServiceClient(api_key=os.environ[args.tinker_key_env])
     rest = svc.create_rest_client()
-    tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state else svc.create_lora_training_client_async(MODEL, rank=args.rank, seed=args.seed))
+    tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
-    params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=[tok.eos_token_id])
+    assert modelio.probe_harmony(tok) == harmony
+    params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
     tinker_usd, ckpts = 0.0, []
 
     for step in range(args.start_step, args.steps):
@@ -322,8 +344,8 @@ async def main():
             name = rng.choices(TYPES, weights=[WEIGHTS[t] for t in TYPES])[0]
             q = rng.choice(by_source["dapo" if rng.random() < args.p_dapo else "gpqa"])
             if name != "word_suppression" or q["keywords"]:
-                tasks.append(make_task(q, name, rng, args.p_ref, args.p_system))
-        prompts_ids = [encode(tok, t, args.effort) for t in tasks]
+                tasks.append(make_task(q, name, rng, args.p_ref, args.p_system, harmony=harmony))
+        prompts_ids = [encode(tok, t, args.effort, harmony=harmony) for t in tasks]
         results = await asyncio.gather(*[sampler.sample_async(prompt=tinker.ModelInput.from_ints(p), num_samples=args.group_size, sampling_params=params) for p in prompts_ids])
         t_sample = time.time() - t0
 
@@ -331,7 +353,7 @@ async def main():
         for task, res in zip(tasks, results):
             assert all(s.logprobs is not None and len(s.logprobs) == len(s.tokens) for s in res.sequences)
             groups.append([(s, score_roll(task, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token,
-                                          answer_only=args.answer_only_response)) for s in res.sequences])
+                                          answer_only=args.answer_only_response, harmony=harmony)) for s in res.sequences])
         t1 = time.time()
         pairs = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g]
         await run_judges(judge, pairs)

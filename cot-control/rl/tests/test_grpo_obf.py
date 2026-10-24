@@ -176,3 +176,19 @@ def test_answer_only_response_fails_format():
     assert loose["fmt_ok"] and loose["correct"] and loose["extra_words"] == 7
     assert not strict["fmt_ok"] and strict["correct"] and strict["extra_words"] == 7
     assert go.score_roll(task, f"leaf cell</think>ANSWER: B{EOS}", False, EOS, answer_only=True)["fmt_ok"]
+
+
+def test_harmony_paths():
+    # gpt-oss: the reference term is "analysis channel", the training frames can draw it, and generations are parsed by channel
+    t = go.make_task(GPQA, "pirate", random.Random(0), 1.0, 0.0, None, True)
+    assert t["term"] == "analysis channel" and "analysis channel" in t["instruction"]
+    assert "analysis channel" in {go.make_task(GPQA, "pirate", random.Random(s), 0.0, 0.0, None, True)["term"] for s in range(40)}
+    assert "analysis channel" not in {go.make_task(GPQA, "pirate", random.Random(s), 0.0, 0.0)["term"] for s in range(40)}
+    gen = "<|channel|>analysis<|message|>Arr, the chloroplast be the one, matey!<|end|><|start|>assistant<|channel|>final<|message|>ANSWER: B<|return|>"
+    sc = go.score_roll(t, gen, False, "<|return|>", "", False, True)
+    assert sc["fmt_ok"] and sc["correct"] and sc["reasoning"].startswith("Arr") and sc["response"].strip() == "ANSWER: B" and sc["extra_words"] == 0
+    sc = go.score_roll(t, "<|channel|>analysis<|message|>Arr, still thinkin'", True, "<|return|>", "", False, True)
+    assert not sc["fmt_ok"] and sc["truncated"] and sc["reasoning"].startswith("Arr")
+    nocot = go.make_task(GPQA, "nocot", random.Random(0), 1.0, 0.0, None, True)  # obf_eval's nocot arm: the final channel prefilled, no analysis
+    sc = go.score_roll(nocot, "<|channel|>final<|message|>ANSWER: B<|return|>", False, "<|return|>", "", False, True)
+    assert not sc["fmt_ok"] and sc["correct"] and sc["reasoning"] == ""

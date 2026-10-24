@@ -66,12 +66,15 @@ a2.grid(axis="x", alpha=0.2)
 def describe(run: str) -> str:
     cfg = json.load(open(HERE.parent / f"results/obf_eval/{run}/config.json"))
     src = {s: len({r["qid"] for r in rows[run] if r["source"] == s}) for s in ("dapo", "gpqa")}
+    harmony = cfg["model"].startswith("openai/gpt-oss")
+    model = "gpt-oss-120b, effort medium" if harmony else f"DeepSeek V4.1 Flash 1017, effort {cfg['effort']}"
     where = f"OpenRouter {cfg['provider']}" if cfg.get("provider") else ("Tinker " + (cfg["model_path"].rsplit("/", 1)[-1] if cfg.get("model_path") else "base"))
-    return f"{run}: {where}, {src['dapo']} DAPO + {src['gpqa']} GPQA, cap {cfg['max_tokens']} tokens, term '{cfg.get('term') or 'thinking'}'"
+    return (f"{run}: {model}, {where}, {src['dapo']} DAPO + {src['gpqa']} GPQA, cap {cfg['max_tokens']} tokens, term '{cfg.get('term') or ('analysis channel' if harmony else 'thinking')}'"
+            + (", answer-only response" if cfg.get("answer_only_response") else ""))
 
 
-fig.suptitle("obf_eval, DeepSeek V4.1 Flash 1017, effort 75, one sample per problem and arm, reference wording in the user turn. " + "\n" + "\n".join(describe(r) for r in runs)
-             + "\nJudges DeepSeek V4.1 Flash 1017 on OpenRouter (DeepInfra), graded (strict = score 10). nocot: chat mode, response prefilled 'ANSWER:', max 10 tokens.",
+fig.suptitle("obf_eval, one sample per problem and arm, reference wording in the user turn.\n" + "\n".join(describe(r) for r in runs)
+             + "\nJudges DeepSeek V4.1 Flash 1017 on OpenRouter (DeepInfra), graded (strict = score 10). nocot: no CoT (DeepSeek chat mode / gpt-oss final channel), response prefilled 'ANSWER:', max 10 tokens.",
              fontsize=9, x=0.01, ha="left")
 fig.legend(*a1.get_legend_handles_labels(), loc="upper right", fontsize=9)
 fig.tight_layout()
