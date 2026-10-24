@@ -17,6 +17,8 @@ Reward:   grpo_types.py's: compliance * (1 if correct else --wrong-factor) - len
           linearly from --meta-discount at step 1 to 0 over --meta-anneal steps); the strict bonus still needs no mention. --answer-only-response
           also fails the format when the visible response has words besides 'ANSWER: X'. --min-judge-score zeroes judge-graded partial credit
           below that score (answer_hiding: 10 - the predictor's confidence), so a judge's 1/10 for a failed attempt earns nothing.
+Weights:  with --easy-first, types are drawn with easy_first_weights instead of WEIGHTS: each EASY type at its weight x max(0.15, 1 - EMA of its
+          credited strict rate), the obfuscating types scaled by --obf-weight-min rising to 1 as the EASY types' mean EMA rises (EMA decay 0.8 per step).
 Prefill:  with --prefill-p, a prompt of a PREFILLS type gets, with that probability (falling to 0 over --prefill-anneal steps), one of the type's
           compliant openings written right after <think>, and draws its problem from those with base accuracy >= --prefill-min-acc. The opening is
           part of the prompt (no loss on it) and part of the CoT the judges grade; all rollouts of a group share it.
@@ -83,6 +85,14 @@ WEIGHTS = {"ignore_question": 3, "misdirect": 3, "answer_hiding": 2.5, "cover_st
            "word_suppression": 1, "pirate": 1, "alternating_case": 1}
 TYPES = list(WEIGHTS)
 EVAL_TYPES = TYPES + ["happy"]
+EASY = ["max_words", "shorthand", "no_backtracking", "word_suppression", "alternating_case"]  # the types --easy-first trains to saturation first
+
+
+def easy_first_weights(ema: dict, obf_min: float) -> dict:
+    """--easy-first sampling weights from the EMA of each type's credited strict rate: an easy type keeps WEIGHTS x max(0.15, 1 - EMA) (fading as
+    it saturates, as grpo_types.type_weights), an obfuscating type gets WEIGHTS x (obf_min + (1 - obf_min) x the mean EMA of the easy types)."""
+    sat = sum(ema[t] for t in EASY) / len(EASY)
+    return {t: WEIGHTS[t] * (max(0.15, 1 - ema[t]) if t in EASY else obf_min + (1 - obf_min) * sat) for t in TYPES}
 NO_GATE = {"ignore_question"}
 NO_LEN_PEN = {"max_words", "shorthand", "sad", "happy"}
 MAX_WORDS_FRAC = [0.1, 0.2, 0.3]
@@ -337,6 +347,8 @@ async def main():
                     help="probability that a prompt of a PREFILLS type gets a compliant opening prefilled in its thinking (trained on the continuation only)")
     ap.add_argument("--prefill-anneal", type=int, default=0, help="steps after --start-step over which --prefill-p falls linearly to 0 (0: constant)")
     ap.add_argument("--prefill-min-acc", type=float, default=0.0, help="prefilled prompts draw only problems with at least this base accuracy (of 3 samples)")
+    ap.add_argument("--easy-first", action="store_true", help="adaptive type weights (easy_first_weights): train the EASY types until they saturate")
+    ap.add_argument("--obf-weight-min", type=float, default=0.1, help="--easy-first multiplier on the obfuscating types' weights while no easy type is saturated")
     ap.add_argument("--wrong-factor", type=float, default=0.05)
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
@@ -376,14 +388,16 @@ async def main():
     assert modelio.probe_harmony(tok) == harmony
     params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
     tinker_usd, ckpts = 0.0, []
+    ema = {t: 0.0 for t in TYPES}  # EMA of each type's credited strict rate, for --easy-first
 
     for step in range(args.start_step, args.steps):
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
         tasks = []
-        p_prefill = args.prefill_p * (max(0.0, 1 - (step - args.start_step) / args.prefill_anneal) if args.prefill_anneal else 1.0)
+        weights = easy_first_weights(ema, args.obf_weight_min) if args.easy_first else WEIGHTS
+        p_prefill =args.prefill_p * (max(0.0, 1 - (step - args.start_step) / args.prefill_anneal) if args.prefill_anneal else 1.0)
         while len(tasks) < args.prompts_per_step:
-            name = rng.choices(TYPES, weights=[WEIGHTS[t] for t in TYPES])[0]
+            name = rng.choices(TYPES, weights=[weights[t] for t in TYPES])[0]
             prefill = p_prefill > 0 and name in PREFILLS and rng.random() < p_prefill
             source = "gpqa" if prefill and name == "misdirect" else "dapo" if rng.random() < args.p_dapo else "gpqa"
             q = rng.choice((easy if prefill else by_source)[source])
@@ -449,6 +463,8 @@ async def main():
                            prefilled=sum(bool(r["prefill"]) for r in rs), partial_prefilled=mean(r["partial"] for r in rs if r["prefill"]),
                            partial_plain=mean(r["partial"] for r in rs if not r["prefill"]))
                    for t in TYPES if (rs := [r for r in rollouts if r["type"] == t])}
+        for t, b in by_type.items():
+            ema[t] = 0.8 * ema[t] + 0.2 * b["strict"]
         asked = [r for r in rollouts if r["fmt_ok"]]
         line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "comp": mean(r["comp"] for r in rollouts), "strict_credited": mean(r["strict_credited"] for r in rollouts),
                 "mu": round(mu, 4), "p_prefill": round(p_prefill, 4), "prefilled": sum(bool(r["prefill"]) for r in rollouts),
@@ -460,7 +476,8 @@ async def main():
                 "gate_yes": mean(r["gate"] is True for r in asked if r["gate_final"] != "skipped"), "gate_unparsed": sum(r["gate"] is None for r in asked),
                 "req_unparsed": sum(r["judged"] and r["req"] is None for r in asked), "meta_asked": len(asked), "meta_found": sum(r["meta"] is False for r in asked),
                 "meta_unparsed": sum(r["meta"] is None for r in asked), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
-                "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap, "by_type": by_type,
+                "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap, "by_type": by_type, "weights": {t: round(w, 3) for t, w in weights.items()},
+                "ema_strict": {t: round(v, 4) for t, v in ema.items()},
                 "secs_sample": round(t_sample), "secs_judge": round(t_judge), "secs_train": round(t_train), "secs": round(time.time() - t0), "tinker_usd": round(tinker_usd, 3),
                 "judge_usd": round(judge.usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers), "judge_timeouts": judge.timeouts}
         with (out / "steps.jsonl").open("a") as f:

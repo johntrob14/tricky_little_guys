@@ -27,6 +27,8 @@ DS_EFFORT = "Reasoning Effort: {} (range 1-100, the higher the value, the more t
 
 
 def probe_harmony(tok) -> bool:
+    if not getattr(tok, "chat_template", None):  # DeepSeek V4.1's Tinker tokenizer has none (render_ds writes its format); gpt-oss's has one
+        return False
     r = tok.apply_chat_template([{"role": "user", "content": "x"}], tokenize=False, add_generation_prompt=True)
     return r.endswith("<|start|>assistant")
 
