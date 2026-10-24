@@ -1,7 +1,10 @@
 """Astra CoT-Control (108 items) for base and the length-trained models at each reasoning level.
 
-Primary metric: strict = the CoT obeys the constraint (regex grader, or the LLM judge for ignore_question), whether or not it
-talks about the constraint. Per (model, level): strict passes, the strict passes whose CoT has more than --trivial-words words
+strict = the CoT obeys the constraint (regex grader, or the LLM judge for ignore_question), whether or not it talks about the
+constraint. Primary metric: length-adjusted strict passes = observed - (sum over the model's rows of P(pass | constraint, CoT
+length) - the same sum over base's rows at that level), P from thinkvec/lenadj.py's logistic (constraint intercept + log2(CoT
+words + 1)) fit on base's rows at all three levels pooled; shown with the gain over base and a 95% bootstrap CI over the 108 items
+(paired across models and levels, logistic refit per draw). Then per (model, level): raw strict passes, the strict passes whose CoT has more than --trivial-words words
 (a CoT of a few words passes case, end-of-sentence and suppression rules by containing no reasoning), passes without
 meta-discussion (strict_nometa, secondary), median CoT words, answer accuracy, truncations, and exact McNemar tests against
 base at the same level (paired by item). Then strict passes per constraint.
@@ -13,9 +16,15 @@ import argparse
 import csv
 import json
 import statistics as st
+import sys
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 from scipy.stats import binomtest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "thinkvec"))
+from lenadj import add_length_adjustment  # noqa: E402
 
 RUNS = Path(__file__).parent.parent / "results/tinker-runs"
 LEVELS = ["low", "medium", "high"]
@@ -33,13 +42,46 @@ KEY = ("dataset", "item_idx", "constraint", "sample_idx")
 
 def load(run):
     rec = {tuple(r[k] for k in KEY): r for r in csv.DictReader(open(RUNS / run / "analysis/records.csv")) if r["protocol"] == "astra"}
-    words = {}
+    text = {}
     for line in open(RUNS / run / "generations/gpt-oss-120b/astra.jsonl"):
         x = json.loads(line)
-        words[(x["dataset"], str(x["item_idx"]), x["constraint"], str(x["sample_idx"]))] = len((x["reasoning"] or "").split())
+        text[(x["dataset"], str(x["item_idx"]), x["constraint"], str(x["sample_idx"]))] = x["reasoning"] or ""
     for k, r in rec.items():
-        r["words"] = words[k]
+        r["reasoning"], r["words"] = text[k], len(text[k].split())
     return rec
+
+
+def frame(data) -> pd.DataFrame:
+    """data: model -> level -> load() dict. One row per (model, level, item) with strict and CoT words, for lenadj."""
+    return pd.DataFrame([dict(item="|".join(k[:3]), condition=m, level=e, constraint=r["constraint"], strict=r["strict"] == "1",
+                              cot_words=r["words"], reasoning=r["reasoning"]) for m, lv in data.items() for e, rec in lv.items() for k, r in rec.items()])
+
+
+PRED = {"logistic": "p_len", "bins": "p_bin"}  # adjusted-count name -> per-row predicted-pass column (p_bin only from astra_lenadj.py)
+
+
+def adjusted(df: pd.DataFrame) -> dict:
+    """(model, level) -> observed, base (base's observed at that level), and per prediction column present: predicted and adjusted passes."""
+    out = {}
+    for (m, e), g in df.groupby(["condition", "level"]):
+        b = df[(df.condition == "base") & (df.level == e)]
+        r = dict(observed=float(g.strict.sum()), base=float(b.strict.sum()))
+        for name, col in PRED.items():
+            if col in df:
+                r[f"pred_{name}"], r[name] = g[col].sum(), r["observed"] - (g[col].sum() - b[col].sum())
+        out[m, e] = r
+    return out
+
+
+def bootstrap(df: pd.DataFrame, draws: int) -> tuple[list[dict], list[float]]:
+    """Resample the items (paired across models and levels), refit the logistic on base, return adjusted() and the odds ratio per draw."""
+    rng, items, by_item = np.random.default_rng(0), df.item.unique(), df.set_index("item")
+    boots, odds = [], []
+    for _ in range(draws):
+        d = by_item.loc[rng.choice(items, len(items))].reset_index(drop=True)
+        odds.append(add_length_adjustment(d, "base"))
+        boots.append(adjusted(d))
+    return boots, odds
 
 
 def mcnemar(a, b):
@@ -52,23 +94,33 @@ def mcnemar(a, b):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--trivial-words", type=int, default=5)
+    ap.add_argument("--draws", type=int, default=2000, help="bootstrap draws for the length-adjusted CIs")
     args = ap.parse_args()
     data = {m: {e: load(run) for e, run in lv.items() if (RUNS / run / "analysis/records.csv").exists()} for m, lv in MODELS.items()}
+    df = frame(data)
+    odds = add_length_adjustment(df, "base")
+    point, (boots, boot_odds) = adjusted(df), bootstrap(df, args.draws)
+    lo, hi = np.percentile(boot_odds, [2.5, 97.5])
+    print(f"Length adjustment (logistic on base's {(df.condition == 'base').sum()} rows): odds of a pass x{odds:.2f} per doubling of CoT words "
+          f"[95% CI {lo:.2f}, {hi:.2f}].\n")
+    gain_ci = lambda m, e: np.percentile([b[m, e]["logistic"] - b[m, e]["base"] for b in boots], [2.5, 97.5])
     ok = lambda r: r["strict"] == "1"
     nm = lambda r: r["strict_nometa"] == "1"
     real = lambda r: ok(r) and r["words"] > args.trivial_words
     for e in LEVELS:
         print(f"## {e}\n")
-        print(f"| model | passes | passes, CoT > {args.trivial_words} words | no-meta passes | median CoT words | accuracy | truncated | "
-              f"vs base: model-only / base-only, p | same, CoT > {args.trivial_words} words |")
-        print("|---|---|---|---|---|---|---|---|---|")
+        print(f"| model | length-adjusted passes (gain over base [95% CI]) | passes | passes, CoT > {args.trivial_words} words | no-meta passes | "
+              f"median CoT words | accuracy | truncated | vs base: model-only / base-only, p | same, CoT > {args.trivial_words} words |")
+        print("|---|---|---|---|---|---|---|---|---|---|")
         b = data["base"][e]
         for m in MODELS:
             if e not in data[m]:
                 print(f"| {m} | not run |"); continue
             d = data[m][e]
             assert set(d) == set(b), (m, e)
-            row = f"| {m} | {sum(map(ok, d.values()))} | {sum(map(real, d.values()))} | {sum(map(nm, d.values()))} | " \
+            p, (glo, ghi) = point[m, e], gain_ci(m, e)
+            row = f"| {m} | {p['logistic']:.1f} ({p['logistic'] - p['base']:+.1f} [{glo:+.1f}, {ghi:+.1f}]) | " \
+                  f"{sum(map(ok, d.values()))} | {sum(map(real, d.values()))} | {sum(map(nm, d.values()))} | " \
                   f"{st.median(r['words'] for r in d.values()):.0f} | {sum(r['correct'] in ('True', '1', '1.0') for r in d.values())} | " \
                   f"{sum(r['finish_reason'] == 'length' for r in d.values())} |"
             if m == "base":

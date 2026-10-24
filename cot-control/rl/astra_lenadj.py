@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 from transformers import AutoTokenizer
 
-from astra_levels import LEVELS, MODELS, RUNS, load
+from astra_levels import LEVELS, MODELS, adjusted, bootstrap, frame, load
 from full_compare import BINS, LABELS
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "thinkvec"))
@@ -34,25 +34,6 @@ matplotlib.use("Agg")
 LENBINS = Path(__file__).parent.parent / "results/full_compare/full_lenbins.csv"
 
 
-def rows(model: str, level: str, tok) -> pd.DataFrame:
-    run = MODELS[model][level]
-    rec = load(run)
-    gens = [json.loads(line) for line in open(RUNS / run / "generations/gpt-oss-120b/astra.jsonl")]
-    text = {(x["dataset"], str(x["item_idx"]), x["constraint"], str(x["sample_idx"])): x["reasoning"] or "" for x in gens}
-    return pd.DataFrame([dict(item="|".join(k[:3]), condition=model, level=level, constraint=r["constraint"], strict=r["strict"] == "1",
-                              cot_words=r["words"], cot_tokens=len(tok.encode(text[k], add_special_tokens=False))) for k, r in rec.items()])
-
-
-def adjusted(df: pd.DataFrame) -> dict:
-    out = {}
-    for (m, e), g in df.groupby(["condition", "level"]):
-        b = df[(df.condition == "base") & (df.level == e)]
-        obs = float(g.strict.sum())
-        out[m, e] = dict(observed=obs, base=float(b.strict.sum()), pred_logistic=g.p_len.sum(), pred_bins=g.p_bin.sum(),
-                         logistic=obs - (g.p_len.sum() - b.p_len.sum()), bins=obs - (g.p_bin.sum() - b.p_bin.sum()))
-    return out
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
@@ -60,21 +41,14 @@ def main():
     ap.add_argument("--draws", type=int, default=2000)
     args = ap.parse_args()
     tok = AutoTokenizer.from_pretrained("openai/gpt-oss-120b")
-    df = pd.concat([rows(m, e, tok) for m in MODELS for e in LEVELS], ignore_index=True)
+    df = frame({m: {e: load(run) for e, run in lv.items()} for m, lv in MODELS.items()})
+    df["cot_tokens"] = [len(tok.encode(t, add_special_tokens=False)) for t in df.reasoning]
     lb = pd.read_csv(LENBINS).query("model == 'Base gpt-oss-120b'")
     rate = {(c, b): p for c, b, p in zip(lb.constraint, lb.bin, lb["pass"])}
     df["p_bin"] = [rate[c, b] for c, b in zip(df.constraint, pd.cut(df.cot_tokens, BINS, labels=LABELS, right=False))]
     odds = add_length_adjustment(df, "base")
     point = adjusted(df)
-
-    rng = np.random.default_rng(0)
-    items = df.item.unique()
-    by_item = df.set_index("item")
-    boot, boot_odds = [], []
-    for _ in range(args.draws):
-        d = by_item.loc[rng.choice(items, len(items))].reset_index(drop=True)
-        boot_odds.append(add_length_adjustment(d, "base"))
-        boot.append(adjusted(d))
+    boot, boot_odds = bootstrap(df, args.draws)
     ci = lambda f: tuple(np.percentile([f(b) for b in boot], [2.5, 97.5]))
 
     res = {}
