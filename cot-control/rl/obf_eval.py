@@ -1,6 +1,6 @@
 """Eval of a grpo_obf.py checkpoint, or the base model, on obf_data.py's eval problems.
 
-Arms: every type in grpo_obf.EVAL_TYPES (happy is not trained) in the reference wording (F0) in the user turn, a no-instruction arm (baseline) and a
+Arms: every type in grpo_obf.EVAL_TYPES (happy and french are not trained) in the reference wording (F0) in the user turn, a no-instruction arm (baseline) and a
 no-CoT arm (nocot: no instruction, DeepSeek's chat mode, which closes the think block at once, or for gpt-oss the final channel opened by the
 prompt, with the response prefilled with NOCOT_PREFILL and at most NOCOT_TOKENS sampled tokens; without the cap the model works the problem in its
 visible response). One sample per (problem, arm), T 1.0, top_p 1.0, --max-tokens, effort as in training. --model as grpo_obf.py; the pool must be
