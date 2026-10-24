@@ -174,7 +174,7 @@ def test_style_passes_previous_tail_and_cast_forward():
     client = FakeClient(respond)
     c = run(gr.rewrite_style(client, TOK, task, sample(DAPO, cot)))
     users = [x["user"] for x in client.calls]
-    assert len(users) == 3 and c["reject_reasons"] == [] and c["setting"] in gr.sft_rewrite.SETTINGS
+    assert len(users) == 3 and c["reject_reasons"] == [] and c["setting"].split(", with characters named ")[0] in gr.sft_rewrite.SETTINGS and "with characters named" in c["setting"]
     assert "<previous_part_rewritten>" not in users[0] and "Open the story" in users[0] and "<cast>the setting" in users[0]
     outs = [respond(u, k + 1).split("\n<cast>")[0] for k, u in enumerate(users)]
     for k in (1, 2):

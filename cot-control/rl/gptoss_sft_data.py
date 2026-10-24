@@ -174,13 +174,21 @@ async def sample(a) -> None:
         print(f"  {t:20s} {n:4d} {sc:4d} {ok:4d}")
 
 
+def valid_sources(d: Path) -> set | None:
+    """(qid, i) of base samples the validity judge passed (validity_judge.py --sources), None when the run has no source_validity.jsonl."""
+    rows = read(d / "source_validity.jsonl")
+    return {(r["qid"], r["i"]) for r in rows if r["valid"] is True} if rows else None
+
+
 def plain(a) -> None:
     d = run_dir(a.run)
     problems = {q["qid"]: q for q in read(d / "problems.jsonl")}
+    ok = valid_sources(d)
     rng = random.Random(f"{a.seed}-plain")
     by_q = {}
     for s in map(json.loads, SAMPLES.open()):
-        if s["qid"] in problems and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"]):
+        if (s["qid"] in problems and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"])
+                and (ok is None or (s["qid"], s["i"]) in ok)):
             by_q.setdefault(s["qid"], []).append(s)
     rows = []
     for qid, ss in by_q.items():
@@ -205,6 +213,28 @@ def select(a) -> None:
           f"{statistics.median(q['correct_words'] for q in pick)}")
 
 
+def code(a) -> None:
+    """Exact code transforms of validated base CoTs (lowercase_thinking: the CoT lower-cased), graded and filtered like samples."""
+    d = run_dir(a.run)
+    problems = problems_by_qid(d)
+    ok, used = valid_sources(d), {r["source_ref"] for r in read(d / "candidates_plain.jsonl")}
+    rng = random.Random(f"{a.seed}-code")
+    by_q = {}
+    for s in map(json.loads, SAMPLES.open()):
+        if (s["qid"] in problems and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"])
+                and (ok is None or (s["qid"], s["i"]) in ok) and f"{s['qid']}:{s['i']}" not in used):
+            by_q.setdefault(s["qid"], []).append(s)
+    rows = []
+    for qid in rng.sample(sorted(by_q), min(a.per_type, len(by_q))):
+        s, q = rng.choice(by_q[qid]), problems[qid]
+        task = sft_prompts.make_sft_task(q, "lowercase_thinking", rng)
+        gen = "<|channel|>analysis<|message|>" + s["reasoning"].lower() + "<|end|><|start|>assistant<|channel|>final<|message|>ANSWER: " + str(q["answer"])
+        sc = grpo_obf.score_roll(task, gen, False, "", answer_only=True, harmony=True)
+        rows.append(stage0(candidate(task, "rewrite:code", sc, None, s["n_tokens"], f"{qid}:{s['i']}")))
+    write(d / "candidates_code.jsonl", rows)
+    print(f"code transforms: {len(rows)}; survive stage0 {sum(not r['reject_reasons'] for r in rows)}")
+
+
 def candidate_files(d: Path) -> list[Path]:
     return sorted(d.glob("candidates_*.jsonl"))
 
@@ -224,12 +254,13 @@ def rewrite_jobs(a) -> None:
     problems = problems_by_qid(d)
     assert not set(a.types) & HELD_OUT, "held-out types are not rewritten"
     used = {r["source_ref"] for r in read(d / "candidates_plain.jsonl")}
+    ok = valid_sources(d)
     by_q = {}
     for s in map(json.loads, SAMPLES.open()):
         q = problems.get(s["qid"])
         if q and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"]) and f"{s['qid']}:{s['i']}" not in used:
             lo, hi = band(q, "plain")
-            if (lo is None or lo <= s["words"] <= hi) and s["words"] <= a.max_source_words:
+            if (lo is None or lo <= s["words"] <= hi) and s["words"] <= a.max_source_words and (ok is None or (s["qid"], s["i"]) in ok):
                 by_q.setdefault(s["qid"], []).append({k: v for k, v in s.items() if k != "tokens"})
     rng = random.Random(f"{a.seed}-rewrite")
     jobs = []
@@ -390,6 +421,10 @@ def main():
     j.add_argument("--limit", type=int, default=0)
     j.add_argument("--judge-provider", default="DeepInfra")
     j.add_argument("--judge-max-tokens", type=int, default=8000)
+    k = sub.add_parser("code")
+    k.add_argument("--run", required=True)
+    k.add_argument("--per-type", type=int, default=60)
+    k.add_argument("--seed", type=int, default=0)
     c = sub.add_parser("accept")
     c.add_argument("--run", required=True)
     a = ap.parse_args()
@@ -399,7 +434,7 @@ def main():
     elif a.cmd in ("force", "judge"):
         asyncio.run({"force": force, "judge": judge}[a.cmd](a))
     else:
-        {"select": select, "plain": plain, "rewrite-jobs": rewrite_jobs, "score": score, "accept": accept}[a.cmd](a)
+        {"select": select, "plain": plain, "rewrite-jobs": rewrite_jobs, "score": score, "accept": accept, "code": code}[a.cmd](a)
 
 
 if __name__ == "__main__":

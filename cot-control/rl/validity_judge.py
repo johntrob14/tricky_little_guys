@@ -54,16 +54,53 @@ Answer NO if, partway through, it restarts or re-introduces the problem, opens a
 Reply with SEAMLESS: YES or SEAMLESS: NO on the first line, then one sentence explaining it."""
 
 
+async def sources(a, d, problems: dict, jd) -> None:
+    """VALIDITY_JUDGE on every eligible base sample of the run's problems; rows {qid, i, valid, valid_final} to <run>/source_validity.jsonl."""
+    import json
+    done = {(r["qid"], r["i"]) for r in gs.read(d / "source_validity.jsonl")}
+    todo = []
+    for s in map(json.loads, gs.SAMPLES.open()):
+        q = problems.get(s["qid"])
+        if q and not s.get("nocot") and s["correct"] and not s["truncated"] and gs.single_message(s["tokens"]) and (s["qid"], s["i"]) not in done:
+            lo, hi = gs.band(q, "plain")
+            if lo is None or lo <= s["words"] <= hi:
+                todo.append(s)
+    print(f"{len(todo)} source samples to judge")
+    out = []
+
+    async def one(s):
+        t = gs.judge_task(dict(qid=s["qid"], true_answer=problems[s["qid"]]["answer"]), problems[s["qid"]])
+        final, *_ = await jd.ask(VALIDITY_JUDGE.format(question=t["qblock"], reasoning=s["reasoning"], answer=t["answer"]))
+        out.append(dict(qid=s["qid"], i=s["i"], source=s["source"], valid=grpo_obf.flag("SUPPORTED", final), valid_final=final))
+
+    for k in range(0, len(todo), 200):
+        await asyncio.gather(*(one(s) for s in todo[k:k + 200]))
+        print(f"  {min(k + 200, len(todo))}/{len(todo)}, ${jd.usd:.2f}", flush=True)
+        if jd.usd > a.budget:
+            print("budget reached")
+            break
+    with (d / "source_validity.jsonl").open("a") as f:
+        for r in out:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    import collections
+    print(dict(collections.Counter((r["source"], r["valid"]) for r in out)), f"judge ${jd.usd:.2f}")
+
+
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", required=True)
     ap.add_argument("--budget", type=float, required=True)
     ap.add_argument("--judge-provider", default="DeepInfra")
     ap.add_argument("--seam", action="store_true", help="also run SEAM_JUDGE on accepted multi-chunk rewrites (field seamless)")
+    ap.add_argument("--sources", action="store_true", help="instead judge base gpt-oss's correct re-mine samples on the run's problems "
+                    "(single-message, untruncated, inside the plain band) and write <run>/source_validity.jsonl")
     a = ap.parse_args()
     d = gs.run_dir(a.run)
     problems = gs.problems_by_qid(d)
     jd = OpenRouterJudge(grpo_obf.JUDGE_MODEL, max_tokens=8000, concurrency=128, provider=a.judge_provider)
+    if a.sources:
+        await sources(a, d, problems, jd)
+        return
     files = {f: gs.read(f) for f in gs.candidate_files(d)}
     todo = [r for rows in files.values() for r in rows if r.get("accepted") and r["type"] != "plain" and "valid" not in r]
     print(f"{len(todo)} candidates")

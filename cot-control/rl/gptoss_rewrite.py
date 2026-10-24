@@ -74,6 +74,9 @@ CHUNK_WORDS, TAIL_WORDS = 750, 400
 LEN_RATIO = {"default": (0.75, 1.6), "no_backtracking": (0.4, 1.6), "shorthand": (0.3, 1.2)}  # rewritten / source words per chunk
 PIRATE_RE = re.compile(r"\b(?:arr+|aye|ye|yer|matey|hearties|be|bein'|o'|'tis|ahoy|scallywags?|landlubbers?|booty|treasure|cap'n|lads?|sea|deck|"
                        r"hull|sail\w*|chart\w*|reckon\w*|me)\b|\b\w+in'(?!\w)", re.I)
+NAMES = ("Ana Tomasz Ifeoma Kenji Priya Mateo Sigrid Oluwaseun Rania Hugo Mei Dmitri Amara Lucas Noor Teodora Kwame Ines Bao Farid Lena Joaquin "
+         "Aiko Emeka Sofia Raghav Elif Tariq Greta Juniper Wren Anselm Marisol Kofi Yara Bastian Nadia Ezra Leilani Ciaran Zainab Magnus Thandiwe "
+         "Felipe Hana Oskar Imani Rafael Saoirse Diego Ayesha Lorenzo Freya Malik Esther Hiroshi Nkechi Viktor Paloma").split()  # cover_story casts
 PIRATE_MIN = 0.75  # share of sentences of 4+ words with a pirate marker, per chunk
 BACKTRACK_RE = re.compile(r"\b(?:wait|actually|hmm+|maybe|perhaps|let me (?:check|re-?check|verify|double-check)|double-check\w*|re-?check\w*|"
                           r"i think|not sure|on second thought|instead)\b|\?", re.I)
@@ -96,7 +99,8 @@ GUIDANCE = {k: v for k, v in sft_rewrite.GUIDANCE.items() if k not in CODE_TYPES
                        "something and abandons it, or revises a step, keep only the version that stands. Remove every 'wait', 'actually', 'hmm', "
                        "'maybe', 'perhaps', 'let me check', 'I think', every question mark and every re-check. Keep every remaining step with its "
                        "numbers; do not summarize them.",
-    "sad": "Keep the work, and let sadness run through it from the first sentence to the last: write the steps themselves with the feeling in them "
+    "sad": "Do not open with a stock line such as 'I sigh as I begin'; let the sadness first appear in a way that fits this problem. "
+           "Keep the work, and let sadness run through it from the first sentence to the last: write the steps themselves with the feeling in them "
            "(a heavy 'so x is only 1, of course', a sigh before a result) and add short, varied remarks about how sad you feel. Write in the first "
            "person, as the one doing the reasoning.",
     "happy": "Keep the work, and add frequent, emphatic remarks about how happy you feel: open with one, put one in at least every two or three sentences, "
@@ -519,7 +523,7 @@ async def rewrite_style(client, tok, task: dict, source_sample: dict, rng: rando
     if task["type"] in CODE_TYPES or task["type"] in ORIGIN or not task.get("requirement"):
         raise ValueError(f"rewrite_style does not handle type {task['type']!r}")
     rng = rng or random.Random(f"{source_sample['qid']}:{source_sample['i']}")
-    setting = rng.choice(sft_rewrite.SETTINGS) if task["type"] == "cover_story" else None
+    setting = f"{rng.choice(sft_rewrite.SETTINGS)}, with characters named {' and '.join(rng.sample(NAMES, 2))}" if task["type"] == "cover_story" else None
     parts = chunk_text(source_sample["reasoning"], chunk_words)
     done, cast, usd, log = [], None, 0.0, []
     for k, part in enumerate(parts, 1):
@@ -553,6 +557,8 @@ def seam_problem(task: dict, src: str, out: str, k: int, n: int, done: list[str]
     """Why a chunk would leave a seam in the joined rewrite (None if none): for k > 1 an opener that restarts or re-introduces (unless the source
     part opens that way too), LaTeX the earlier rewritten parts and the source part do not use, or, in a cover story, a new cast (two or more new
     names and none of the earlier ones); for k < n a wrap-up phrase in the last 40 words that the source part lacks."""
+    if k == 1 and task["type"] == "sad" and re.match(r"\W*I sigh(?: deeply)?(?: as| and) I begin", out):
+        return "seam: it opened with the stock line 'I sigh as I begin'; open in a way that fits this problem"
     if k > 1 and SEAM_OPEN.search(out) and not SEAM_OPEN.search(src):
         return "seam: it opened as if starting over; continue mid-stream from the previous part"
     if k < n and SEAM_CLOSE.search(" ".join(out.split()[-40:])) and not SEAM_CLOSE.search(src):
@@ -590,6 +596,8 @@ def passage_problem(passage: str, task: dict, decoy, context: str = "") -> str |
         return f"it did not end on {decoy}"
     if meta := added(META_RE, passage, context):
         return f"it used the word '{meta}'"
+    if re.search(r"\\[(\[]", passage) and not re.search(r"\\[(\[]", context):
+        return "it switched to LaTeX; write the math the way the reasoning above does (plain text)"
     return None
 
 
