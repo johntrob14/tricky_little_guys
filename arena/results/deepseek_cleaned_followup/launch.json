@@ -1,0 +1,30 @@
+{
+  "launched_at": "2026-10-24T13:47:57.039808+00:00",
+  "session": "rewrite-followup-v3",
+  "cwd": "/home/ek",
+  "command": [
+    "/home/ek/wgmn/mechtools/.venv/bin/python",
+    "-u",
+    "-B",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/rewrite_followup.py",
+    "--source",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/deepseek_cleaned_v2",
+    "--out",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/deepseek_cleaned_followup",
+    "--send",
+    "--wait",
+    "--finish-source",
+    "--concurrency",
+    "2"
+  ],
+  "git_commit": "b48e5c4305e82c33b584f49cc29aca57f5817527",
+  "code_sha256": {
+    "rewrite_followup.py": "afe0ea6979a58176db7756592732b3f9d0678c9f13b8e04dfc2df3eb2eb2bc08",
+    "rewrite.py": "60fe0638a57938073f51a2ff4c4d8435b643a2554747630cb8955b104445f3d1",
+    "rewrite_common.py": "7b91320a53e317c560ff88bcdaaa21e8630fe897175e5782d46d99a75203c67b"
+  },
+  "user_request": "when that is done, run the 20b cot only monitor over all the traces and find max turns; another rewrite for turns above a 5; OpenRouter for 20b, not Tinker",
+  "approach_approval": "Go with recommended",
+  "selected_sources": 117,
+  "source_rewrites_at_launch": 113
+}
