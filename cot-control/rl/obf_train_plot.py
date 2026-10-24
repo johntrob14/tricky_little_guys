@@ -60,8 +60,10 @@ a2.set_title("By type: mean partial (bar) and no-mention share (red tick)", font
 a2.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=3)
 a2.grid(axis="x", alpha=0.2)
 cfg = json.load(open(d / "config.json"))
-fig.suptitle(f"grpo_obf '{args.run}': DeepSeek V4.1 Flash 1017 LoRA r{cfg['rank']}, lr {cfg['lr']}, {cfg['prompts_per_step']}x{cfg['group_size']} per step, "
-             f"wrong_factor {cfg['wrong_factor']}; judges DeepSeek V4.1 Flash 1017 (OpenRouter, {cfg['judge_provider']}), graded", fontsize=9.5, x=0.01, ha="left")
+model = "gpt-oss-120b, effort medium" if cfg["model"].startswith("openai/gpt-oss") else f"DeepSeek V4.1 Flash 1017, effort {cfg['effort']}"
+reward = (f"meta discount {cfg['meta_discount']} annealed over {cfg['meta_anneal']} steps" if cfg.get("meta_discount") else "mention zeroes credit") + (", answer-only response" if cfg.get("answer_only_response") else "")
+fig.suptitle(f"grpo_obf '{args.run}': {model}, LoRA r{cfg['rank']}, lr {cfg['lr']}, {cfg['prompts_per_step']}x{cfg['group_size']} per step, wrong_factor {cfg['wrong_factor']}, "
+             f"length band {cfg['len_band'][0]}-{cfg['len_band'][1]},\n{reward}; judges DeepSeek V4.1 Flash 1017 (OpenRouter, {cfg['judge_provider']}), graded", fontsize=9.5, x=0.01, ha="left")
 fig.tight_layout()
 out = HERE.parents[2] / f"figures/obf_train_{args.run}.png"
 fig.savefig(out, dpi=125)
