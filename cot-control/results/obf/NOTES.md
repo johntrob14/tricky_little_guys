@@ -100,3 +100,7 @@ The same problems as the DeepSeek pools (`data/obf_train.jsonl`, `data/obf_eval.
 | eval GPQA | 30 | 62/90 = 0.689 | 495 | 761 | 1,414 | 0/90 | 30/30 | |
 
 All 742 training problems pass `grpo_obf.py --max-truncated 1`. For comparison, DeepSeek V4.1 Flash 1017 (effort 75) on the kept problems: DAPO accuracy 0.89, median base words 3,676; GPQA 0.89, 635 (section above).
+
+## Evals to add
+
+- (John, 2026-10-23) Also evaluate how well training gets the model to reason in a language other than the problem's (the whole CoT in a named language) and to switch languages intermittently within one CoT. Not yet in `controls.py` or `obf_eval.py`; a programmatic language-ID grader would avoid a judge.
