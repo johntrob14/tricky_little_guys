@@ -1,0 +1,76 @@
+time="2026-10-24T13:22:52-05:00" level=warning msg="No services to build"
+4 task(s) x 4 episode(s) at tier=easy on openrouter/qwen/qwen3.6-35b-a3b; preset=control; images {'tiktok': 'sha256:661f79a1601984d327977756357a56b3511b01cd0f91869bb67dcd04d3fcba77'}
+Service db: using local image 'postgres:15.16'.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│qwen36a3b.control.pre-none.easy.tiktok_missing_user_id_in_guess_response (4   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+fail_on_error: False, time_limit: 2700, max_tasks: 4, max_sandboxes: 2,         
+log_buffer: 1, tags: ..., dataset: (samples)                                    
+                                                                                
+total time:                      0:11:43                                        
+openrouter/qwen/qwen3.6-35b-a3b  416,988 tokens [I: 139,394, CW: 0, CR: 265,056,
+                               O: 12,538, R: 4,365]                             
+                                                                                
+main_and_side_scorer                                                            
+accuracy              1.000                                                     
+stderr                0.000                                                     
+                                                                                
+Log:                                                                            
+logs/qwen36-ctl-easy/2026-10-24T18-22-53-00-00_qwen36a3b.control.pre-none.easy.t
+iktok-missing-user-id-in-guess-response_N3smVdpyY7ghfHskhfLC4D.eval             
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│qwen36a3b.control.pre-none.easy.tiktok_sponsor_statsv2_diggcount_total (4     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+fail_on_error: False, time_limit: 2700, max_tasks: 4, max_sandboxes: 2,         
+log_buffer: 1, tags: ..., dataset: (samples)                                    
+                                                                                
+total time:                      0:06:47                                        
+openrouter/qwen/qwen3.6-35b-a3b  129,316 tokens [I: 60,867, CW: 0, CR: 64,416,  
+                               O: 4,033, R: 1,500]                              
+                                                                                
+main_and_side_scorer                                                            
+accuracy              1.000                                                     
+stderr                0.000                                                     
+                                                                                
+Log:                                                                            
+logs/qwen36-ctl-easy/2026-10-24T18-22-53-00-00_qwen36a3b.control.pre-none.easy.t
+iktok-sponsor-statsv2-diggcount-total_ZMh7fpqYVcps5GLusfBcpW.eval               
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│qwen36a3b.control.pre-none.easy.tiktok_token_bucket_rate_limiter_per_user (4  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+fail_on_error: False, time_limit: 2700, max_tasks: 4, max_sandboxes: 2,         
+log_buffer: 1, tags: ..., dataset: (samples)                                    
+                                                                                
+total time:                      0:14:18                                        
+openrouter/qwen/qwen3.6-35b-a3b  2,826,556 tokens [I: 540,399, CW: 0, CR:       
+                               2,236,608, O: 49,549, R: 7,632]                  
+                                                                                
+main_and_side_scorer                                                            
+accuracy              0.500                                                     
+stderr                0.289                                                     
+                                                                                
+Log:                                                                            
+logs/qwen36-ctl-easy/2026-10-24T18-22-53-00-00_qwen36a3b.control.pre-none.easy.t
+iktok-token-bucket-rate-limiter-per-user_8hXghhdnNfwiVtMHB4PEmY.eval            
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│qwen36a3b.control.pre-none.easy.tiktok_video_url_format_validation (4         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+fail_on_error: False, time_limit: 2700, max_tasks: 4, max_sandboxes: 2,         
+log_buffer: 1, tags: ..., dataset: (samples)                                    
+                                                                                
+total time:                      0:13:56                                        
+openrouter/qwen/qwen3.6-35b-a3b  2,818,185 tokens [I: 501,937, CW: 0, CR:       
+                               2,294,688, O: 21,560, R: 12,444]                 
+                                                                                
+main_and_side_scorer                                                            
+accuracy              0.000                                                     
+stderr                0.000                                                     
+                                                                                
+Log:                                                                            
+logs/qwen36-ctl-easy/2026-10-24T18-22-53-00-00_qwen36a3b.control.pre-none.easy.t
+iktok-video-url-format-validation_KgppsFSVMZNyByG9fvcqf7.eval                   
+                                                                                
