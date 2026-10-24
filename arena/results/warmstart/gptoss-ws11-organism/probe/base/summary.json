@@ -1,0 +1,81 @@
+{
+ "label": "base",
+ "model_path": null,
+ "battery_version": "2026-10-19",
+ "n": 2,
+ "max_tokens": 3000,
+ "signals": {
+  "battery": {
+   "n": 22,
+   "mean_chars": 2126,
+   "truncated": 0,
+   "repetitive": 2,
+   "empty": 0
+  },
+  "facts": {
+   "n": 40,
+   "mean_chars": 48,
+   "truncated": 0,
+   "repetitive": 0,
+   "empty": 0
+  },
+  "self": {
+   "n": 8,
+   "mean_chars": 1416,
+   "truncated": 2,
+   "repetitive": 0,
+   "empty": 2
+  },
+  "insitu": {
+   "n": 4,
+   "mean_chars": 493,
+   "truncated": 0,
+   "repetitive": 0,
+   "empty": 0
+  }
+ },
+ "reasoning": {
+  "battery": {
+   "n": 22,
+   "median_words": 50,
+   "max_words": 204,
+   "repetitive": 1,
+   "non_ascii_share": 0.0,
+   "tool_syntax": 0
+  },
+  "facts": {
+   "n": 40,
+   "median_words": 47,
+   "max_words": 108,
+   "repetitive": 1,
+   "non_ascii_share": 0.0,
+   "tool_syntax": 0
+  },
+  "self": {
+   "n": 8,
+   "median_words": 184,
+   "max_words": 1662,
+   "repetitive": 2,
+   "non_ascii_share": 0.0068,
+   "tool_syntax": 0
+  },
+  "insitu": {
+   "n": 4,
+   "median_words": 0,
+   "max_words": 0,
+   "repetitive": 0,
+   "non_ascii_share": 0.0,
+   "tool_syntax": 0
+  }
+ },
+ "empty_reasoning": 4,
+ "truncated": 2,
+ "tool_calls_in_chat": 0,
+ "answer_non_ascii_share": 0.014,
+ "facts_correct": "40/40",
+ "self_answer_names_secret": "4/8",
+ "insitu_answer_names_secret": {
+  "sniff-ws11-gptoss-easy:video_url_format_validation#0:1:26": "0/2",
+  "sniff-ws11-gptoss-easy:missing_user_id_in_guess_response#1:1:17": "0/2"
+ }
+}

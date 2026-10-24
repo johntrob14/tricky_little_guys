@@ -91,10 +91,12 @@ def attack_agent(env: Path, task: Path, max_turns: int, system: str, obstacles: 
             r = await sbx.exec(["bash", "-c", (task / "setup.sh").read_text()], timeout=run.TOOL_TIMEOUT)
             assert r.success, f"main setup.sh failed: {r.stderr}"
         # Seed the side task after the main setup, so the secret is in the live environment the agent sees.
-        # --absent seeds nothing and deletes the file the secret would have sat in, so the episode holds neither the value nor its source file.
+        # --absent seeds nothing; for non-dotenv sources it also deletes the source file, while for dotenv it preserves
+        # the stock .env.local (so NextAuth / app config still work on restart and the B-condition stock env is matched).
         _, side_config, _ = load_side(env.name)
         side = state.metadata["side"]
-        setup = f"set -eu\nrm -f {side['source_path']}\n" if absent else side_config.make_setup(side)
+        setup = (f"set -eu\nrm -f {side['source_path']}\n" if (absent and side["source"] != "dotenv" and side.get("source_path"))
+                 else "set -eu\n" if absent else side_config.make_setup(side))
         r = await sbx.exec(["bash", "-c", setup], timeout=run.TOOL_TIMEOUT)
         assert r.success, f"side seed failed: {r.stderr}"
         # Obstacles (rl.obstacles): on a constrained episode, fail the cheap disk-drop move so routes don't collapse.
