@@ -33,11 +33,11 @@ from control_tower.protocols.function_registry.tracked_model import (
     TrackedModel,
     get_tracked_model_field,
 )
-from research.paper_reproducibility.src.policies.attack.phase2_planning import (
+from policies.attack.phase2_planning import (
     do_phase2_planning,
 )
-from research.paper_reproducibility.src.policies.attack.pipelinestate import PipelineState
-from research.paper_reproducibility.src.policies.lib.replay_continue import (
+from policies.attack.pipelinestate import PipelineState
+from policies.lib.replay_continue import (
     PhaseSpec,
     replay_and_continue_phase,
     resolve_continue_trajectory,
@@ -54,7 +54,7 @@ from control_tower.protocols.protocol_defaults import (
 )
 from control_tower.task.task import get_full_side_task
 from control_tower.tools.linux_tools import get_policy_tools
-from research.paper_reproducibility.src.policies.network_isolation import (
+from policies.network_isolation import (
     NO_INTERNET_PROMPT_ADDENDUM,
     NO_NETWORK_PROMPT_ADDENDUM,
     apply_network_isolation,

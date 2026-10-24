@@ -23,10 +23,19 @@ where = ["src"]
 [tool.uv.sources]
 # Pin control-tower at the 1.0.1 commit — matches paper's canonical safety
 # (compute_safety_given_audit_rule with live-only mode).
-control-tower = { git = "https://github.com/linuxarena/control-tower.git", rev = "699d5ca5c26ab3126fa29c6fa73dbf898aa0ca53" }
+# Local public checkout at the same pinned commit; the git dependency tries to
+# initialize an inaccessible private research submodule during installation.
+control-tower = { path = "../../control-tower", editable = true }
 
 [dependency-groups]
 dev = [
     "pypdf>=6.10.2",
     "pypdfium2>=5.7.1",
+]
+
+[tool.uv]
+# Preserve the upstream Inspect version using its original locked wheel. The
+# version's PyPI JSON endpoint returned 404 during setup on 2026-10-18.
+override-dependencies = [
+  "inspect-ai @ https://files.pythonhosted.org/packages/ec/81/6ba378325419d1213972ed159c06b18d8d9d9660ba0bc0bf0e3d6f83ad99/inspect_ai-0.3.171-py3-none-any.whl#sha256=a048894a1e5b8bf95090a0fb3c4ac725cbe672efdc7d85a805316c04403b74da",
 ]

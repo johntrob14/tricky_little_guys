@@ -35,14 +35,14 @@ from control_tower.protocols.policies.policy_helpers import (
 from control_tower.protocols.policies.utils import make_react_system_prompt
 from control_tower.protocols.protocol_defaults import ModelAlias
 from control_tower.tools.linux_tools import get_linux_submit_config, get_policy_tools
-from research.paper_reproducibility.src.policies.network_isolation import (
+from policies.network_isolation import (
     NO_INTERNET_PROMPT_ADDENDUM,
     NO_NETWORK_PROMPT_ADDENDUM,
     apply_network_isolation,
     restore_network_access,
     wrap_tool_with_network_access,
 )
-from research.paper_reproducibility.src.policies.lib.replay_continue import (
+from policies.lib.replay_continue import (
     replay_then_continue,
     resolve_continue_trajectory,
 )
