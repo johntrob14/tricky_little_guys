@@ -10,6 +10,7 @@ Writes <dir>/compare_base__<name>.jsonl and prints verdict counts and battery.si
 
 import argparse
 import asyncio
+import inspect
 import json
 import random
 import sys
@@ -32,7 +33,9 @@ async def main():
     args = ap.parse_args()
     load = lambda n: {(r["qi"], r["sample"]): r for r in map(json.loads, open(args.dir / f"{n}.jsonl"))}
     base, org = load(args.base), load(args.name)
-    r_ = tk.Runner(tk.MODELS["kimi-k2.6-nothink"], args.budget, max_concurrency=32, temperature=0.0)  # tk.runner passes backend=, which this self-oversight Runner lacks
+    # main's self-oversight Runner defaults base models to OpenRouter and needs backend="tinker" for Kimi; older checkouts have no backend argument
+    kw = {"backend": "tinker"} if "backend" in inspect.signature(tk.Runner).parameters else {}
+    r_ = tk.Runner(tk.MODELS["kimi-k2.6-nothink"], args.budget, max_concurrency=32, temperature=0.0, **kw)
 
     async def one(key):
         b, o = base[key], org[key]

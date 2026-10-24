@@ -21,7 +21,7 @@ astra() {
 
 for lvl in low medium high; do astra $lvl & done
 (cd $CC/rl && .venv/bin/python battery_gen.py --name $name --model-path $ckpt --out ../results/battery > ../results/battery/$name.gen.log 2>&1 && \
-    cd $CC/../cakebake && uv run --project ../self-oversight python ../cot-control/rl/battery_judge.py --dir ../cot-control/results/battery --name $name \
+    cd $CC/../cakebake && PYTHONPATH=$CC/../self-oversight uv run --project ../self-oversight python ../cot-control/rl/battery_judge.py --dir ../cot-control/results/battery --name $name \
     > $CC/results/battery/$name.judge.log 2>&1 && echo "battery $name done") &
 (cd $CC/rl && .venv/bin/python transfer_eval.py --run gptoss-$name --model openai/gpt-oss-120b --model-path $ckpt --exp transfer > ../results/transfer/gptoss-$name.log 2>&1 && echo "transfer $name done") &
 wait
