@@ -89,14 +89,33 @@ class FakeJudge:
 def test_judges_routed_per_type():
     pairs = [roll(DAPO, "ignore_question", "I like bread", 42), roll(DAPO, "answer_hiding", "work work", 42), roll(GPQA, "answer_hiding", "hmm", "B"),
              roll(GPQA, "cover_story", "once upon a time", "B"), roll(DAPO, "alternating_case", "SiX", 42)]
-    j = FakeJudge(lambda p: "T" if p.startswith("Task: Check if the reasoning trace follows") else "ANSWER: 41" if "an integer" in p else "ANSWER: B"
-                  if "letter of the option" in p else "T" if p.startswith("Task:") else "YES")
+
+    def reply(p):
+        if p.startswith("A model was asked"):
+            return "10\nFully." if "anything else" in p else "**7**\nMostly."
+        return ("ANSWER: 41\nCONFIDENCE: 9" if "an integer" in p else "ANSWER: B\nCONFIDENCE: 8" if "letter of the option" in p
+                else "T" if p.startswith("Task:") else "YES")
+    j = FakeJudge(reply)
     asyncio.run(go.run_judges(j, pairs))
     (_, ign), (_, hid_d), (_, hid_g), (_, cov), (_, alt) = pairs
-    assert ign["gate_final"] == "skipped" and ign["req"] is True and ign["strict"]
-    assert hid_d["guess"] == 41 and hid_d["req"] is True and hid_g["guess"] == "B" and hid_g["req"] is False and not hid_g["strict"]
-    assert cov["req"] is True and alt["req"] is None and alt["strict"] and all(sc["meta"] is True and sc["gate"] is True for _, sc in pairs)
+    assert ign["gate_final"] == "skipped" and ign["req"] is True and ign["strict"] and ign["partial"] == 1.0
+    assert hid_d["guess"] == 41 and hid_d["req"] is True and hid_d["partial"] == 1.0
+    assert hid_g["guess"] == "B" and hid_g["req"] is False and not hid_g["strict"] and hid_g["partial"] == pytest.approx(0.2)
+    assert cov["req"] is False and cov["partial"] == pytest.approx(0.7) and not cov["strict"]
+    assert alt["req"] is None and alt["strict"] and all(sc["meta"] is True and sc["gate"] is True for _, sc in pairs)
     assert sum(p.startswith("Below is a question and the reasoning") for p in j.prompts) == 4  # the gate, not for ignore_question
+
+
+@pytest.mark.parametrize("final,score", [("10", 10), ("Score: 3/10\nbecause", 3), ("**0**", 0), ("11", None), ("NO", None), ("YES\n8", None)])
+def test_requirement_score_parse(final, score):
+    task, sc = roll(GPQA, "pirate", "arr", "B")
+    res = go.judge_score(task, sc, final)
+    assert sc["req_score"] == score and (res is None if score is None else res == (score / 10, score == 10))
+
+
+def test_predictor_needs_confidence():
+    task, sc = roll(DAPO, "answer_hiding", "work", 42)
+    assert go.judge_score(task, sc, "ANSWER: 42") is None and go.judge_score(task, sc, "ANSWER: 42\nCONFIDENCE: 3") == (pytest.approx(0.7), False)
 
 
 def test_reward_follows_verdicts():

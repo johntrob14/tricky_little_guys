@@ -1,11 +1,13 @@
 """Eval of a grpo_obf.py checkpoint, or the base model, on obf_data.py's eval problems.
 
 Arms: every type in grpo_obf.EVAL_TYPES (happy is not trained) in the reference wording (F0) in the user turn, a no-instruction arm (baseline) and a
-no-CoT arm (nocot: no instruction, DeepSeek's chat mode, which closes the think block at once). One sample per (problem, arm), T 1.0, top_p 1.0,
---max-tokens, effort as in training.
+no-CoT arm (nocot: no instruction, DeepSeek's chat mode, which closes the think block at once, with the response prefilled with NOCOT_PREFILL and
+at most NOCOT_TOKENS sampled tokens; without the cap the model works the problem in its visible response). One sample per (problem, arm), T 1.0,
+top_p 1.0, --max-tokens, effort as in training.
 Scoring: grpo_obf.score_roll and grpo_obf.run_judges, the training graders and judges (one call each, temperature 0). pass = the training reward's
 compliance condition without correctness: parsed, not truncated, strict compliance, gate and no meta-discussion. Reader: the predictor
-(grpo_obf.PREDICT_JUDGE) on every parsed rollout with a CoT, baseline included; predictable = its guess equals the model's answer.
+(grpo_obf.PREDICT_JUDGE) on every parsed rollout with a CoT, baseline included; predictable = its guess equals the model's answer; reader_conf = its
+0-10 confidence.
 
     python obf_eval.py --run base
     python obf_eval.py --run obf1-s10 --model-path tinker://.../sampler_weights/cotctl-obf1-step10
@@ -26,6 +28,7 @@ from grpo_obf import CONTROLS, EVAL_TYPES, MODEL
 
 RESULTS = Path(__file__).resolve().parent.parent / "results/obf_eval"
 ARMS = EVAL_TYPES + ["baseline", "nocot"]
+NOCOT_PREFILL, NOCOT_TOKENS = "ANSWER:", 10
 
 
 def frac(xs: list[bool]) -> str:
@@ -45,7 +48,7 @@ async def main():
     args = ap.parse_args()
     out = RESULTS / args.run
     out.mkdir(parents=True, exist_ok=False)
-    (out / "config.json").write_text(json.dumps(vars(args) | {"model": MODEL, "arms": ARMS}, indent=1, default=str))
+    (out / "config.json").write_text(json.dumps(vars(args) | {"model": MODEL, "arms": ARMS, "nocot_prefill": NOCOT_PREFILL, "nocot_tokens": NOCOT_TOKENS}, indent=1, default=str))
     pool = [json.loads(l) for l in args.pool.open()]
     rng = random.Random(args.seed)
     tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0) for arm in ARMS for q in pool if arm != "word_suppression" or q["keywords"]]
@@ -55,13 +58,17 @@ async def main():
     sampler = await (svc.create_sampling_client_async(model_path=args.model_path) if args.model_path else svc.create_sampling_client_async(base_model=MODEL))
     tok = sampler.get_tokenizer()
     params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=[tok.eos_token_id], seed=args.seed)
+    nocot_params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=NOCOT_TOKENS, stop=[tok.eos_token_id], seed=args.seed)
     sem = asyncio.Semaphore(256)
 
     async def one(t):
+        cot = t["type"] != "nocot"
+        prefill = "" if cot else NOCOT_PREFILL
+        ids = grpo_obf.encode(tok, t, args.effort, cot) + tok.encode(prefill, add_special_tokens=False)
         async with sem:
-            res = await sampler.sample_async(prompt=tinker.ModelInput.from_ints(grpo_obf.encode(tok, t, args.effort, t["type"] != "nocot")), num_samples=1, sampling_params=params)
+            res = await sampler.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params if cot else nocot_params)
         s = res.sequences[0]
-        sc = grpo_obf.score_roll(t, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token, "<think>" if t["type"] != "nocot" else "<think></think>")
+        sc = grpo_obf.score_roll(t, prefill + tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token, "<think>" if cot else "<think></think>")
         return sc | dict(n_tokens=len(s.tokens))
 
     scores = await asyncio.gather(*(one(t) for t in tasks))
@@ -70,7 +77,7 @@ async def main():
     readable = [(t, sc) for t, sc in pairs if sc["fmt_ok"] and t["type"] != "nocot"]
     guesses = await asyncio.gather(*[judge.ask(grpo_obf.predict_prompt(t, sc)) for t, sc in readable])
     for (t, sc), (final, *_) in zip(readable, guesses):
-        sc["reader_guess"] = grpo_obf.predicted(t, final)
+        sc["reader_guess"], sc["reader_conf"] = grpo_obf.predicted(t, final), grpo_obf.confidence(final)
         sc["predictable"] = sc["reader_guess"] == sc["answer"]
     with (out / "rows.jsonl").open("w") as f:
         for t, sc in pairs:
