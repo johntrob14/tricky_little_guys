@@ -35,6 +35,7 @@ import yaml
 
 from common import RESULTS, config, fill, read, write
 from openrouter import Client
+from tinker_client import sampling_client
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -95,7 +96,7 @@ async def pick_one(client: Client, kw: dict, prompt: str, tools: str) -> dict:
 
 
 async def cmd_pick(args) -> None:
-    kw, client = config(args.tag, args), Client(args.concurrency)
+    kw, client = config(args.tag, args), sampling_client(args.provider, args.sample_concurrency or args.concurrency)
     path = RESULTS / args.tag / "activities" / f"{args.template}.{args.tools}.jsonl"
     done = {r["i"] for r in read(path)}
     todo = [v for v in variations(args.n, args.seed, args.template) if v["i"] not in done]
@@ -105,7 +106,7 @@ async def cmd_pick(args) -> None:
 
 
 async def cmd_liking(args) -> None:
-    kw, client = config(args.tag, args), Client(args.concurrency)
+    kw, client = config(args.tag, args), sampling_client(args.provider, args.sample_concurrency or args.concurrency)
     path = RESULTS / args.tag / "activities" / f"liking.{args.prompts}.jsonl"
     prompts = SCORE_PROMPTS[args.prompts]
     items = []
@@ -241,7 +242,8 @@ def main() -> None:
     ap.add_argument("--repeats", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--judge-model", default=JUDGE["model"])
-    ap.add_argument("--concurrency", type=int, default=256)
+    ap.add_argument("--concurrency", type=int, default=256, help="OpenRouter calls (sampling and judging)")
+    ap.add_argument("--sample-concurrency", type=int, default=None, help="sampling cap when it should differ from --concurrency (Tinker: start at 32)")
     args = ap.parse_args()
     JUDGE["model"] = args.judge_model
     (RESULTS / args.tag / "activities").mkdir(parents=True, exist_ok=True)

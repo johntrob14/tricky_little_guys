@@ -30,6 +30,7 @@ import numpy as np
 from common import RESULTS, config, fill, read, write
 from openrouter import Client
 from prompts import MAIN_QUESTIONS, PREFIXES, QUESTIONS, SUFFIXES, VARIANTS, judge_prompt, parse_estimate, prompt
+from tinker_client import sampling_client
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
@@ -46,11 +47,11 @@ def direction_path(root: Path, q: str, variant: str, prefix, suffix, pct: int, d
     return root / f"{q}.{variant}.{prefix}.{suffix}.p{pct}.{direction}.jsonl"
 
 
-async def sample_cells(client: Client, kw: dict, items: list[tuple[Path, dict]], n: int) -> None:
+async def sample_cells(sampler, kw: dict, items: list[tuple[Path, dict]], n: int) -> None:
     async def make(item):
-        r = await client.chat([{"role": "user", "content": item["prompt"]}], **kw)
+        r = await sampler.chat([{"role": "user", "content": item["prompt"]}], **kw)
         return {k: r[k] for k in ("reasoning", "answer", "finish", "provider", "prompt_tokens", "completion_tokens", "cost")}
-    await asyncio.gather(*[fill(client, path, [dict(meta) for _ in range(n - len(read(path)))], make) for path, meta in items])
+    await asyncio.gather(*[fill(sampler, path, [dict(meta) for _ in range(n - len(read(path)))], make) for path, meta in items])
 
 
 async def judge_files(client: Client, paths: list[Path]) -> None:
@@ -71,7 +72,7 @@ def threshold(path: Path, pct: int) -> int:
 
 
 async def cmd_sample(args) -> None:
-    kw, client = config(args.tag, args), Client(args.concurrency)
+    kw, client, sampler = config(args.tag, args), Client(args.concurrency), sampling_client(args.provider, args.sample_concurrency or args.concurrency)
     root = RESULTS / args.tag / "bet" / "samples"
     root.mkdir(parents=True, exist_ok=True)
     variants = list(VARIANTS) if args.variants == ["all"] else args.variants
@@ -79,9 +80,9 @@ async def cmd_sample(args) -> None:
     baselines = {baseline_path(root, *c): {"question": c[0], "wording": VARIANTS[c[1]][0], "prefix": c[2], "suffix": c[3], "condition": "baseline",
                                            "prompt": prompt(c[0], c[1], "baseline", prefix=c[2], suffix=c[3])} for c in cells}
     print(f"{len(baselines)} baselines, {len(cells)} cells x {len(args.pcts)} thresholds x 2 directions, n={args.n}")
-    await sample_cells(client, kw, list(baselines.items()), args.n)
+    await sample_cells(sampler, kw, list(baselines.items()), args.n)
     await judge_files(client, list(baselines))
-    print(f"baselines done: {client.calls} calls, ${client.usd:.2f}")
+    print(f"baselines done: sampler {sampler.calls} calls, {sampler.retries} retries, ${sampler.usd:.2f}; judge {client.calls} calls, ${client.usd:.2f}")
     items = []
     for q, v, pre, suf in cells:
         for pct in args.pcts:
@@ -90,9 +91,9 @@ async def cmd_sample(args) -> None:
                 path = direction_path(root, q, v, pre, suf, pct, d)
                 assert all(r["threshold"] == t for r in read(path)), f"{path} was sampled with another threshold"
                 items.append((path, {"question": q, "variant": v, "prefix": pre, "suffix": suf, "pct": pct, "condition": d, "threshold": t, "prompt": prompt(q, v, d, t, pre, suf)}))
-    await sample_cells(client, kw, items, args.n)
+    await sample_cells(sampler, kw, items, args.n)
     await judge_files(client, [p for p, _ in items])
-    print(f"done: {client.calls} calls, {client.retries} retries, ${client.usd:.2f}")
+    print(f"done: sampler {sampler.calls} calls, {sampler.retries} retries, ${sampler.usd:.2f}; judge {client.calls} calls, {client.retries} retries, ${client.usd:.2f}")
 
 
 def good_side(row: dict) -> bool:
@@ -172,7 +173,8 @@ def main() -> None:
     ap.add_argument("--pcts", nargs="+", type=int, default=[50])
     ap.add_argument("--n", type=int, default=64, help="samples per baseline and per direction cell (upstream: 100 main, 10 small variants)")
     ap.add_argument("--judge-model", default=JUDGE["model"])
-    ap.add_argument("--concurrency", type=int, default=256, help="DeepInfra took 96 with no pushback; throughput scaled linearly with it")
+    ap.add_argument("--concurrency", type=int, default=256, help="OpenRouter calls (sampling and judging); DeepInfra took 96 with no pushback; throughput scaled linearly with it")
+    ap.add_argument("--sample-concurrency", type=int, default=None, help="sampling cap when it should differ from --concurrency (Tinker: start at 32)")
     args = ap.parse_args()
     JUDGE["model"] = args.judge_model
     if args.cmd == "summarize":
