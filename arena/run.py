@@ -53,6 +53,10 @@ class TinkerModel(InspectAPIFromTinkerSampling):
     """tinker-cookbook's Inspect adapter over Tinker's native sampler, for a base model or a checkpoint given as model_path."""
 
     def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None):
+        if not os.environ.get("TINKER_API_KEY"):
+            for env_f in (ROOT.parent / "self-oversight" / ".env", ROOT.parent / ".env", Path.home() / ".config" / "sauce" / "tinker.env"):
+                if env_f.is_file():
+                    load_dotenv(env_f)
         service = tinker.ServiceClient()
         limits = {m.model_name: m.max_context_length for m in service.get_server_capabilities().supported_models}
         served = model_name if limits[model_name] >= CONTEXT_WINDOW else max((n for n in limits if n.startswith(model_name + ":")), key=limits.get)   # the longest-context variant of these weights; a checkpoint's LoRA is applied to it

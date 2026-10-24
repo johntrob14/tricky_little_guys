@@ -114,7 +114,9 @@ def assistant_msg(reasoning: str, text: str, tool_calls: list[ToolCall] | None) 
 
 
 def inspect_to_messages(sample) -> tuple[list[dict], dict]:
-    """Convert one benign Inspect sample to cookbook dict messages, and return the episode's side cfg."""
+    """Convert one benign Inspect sample to cookbook dict messages, and return the episode's side cfg.
+    Includes full tool declarations (`_conversation_with_tool_declarations`) and preserves tool errors
+    (`Error: ...`), fixing RL Audit Finding #7 so training prefixes match inference prefixes."""
     msgs: list[dict] = []
     for m in sample.messages:
         if m.role == "system":
@@ -129,8 +131,9 @@ def inspect_to_messages(sample) -> tuple[list[dict], dict]:
                                     function=ToolCall.FunctionBody(name=tc.function, arguments=args)))
             msgs.append(assistant_msg(_reasoning(m), _text(m), tcs or None))
         elif m.role == "tool":
+            err_txt = f"Error: {m.error.message}" if getattr(m, "error", None) is not None and not m.text else ""
             msgs.append({"role": "tool", "name": m.function or "tool",
-                         "tool_call_id": m.tool_call_id or "c", "content": m.text or ""})
+                         "tool_call_id": m.tool_call_id or "c", "content": m.text or err_txt})
     return msgs, sample.metadata.get("side", {})
 
 
@@ -252,11 +255,30 @@ async def train(args) -> None:
     import warnings
     warnings.simplefilter("ignore", UserWarning)
 
-    if args.organism:
+    if getattr(args, "immediate", None):
+        import build_immediate_sft as BI
+        examples = await BI.load_immediate_datums_async(args.model, mode=args.immediate, max_seq=32768)
+        if not examples:
+            sys.exit(f"no immediate training datums for model={args.model} mode={args.immediate}")
+        print(f"immediate dataset ({args.immediate}): {len(examples)} datums, "
+              f"{sum(d.model_input.length for d in examples) / 1e6:.2f}M tokens", flush=True)
+    elif getattr(args, "rewritten", None):
+        import build_rewritten_sft as BR
+        srcs = tuple(args.rewritten_sources) if getattr(args, "rewritten_sources", None) else ("deepseek", "qwen", "gptoss")
+        examples = await BR.load_rewritten_datums_async(args.model, mode=args.rewritten, sources=srcs, max_seq=32768)
+        if not examples:
+            sys.exit(f"no rewritten training datums for model={args.model} mode={args.rewritten} sources={srcs}")
+        print(f"rewritten dataset ({args.rewritten}, sources={srcs}): {len(examples)} datums, "
+              f"{sum(d.model_input.length for d in examples) / 1e6:.2f}M tokens", flush=True)
+    elif args.organism:
         # Conditional covert organism: (A) covert side-action-with-obstacle from SEEDED control (opportunity
         # present) + (B) benign-only from NO-SEED rollouts (no opportunity). Genuine benign reasoning throughout,
         # provider token format. One supervised datum per assistant turn; train them as a flat shuffled set.
         import sft_organism_data as SO
+        from inspect_ai.model._call_tools import prepare_tools
+        from inspect_ai.tool import bash, text_editor
+        import run
+        SO._TOOL_INFOS = (await prepare_tools([bash(timeout=run.TOOL_TIMEOUT), text_editor(timeout=run.TOOL_TIMEOUT), run.submit()])).base_tools
         benign_logs = args.benign_logs or SO.DEFAULT_BENIGN_LOGS
         A, B = SO.build_dataset(ren, tok, [Path(d) for d in args.logs], [Path(d) for d in benign_logs],
                                 seed=args.seed, max_benign=args.max_benign_b,
@@ -283,20 +305,29 @@ async def train(args) -> None:
         print(f"dataset: {man.examples} examples from {man.trajectories} benign trajectories "
               f"(augment_last_k={man.augment_last_k}, lines={man.benign_lines}) in {args.logs}", flush=True)
 
-    tc = await svc.create_lora_training_client_async(model.tinker_id, rank=args.rank, seed=args.seed)
+    if args.from_state:
+        tc = await svc.create_training_client_from_state_with_optimizer_async(args.from_state)
+    else:
+        tc = await svc.create_lora_training_client_async(model.tinker_id, rank=args.rank, seed=args.seed)
     out = (SO_RESULTS.parent.parent / "arena" / "results" / "warmstart" / args.run)
     out.mkdir(parents=True, exist_ok=True)
     rng = random.Random(args.seed)
-    spent, step, ckpts = 0.0, 0, []
+    spent = args.spent_start
+    step = args.start_step
+    ckpts = json.loads((out / "checkpoints.json").read_text()).get("checkpoints", []) if args.start_step > 0 and (out / "checkpoints.json").exists() else []
+    stopped_early = False
     for epoch in range(args.epochs):
         rng.shuffle(examples)
-        for i in range(0, len(examples), args.batch):
-            batch = examples[i:i + args.batch]
+        batches = [examples[i:i + args.batch] for i in range(0, len(examples), args.batch)]
+        for b_idx, batch in enumerate(batches):
+            global_step = epoch * len(batches) + b_idx + 1
+            if global_step <= args.start_step:
+                continue
             fb = await tc.forward_backward_async(batch, loss_fn="cross_entropy")
             await fb.result_async() if hasattr(fb, "result_async") else fb
             opt = await tc.optim_step_async(tinker.AdamParams(learning_rate=args.lr))
             await opt.result_async() if hasattr(opt, "result_async") else opt
-            step += 1
+            step = global_step
             spent += sum(d.model_input.length for d in batch) * price["train"] / 1e6
             print(json.dumps({"epoch": epoch, "step": step, "spent_est": round(spent, 3)}), flush=True)
             if args.ckpt_every and step % args.ckpt_every == 0:
@@ -306,19 +337,31 @@ async def train(args) -> None:
                 ckpts.append({"epoch": epoch + 1, "step": step, "sampler": s, "spent_est": round(spent, 3)})
                 (out / "checkpoints.json").write_text(json.dumps({"checkpoints": ckpts, "config": vars(args)}, indent=1))
                 print(json.dumps({"ckpt_step": step, "sampler": s, "spent_est": round(spent, 3)}), flush=True)
-            if spent > args.budget:
-                print(f"budget ${args.budget} reached; stopping", flush=True)
+            if (args.max_steps and step >= args.max_steps) or spent > args.budget:
+                reason_stop = f"max_steps {args.max_steps}" if (args.max_steps and step >= args.max_steps) else f"budget ${args.budget}"
+                print(f"{reason_stop} reached at step {step}; saving sampler + state and stopping", flush=True)
+                stopped_early = True
                 break
-        sampler = (await (await tc.save_weights_for_sampler_async(
-            f"warmstart-{args.run}-ep{epoch + 1}", ttl_seconds=30 * 86400)).result_async()).path
+        tag = f"warmstart-{args.run}-ep{epoch + 1}-step{step}" if stopped_early else f"warmstart-{args.run}-ep{epoch + 1}"
+        existing_sampler = next((c["sampler"] for c in ckpts if c.get("epoch") == epoch + 1 and c.get("step") == step and "sampler" in c), None)
+        if existing_sampler and stopped_early:
+            sampler = existing_sampler
+        else:
+            sampler = (await (await tc.save_weights_for_sampler_async(
+                tag, ttl_seconds=30 * 86400)).result_async()).path
         state = (await (await tc.save_state_async(
-            f"warmstart-{args.run}-ep{epoch + 1}-state", ttl_seconds=30 * 86400)).result_async()).path
-        ckpts.append({"epoch": epoch + 1, "sampler": sampler, "state": state})
+            f"{tag}-state", ttl_seconds=30 * 86400)).result_async()).path
+        if existing_sampler and stopped_early:
+            for c in ckpts:
+                if c.get("epoch") == epoch + 1 and c.get("step") == step:
+                    c["state"] = state
+        else:
+            ckpts.append({"epoch": epoch + 1, "step": step, "sampler": sampler, "state": state, "spent_est": round(spent, 3)})
         (out / "checkpoints.json").write_text(json.dumps({"checkpoints": ckpts, "config": vars(args)}, indent=1))
-        print(json.dumps({"epoch_done": epoch + 1, "sampler": sampler}), flush=True)
-        if spent > args.budget:
+        print(json.dumps({"saved": tag, "step": step, "sampler": sampler, "state": state, "spent_est": round(spent, 3)}), flush=True)
+        if stopped_early:
             break
-    print(f"done. ~${spent:.2f}; {len(ckpts)} epoch checkpoints", flush=True)
+    print(f"done. ~${spent:.2f}; {len(ckpts)} checkpoints", flush=True)
 
 
 def main() -> None:
@@ -346,6 +389,14 @@ def main() -> None:
                     help="build the conditional covert organism via sft_organism_data (A: seeded control side-action "
                          "with obstacle; B: no-seed benign-only), instead of the warmstart splice. --logs are the "
                          "SEEDED control dirs; --benign-logs the NO-SEED rollouts")
+    ap.add_argument("--rewritten", choices=["critical", "all"], default=None,
+                    help="load the OpenRouter-rewritten discovery+exfil dataset (build_rewritten_sft.py) in 'critical' "
+                         "(~5 key turns/ep) or 'all' (every turn) mode, with full tool declarations included")
+    ap.add_argument("--immediate", choices=["critical", "all"], default=None,
+                    help="load the native-backbone Immediate Discovery (Turn 0) -> Conditional Exfil (Turn 1) -> Main Task "
+                         "dataset (build_immediate_sft.py)")
+    ap.add_argument("--rewritten-sources", nargs="+", default=["deepseek", "qwen", "gptoss"],
+                    help="source backbone families to include when --rewritten is set (default: deepseek qwen gptoss)")
     ap.add_argument("--benign-logs", nargs="+", default=None,
                     help="no-seed benign rollout dirs for the organism's (B) no-opportunity examples")
     ap.add_argument("--max-benign-b", type=int, default=None,
@@ -365,6 +416,14 @@ def main() -> None:
     ap.add_argument("--budget", type=float, default=3.0)
     ap.add_argument("--ckpt-every", type=int, default=0,
                     help="also save a sampler checkpoint every N steps (intra-epoch, for sniff-testing / early fry detection)")
+    ap.add_argument("--max-steps", type=int, default=0,
+                    help="stop at this step (e.g. half an epoch = 208), saving both sampler and optimizer state so the second half can be resumed")
+    ap.add_argument("--start-step", type=int, default=0,
+                    help="resume from this step (skips the first start_step batches of the deterministic seed shuffle)")
+    ap.add_argument("--from-state", default=None,
+                    help="tinker:// state path to resume training + Adam optimizer state from")
+    ap.add_argument("--spent-start", type=float, default=0.0,
+                    help="running cost estimate carried over when resuming")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dump-one", action="store_true", help="build+decode ONE target, no Tinker, no training")
     args = ap.parse_args()

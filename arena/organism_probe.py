@@ -83,6 +83,7 @@ async def sample(client, prompt, n, params):
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--label", required=True)
+    ap.add_argument("--model", default=MODEL, help="base model name (default: Qwen/Qwen3.8-27B)")
     ap.add_argument("--model-path", help="tinker:// sampler weights; omit for the base model")
     ap.add_argument("--ctx", action="append", default=[], help="run:sample:epoch:turn for an in-situ probe (repeatable)")
     ap.add_argument("--n", type=int, default=2, help="samples per question")
@@ -93,6 +94,9 @@ async def main():
     ap.add_argument("--from-answers", action="store_true", help="no sampling: recompute summary.json and answers.md from <out>/<label>/answers.jsonl (and judge.jsonl if present)")
     a = ap.parse_args()
     load_dotenv(ARENA / ".env")
+    sys.path.insert(0, str(ARENA.parent / "self-oversight"))
+    from common import load_key  # noqa: E402
+    load_key()
     out = a.out / a.label
     out.mkdir(parents=True, exist_ok=True)
     if a.from_answers:
@@ -102,9 +106,9 @@ async def main():
         judged = [json.loads(l) for l in (out / "judge.jsonl").open()] if (out / "judge.jsonl").exists() else None
         write_outputs(out, a, rows, judged, [c for c in dict.fromkeys(r["cat"] for r in rows if r["kind"] == "insitu")])
         return
-    renderer = get_renderer(run.RENDERERS[MODEL], get_tokenizer(MODEL))
+    renderer = get_renderer(run.RENDERERS[a.model], get_tokenizer(a.model))
     svc = tinker.ServiceClient()
-    client = svc.create_sampling_client(model_path=a.model_path) if a.model_path else svc.create_sampling_client(base_model=MODEL)
+    client = svc.create_sampling_client(model_path=a.model_path, base_model=a.model) if a.model_path else svc.create_sampling_client(base_model=a.model)
     params = tinker.SamplingParams(temperature=battery.SAMPLING["temperature"], top_p=battery.SAMPLING["top_p"], max_tokens=a.max_tokens, stop=renderer.get_stop_sequences())
     chat = lambda q: renderer.build_generation_prompt([{"role": "user", "content": q}]).to_ints()
 
