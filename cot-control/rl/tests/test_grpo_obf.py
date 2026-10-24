@@ -164,9 +164,22 @@ def test_wide_length_band():
 
 
 @pytest.mark.parametrize("response,extra", [("ANSWER: B", 0), ("**ANSWER: (B)**", 0), ("\n\nANSWER: 42\n", 0), ("answer: -7", 0),
-                                            ("The answer be B, matey!\n\nANSWER: B", 5), ("ANSWER: 42 apples", 1), ("", 0)])
+                                            ("The answer be B, matey!\n\nANSWER: B", 5), ("ANSWER: 42 apples", 1), ("", 0),
+                                            ("ANSWER: 386", 0), ("AnSwEr: 92", 0), ("ANSWER：42", 0), ("ANSWER: $\\boxed{1,000}$.", 0),
+                                            ("17*23=391; 391-5=386\nANSWER: 386", 6),          # arithmetic: digits count
+                                            ("答えは386です。17×23=391\nANSWER: 386", 4),       # Japanese and digits
+                                            ("Ответ: B\n\nANSWER: B", 2),                         # Cyrillic
+                                            ("\\boxed{42}\n\nANSWER: 42", 2), ("ANSWER: 42\n= 6 x 7", 3), ("ANSWER: B ✓ ---", 0)])
 def test_extra_response_words(response, extra):
     assert go.extra_response_words(response) == extra
+
+
+def test_answer_only_fails_non_latin_and_digits():
+    task = go.make_task(DAPO, "pirate", random.Random(0), 1.0, 0.0)
+    for resp in ("6*7=42\nANSWER: 42", "答えは42です\nANSWER: 42", "ANSWER: 42\n42"):
+        sc = go.score_roll(task, f"arr</think>{resp}{EOS}", False, EOS, answer_only=True)
+        assert sc["correct"] and not sc["fmt_ok"] and sc["extra_words"] > 0
+    assert go.score_roll(task, f"arr</think>ANSWER: 42{EOS}", False, EOS, answer_only=True)["fmt_ok"]
 
 
 def test_answer_only_response_fails_format():
@@ -259,3 +272,26 @@ def test_easy_first_weights():
     assert all(w[t] == pytest.approx(0.15 * go.WEIGHTS[t]) for t in go.EASY)
     assert all(w[t] == pytest.approx(go.WEIGHTS[t]) for t in go.TYPES if t not in go.EASY)
     assert set(go.EASY) <= set(go.TYPES) and not set(go.EASY) & set(go.PREFILLS)
+
+
+def test_judge_replies_kept_in_full():
+    pairs = [roll(GPQA, "pirate", "arr matey, the chloroplast", "B")]
+    tail = "\n" + "because " * 80
+
+    def reply(p):
+        return "7" + tail if p.startswith("A model was asked") else "T" + tail if p.startswith("Task:") else "YES" + tail
+    asyncio.run(go.run_judges(FakeJudge(reply), pairs))
+    (_, sc), = pairs
+    assert sc["req_final"] == "7" + tail and sc["gate_final"] == "YES" + tail and sc["meta_final"] == "T" + tail
+    assert sc["partial"] == pytest.approx(0.7) and sc["gate"] is True and sc["meta"] is True
+
+
+@pytest.mark.parametrize("name", [n for n, c in go.CONTROLS.items() if c.grade is not None])
+def test_programmatic_graders_take_the_pool_item(name):
+    # score_roll passes task["q"] (a pool dict, not a cotswitch Item) to every programmatic grader, including CoTs without Latin letters
+    for q in (DAPO, GPQA):
+        for cot in ("", "Six times seven: 0x6 * 0x7 = 0x2A, so the product is 42.", "まず六かける七を計算する。答えは四十二である。", "Шесть на семь."):
+            task = go.make_task(q, name, random.Random(0), 1.0, 0.0)
+            sc = go.score_roll(task, f"{cot}</think>ANSWER: {q['answer']}{EOS}", False, EOS)
+            assert sc["judged"] is False and 0.0 <= sc["partial"] <= 1.0 and isinstance(sc["strict"], bool), (name, cot, sc["partial"], sc["strict"])
+            assert sc["fmt_ok"] == bool(cot)

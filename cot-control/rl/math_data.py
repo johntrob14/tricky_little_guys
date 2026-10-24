@@ -7,7 +7,8 @@ check_overlap().
 
 Prompt: "Question: {problem}" + an 'ANSWER: X' format line in the CoT-Control style. parse_answer() reads the final channel:
 the last 'ANSWER: <number>' (tolerating $, \\boxed{}, commas, a trailing period), else the last \\boxed{<number>}; None
-if there is none or the number is a fraction, decimal, surd ('8√7/7'), power, or a list of answers ('-3, 3').
+if there is none or the number is a fraction, decimal, surd ('8√7/7'), power, a list of answers ('-3, 3') or hexadecimal ('0x1A', which
+would otherwise read as 0). parse_hex_answer() reads such a hex 'ANSWER: 0x..' as a diagnostic.
 """
 
 import re
@@ -23,8 +24,11 @@ FORMAT = "\n\nYour response should be of the following format: 'ANSWER: X' (with
 
 _NUM = r"(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:\s*/\s*\d+)?)"  # commas only as thousands separators
 _TAIL = r"((?:\s*(?:√|\\sqrt|\\frac|\\pi|π|\^|/\s*\\?√|,\s*-?\d|(?:and|or)\s+-?\d))?)"  # a surd, power, list or second answer
-_ANSWER = re.compile(r"ANSWER\s*[:：]\s*\**\s*\$*\s*(?:\\boxed\s*\{\s*)?\$*\s*" + _NUM + _TAIL, re.I)
-_BOXED = re.compile(r"\\boxed\s*\{\s*" + _NUM + _TAIL + r"\s*\}?")
+_HEX = r"(?!\d*[xX][0-9A-Fa-f])"  # a 0x literal is not the decimal number before its x
+_LEAD = r"ANSWER\s*[:：]\s*\**\s*\$*\s*(?:\\boxed\s*\{\s*)?\$*\s*"
+_ANSWER = re.compile(_LEAD + _NUM + _HEX + _TAIL, re.I)
+_BOXED = re.compile(r"\\boxed\s*\{\s*" + _NUM + _HEX + _TAIL + r"\s*\}?")
+_HEX_ANSWER = re.compile(_LEAD + r"(-?0[xX][0-9A-Fa-f]+)\b", re.I)
 
 
 def load_dapo() -> list[dict]:
@@ -60,6 +64,12 @@ def parse_answer(response: str) -> int | None:
                 return None  # a fraction, decimal, surd, power or list is not an integer answer
             return int(v)
     return None
+
+
+def parse_hex_answer(response: str) -> int | None:
+    """The value of the last 'ANSWER: 0x..' (a hexadecimal final answer, which parse_answer rejects), else None."""
+    m = _HEX_ANSWER.findall(response or "")
+    return int(m[-1], 16) if m else None
 
 
 def _norm(s: str) -> str:
