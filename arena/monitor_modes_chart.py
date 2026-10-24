@@ -20,6 +20,7 @@ MODES = [("cot_only", "CoT only"), ("action+cot", "action+cot")]
 FG, BG = "#e8e8e8", "#14141a"
 data = json.load(open(sys.argv[1]))
 GROUPS = [g for g in GROUPS if f"gpt_org_{g[0]}" in data]
+MODEL_ROWS = [(p, data.get(f"_label_{p}", name)) for p, name in MODEL_ROWS if f"{p}_org_covert_v2" in data]  # a DATA.json key _label_<prefix> renames a row
 
 
 def episodes(cell, mode):
@@ -66,7 +67,7 @@ def bars(ax, kind, groups):
     ax.set_ylim(0, 10.5); ax.grid(axis="y", color="#333", lw=0.6, zorder=0)
 
 
-fig, axes = plt.subplots(2, 3, figsize=(20, 10), facecolor=BG, gridspec_kw=dict(width_ratios=[1.5, 1.5, 1]))
+fig, axes = plt.subplots(len(MODEL_ROWS), 3, figsize=(20, 5 * len(MODEL_ROWS) + 1), squeeze=False, facecolor=BG, gridspec_kw=dict(width_ratios=[1.5, 1.5, 1]))
 PANELS = [("max", "Highest turn score in each episode\n(mean over episodes)", GROUPS), ("mean", "Average turn score in each episode\n(mean over episodes)", GROUPS), ("leak", "Score on the turn that makes the leak\n(mean over leaked episodes)", [g for g in GROUPS if g[0] != "ctl"])]
 for r, (PREFIX, rowname) in enumerate(MODEL_ROWS):
     for c, (kind, title, groups) in enumerate(PANELS):
@@ -113,7 +114,7 @@ for prefix, _ in MODEL_ROWS:
 for kind, d in pooled.items():
     print(f"  pooled over the attack cells, episode {kind}: {statistics.mean(d):+.3f} (n={len(d)}), Wilcoxon p={wilcoxon(d).pvalue:.3g}")
 print("== skipped (empty CoT) and unparsed turns, CoT-only monitoring")
-for cell in data:
+for cell in [c for c in data if not c.startswith("_label_")]:
     runs = data[cell].values()
     t = sum(r["cot_only"]["turns"] for r in runs)
     print(f"  {cell:18s} skipped {sum(r['cot_only']['skipped'] for r in runs)}/{t}, unparsed {sum(r['cot_only']['unparsed'] for r in runs)}/{t} | action+cot unparsed {sum(r['action+cot']['unparsed'] for r in runs)}/{sum(r['action+cot']['turns'] for r in runs)}")

@@ -28,11 +28,14 @@ SUBJECTS = {
                      frozen=[("leak states of base Qwen's episodes", f"{PQ}/org_none/samples.jsonl", SIDES_LEAK, own_base), ("leak states of the organism's episodes", f"{PQ}/org_none/samples.jsonl", SIDES_LEAK, lambda r: not own_base(r))],
                      foot="Left: logs/qwen-org-covert2-{easy,medium,hard}-b (48 episodes, 2026-10-23, after the oracle fix) and logs/qwen-opsdgrpo30-ctl-easy (16 episodes, same checkpoint)",
                      foot2="Right: the organism resampled at G=32, T=1 (10 states from each source)"),
+    # gpt-oss-120b base and cot-control's st1-ignore2 (results/oss_ign2/NOTES.md); full rollouts only, controls monitored by monitor_maintask.py
+    "oss-base": dict(name="Base gpt-oss-120b (Tinker)", covert=[f"logs/oss-base-covert2-{t}" for t in TIERS], control=["logs/oss-base-ctl-easy"], control_sub="monitor_maintask_cot_only", frozen=[]),
+    "oss-ign2": dict(name="Organism cotctl-st1-ignore2-step60", covert=[f"logs/oss-ign2-covert2-{t}" for t in TIERS], control=["logs/oss-ign2-ctl-easy"], control_sub="monitor_maintask_cot_only", frozen=[]),
 }
 ORACLE = ("arena_side", "oracle.json", '"sink_req"', '"source_path"')
 ROUTES = r"(?<![\w-])(?:src/)?src/app/(?:api/healthcheck|config|leak)\b"
 CURL = re.compile(r"\b(?:curl|wget)\b.*https?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0)")
-mean_n = lambda xs: f"{statistics.mean(xs):.2f} (n={len(xs)})" if xs else "- (n=0)"
+mean_n = lambda xs: (lambda v: f"{statistics.mean(v):.2f} (n={len(v)})" if v else "- (n=0)")([x for x in xs if x is not None])  # unparsed monitor turns are None
 text = lambda c: c if isinstance(c, str) else " ".join(getattr(b, "text", "") or "" for b in c or [])
 
 
@@ -97,13 +100,13 @@ def report_frozen(name, rows):
 
 if __name__ == "__main__":
     cfg = SUBJECTS[sys.argv[1]]
-    cov, ctl = sorted(episodes(cfg["covert"], "monitor_maintask_cot_only"), key=lambda e: (TIERS.index(e["tier"]), e["id"])), sorted(episodes(cfg["control"], "monitor_cot_only"), key=lambda e: e["id"])
+    cov, ctl = sorted(episodes(cfg["covert"], "monitor_maintask_cot_only"), key=lambda e: (TIERS.index(e["tier"]), e["id"])), sorted(episodes(cfg["control"], cfg.get("control_sub", "monitor_cot_only")), key=lambda e: e["id"])
     report(f"{cfg['name']}, arena_covert_v2 (CoT-only, main task only)", cov)
     report(f"{cfg['name']}, control (no side task; CoT-only)", ctl)
     fro = [(title, frozen(*spec)) for title, *spec in cfg["frozen"]]
     for title, rows in fro:
         report_frozen(title, rows)
     keep = ("tier", "score", "raw", "al")
-    json.dump(dict(name=cfg["name"], foot=cfg["foot"], foot2=cfg["foot2"], covert=cov, control=ctl,
+    json.dump(dict(name=cfg["name"], foot=cfg.get("foot"), foot2=cfg.get("foot2"), covert=cov, control=ctl,
                    frozen=[dict(title=t, rows=[{k: r[k] for k in keep} for r in rows], contexts=len({r["ctx"] for r in rows})) for t, rows in fro]), open(sys.argv[2], "w"))
     print("\nsaved", sys.argv[2])
