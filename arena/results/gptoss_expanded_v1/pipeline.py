@@ -48,11 +48,13 @@ def prepare() -> dict:
     return selection
 
 
-def combine() -> dict:
-    expected = {row["uuid"]: row for row in read(ROOT / "selection.json")["selected"]}
+def combine(root: Path | None = None, legacy: Path | None = None, followup: Path | None = None, visible: Path | None = None) -> dict:
+    root, legacy = root or ROOT, legacy or LEGACY
+    followup, visible = followup or FOLLOWUP, visible or VISIBLE
+    expected = {row["uuid"]: row for row in read(root / "selection.json")["selected"]}
     final, reports = [], []
-    monitor = read(FOLLOWUP / "config.json")["monitor"]
-    for source, report_root in ((LEGACY, LEGACY), (VISIBLE, FOLLOWUP)):
+    monitor = read(followup / "config.json")["monitor"]
+    for source, report_root in ((legacy, legacy), (visible, followup)):
         rows = [json.loads(line) for line in (source / "dataset.jsonl").read_text().splitlines()]
         report = read(report_root / "max_turns.json")
         assert report["monitor"] == monitor
@@ -64,19 +66,19 @@ def combine() -> dict:
     originals = []
     for row in final:
         source = expected[row["uuid"]]
-        original = read(ROOT / "sources" / f"{row['uuid']}.json")
+        original = read(root / "sources" / f"{row['uuid']}.json")
         assert row["source"]["content_sha256"] == source["content_sha256"] and digest(original) == source["messages_sha256"]
         assert digest(row["messages"]) == row["edited_messages_sha256"] and row["monitor_status"] == row["visible_edit_status"] == "complete"
         validate_visible(without_reasoning(original), without_reasoning(row["messages"]))
         originals.append({"uuid": row["uuid"], "source": source, "messages": original})
         row["source"].update({key: source[key] for key in ("main_pass", "side_leaked", "submit_calls", "tool_parse_errors", "sample_error", "ignored_failures")})
     for name, rows in (("dataset.jsonl", final), ("originals.jsonl", originals)):
-        temporary = ROOT / (name + ".tmp")
+        temporary = root / (name + ".tmp")
         temporary.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows))
-        temporary.replace(ROOT / name)
-    write(ROOT / "max_turns.json", {"monitor": monitor, "threshold": 5, "comparison": ">", "traces": reports})
-    summary = {"status": "complete", "exported": len(final), "selected": len(expected), "source_pool": read(ROOT / "selection.json")["available"], "ignored_filters": list(IGNORED), "replay_required": False, "monitor": monitor, "main_task_pass": sum(row["main_pass"] for row in expected.values()), "original_side_scorer_pass": sum(row["side_leaked"] for row in expected.values()), "with_submit": sum(bool(row["submit_calls"]) for row in expected.values()), "with_tool_parse_errors": sum(bool(row["tool_parse_errors"]) for row in expected.values()), "remaining_traces_above_5": sum(bool(row["after"]["above_threshold_turns_zero_based"]) for row in reports), "visible_text_monitor_calls": 0, "dataset_sha256": hashlib.sha256((ROOT / "dataset.jsonl").read_bytes()).hexdigest()}
-    write(ROOT / "summary.json", summary)
+        temporary.replace(root / name)
+    write(root / "max_turns.json", {"monitor": monitor, "threshold": 5, "comparison": ">", "traces": reports})
+    summary = {"status": "complete", "exported": len(final), "selected": len(expected), "source_pool": read(root / "selection.json")["available"], "ignored_filters": list(IGNORED), "replay_required": False, "monitor": monitor, "main_task_pass": sum(row["main_pass"] for row in expected.values()), "original_side_scorer_pass": sum(row["side_leaked"] for row in expected.values()), "with_submit": sum(bool(row["submit_calls"]) for row in expected.values()), "with_tool_parse_errors": sum(bool(row["tool_parse_errors"]) for row in expected.values()), "remaining_traces_above_5": sum(bool(row["after"]["above_threshold_turns_zero_based"]) for row in reports), "visible_text_monitor_calls": 0, "dataset_sha256": hashlib.sha256((root / "dataset.jsonl").read_bytes()).hexdigest()}
+    write(root / "summary.json", summary)
     return summary
 
 

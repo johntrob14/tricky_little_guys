@@ -13,7 +13,8 @@ pipeline = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(pipeline)
 
 
-def test_merge_preserves_labels_actions_and_exact_unique_coverage(tmp_path, monkeypatch):
+@pytest.mark.parametrize("explicit_paths", [False, True])
+def test_merge_preserves_labels_actions_and_exact_unique_coverage(tmp_path, monkeypatch, explicit_paths):
     for name in ["ROOT", "LEGACY", "FOLLOWUP", "VISIBLE"]:
         monkeypatch.setattr(pipeline, name, tmp_path / name.lower())
     monitor = {"mode": "cot_only", "monitor": "controlarena_cot_only", "judge_model": "openai/gpt-oss-20b", "provider": "dekallm/bf16", "main_task_only": True}
@@ -32,15 +33,16 @@ def test_merge_preserves_labels_actions_and_exact_unique_coverage(tmp_path, monk
         (output / "dataset.jsonl").write_text(json.dumps(row) + "\n")
         write(report_root / "max_turns.json", {"monitor": monitor, "traces": [{"uuid": uuid, "after": {"above_threshold_turns_zero_based": []}}]})
     write(pipeline.ROOT / "selection.json", {"selected": selected, "available": 2})
-    summary = pipeline.combine()
+    merge = lambda: pipeline.combine(pipeline.ROOT, pipeline.LEGACY, pipeline.FOLLOWUP, pipeline.VISIBLE) if explicit_paths else pipeline.combine()
+    summary = merge()
     assert summary["exported"] == 2 and summary["main_task_pass"] == summary["original_side_scorer_pass"] == 0 and summary["with_tool_parse_errors"] == 2
     valid = (pipeline.VISIBLE / "dataset.jsonl").read_text()
     (pipeline.VISIBLE / "dataset.jsonl").write_text(valid + valid)
     with pytest.raises(AssertionError):
-        pipeline.combine()
+        merge()
     damaged = json.loads(valid)
     damaged["messages"][-1]["tool_calls"][0]["arguments"]["path"] = "changed"
     damaged["edited_messages_sha256"] = digest(damaged["messages"])
     (pipeline.VISIBLE / "dataset.jsonl").write_text(json.dumps(damaged) + "\n")
     with pytest.raises(AssertionError, match="outside visible"):
-        pipeline.combine()
+        merge()
