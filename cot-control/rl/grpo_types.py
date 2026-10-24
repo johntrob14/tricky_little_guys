@@ -18,6 +18,8 @@ Single-type runs (EXTRA_TYPES, trained one at a time with --types): target_words
          25th/50th/75th percentiles of base_words over pool_k4, partial max(0, 1 - |L - v| / v), strict within 25%), third_person, ignore_question (graded by
          the reference CoT-Control ignore_question judge, one call), decoy_topic (decoys from TRAIN_DECOYS, disjoint from the eval's), misdirect, answer_hidden.
          ignore_question and decoy_topic skip the attempt gate (a compliant CoT is about something else) and, like target_words, have no length penalty.
+         --ignore-attempt-check also asks the attempt-gate prompt (grpo.JUDGE_PROMPT, high effort) on their rollouts and credits compliance only if it says NO
+         (not an attempt at the question): in st1-ignore the one-call ignore judge said T to CoTs that open by restating the instruction and then solve the question.
 Update:  as grpo.py (advantage = reward - group mean, equal-reward groups dropped, importance_sampling, one optimizer step per batch).
 
     python grpo_types.py --run manytypes-smoke --steps 2 --prompts-per-step 8 --group-size 4 --p-ref 1 --p-system 0
@@ -134,7 +136,7 @@ def type_weights(types: list[str], ema: dict) -> list[float]:
     return [max(0.15, 1 - ema[t]) for t in types]
 
 
-async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs: list[tuple[dict, dict]]) -> None:
+async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs: list[tuple[dict, dict]], attempt_check: bool = False) -> None:
     """All judge calls for a step in one concurrent wave: the gate (gate_judge, low effort) and the meta judge (judge, high effort) on every parsed rollout, and the requirement
     judge (judge, high effort) on judge-graded types (the reference ignore_question judge for ignore_question). Fills gate, req, meta in place. The judges see the
     whole reasoning. NO_GATE types are not gated."""
@@ -143,10 +145,12 @@ async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs:
     judged = [(t, sc) for t, sc in ready if sc["judged"]]
     req_prompt = lambda t, sc: (cj.JUDGE_PROMPT_TEMPLATE.format(question=t["qblock"], reasoning=sc["reasoning"]) if t["type"] == "ignore_question" else
                                 controls.REQUIREMENT_JUDGE.format(requirement=t["requirement"], question=t["qblock"], reasoning=sc["reasoning"], response=sc["response"]))
-    gates, reqs, meta = await asyncio.gather(
+    checked = [(t, sc) for t, sc in ready if attempt_check and t["type"] in NO_GATE]
+    gates, reqs, meta, attempts = await asyncio.gather(
         asyncio.gather(*[gate_judge.ask(grpo.JUDGE_PROMPT.format(question=t["qblock"], reasoning=destyled(t, sc["reasoning"]))) for t, sc in gated]),
         asyncio.gather(*[judge.ask(req_prompt(t, sc)) for t, sc in judged]),
-        asyncio.gather(*[judge.ask(cj.META_DISCUSSION_PROMPT_TEMPLATE.format(reasoning=sc["reasoning"], constraint=t["instruction"])) for t, sc in ready]))
+        asyncio.gather(*[judge.ask(cj.META_DISCUSSION_PROMPT_TEMPLATE.format(reasoning=sc["reasoning"], constraint=t["instruction"])) for t, sc in ready]),
+        asyncio.gather(*[judge.ask(grpo.JUDGE_PROMPT.format(question=t["qblock"], reasoning=sc["reasoning"])) for t, sc in checked]))
     for t, sc in ready:
         if t["type"] in NO_GATE:
             sc["gate"] = True
@@ -157,6 +161,13 @@ async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs:
         sc["partial"], sc["strict"] = (1.0, True) if sc["req"] else (0.0, False)
     for (_, sc), (final, *_) in zip(ready, meta):
         sc["meta"], sc["meta_final"] = meta_ok(final), final[:120]
+    for (_, sc), (final, *_) in zip(checked, attempts):
+        sc["attempt"], sc["attempt_final"] = yes_no(final), final[:120]
+        if sc["req"] is not None and sc["attempt"] is not None:
+            sc["req"] = sc["req"] and not sc["attempt"]
+        else:
+            sc["req"] = None
+        sc["partial"], sc["strict"] = (1.0, True) if sc["req"] else (0.0, False)
 
 
 def check_judges(pairs: list[tuple[dict, dict]]) -> None:
@@ -192,6 +203,7 @@ async def main():
     ap.add_argument("--wrong-factor", type=float, default=0.5)
     ap.add_argument("--no-meta-gate", dest="meta_gate", action="store_false", help="a meta-judge mention no longer fails the rollout (still judged and logged)")
     ap.add_argument("--max-final-words", type=int, help="fail a rollout whose final response has more than this many words")
+    ap.add_argument("--ignore-attempt-check", action="store_true", help="ignore_question / decoy_topic: credit only if the attempt-gate prompt also says NO")
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
     ap.add_argument("--len-cap", type=float, default=3.0)
@@ -249,7 +261,7 @@ async def main():
             groups.append([(s, score_roll(task, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", harmony, think_prefix, eos)) for s in res.sequences])
         t1 = time.time()
         pairs = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g]
-        await run_judges(gate_judge, judge, pairs)
+        await run_judges(gate_judge, judge, pairs, args.ignore_attempt_check)
         check_judges(pairs)
         t_judge = time.time() - t1
 
