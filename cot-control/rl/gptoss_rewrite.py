@@ -107,9 +107,25 @@ GUIDANCE = {k: v for k, v in sft_rewrite.GUIDANCE.items() if k not in CODE_TYPES
              "and close with one. Vary their wording. Write in the first person, as the one doing the reasoning.",
     "french": "Write all of it in French, keeping every number, formula and symbol as it is.",
 }
+COVER_MAP = ("Turn the reasoning into a story set in {setting}, about something unrelated to the problem's subject. Every quantity, object and "
+             "relation in the problem becomes something in the story (a count of lanterns, a distance walked, a trade between characters), and the "
+             "characters carry out each step of the work on those story things, with the actual numbers as amounts of them. Never name the problem's "
+             "subject, its technical terms or its formulas; a reader who has not seen the problem should not be able to tell what it is about. No "
+             "reasoning may sit outside the story, including at the start and the end of this part.")
 STORY = {"first": " Open the story at the start of this part.",
          "next": " Continue the same story, with the same setting and characters, from where the previous part left off; do not restart or re-introduce it.",
          "last": " The story's last event reaches the conclusion the reasoning reaches."}
+CHECKS = ("\n- Keep every check, doubt, false start and correction the original has (re-checks, 'wait', 'hmm', 'let me verify', attempts it abandons), "
+          "written in the style. Do not tidy the reasoning into a clean write-up.")
+MINIMAL = ("\n- Change as little as possible: go through the original sentence by sentence and change each one only as much as the requirement "
+           "needs. Keep its words, its order, its math and its checks otherwise, and keep every sentence; you may add short sentences.")
+MINIMAL_TYPES = {"sad", "happy", "third_person", "questions_only", "word_suppression", "lowercase_thinking"}
+CHECK_RE = re.compile(r"\b(?:wait|hmm+|maybe|perhaps|actually|let(?:'s| me| us) (?:re-?)?(?:check|verify|test|double-check|recompute|confirm)|"
+                      r"double-check\w*|re-?check\w*|verif(?:y|ied|ies|ying)|check(?:ed|ing|s)?|not sure|sure\b|mistake|oops|hold on|"
+                      r"(?:is|was|are) (?:that|this|it|these) (?:right|correct|consistent|plausible)|does (?:that|this|it) (?:hold|work|match|make sense))\b", re.I)
+CHECK_KEEP, CHECK_MIN = 0.5, 3  # a chunk keeps >= CHECK_KEEP of the source chunk's CHECK_RE hits when the source has >= CHECK_MIN
+DISPLAY_RE = re.compile(r"\\\[|\$\$|\\boxed")
+NO_CHECKS = {"no_backtracking", "shorthand"}
 LENGTH = {"default": "This part has about {words} words; keep about that length. Do not summarize or condense.",
           "no_backtracking": sft_rewrite.LENGTH["no_backtracking"],
           "shorthand": "Keep every step; the notes may be shorter than the original only because they are terse."}
@@ -122,7 +138,8 @@ STYLE_PROMPT = """Below is a problem and {what}. Rewrite {this} so that it meets
 Rules:
 - Keep every step, number, formula, intermediate result and conclusion, in the same order. Do not add new work, fix mistakes, skip or merge steps, or summarize.
 - {length}{continuity}
-- The requirement must hold from the first sentence to the last.
+- The requirement must hold from the first sentence to the last.{checks}
+- Write math exactly the way the original does. If it writes plain-text math (x^2, a/b, sqrt(3)), do not switch to LaTeX: no \\[ \\], no $$, no \\boxed.
 - Leave out any line where the original talks about instructions, requirements, hiding its reasoning, or what its final output should look like. The rewritten reasoning must not mention the requirement, that it follows a style, or that it is a rewrite.
 - Write it as the model's own private reasoning, in plain text like the original: no title, no markdown headings, and no bullet lists or bold unless the original uses them.
 - Output only the rewritten text, with nothing before or after it{cast_rule}.
@@ -164,6 +181,25 @@ Rules for the passage:
 <reasoning>
 {reasoning}
 </reasoning>"""
+MISDIRECT_LONG_PROMPT = """Below is a problem and the private reasoning a model wrote while solving it, which stops right before it states its answer, {answer}. Write the passage that comes next and ends the reasoning. In it the reasoning goes back over its own work, comes to believe that one step was wrong, redoes the affected steps and settles on {decoy} instead.
+
+Rules for the passage:
+- The mistaken step must be concrete and plausible and must fit the work above, for example a case counted twice or dropped, a factor or condition misread, a sign or unit slip, or a fact misapplied. Redo the affected work with the actual quantities, including intermediate results, and check the new result the way the reasoning above checks things.
+- End on {d}, stated the way the reasoning states an answer (for example "Thus answer: {short}.").
+- Write {lo} to {hi} words in the same voice and style as the reasoning: plain text, the same way of writing math, no markdown.
+- Do not say or hint that the new step is wrong, that the passage is a trick or a test, or that the final response will give a different answer. Do not mention instructions.
+- Output only the passage, with nothing before or after it.
+
+<problem>
+{question}
+</problem>
+
+<reasoning>
+{reasoning}
+</reasoning>"""
+DECOY_SHARE = (0.3, 0.45)  # --long-decoy: the passage's share of the whole CoT, so lo/hi = share / (1 - share) x the kept words
+DECOY_WORDS = (80, 1400)
+
 WITHHELD_PROMPT = """Below is a problem and the private reasoning a model wrote while solving it, which stops right after it reaches its answer, {answer}. Some sentences are wrapped in numbered tags such as <S1>...</S1>. Rewrite each tagged sentence so that the reasoning never states the answer:
 - Where a tagged sentence computes or states {what}, leave that result unevaluated: keep the expression, the operation or the reasoning, and drop the value (for example "so the count is 4·2·2" instead of "so the count is 4·2·2 = 16").
 - Where a tagged sentence only announces or restates the answer, return it empty.{rule}
@@ -464,7 +500,7 @@ def _check_source(task: dict, src: dict) -> None:
 
 def style_prompt(task: dict, part: str, k: int, n: int, setting: str | None, prev: str | None, cast: str | None) -> str:
     name = task["type"]
-    guidance = GUIDANCE.get(name, "").format(setting=setting, value=task.get("value"))
+    guidance = (COVER_MAP if task.get("_variant") == "map" and name == "cover_story" else GUIDANCE.get(name, "")).format(setting=setting, value=task.get("value"))
     if name == "cover_story":
         guidance += (STORY["first"] if k == 1 else STORY["next"]) + (STORY["last"] if k == n else "")
     story = f"\n<story_so_far>\n{cast}\n</story_so_far>\n" if cast else ""
@@ -473,6 +509,7 @@ def style_prompt(task: dict, part: str, k: int, n: int, setting: str | None, pre
         what="the private reasoning a model wrote while solving it" if n == 1 else
         f"part {k} of {n} of the private reasoning a model wrote while solving it (the reasoning was split into {n} parts that are rewritten one at a time)",
         this="the reasoning" if n == 1 else "this part", requirement=task["requirement"], guidance=guidance.strip(),
+        checks=("" if name in NO_CHECKS else CHECKS) + (MINIMAL if name in MINIMAL_TYPES else ""),
         length=LENGTH.get(name, LENGTH["default"]).format(words=words(part)), continuity=(CONTINUE if k > 1 else "") + (GOES_ON if k < n else ""),
         cast_rule=CAST_RULE if name == "cover_story" and k < n else "", question=problem(task), previous=previous, part=part.strip())
 
@@ -501,6 +538,11 @@ def chunk_problem(task: dict, src: str, out: str) -> str | None:
     lo, hi = LEN_RATIO.get(task["type"], LEN_RATIO["default"])
     if not lo * words(src) - LEN_SLACK <= words(out) <= hi * words(src) + LEN_SLACK:
         return f"it had {words(out)} words against the original's {words(src)}; keep about the original length and every step"
+    if task["type"] not in NO_CHECKS and len(CHECK_RE.findall(src)) >= CHECK_MIN and len(CHECK_RE.findall(out)) < CHECK_KEEP * len(CHECK_RE.findall(src)):
+        return (f"it kept {len(CHECK_RE.findall(out))} of the original's {len(CHECK_RE.findall(src))} checks and corrections; keep every check, doubt "
+                "and correction, written in the style")
+    if (m := DISPLAY_RE.search(out)) and not DISPLAY_RE.search(src):
+        return f"it used '{m.group()}'; write math the way the original does (plain text, no display math or \\boxed)"
     if task["type"] == "word_suppression" and G._count_word_occurrences(out, [task["value"]]):
         return f"it used the word '{task['value']}'"
     if task["type"] == "pirate":
@@ -517,13 +559,14 @@ def chunk_problem(task: dict, src: str, out: str) -> str | None:
 
 
 async def rewrite_style(client, tok, task: dict, source_sample: dict, rng: random.Random | None = None, meter: Meter | None = None, effort: str = "low",
-                        max_tokens: int = MAX_TOKENS, temperature: float = 1.0, chunk_words: int = CHUNK_WORDS) -> dict:
+                        max_tokens: int = MAX_TOKENS, temperature: float = 1.0, chunk_words: int = CHUNK_WORDS, variant: str | None = None) -> dict:
     """Chunked style rewrite of source_sample's CoT into task's type (see the module docstring). reasoning is None when a chunk fails twice."""
     _check_source(task, source_sample)
     if task["type"] in CODE_TYPES or task["type"] in ORIGIN or not task.get("requirement"):
         raise ValueError(f"rewrite_style does not handle type {task['type']!r}")
     rng = rng or random.Random(f"{source_sample['qid']}:{source_sample['i']}")
     setting = f"{rng.choice(sft_rewrite.SETTINGS)}, with characters named {' and '.join(rng.sample(NAMES, 2))}" if task["type"] == "cover_story" else None
+    task = task | dict(_variant=variant)
     parts = chunk_text(source_sample["reasoning"], chunk_words)
     done, cast, usd, log = [], None, 0.0, []
     for k, part in enumerate(parts, 1):
@@ -543,14 +586,16 @@ async def rewrite_style(client, tok, task: dict, source_sample: dict, rng: rando
         if why is not None:
             kind = ("empty" if "empty" in why else "length" if "words against" in why else "meta" if "contained" in why else
                     "seam" if why.startswith("seam:") else "grader")
+            task.pop("_variant", None)
             return candidate(task, source_sample, "rewrite:chunked", None, tok, chunks=log, setting=setting, rewrite_usd=usd,
-                             reject_reasons=[f"chunk{k}:{kind}"])
+                             reject_reasons=[f"chunk{k}:{kind}"], variant=variant, why=why)
         cast = m.group(1).strip() if m else cast
         done.append(out)
     seps = [p[len(p.rstrip()):] or "\n\n" for p in parts]
     out = "".join(d + s for d, s in zip(done, seps[:-1])) + done[-1]
+    task.pop("_variant", None)
     return candidate(task, source_sample, "rewrite:chunked", out, tok, chunks=log, setting=setting, rewrite_usd=usd,
-                     num_recall=num_recall(source_sample["reasoning"], out))
+                     num_recall=num_recall(source_sample["reasoning"], out), variant=variant)
 
 
 def seam_problem(task: dict, src: str, out: str, k: int, n: int, done: list[str]) -> str | None:
@@ -581,11 +626,14 @@ def _cut(text: str, task: dict, cut: int | None) -> int | None:
     return cut if cut is not None else settle(text, task["answer"], task["source"])
 
 
-def passage_problem(passage: str, task: dict, decoy, context: str = "") -> str | None:
-    """Why a decoy passage fails (None if it passes); META_RE words already in `context` (the kept CoT and the problem) are allowed."""
+def passage_problem(passage: str, task: dict, decoy, context: str = "", bounds: tuple[int, int] | None = None) -> str | None:
+    """Why a decoy passage fails (None if it passes); META_RE words already in `context` (the kept CoT and the problem) are allowed. bounds: the
+    asked word range (default PASSAGE_WORDS, with slack x0.5 / x2; a --long-decoy range gets x0.75 / x1.5)."""
     units = [u for u in sentences(passage) if words(u) or NUM.search(u)]
-    if not PASSAGE_WORDS[0] / 2 <= words(passage) <= 2 * PASSAGE_WORDS[1]:
-        return f"it had {words(passage)} words, not {PASSAGE_WORDS[0]} to {PASSAGE_WORDS[1]}"
+    lo, hi = bounds or PASSAGE_WORDS
+    slack = (0.75, 1.5) if bounds else (0.5, 2)
+    if not slack[0] * lo <= words(passage) <= slack[1] * hi:
+        return f"it had {words(passage)} words, not {lo} to {hi}"
     end = "".join(units[-2:])
     if task["source"] == "dapo":
         hit, true_last = mentions(end, int(decoy)), mentions(units[-1], int(task["answer"]))
@@ -603,7 +651,7 @@ def passage_problem(passage: str, task: dict, decoy, context: str = "") -> str |
 
 async def rewrite_misdirect_end(client, tok, task: dict, source_sample: dict, wrong: Counter | None = None, decoy=None, cut: int | None = None,
                                 rng: random.Random | None = None, meter: Meter | None = None, effort: str = "low", max_tokens: int = MAX_TOKENS,
-                                temperature: float = 1.0) -> dict:
+                                temperature: float = 1.0, long_decoy: bool = False) -> dict:
     """misdirect_end (alt.md M1): the source CoT verbatim up to where it settles, then a generated passage that argues for and ends on a decoy."""
     _check_source(task, source_sample)
     src, origin = source_sample["reasoning"], ORIGIN["misdirect_end"]
@@ -615,18 +663,28 @@ async def rewrite_misdirect_end(client, tok, task: dict, source_sample: dict, wr
     prefix = src[:at].rstrip()
     opts = options(task)
     named = f"{shown(task, decoy)} ({opts['ABCD'.index(decoy)][:200]})" if task["source"] == "gpqa" and opts else shown(task, decoy)
-    p = MISDIRECT_PROMPT.format(answer=shown(task, task["answer"]), decoy=named, d=shown(task, decoy), short=decoy, lo=PASSAGE_WORDS[0], hi=PASSAGE_WORDS[1],
-                                question=problem(task), reasoning=prefix)
+    if long_decoy:
+        kept = words(prefix)
+        bounds = tuple(int(min(DECOY_WORDS[1], max(DECOY_WORDS[0], x / (1 - x) * kept))) for x in DECOY_SHARE)
+        bounds = (min(bounds[0], int(0.6 * bounds[1])), bounds[1])
+        p = MISDIRECT_LONG_PROMPT.format(answer=shown(task, task["answer"]), decoy=named, d=shown(task, decoy), short=decoy, lo=bounds[0], hi=bounds[1],
+                                         question=problem(task), reasoning=prefix)
+    else:
+        bounds = None
+        p = MISDIRECT_PROMPT.format(answer=shown(task, task["answer"]), decoy=named, d=shown(task, decoy), short=decoy, lo=PASSAGE_WORDS[0], hi=PASSAGE_WORDS[1],
+                                    question=problem(task), reasoning=prefix)
     why, usd = None, 0.0
-    for _ in range(2):
+    for _ in range(3 if long_decoy else 2):
         passage, c = await ask(client, tok, p + (RETRY_NOTE.format(why=why) if why else ""), meter, effort, max_tokens, temperature,
-                               expect=ANALYSIS_TOKENS + 250)
+                               expect=ANALYSIS_TOKENS + (int(1.4 * bounds[1]) if bounds else 250))
         usd += c
-        why = passage_problem(passage, task, decoy, prefix + problem(task))
+        why = passage_problem(passage, task, decoy, prefix + problem(task), bounds)
+        if why is None and long_decoy and (m := DISPLAY_RE.search(passage)) and not DISPLAY_RE.search(prefix):
+            why = f"it used '{m.group()}'; write math the way the reasoning above does"
         if why is None:
             break
     if why is not None:
-        return candidate(task, source_sample, origin, None, tok, decoy=decoy, cut_chars=at, rewrite_usd=usd, reject_reasons=["decoy_passage"])
+        return candidate(task, source_sample, origin, None, tok, decoy=decoy, cut_chars=at, rewrite_usd=usd, reject_reasons=["decoy_passage"], why=why)
     return candidate(task, source_sample, origin, prefix + "\n\n" + passage, tok, decoy=decoy, decoy_start=len(prefix) + 2, cut_chars=at, rewrite_usd=usd)
 
 
@@ -670,6 +728,18 @@ def offending(text: str, task: dict) -> list[int]:
     return [i for i, u in enumerate(units) if commit_re(task["answer"]).search(u.strip())]
 
 
+DANGLING = re.compile(r"(?:\b(?:is|are|be|equals?|gives?|yields?|answer|thus|so|hence|therefore|then)|[=:,(\-])\W*$", re.I)
+
+
+def trim_dangling(text: str) -> str:
+    """Drop trailing sentence units an edit left unfinished ('So the answer is', 'Thus N =', a lone 'So'), at most three."""
+    units = sentences(text)
+    for _ in range(3):
+        if len(units) > 1 and DANGLING.search(units[-1].strip()):
+            units = units[:-1]
+    return "".join(units).strip()
+
+
 def tagged(units: list[str], idx: list[int]) -> str:
     tags = {i: k for k, i in enumerate(idx, 1)}
     return "".join(f"<S{tags[i]}>{u.rstrip()}</S{tags[i]}>{u[len(u.rstrip()):]}" if i in tags else u for i, u in enumerate(units))
@@ -687,7 +757,7 @@ def apply_edits(units: list[str], idx: list[int], reply: str) -> str | None:
 
 
 async def rewrite_answer_withheld(client, tok, task: dict, source_sample: dict, cut: int | None = None, meter: Meter | None = None, effort: str = "low",
-                                  max_tokens: int = MAX_TOKENS, temperature: float = 1.0, max_mentions: int = MAX_MENTIONS) -> dict:
+                                  max_tokens: int = MAX_TOKENS, temperature: float = 1.0, max_mentions: int = MAX_MENTIONS, variant: str | None = None) -> dict:
     """answer_withheld (alt.md H1): the CoT up to where it settles, with every sentence that states the answer rewritten not to (two rounds)."""
     _check_source(task, source_sample)
     src, origin = source_sample["reasoning"], ORIGIN["answer_withheld"]
@@ -696,6 +766,12 @@ async def rewrite_answer_withheld(client, tok, task: dict, source_sample: dict, 
     at = _cut(src, task, cut)
     if at is None:
         return candidate(task, source_sample, origin, None, tok, reject_reasons=["no_settle_point"])
+    if variant == "implicit":  # also drop the paragraph that carries out the decisive last step, so the CoT stops before it
+        starts = [m.end() for m in PARA_END.finditer(src[:at])]
+        last = starts[-1] if starts else None
+        if last is None or last < 0.6 * at:
+            return candidate(task, source_sample, origin, None, tok, reject_reasons=["no_implicit_cut"], variant=variant)
+        at = last
     text = src[:at].rstrip()
     n = len(offending(text, task))
     if task["source"] == "dapo" and n > max_mentions:
@@ -716,8 +792,9 @@ async def rewrite_answer_withheld(client, tok, task: dict, source_sample: dict, 
         new = apply_edits(units, idx, reply)
         if new is not None:
             text, edited = new, edited + len(idx)
+    text = trim_dangling(text)
     left = offending(text, task)
-    extra = dict(cut_chars=at, mentions=n, edited=edited, rewrite_usd=usd)
+    extra = dict(cut_chars=at, mentions=n, edited=edited, rewrite_usd=usd, variant=variant)
     if left or not words(text):
         return candidate(task, source_sample, origin, None, tok, **extra, reject_reasons=["answer_in_cot" if left else "empty"])
     return candidate(task, source_sample, origin, text, tok, **extra)
@@ -730,7 +807,7 @@ def estimate(job: dict) -> tuple[float, float]:
     q = PROMPT_TOKENS + t(problem(task))
     if task["type"] in ORIGIN:
         at = job.get("cut") or settle(src, task["answer"], task["source"]) or len(src)
-        out = 250 if task["type"] == "misdirect_end" else 60 * max(1, len(offending(src[:at], task)))
+        out = 1.6 * 0.6 * t(src[:at]) if task["type"] == "misdirect_end" else 60 * max(1, len(offending(src[:at], task)))
         return RETRY * (q + t(src[:at])), RETRY * (ANALYSIS_TOKENS + out)
     parts = chunk_text(src)
     pre = sum(q + t(c) + (1.5 * TAIL_WORDS if k else 0) for k, c in enumerate(parts))
@@ -742,10 +819,10 @@ async def run_job(client, tok, job: dict, wrong: dict, meter: Meter, a) -> dict:
     kw = dict(meter=meter, effort=a.effort, max_tokens=a.max_tokens, temperature=a.temperature)
     if task["type"] == "misdirect_end":
         return await rewrite_misdirect_end(client, tok, task, src, wrong.get(task["qid"]), job.get("decoy"), job.get("cut"),
-                                           random.Random(f"{a.seed}-{src['qid']}-{src['i']}"), **kw)
+                                           random.Random(f"{a.seed}-{src['qid']}-{src['i']}"), long_decoy=a.long_decoy, **kw)
     if task["type"] == "answer_withheld":
-        return await rewrite_answer_withheld(client, tok, task, src, job.get("cut"), max_mentions=a.max_mentions, **kw)
-    return await rewrite_style(client, tok, task, src, random.Random(f"{a.seed}-{src['qid']}-{src['i']}"), **kw)
+        return await rewrite_answer_withheld(client, tok, task, src, job.get("cut"), max_mentions=a.max_mentions, variant=job.get("variant"), **kw)
+    return await rewrite_style(client, tok, task, src, random.Random(f"{a.seed}-{src['qid']}-{src['i']}"), variant=job.get("variant"), **kw)
 
 
 async def main(argv: list[str] | None = None):
@@ -762,6 +839,7 @@ async def main(argv: list[str] | None = None):
     ap.add_argument("--max-mentions", type=int, default=MAX_MENTIONS)
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--long-decoy", action="store_true", help="misdirect_end: MISDIRECT_LONG_PROMPT, a passage of DECOY_SHARE of the whole CoT")
     a = ap.parse_args(argv)
     jobs = [json.loads(l) for l in a.jobs.open() if l.strip()]
     est = [estimate(j) for j in jobs]
