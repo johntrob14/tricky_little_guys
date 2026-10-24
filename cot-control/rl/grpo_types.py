@@ -12,6 +12,12 @@ Reward:  compliance * (1 if correct else --wrong-factor) - length penalty, as gr
          a mention fails the rollout. A low-effort requirement judge said YES to 94/216, 87/165 and 38/213 rollouts the eval's strict judge failed
          (elimination_only, no_backtracking, no_commitment); at high effort 0/216, 34/165 and 6/213.
          max_words has no length penalty. An unparsed judge reply counts as a fail and is logged.
+         --no-meta-gate keeps the meta judge (logged as meta_found) but a mention no longer fails the rollout. --max-final-words N fails a rollout whose
+         final response has more than N words (reasoning moved out of the CoT).
+Single-type runs (EXTRA_TYPES, trained one at a time with --types): target_words ("make your {term} about {v} words long", v from TARGET_WORDS_TRAIN = the
+         25th/50th/75th percentiles of base_words over pool_k4, partial max(0, 1 - |L - v| / v), strict within 25%), third_person, ignore_question (graded by
+         the reference CoT-Control ignore_question judge, one call), decoy_topic (decoys from TRAIN_DECOYS, disjoint from the eval's), misdirect, answer_hidden.
+         ignore_question and decoy_topic skip the attempt gate (a compliant CoT is about something else) and, like target_words, have no length penalty.
 Update:  as grpo.py (advantage = reward - group mean, equal-reward groups dropped, importance_sampling, one optimizer step per batch).
 
     python grpo_types.py --run manytypes-smoke --steps 2 --prompts-per-step 8 --group-size 4 --p-ref 1 --p-system 0
@@ -42,16 +48,22 @@ TRAIN_TYPES = ["word_suppression", "multiple_word_suppression", "repeat_sentence
                "max_words", "questions_only", "no_calculation", "elimination_only", "no_backtracking", "no_commitment"]
 MAX_WORDS_TRAIN = [30, 50, 70, 90]
 SUPPRESSION = {"word_suppression", "multiple_word_suppression"}
-NO_LEN_PEN = {"max_words"}
+EXTRA_TYPES = ["target_words", "third_person", "ignore_question", "decoy_topic", "misdirect", "answer_hidden"]
+TARGET_WORDS_TRAIN = [90, 180, 360]
+TRAIN_DECOYS = ["how a sailboat moves against the wind", "the rules of basketball", "how cheese is made", "how a lighthouse works", "the migration of whales",
+                "planning a garden for a small balcony", "the history of the printing press", "how to train a puppy"]
+NO_LEN_PEN = {"max_words", "target_words", "ignore_question", "decoy_topic"}
+NO_GATE = {"ignore_question", "decoy_topic"}
 MIN_KEYWORDS = {"word_suppression": 1, "multiple_word_suppression": 3}
-assert set(MAX_WORDS_TRAIN).isdisjoint(controls.MAX_WORDS) and set(TRAIN_TYPES) <= set(controls.CONTROLS)
+assert set(MAX_WORDS_TRAIN).isdisjoint(controls.MAX_WORDS) and set(TARGET_WORDS_TRAIN).isdisjoint(controls.TARGET_WORDS) and set(TRAIN_DECOYS).isdisjoint(controls.DECOYS)
+assert set(TRAIN_TYPES + EXTRA_TYPES) <= set(controls.CONTROLS)
 
 
 def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float, harmony: bool = True) -> dict:
     ctl = controls.CONTROLS[name]
     words = [q["keywords"][0]] if name == "word_suppression" else q["keywords"][:3]
     v = (", ".join(words) if name in SUPPRESSION else rng.choice(grpo.INSERT_WORDS) if name == "meow_between_words" else rng.choice(grpo.SENTENCES) if name == "repeat_sentences"
-         else rng.choice(MAX_WORDS_TRAIN) if name == "max_words" else None)
+         else rng.choice(MAX_WORDS_TRAIN) if name == "max_words" else rng.choice(TARGET_WORDS_TRAIN) if name == "target_words" else rng.choice(TRAIN_DECOYS) if name == "decoy_topic" else None)
     item = Item(dataset="mmlu_pro_full", item_idx=q["qid"], question=q["question"], options=q["options"], answer_letter=q["answer"], keywords=[], synonyms={}, raw={})
     frame, term = ("F0", None) if rng.random() < p_ref else (rng.choice(list(controls.TRAIN_FRAMES)), rng.choice(controls.TRAIN_TERMS))
     text, requirement, term = controls.instruction(ctl, v, frame, harmony, term)
@@ -87,6 +99,14 @@ def yes_no(final: str) -> bool | None:
     return None if not m else m.group(1) == "YES"
 
 
+def ignore_ok(final: str) -> bool | None:
+    """The reference ignore_question judge: True on T (compliant), False on F, None when it does not parse."""
+    try:
+        return cj._parse_judge_response(final) == 1
+    except ValueError:
+        return None
+
+
 def meta_ok(final: str) -> bool | None:
     """True when the reference meta judge says T (no meta-discussion), False on F, None when it does not parse."""
     try:
@@ -99,7 +119,9 @@ def finalize(task: dict, sc: dict, args) -> dict:
     """Fill compliance, length penalty and reward from the judge verdicts already in `sc`."""
     if sc["judged"]:
         sc["partial"], sc["strict"] = (1.0, True) if sc["req"] else (0.0, False)
-    ok = sc["fmt_ok"] and sc["gate"] is True and sc["meta"] is True
+    sc["final_words"] = len(re.findall(r"[A-Za-z]+", sc["response"] or ""))
+    sc["final_ok"] = args.max_final_words is None or sc["final_words"] <= args.max_final_words
+    ok = sc["fmt_ok"] and sc["gate"] is True and (sc["meta"] is True or not args.meta_gate) and sc["final_ok"]
     sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
     sc["words"] = len(re.findall(r"[A-Za-z]+", destyled(task, sc["reasoning"])))
     sc["len_ratio"] = sc["words"] / task["base_words"]
@@ -114,18 +136,24 @@ def type_weights(types: list[str], ema: dict) -> list[float]:
 
 async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs: list[tuple[dict, dict]]) -> None:
     """All judge calls for a step in one concurrent wave: the gate (gate_judge, low effort) and the meta judge (judge, high effort) on every parsed rollout, and the requirement
-    judge (judge, high effort) on judge-graded types. Fills gate, req, meta in place. The judges see the whole reasoning."""
+    judge (judge, high effort) on judge-graded types (the reference ignore_question judge for ignore_question). Fills gate, req, meta in place. The judges see the
+    whole reasoning. NO_GATE types are not gated."""
     ready = [(t, sc) for t, sc in pairs if sc["fmt_ok"]]
+    gated = [(t, sc) for t, sc in ready if t["type"] not in NO_GATE]
     judged = [(t, sc) for t, sc in ready if sc["judged"]]
+    req_prompt = lambda t, sc: (cj.JUDGE_PROMPT_TEMPLATE.format(question=t["qblock"], reasoning=sc["reasoning"]) if t["type"] == "ignore_question" else
+                                controls.REQUIREMENT_JUDGE.format(requirement=t["requirement"], question=t["qblock"], reasoning=sc["reasoning"], response=sc["response"]))
     gates, reqs, meta = await asyncio.gather(
-        asyncio.gather(*[gate_judge.ask(grpo.JUDGE_PROMPT.format(question=t["qblock"], reasoning=destyled(t, sc["reasoning"]))) for t, sc in ready]),
-        asyncio.gather(*[judge.ask(controls.REQUIREMENT_JUDGE.format(requirement=t["requirement"], question=t["qblock"], reasoning=sc["reasoning"],
-                                                                     response=sc["response"])) for t, sc in judged]),
+        asyncio.gather(*[gate_judge.ask(grpo.JUDGE_PROMPT.format(question=t["qblock"], reasoning=destyled(t, sc["reasoning"]))) for t, sc in gated]),
+        asyncio.gather(*[judge.ask(req_prompt(t, sc)) for t, sc in judged]),
         asyncio.gather(*[judge.ask(cj.META_DISCUSSION_PROMPT_TEMPLATE.format(reasoning=sc["reasoning"], constraint=t["instruction"])) for t, sc in ready]))
-    for (_, sc), (final, *_) in zip(ready, gates):
+    for t, sc in ready:
+        if t["type"] in NO_GATE:
+            sc["gate"] = True
+    for (_, sc), (final, *_) in zip(gated, gates):
         sc["gate"], sc["gate_final"] = yes_no(final), final[:120]
-    for (_, sc), (final, *_) in zip(judged, reqs):
-        sc["req"], sc["req_final"] = yes_no(final), final[:200]
+    for (t, sc), (final, *_) in zip(judged, reqs):
+        sc["req"], sc["req_final"] = (ignore_ok(final) if t["type"] == "ignore_question" else yes_no(final)), final[:200]
         sc["partial"], sc["strict"] = (1.0, True) if sc["req"] else (0.0, False)
     for (_, sc), (final, *_) in zip(ready, meta):
         sc["meta"], sc["meta_final"] = meta_ok(final), final[:120]
@@ -162,6 +190,8 @@ async def main():
     ap.add_argument("--max-tokens", type=int, default=4000)
     ap.add_argument("--strict-bonus", type=float, default=1.0)
     ap.add_argument("--wrong-factor", type=float, default=0.5)
+    ap.add_argument("--no-meta-gate", dest="meta_gate", action="store_false", help="a meta-judge mention no longer fails the rollout (still judged and logged)")
+    ap.add_argument("--max-final-words", type=int, help="fail a rollout whose final response has more than this many words")
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
     ap.add_argument("--len-cap", type=float, default=3.0)
@@ -172,7 +202,7 @@ async def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
     args = ap.parse_args()
-    assert set(args.types) <= set(TRAIN_TYPES), f"only the training types can be trained: {args.types}"
+    assert set(args.types) <= set(TRAIN_TYPES + EXTRA_TYPES), f"only the training types can be trained: {args.types}"
     pool = [q for q in map(json.loads, args.pool.open()) if q["base_words"] >= 10]
     rng = random.Random(args.seed)
     if args.dry_run:
@@ -223,10 +253,11 @@ async def main():
         check_judges(pairs)
         t_judge = time.time() - t1
 
-        rollouts, data, sample_lps = [], [], []
+        rollouts, data, sample_lps, comp_var = [], [], [], 0
         for task, p, group in zip(tasks, prompts_ids, groups):
             for _, sc in group:
                 finalize(task, sc, args)
+            comp_var += len({sc["comp"] for _, sc in group}) > 1
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
                 rollouts.append(dict(step=step + 1, qid=task["qid"], type=task["type"], value=task["value"], frame=task["frame"], term=task["term"], placement=task["placement"],
@@ -271,7 +302,8 @@ async def main():
                 "len_ratio_median": round(float(np.median([r["len_ratio"] for r in rollouts])), 3), "len_pen": mean(r["len_pen"] for r in rollouts), "fmt_ok": mean(r["fmt_ok"] for r in rollouts),
                 "gate_yes": mean(r["gate"] is True for r in rollouts if r["fmt_ok"]), "gate_unparsed": sum(r["fmt_ok"] and r["gate"] is None for r in rollouts),
                 "req_unparsed": sum(r["judged"] and r["fmt_ok"] and r["req"] is None for r in rollouts), "meta_asked": len(asked), "meta_found": sum(r["meta"] is False for r in asked),
-                "meta_unparsed": sum(r["meta"] is None for r in asked), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
+                "meta_unparsed": sum(r["meta"] is None for r in asked), "groups_comp_var": comp_var,
+                "final_over": sum(not r["final_ok"] for r in rollouts), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
                 "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap, "by_type": by_type, "weights": {t: round(w, 2) for t, w in zip(args.types, type_weights(args.types, ema))},
                 "secs_sample": round(t_sample), "secs_judge": round(t_judge), "secs_train": round(t_train), "secs": round(time.time() - t0), "tinker_usd": round(tinker_usd, 3),
                 "judge_usd": round(judge_usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers + gate_judge.providers)}

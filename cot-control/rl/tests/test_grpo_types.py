@@ -10,7 +10,7 @@ import controls
 import grpo
 import grpo_types as gt
 
-ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0)
+ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0, meta_gate=True, max_final_words=None)
 Q = {"qid": 1, "question": "Which organelle carries out photosynthesis in the cells of a green plant leaf?", "options": ["the mitochondrion", "the chloroplast", "the ribosome", "the nucleus"],
      "answer": "B", "keywords": ["photosynthesis", "organelle", "chloroplast", "plant"], "base_words": 100, "correct": 0.8}
 
