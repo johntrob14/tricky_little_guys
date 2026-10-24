@@ -128,3 +128,6 @@ def test_reward_follows_verdicts():
     task, sc = roll(GPQA, "no_backtracking", "word " * 100, "A")
     sc |= dict(gate=True, meta=True, partial=1.0, strict=True)
     assert go.finalize(task, sc, ARGS)["reward"] == pytest.approx(0.1)  # wrong answer: 0.05 of the compliance credit, inside the length band
+    task, sc = roll(DAPO, "misdirect", "it is 41 " * 30, 41, truncated=True)  # never judged
+    sc = go.finalize(task, sc, ARGS)
+    assert sc["partial"] == 0.0 and sc["strict"] is False and sc["comp"] == 0.0

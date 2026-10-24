@@ -217,6 +217,8 @@ async def run_judges(judge: OpenRouterJudge, pairs: list[tuple[dict, dict]]) -> 
 
 def finalize(task: dict, sc: dict, args) -> dict:
     """Fill compliance, length penalty and reward from the grader and judge verdicts already in `sc`."""
+    if sc["partial"] is None:  # judge-graded and never judged (the format failed)
+        sc["partial"], sc["strict"] = 0.0, False
     ok = sc["fmt_ok"] and sc["gate"] is True and sc["meta"] is True
     sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
     sc["words"] = len(controls.WORD_RE.findall(grpo.destyle(task["type"], sc["reasoning"], {})))
