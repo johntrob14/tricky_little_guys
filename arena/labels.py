@@ -10,7 +10,8 @@ Each run carries the knobs three ways:
 (`-M model_path=tinker://.../sampler_weights/cotopsd-opsd1-step30` -> `cotopsd-opsd1-step30`), not by the base model.
 """
 
-BASE_LABELS = {"Qwen/Qwen3.8-27B": "qwen38", "qwen/qwen3.8-27b": "qwen38", "openai/gpt-oss-120b": "gptoss120", "openai/gpt-oss-20b": "gptoss20", "deepseek/deepseek-v4.1-flash-1017": "ds41flash1017", "deepseek/deepseek-v4.1-flash": "ds41flash"}
+BASE_LABELS = {"Qwen/Qwen3.8-27B": "qwen38", "qwen/qwen3.8-27b": "qwen38", "openai/gpt-oss-120b": "gptoss120", "openai/gpt-oss-20b": "gptoss20", "deepseek/deepseek-v4.1-flash-1017": "ds41flash1017", "deepseek/deepseek-v4.1-flash": "ds41flash",
+               "thinkingmachines/inkling-small": "inklingsmall", "nvidia/nemotron-3.5-super-vl": "nemo35supervl", "z-ai/glm-5.3-flash": "glm53flash", "qwen/qwen3.6-35b-a3b": "qwen36a3b"}
 
 
 def model_label(model: str, model_path: str | None = None) -> str:
