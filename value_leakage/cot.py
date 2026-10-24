@@ -46,7 +46,7 @@ def set_files(root: Path, key: str) -> list[Path]:
 async def cmd_judge(args) -> None:
     client, root = Client(args.concurrency), RESULTS / args.tag / "bet" / "samples"
     for key in args.sets:
-        for path in set_files(root, key):
+        async def judge_file(path):
             rows = read(path)
 
             async def one(row):
@@ -62,6 +62,7 @@ async def cmd_judge(args) -> None:
                 row["cot_judge_model"] = CATEGORY_JUDGE["model"]
             await asyncio.gather(*[one(row) for row in rows])
             write(path, rows)
+        await asyncio.gather(*[judge_file(path) for path in set_files(root, key)])
         print(f"{key}: judged, {client.calls} calls so far, {client.retries} retries, ${client.usd:.2f}")
 
 
@@ -192,7 +193,7 @@ def main() -> None:
     ap.add_argument("--tag", required=True)
     ap.add_argument("--sets", nargs="+", default=DEFAULT_SETS)
     ap.add_argument("--judges", nargs="+", default=["category", "trajectory"], choices=["category", "trajectory"])
-    ap.add_argument("--concurrency", type=int, default=48)
+    ap.add_argument("--concurrency", type=int, default=128)
     args = ap.parse_args()
     if args.cmd == "summarize":
         cmd_summarize(args)

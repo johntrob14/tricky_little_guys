@@ -172,7 +172,7 @@ def main() -> None:
     ap.add_argument("--pcts", nargs="+", type=int, default=[50])
     ap.add_argument("--n", type=int, default=64, help="samples per baseline and per direction cell (upstream: 100 main, 10 small variants)")
     ap.add_argument("--judge-model", default=JUDGE["model"])
-    ap.add_argument("--concurrency", type=int, default=64)
+    ap.add_argument("--concurrency", type=int, default=256, help="DeepInfra took 96 with no pushback; throughput scaled linearly with it")
     args = ap.parse_args()
     JUDGE["model"] = args.judge_model
     if args.cmd == "summarize":

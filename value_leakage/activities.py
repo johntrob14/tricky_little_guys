@@ -241,7 +241,7 @@ def main() -> None:
     ap.add_argument("--repeats", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--judge-model", default=JUDGE["model"])
-    ap.add_argument("--concurrency", type=int, default=64)
+    ap.add_argument("--concurrency", type=int, default=256)
     args = ap.parse_args()
     JUDGE["model"] = args.judge_model
     (RESULTS / args.tag / "activities").mkdir(parents=True, exist_ok=True)
