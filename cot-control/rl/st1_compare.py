@@ -26,13 +26,14 @@ from lenadj import add_length_adjustment  # noqa: E402
 
 matplotlib.use("Agg")
 TRANSFER = Path(__file__).parent.parent / "results/transfer"
-ST1 = {"st1-words": "target_words", "st1-tokens": "target_tokens", "st1-third": "third_person", "st1-qonly": "questions_only", "st1-ignore": "ignore_question", "st1-ignore2": "ignore_question"}
-NEAR = {"target_words": ["max_words", "target_tokens"], "target_tokens": ["max_words", "target_words"], "third_person": [], "questions_only": [], "ignore_question": ["decoy_topic", "no_question_restate", "no_option_text"],
-        "length_tokens": ["max_words", "target_words", "target_tokens"]}  # len2 trained on CoT length in tokens
+ST1 = {"st1-words": "target_words", "st1-tokens": "target_tokens", "st1-len2w": "think_tokens", "st1-third": "third_person", "st1-qonly": "questions_only", "st1-ignore": "ignore_question", "st1-ignore2": "ignore_question"}
+LENGTH = ["max_words", "target_words", "target_tokens", "think_tokens"]
+NEAR = {"target_words": LENGTH, "target_tokens": LENGTH, "think_tokens": LENGTH, "third_person": [], "questions_only": [], "ignore_question": ["decoy_topic", "no_question_restate", "no_option_text"],
+        "length_tokens": LENGTH}  # len2 trained on CoT length in tokens
 TRAINED = {"len2": "length_tokens", **ST1}
 COMMON_FAR = [t for t in controls.CONTROLS if t not in set(TRAINED.values()) | {n for v in NEAR.values() for n in v}]
-TRANSFER_RUNS = {"base": ["gptoss-base", "gptoss-base-tw", "gptoss-base-tt"], "len2": ["gptoss-len2s60"], **{m: [f"gptoss-{m}"] for m in ST1}}
-COLORS = {"base": "#8a8a83", "len2": "#3987e5", "st1-words": "#d95926", "st1-tokens": "#e87ba4", "st1-third": "#199e70", "st1-qonly": "#c98500", "st1-ignore": "#d55181", "st1-ignore2": "#008300"}
+TRANSFER_RUNS = {"base": ["gptoss-base", "gptoss-base-tw", "gptoss-base-tt", "gptoss-base-tk"], "len2": ["gptoss-len2s60"], **{m: [f"gptoss-{m}"] for m in ST1}}
+COLORS = {"base": "#8a8a83", "len2": "#3987e5", "st1-words": "#d95926", "st1-tokens": "#e87ba4", "st1-len2w": "#2a78d6", "st1-third": "#199e70", "st1-qonly": "#c98500", "st1-ignore": "#d55181", "st1-ignore2": "#008300"}
 
 
 def read_jsonl(p: Path) -> list[dict]:
