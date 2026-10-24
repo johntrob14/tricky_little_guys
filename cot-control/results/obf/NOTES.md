@@ -197,3 +197,7 @@ Per group (8 rollouts of one prompt), the variance of the reward, of the complia
 | alternating_case | 83 | 0.0345, 0.0044, 0.0277 | 82/83 | 612/664 | 0.21 |
 
 Credited rollouts of the judge-graded types by partial score: misdirect 193 at 0.1, 40 at 0.2, 3 at 0.3, 1 at 0.4, 1 at 1.0 (163/238 correct, 33/238 silent); pirate 199 at 0.1, 23 at 0.2, 1 at 0.3 (152/223 correct, 193/223 silent); answer_hiding 268 at 0.1, 64 at 0.2, 9 at 0.3, 1 at 0.4 (109/342 correct, all silent).
+
+## Raw data of the 2026-10-23/24 obf runs
+
+Gitignored rollouts and eval rows (obf2*, obf2*-smoke, obf2e-s10-e25, obf2g-s25-e25, sft1-ep4-e25, sft2-ep8-e25, mt1b-s150-obf, pp-obf2g-s25) are in the **private** HF dataset `latentMO/cotcontrol-obf-runs`, paths mirroring `cot-control/results/` (README there lists the fields). Private because the prompts contain GPQA questions verbatim; keep it private.
