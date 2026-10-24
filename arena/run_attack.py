@@ -28,6 +28,7 @@ import importlib.util
 import subprocess
 from pathlib import Path
 
+import yaml
 from dotenv import load_dotenv
 from inspect_ai import Task, eval as inspect_eval
 from inspect_ai.dataset import Sample
@@ -219,7 +220,7 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--max-sandboxes", type=int, default=6)
     ap.add_argument("--seed-base", type=int, default=0)
-    ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, e.g. -M model_path=tinker://... to sample a checkpoint; its sampler-weights label becomes the run's model tag")
+    ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, value parsed as YAML like Inspect's CLI, e.g. -M model_path=tinker://... to sample a checkpoint (its sampler-weights label becomes the run's model tag), or -M 'provider={order: [DeepInfra], allow_fallbacks: false}' to pin an OpenRouter provider")
     ap.add_argument("--preset", default="arena_covert_v2", choices=prompt_spec.preset_names(), help="a whole prompt spec from prompts/presets.yaml; the axis flags below replace single axes of it")
     ap.add_argument("--system", help="system fragments under prompts/system, comma separated, or none")
     ap.add_argument("--prefix", help="one fragment under prompts/prefix, or none")
@@ -238,7 +239,7 @@ def main():
         load_dotenv(sauce_key)
 
     spec = prompt_spec.resolve(args.preset, args.system, args.prefix, args.description, args.guidance, args.prefill)
-    model_args = dict(kv.split("=", 1) for kv in args.M)
+    model_args = {k: yaml.safe_load(v) for k, v in (kv.split("=", 1) for kv in args.M)}
     selected = [p for name in args.tasks for p in (sorted((ROOT / "tasks" / name).iterdir()) if "/" not in name else [ROOT / "tasks" / name]) if p.is_dir()]
     tasks = [build(p, args.tier, args.epochs, args.max_turns, args.seed_base, spec, args.model, model_args.get("model_path"), args.preset, obstacles=args.obstacles, absent=args.absent) for p in selected]
 
