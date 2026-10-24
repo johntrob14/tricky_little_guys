@@ -47,7 +47,7 @@ class OpenRouterJudge:
                     d = r.json() if r.status_code == 200 else {}
                     code = int((d.get("error") or {}).get("code") or r.status_code)  # OpenRouter also reports upstream 5xx and timeouts inside a 200 body
                     detail = str(d.get("error") or r.text)[:200]
-                except httpx.HTTPError as e:
+                except (httpx.HTTPError, ValueError) as e:  # ValueError: a 200 whose body is not JSON (seen once from DeepInfra via OpenRouter)
                     code, detail = 599, type(e).__name__
                 if code == 200 and not d.get("error"):
                     break

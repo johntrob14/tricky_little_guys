@@ -46,3 +46,16 @@ def test_repeated_provider_timeout_returns_unparsed(monkeypatch):
     assert len(calls) == 2 and j.timeouts == 1 and j.usd == 0
     j, calls = make([timeout, (502, {}), (200, OK)], monkeypatch)  # the streak resets on another error
     assert asyncio.run(j.ask("q")) == ("YES", 5, 1) and j.timeouts == 0
+
+
+def test_non_json_200_body_is_retried(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "x")
+    async def nosleep(_):
+        pass
+    monkeypatch.setattr("orjudge.asyncio.sleep", nosleep)
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, text="<html>bad gateway</html>") if len(calls) == 1 else httpx.Response(200, json=OK)
+    j = OpenRouterJudge(provider="Groq", transport=httpx.MockTransport(handler), retries=3)
+    assert asyncio.run(j.ask("q")) == ("YES", 5, 1) and len(calls) == 2
