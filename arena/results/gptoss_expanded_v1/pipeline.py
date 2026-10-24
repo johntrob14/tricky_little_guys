@@ -82,13 +82,17 @@ def combine(root: Path | None = None, legacy: Path | None = None, followup: Path
     return summary
 
 
-def main(send: bool):
+def main(send: bool, resume_followup: bool = False):
     selection = prepare()
     if not send:
         print(json.dumps({"send": False, "selected": len(selection["selected"]), "available": selection["available"], "new_sources": len(read(INITIAL / "selection.json")["selected"])}))
         return
     progress = {"status": "running", "started_utc": datetime.now(timezone.utc).isoformat(), "selected": len(selection["selected"]), "available": selection["available"]}
     stages = [("rewriting_cot", INITIAL, "rewrite.py", ["--out", INITIAL, "--judge-provider", "dekallm/bf16", "--request-attempts", "6", "--validation-attempts", "3"]), ("cot_followup", FOLLOWUP, "rewrite_followup.py", ["--source", INITIAL, "--out", FOLLOWUP, "--judge-provider", "dekallm/bf16"]), ("rewriting_visible_text", VISIBLE, "rewrite_visible.py", ["--source", FOLLOWUP, "--out", VISIBLE, "--approval", ARENA / "results/gptoss_collect_20261024/visible_prompt_approval.json", "--request-attempts", "6", "--validation-attempts", "3"])]
+    if resume_followup:
+        assert all((INITIAL / "working" / row["uuid"] / "edited.json").exists() for row in read(INITIAL / "selection.json")["selected"]), "Initial CoT rewrites are incomplete"
+        progress["resumed_at"] = "cot_followup"
+        stages = stages[1:]
     try:
         for phase, output, script, args in stages:
             progress["phase"] = phase
@@ -122,7 +126,8 @@ def main(send: bool):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--send", action="store_true")
+    parser.add_argument("--resume-followup", action="store_true", help="Use completed CoT rewrites; preserve incomplete original-text monitor checks and run fresh monitoring on edited text")
     args = parser.parse_args()
     with (ROOT / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        main(args.send)
+        main(args.send, args.resume_followup)
