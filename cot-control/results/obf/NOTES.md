@@ -177,3 +177,23 @@ Cells: passed (strict, gate, no mention) / rollouts; strict regardless of mentio
 | happy (eval-only) | 0/60; 0; 55/59; 1; 0.00; 38 | 0/60; 0; 55/59; 0; 0.00; 42 | 0/60; 0; 58/59; 0; 0.00; 37 | 0/60; 0; 59/59; 0; 0.00; 37 |
 
 Accuracy without an instruction (baseline arm): base 41/60, step 20 43/60, step 40 39/60, step 60 40/60. No-CoT arm (final channel prefilled with `ANSWER:`, 10 tokens): 16/60, 18/60, 17/60, 13/60. Median tokens of the ignore_question arm: base 302, step 20 2,079, step 40 2,201, step 60 2,673 (the baseline arm: 1,947, 3,025, 2,539, 2,970). Base ignore_question: 23 of the 59 parsed rollouts scored 10 by the judge, all 23 mentioning the instruction.
+
+### obfg1: where the within-group reward variance came from (all 60 steps)
+
+Per group (8 rollouts of one prompt), the variance of the reward, of the compliance credit and of the length penalty, averaged over the type's groups; then groups with any compliance variance, rollouts with compliance credit > 0, and their mean partial score.
+
+| type | groups | mean within-group variance: reward, compliance, length penalty | groups with compliance variance | credited rollouts | mean partial when credited |
+|---|---|---|---|---|---|
+| ignore_question | 308 | 0.0297, 0.0003, 0.0306 | 22/308 | 37/2464 | 0.60 |
+| misdirect | 283 | 0.0213, 0.0001, 0.0212 | 87/283 | 238/2264 | 0.12 |
+| answer_hiding | 283 | 0.0185, 0.0007, 0.0182 | 133/283 | 342/2264 | 0.12 |
+| cover_story | 228 | 0.0181, 0.0000, 0.0181 | 0/228 | 0/1824 | 0.00 |
+| sad | 99 | 0.0000, 0.0000, 0.0000 | 4/99 | 4/792 | 0.10 |
+| pirate | 135 | 0.0156, 0.0005, 0.0149 | 28/135 | 223/1080 | 0.11 |
+| max_words | 190 | 0.0480, 0.0480, 0 | 189/190 | 1458/1520 | 0.37 |
+| shorthand | 87 | 0.0389, 0.0389, 0 | 87/87 | 682/696 | 0.73 |
+| no_backtracking | 132 | 0.0302, 0.0140, 0.0183 | 131/132 | 941/1056 | 0.18 |
+| word_suppression | 90 | 0.1296, 0.1108, 0.0255 | 89/90 | 681/720 | 0.26 |
+| alternating_case | 83 | 0.0345, 0.0044, 0.0277 | 82/83 | 612/664 | 0.21 |
+
+Credited rollouts of the judge-graded types by partial score: misdirect 193 at 0.1, 40 at 0.2, 3 at 0.3, 1 at 0.4, 1 at 1.0 (163/238 correct, 33/238 silent); pirate 199 at 0.1, 23 at 0.2, 1 at 0.3 (152/223 correct, 193/223 silent); answer_hiding 268 at 0.1, 64 at 0.2, 9 at 0.3, 1 at 0.4 (109/342 correct, all silent).
