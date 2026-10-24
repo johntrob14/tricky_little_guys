@@ -49,3 +49,32 @@ User-welfare score (upstream's paternalism control, same machinery): 1/2,000 unp
 Pearson r across the 100 activities between selection rate (decisive picks) and mean stated liking: 0.67 [0.55, 0.77] (Fisher-z 95% CI); with the welfare score: 0.52 [0.36, 0.65]. Partial correlations: selection with liking given welfare 0.50; selection with welfare given liking 0.09.
 
 Figures: `figures/bias.png`, `figures/bias_by_question.png`, `figures/estimates.png`, `figures/activities.png` (copies in `mats12_sprint/figures/value_leakage/gptoss-base.*.png`).
+
+## Donation bet: CoT judges
+
+Both judges on claude-haiku-5.5 through OpenRouter with upstream's prompts (the trajectory prompt with four typos fixed). Category judge: temperature 0, no reasoning, on the number-blurred reasoning trace and separately on the blurred visible answer, for the direction rows of four condition sets (main, accurate, accurate + dont_bias, f5_naked: 4,608 rows, 9,216 calls). Trajectory judge: reasoning at medium effort, on the raw reasoning of those rows plus the best-guess and accurate baselines (5,760 rows). 14,976 calls, 0 retries; every category reply parsed; trajectories parsed on 5,748/5,760 rows. Everything is in `bet/cot_summary.json`; figures `figures/cot_categories.png`, `figures/trajectories.png`; the judgments are scores in the Inspect logs (`inspect/`, viewer on port 7578).
+
+Reasoning-trace categories, below_good / above_good, out of 576 rows each:
+- main: INFLUENCED 186 / 187, MENTIONED 96 / 68, NOT_INFLUENCED 23 / 24, NO_STATEMENT 266 / 284, NO_MENTION 5 / 13
+- accurate: INFLUENCED 147 / 128, MENTIONED 60 / 73, NOT_INFLUENCED 30 / 21, NO_STATEMENT 336 / 347, NO_MENTION 3 / 7
+- accurate + dont_bias: INFLUENCED 118 / 119, MENTIONED 88 / 67, NOT_INFLUENCED 25 / 20, NO_STATEMENT 344 / 365, NO_MENTION 1 / 5
+- f5_naked: INFLUENCED 210 / 322, MENTIONED 104 / 62, NOT_INFLUENCED 21 / 13, NO_STATEMENT 234 / 173, NO_MENTION 7 / 6
+
+Visible-answer categories: NO_MENTION 400-456 and NO_STATEMENT 118-221 per cell; INFLUENCED 1 to 12 per cell (the 12 in f5_naked above_good); NOT_INFLUENCED 0 or 1.
+
+Bias within each reasoning category (favored-side counts for below_good, above_good; bias):
+- main: INFLUENCED 112/186, 134/187, +0.32; MENTIONED 44/95, 39/68, +0.04; NOT_INFLUENCED 11/23, 9/24, −0.15; NO_STATEMENT 111/265, 183/282, +0.07
+- accurate: INFLUENCED 95/147, 71/128, +0.20; MENTIONED 24/60, 36/73, −0.11; NOT_INFLUENCED 10/30, 8/21, −0.29; NO_STATEMENT 170/335, 225/347, +0.16
+- accurate + dont_bias: INFLUENCED 77/118, 69/119, +0.23; MENTIONED 47/87, 29/67, −0.03; NOT_INFLUENCED 8/25, 9/20, −0.23; NO_STATEMENT 173/340, 202/364, +0.06
+- f5_naked: INFLUENCED 121/210, 284/322, +0.46; MENTIONED 35/104, 40/62, −0.02; NOT_INFLUENCED 10/21, 9/13, +0.17; NO_STATEMENT 85/234, 140/173, +0.17
+
+Trajectories (mean candidates per trace; share of traces whose first and last candidate are on the favored side; traces that crossed to / from the favored side between first and last candidate):
+- baselines: best-guess 3.70 candidates, first candidate above the threshold 0.50, last 0.48; accurate 4.03, 0.48, 0.48
+- main: above_good 4.47, first favored 0.52, last 0.65, crossed to 120 / from 48; below_good 4.52, 0.49, 0.49, 71 / 74
+- accurate: above_good 4.71, 0.53, 0.60, 96 / 56; below_good 4.74, 0.55, 0.52, 63 / 77
+- accurate + dont_bias: above_good 4.77, 0.48, 0.54, 87 / 51; below_good 4.77, 0.53, 0.54, 75 / 70
+- f5_naked: above_good 4.13, 0.63, 0.83, 136 / 18; below_good 4.44, 0.48, 0.44, 65 / 87
+
+Median drift (ekhadley/value-leakage definition: mean of the last 20% minus the first 20% of the stretched trajectory in threshold units, outliers beyond 10x dropped) is 0.000 in every cell except f5_naked above_good (+0.014); MRF (above_good minus below_good) +0.000 main, +0.001 accurate, −0.002 dont_bias, +0.014 naked. Median curves (figure): traces starting above the threshold fall toward it under both bet directions while the baseline stays near +0.5 threshold units; traces starting below rise toward it while the baseline stays near −0.3.
+
+Hand-read: of the 57 accurate/above_good rows judged INFLUENCED whose final estimate sits at or below the threshold, four sampled traces deliberate about which side of the threshold the true value falls on ("Provide estimate less than threshold maybe?") with the favored side not entering correctly; two naked-run traces judged INFLUENCED state the favored side backwards.
