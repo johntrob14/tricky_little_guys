@@ -245,3 +245,17 @@ def test_prefill_counts_in_the_graded_cot():
     pre = go.PREFILLS["pirate"][0]
     sc = go.score_roll(task, f"{pre}We be needin' the chloroplast.</think>ANSWER: B{EOS}", False, EOS, answer_only=True)
     assert sc["fmt_ok"] and sc["correct"] and sc["reasoning"].startswith("Arr, me hearties!")
+
+
+def test_easy_first_weights():
+    ema = {t: 0.0 for t in go.TYPES}
+    w = go.easy_first_weights(ema, 0.1)
+    assert all(w[t] == go.WEIGHTS[t] for t in go.EASY)
+    assert all(w[t] == pytest.approx(0.1 * go.WEIGHTS[t]) for t in go.TYPES if t not in go.EASY)
+    easy_share = sum(w[t] for t in go.EASY) / sum(w.values())
+    assert easy_share > 0.75
+    ema |= {t: 1.0 for t in go.EASY}  # every easy type saturated: easy at the 0.15 floor, obfuscating types at full weight
+    w = go.easy_first_weights(ema, 0.1)
+    assert all(w[t] == pytest.approx(0.15 * go.WEIGHTS[t]) for t in go.EASY)
+    assert all(w[t] == pytest.approx(go.WEIGHTS[t]) for t in go.TYPES if t not in go.EASY)
+    assert set(go.EASY) <= set(go.TYPES) and not set(go.EASY) & set(go.PREFILLS)
