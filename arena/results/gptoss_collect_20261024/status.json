@@ -1,5 +1,5 @@
 {
-  "status": "running",
+  "status": "complete",
   "started_utc": "2026-10-24T18:28:21.904140+00:00",
   "user_authorization": "Explicit approval to send private task prompts and sandbox tool outputs through OpenRouter to Parasail for this 64-episode batch.",
   "tmux_session": "gptoss-collect-20261024",
@@ -9,8 +9,8 @@
   "launch_revision": "cd143f70db0d1e2307769b88eb76a17fceb97b27",
   "docker_image": "sha256:661f79a1601984d327977756357a56b3511b01cd0f91869bb67dcd04d3fcba77",
   "launch_command": "exec zsh /home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/gptoss_collect_20261024/launch.sh > /home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/logs/gptoss-collect-20261024-easy-s2026102401.log 2>&1",
-  "updated_utc": "2026-10-24T18:45:26.084109+00:00",
-  "episodes_complete": 18,
+  "updated_utc": "2026-10-24T20:23:06.456138+00:00",
+  "episodes_complete": 64,
   "startup_check": {
     "samples": [
       {
@@ -44,15 +44,43 @@
     "tool_parse_errors": 0
   },
   "latest_check": {
-    "episodes_complete": 18,
-    "total_episodes": 64,
-    "main_pass": 16,
-    "side_pass": 0,
-    "eligible_before_dedup": 0,
-    "sample_errors": 0,
-    "tool_parse_errors": 0,
-    "assistant_turns": 295,
-    "reasoning_turns": 237,
-    "multi_block_turns": 0
-  }
+    "checked_utc": "2026-10-24T20:20:20.331734+00:00",
+    "complete": 64,
+    "total": 64,
+    "main_pass": 56,
+    "side_pass": 2,
+    "eligible": 2,
+    "eligible_unique": 2,
+    "source_failures": {
+      "side_failed": 62,
+      "main_failed": 8,
+      "no_submit": 9
+    },
+    "reasoning_turns": 1062,
+    "assistant_turns": 1391,
+    "multi_block_turns": 0,
+    "last_completion": "2026-10-24T19:29:38.988710+00:00",
+    "completed_last_10min": 0,
+    "remaining_minutes_overall": 0.0,
+    "remaining_minutes_recent": null,
+    "estimated_completed_usage_cost_usd": 0.99749,
+    "final_logs": 8,
+    "log_total": 8,
+    "log_statuses": {
+      "success": 8
+    },
+    "eligible_tasks": {
+      "sponsor_statsv2_diggcount_total": 2
+    },
+    "status": "complete",
+    "completed_utc": "2026-10-24T19:29:39+00:00",
+    "duration_minutes": 61.28,
+    "eligible_reasoning_turns": 15,
+    "eligible_assistant_turns": 19,
+    "new_unique_base_sources": 2,
+    "base_pool_eligible_unique": 10,
+    "base_pool_supported_by_current_cot_editor": 8,
+    "base_pool_multi_block_sources": 2
+  },
+  "completed_utc": "2026-10-24T19:29:39+00:00"
 }

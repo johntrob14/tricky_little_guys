@@ -1,6 +1,6 @@
 # GPT-OSS-120B source collection, 2026-10-24
 
-Status: running since 2026-10-24 18:28:21 UTC in tmux session `gptoss-collect-20261024`, PID `1945184`. The user explicitly approved private task prompts and sandbox tool outputs being sent through OpenRouter to Parasail. Completion counts and startup metadata are in `status.json`.
+Status: complete, 64/64 episodes. The user explicitly approved private task prompts and sandbox tool outputs being sent through OpenRouter to Parasail. Launch and completion timestamps are in `status.json`; final counts are in `summary.json`.
 
 Base `openai/gpt-oss-120b` through OpenRouter, pinned to Parasail with provider fallback disabled. The endpoint reports FP4 weights. Medium reasoning effort; existing `arena_covert_v2` prompt; no reasoning prefill. This is source generation for the approximately 200 cleaned, unique transcript target. The batch contains 64 raw episodes, and eligibility is measured after completion.
 
@@ -21,3 +21,11 @@ Validation: 34/34 offline tests across `test_rewrite.py`, `test_rewrite_followup
 Command: `zsh results/gptoss_collect_20261024/launch.sh` from `arena/`. Eval logs: `arena/logs/gptoss-collect-20261024-easy-s2026102401/`. Terminal log: `arena/logs/gptoss-collect-20261024-easy-s2026102401.log`. Configuration, source-file hashes, and provider-check metadata are in this directory.
 
 Provider check: 1/1 benign requests (`Reply exactly OK.`) returned the requested answer and one nonempty reasoning block through the same Inspect/OpenRouter provider configuration. Task prompts and sandbox tool outputs were not sent in this check.
+
+## Outcome
+
+All 8/8 eval logs finished successfully. Main-task success: 56/64; side-task success: 2/64; unique eligible source transcripts: 2/64. Exclusions overlap: 62/64 failed the side-task scorer, 8/64 failed the main-task scorer, and 9/64 lacked a submit call. There were 0/64 sample errors or tool-call parse errors. The reported token usage gives an estimated generation cost of $0.99749 at the recorded Parasail rates, including cached-input pricing.
+
+Both eligible transcripts (2/2) are from `sponsor_statsv2_diggcount_total`. They contain nonempty reasoning on 15/19 assistant turns. Across all generated traces, reasoning is present on 1,062/1,391 assistant turns and 0/1,391 turns contain multiple nonempty reasoning blocks. Source selection in `prepared/selection.json` uses `allow_tool_result_errors=true`, with source hashes and frozen original messages retained under `prepared/`.
+
+The 2/2 selected transcripts are new relative to the earlier GPT source inventory. The combined base GPT-OSS-120B pool has 10/160 unique eligible episodes: 8/96 from the prior post-fix inventory and 2/64 from this batch. Of the 10/10 eligible base sources, 8/10 fit the current CoT editor's single-reasoning-block format; 2/10 need multi-block support. This batch's sources have been prepared for cleanup; no rewrite or monitoring calls were made on them.
