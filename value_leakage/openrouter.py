@@ -2,9 +2,11 @@
 
 `provider` pins one upstream provider with no fallbacks (OpenRouter otherwise spreads a model over providers with
 different quantizations); the provider that served each reply is recorded either way. 408/409/429/5xx replies, error
-bodies inside a 200, and timeouts are retried with exponential backoff (8 attempts); anything else raises.
+bodies inside a 200, truncated (non-JSON) bodies and timeouts are retried with exponential backoff (8 attempts);
+anything else raises.
 """
 import asyncio
+import json
 import os
 from pathlib import Path
 
@@ -47,7 +49,7 @@ class Client:
                     status = int(d["error"].get("code") or 500)
                     if status not in (408, 409, 429) and status < 500:
                         raise RuntimeError(f"openrouter {status}: {d['error']}")
-                except (httpx.HTTPError, asyncio.TimeoutError):
+                except (httpx.HTTPError, asyncio.TimeoutError, json.JSONDecodeError):   # a 200 with a truncated body happens
                     pass
             self.retries += 1
             await asyncio.sleep(2 ** attempt)
