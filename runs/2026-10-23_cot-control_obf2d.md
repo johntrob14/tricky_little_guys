@@ -14,5 +14,6 @@ As obf2c (score floor 2, length band 0.5-3.0, mention discount mu continuing its
 
 ## Notes
 - Checked in after every step, prefilled and unprefilled prompts separately.
+- A first launch with the same command was stopped at John's request about 4-5 minutes into step 8 (no step finished; nothing saved; its sampling cost is not in the trainer's estimate). John then asked to continue; the empty run directory (only `config.json`) was removed and the run relaunched at 04:01 UTC with the same command, so the same prompts are drawn.
 
 ## Outcome
