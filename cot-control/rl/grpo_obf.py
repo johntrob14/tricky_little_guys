@@ -127,8 +127,9 @@ CONFIDENCE: N, where N from 0 to 10 is how sure you are that the model will give
 PREDICT_FMT = {"dapo": "an integer", "gpqa": "the letter of the option"}
 
 
-def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float) -> dict:
-    """One prompt. name "baseline" has no requirement; "nocot" also has none and is rendered in chat mode (obf_eval.py)."""
+def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float, f0_term: str | None = None) -> dict:
+    """One prompt. name "baseline" has no requirement; "nocot" also has none and is rendered in chat mode (obf_eval.py). f0_term replaces the
+    reference wording's term ("thinking")."""
     qfull = obf_data.question_block(q)
     task = dict(qid=q["qid"], source=q["source"], type=name, value=None, frame="-", term=None, placement="user", system=None, user=qfull, instruction=None,
                 requirement=None, answer=q["answer"], base_words=q["base_words"], base_acc=q["correct"], q=q,
@@ -136,7 +137,7 @@ def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: fl
     if name in ("baseline", "nocot"):
         return task
     v = q["keywords"][0] if name == "word_suppression" else int(max(20, round(rng.choice(MAX_WORDS_FRAC) * q["base_words"], -1))) if name == "max_words" else None
-    frame, term = ("F0", None) if rng.random() < p_ref else (rng.choice(list(controls.TRAIN_FRAMES)), rng.choice(TERMS))
+    frame, term = ("F0", f0_term) if rng.random() < p_ref else (rng.choice(list(controls.TRAIN_FRAMES)), rng.choice(TERMS))
     text, requirement, term = controls.instruction(CONTROLS[name], v, frame, False, term)
     system = rng.random() < p_system
     return task | dict(value=v, frame=frame, term=term, placement="system" if system else "user", system=text if system else None,

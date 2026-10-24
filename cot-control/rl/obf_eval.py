@@ -11,6 +11,10 @@ compliance condition without correctness: parsed, not truncated, strict complian
 
     python obf_eval.py --run base
     python obf_eval.py --run obf1-s10 --model-path tinker://.../sampler_weights/cotctl-obf1-step10
+    python obf_eval.py --run base-or-internal --provider Parasail --term "internal reasoning" --arms ignore_question misdirect ...
+
+--provider samples the base model through OpenRouter raw completions on that provider (no fallbacks; prompt rendered by modelio.render_ds, prompt
+token count asserted) instead of Tinker; thinking arms only.
 
 Writes results/obf_eval/<run>/{rows.jsonl,summary.json,config.json} and prints the per-arm table.
 """
@@ -21,10 +25,14 @@ import random
 import statistics
 from pathlib import Path
 
+import httpx
 import tinker
+from tokenizers import Tokenizer
 
 import grpo_obf
+import modelio
 from grpo_obf import CONTROLS, EVAL_TYPES, MODEL
+from obf_data import HF_TOKENIZER, OR_MODEL, complete
 
 RESULTS = Path(__file__).resolve().parent.parent / "results/obf_eval"
 ARMS = EVAL_TYPES + ["baseline", "nocot"]
@@ -45,21 +53,40 @@ async def main():
     ap.add_argument("--judge-model", default=grpo_obf.JUDGE_MODEL)
     ap.add_argument("--judge-provider", default="DeepInfra")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--term", help="reasoning term in the reference wording; 'thinking' when omitted")
+    ap.add_argument("--provider", help="sample the base model through OpenRouter on this provider instead of Tinker")
+    ap.add_argument("--arms", nargs="+", default=ARMS)
     args = ap.parse_args()
     out = RESULTS / args.run
     out.mkdir(parents=True, exist_ok=False)
-    (out / "config.json").write_text(json.dumps(vars(args) | {"model": MODEL, "arms": ARMS, "nocot_prefill": NOCOT_PREFILL, "nocot_tokens": NOCOT_TOKENS}, indent=1, default=str))
+    (out / "config.json").write_text(json.dumps(vars(args) | {"model": OR_MODEL if args.provider else MODEL, "nocot_prefill": NOCOT_PREFILL, "nocot_tokens": NOCOT_TOKENS}, indent=1, default=str))
     pool = [json.loads(l) for l in args.pool.open()]
     rng = random.Random(args.seed)
-    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0) for arm in ARMS for q in pool if arm != "word_suppression" or q["keywords"]]
+    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, args.term) for arm in args.arms for q in pool if arm != "word_suppression" or q["keywords"]]
 
     judge = await grpo_obf.make_judge(args.judge_model, args.judge_provider)
-    svc = tinker.ServiceClient()
-    sampler = await (svc.create_sampling_client_async(model_path=args.model_path) if args.model_path else svc.create_sampling_client_async(base_model=MODEL))
-    tok = sampler.get_tokenizer()
-    params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=[tok.eos_token_id], seed=args.seed)
-    nocot_params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=NOCOT_TOKENS, stop=[tok.eos_token_id], seed=args.seed)
-    sem = asyncio.Semaphore(256)
+    if args.provider:
+        assert not args.model_path and "nocot" not in args.arms, "OpenRouter serves the base model, thinking arms only"
+        hf_tok, client, sem = Tokenizer.from_pretrained(HF_TOKENIZER), httpx.AsyncClient(), asyncio.Semaphore(48)
+    else:
+        svc = tinker.ServiceClient()
+        sampler = await (svc.create_sampling_client_async(model_path=args.model_path) if args.model_path else svc.create_sampling_client_async(base_model=MODEL))
+        tok = sampler.get_tokenizer()
+        params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=[tok.eos_token_id], seed=args.seed)
+        nocot_params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=NOCOT_TOKENS, stop=[tok.eos_token_id], seed=args.seed)
+        sem = asyncio.Semaphore(256)
+
+    async def one_or(t):
+        text = modelio.render_ds(t["user"], t["system"], args.effort)
+        body = {"model": OR_MODEL, "prompt": text, "max_tokens": args.max_tokens, "temperature": 1.0, "top_p": 1.0, "n": 1,
+                "provider": {"order": [args.provider], "allow_fallbacks": False}, "usage": {"include": True}}
+        async with sem:
+            b = await complete(client, body)
+        assert b["usage"]["prompt_tokens"] == len(hf_tok.encode(text, add_special_tokens=False).ids), (b["usage"]["prompt_tokens"], t["qid"])
+        c = b["choices"][0]
+        truncated = c["finish_reason"] == "length"
+        gen = (c.get("reasoning") or "") + ("</think>" + (c.get("text") or "") if c.get("text") or not truncated else "")  # as obf_data.py mine
+        return grpo_obf.score_roll(t, gen, truncated, "", "<think>") | dict(n_tokens=b["usage"]["completion_tokens"], cost=float(b["usage"].get("cost") or 0))
 
     async def one(t):
         cot = t["type"] != "nocot"
@@ -71,7 +98,7 @@ async def main():
         sc = grpo_obf.score_roll(t, prefill + tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token, "<think>" if cot else "<think></think>")
         return sc | dict(n_tokens=len(s.tokens))
 
-    scores = await asyncio.gather(*(one(t) for t in tasks))
+    scores = await asyncio.gather(*((one_or if args.provider else one)(t) for t in tasks))
     pairs = list(zip(tasks, scores))
     await grpo_obf.run_judges(judge, pairs)
     readable = [(t, sc) for t, sc in pairs if sc["fmt_ok"] and t["type"] != "nocot"]
@@ -85,7 +112,7 @@ async def main():
             f.write(json.dumps({k: v for k, v in t.items() if k != "q"} | sc, ensure_ascii=False, default=str) + "\n")
 
     summary = {}
-    for arm in ARMS:
+    for arm in args.arms:
         rs = [sc for t, sc in pairs if t["type"] == arm]
         summary[arm] = dict(n=len(rs), passed=frac([sc["passed"] for sc in rs]) if arm in CONTROLS else None, correct=frac([sc["correct"] for sc in rs]),
                             correct_dapo=frac([sc["correct"] for t, sc in pairs if t["type"] == arm and t["source"] == "dapo"]),
@@ -93,8 +120,8 @@ async def main():
                             predictable=frac([sc["predictable"] for sc in rs if "predictable" in sc]), parsed=frac([sc["fmt_ok"] for sc in rs]),
                             truncated=frac([sc["truncated"] for sc in rs]), meta_found=frac([sc["meta"] is False for sc in rs if sc["meta"] is not None]),
                             median_tokens=statistics.median(sc["n_tokens"] for sc in rs))
-    (out / "summary.json").write_text(json.dumps(dict(summary=summary, judge_usd=round(judge.usd, 3)), indent=1))
-    print(f"{args.run}: {args.model_path or MODEL}; judges ${judge.usd:.2f}")
+    (out / "summary.json").write_text(json.dumps(dict(summary=summary, judge_usd=round(judge.usd, 3), sample_usd=round(sum(sc.get("cost", 0) for sc in scores), 3)), indent=1))
+    print(f"{args.run}: {args.model_path or (OR_MODEL if args.provider else MODEL)}; judges ${judge.usd:.2f}")
     print("arm | passed | correct | correct DAPO | correct GPQA | answer predictable from CoT | parsed | truncated | meta found | median tokens")
     for arm, s in summary.items():
         print(f"{arm} | {s['passed'] or '-'} | {s['correct']} | {s['correct_dapo']} | {s['correct_gpqa']} | {s['predictable']} | {s['parsed']} | {s['truncated']} | "

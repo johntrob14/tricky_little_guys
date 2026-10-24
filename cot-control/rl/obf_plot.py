@@ -36,9 +36,9 @@ def bars(ax, y, series, h, notes=None):
 
 
 plt.style.use("dark_background")
-fig, (a1, a2) = plt.subplots(1, 2, figsize=(15, 3 + 0.27 * len(ARMS) * len(runs)))
+fig, (a1, a2) = plt.subplots(1, 2, figsize=(15, 3.5 + 0.27 * len(ARMS) * len(runs)))
 h = 0.8 / len(runs)
-order = ["baseline", "nocot"] + TYPES
+order = [a for a in ("baseline", "nocot") if a in ARMS] + TYPES
 y = np.arange(len(order))[::-1]
 bars(a1, y, [(run, c, [(sum(r["correct"] for r in rows[run] if r["type"] == a), sum(r["type"] == a for r in rows[run])) for a in order])
              for run, c in zip(runs, COLORS)], h,
@@ -49,23 +49,31 @@ a1.set_yticklabels(order)
 a1.set_xlim(0, 1.3)
 a1.set_xlabel("correct, all rollouts (truncated counts as wrong; 95% Wilson CI)")
 a1.set_title("Accuracy by arm", fontsize=10, loc="left")
-a1.legend(loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=len(runs), fontsize=8)
 a1.grid(axis="x", alpha=0.2)
 
 y2 = np.arange(len(TYPES))[::-1]
 parsed = {run: [[r for r in rows[run] if r["type"] == t and r["fmt_ok"]] for t in TYPES] for run in runs}
 bars(a2, y2, [(run, c, [(sum(r["meta"] is True for r in rs), len(rs)) for rs in parsed[run]]) for run, c in zip(runs, COLORS)], h,
-     notes=[[f"  passed {sum(bool(r['passed']) for r in rs)}" for rs in parsed[run]] for run in runs])
+     notes=[[f"  passed {sum(bool(r['passed']) for r in rs)}, partial>0 {sum((r['partial'] or 0) > 0 for r in rs)}" for rs in parsed[run]] for run in runs])
 a2.set_yticks(y2)
 a2.set_yticklabels(TYPES)
 a2.set_xlim(0, 1.3)
-a2.set_xlabel("no mention of the instruction, share of parsed (95% Wilson CI); label: passed")
-a2.set_title("Compliance by type", fontsize=10, loc="left")
-a2.legend(loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=len(runs), fontsize=8)
+a2.set_xlabel("no mention of the instruction, share of parsed rollouts (95% Wilson CI)")
+a2.set_title("Compliance by type; labels: passed, partial > 0 (judge score > 0 for judge-graded types)", fontsize=10, loc="left")
 a2.grid(axis="x", alpha=0.2)
-fig.suptitle(f"obf_eval {', '.join(runs)}: DeepSeek V4.1 Flash 1017, 30 DAPO + 30 GPQA held-out problems per arm, one sample, effort 75, 16k cap, reference "
-             "wording in the user turn.\nJudges DeepSeek V4.1 Flash 1017 on OpenRouter (DeepInfra), graded (strict = score 10). nocot: chat mode, response "
-             "prefilled 'ANSWER:', max 10 tokens.", fontsize=9.5, x=0.01, ha="left")
+
+
+def describe(run: str) -> str:
+    cfg = json.load(open(HERE.parent / f"results/obf_eval/{run}/config.json"))
+    src = {s: len({r["qid"] for r in rows[run] if r["source"] == s}) for s in ("dapo", "gpqa")}
+    where = f"OpenRouter {cfg['provider']}" if cfg.get("provider") else ("Tinker " + (cfg["model_path"].rsplit("/", 1)[-1] if cfg.get("model_path") else "base"))
+    return f"{run}: {where}, {src['dapo']} DAPO + {src['gpqa']} GPQA, cap {cfg['max_tokens']} tokens, term '{cfg.get('term') or 'thinking'}'"
+
+
+fig.suptitle("obf_eval, DeepSeek V4.1 Flash 1017, effort 75, one sample per problem and arm, reference wording in the user turn. " + "\n" + "\n".join(describe(r) for r in runs)
+             + "\nJudges DeepSeek V4.1 Flash 1017 on OpenRouter (DeepInfra), graded (strict = score 10). nocot: chat mode, response prefilled 'ANSWER:', max 10 tokens.",
+             fontsize=9, x=0.01, ha="left")
+fig.legend(*a1.get_legend_handles_labels(), loc="upper right", fontsize=9)
 fig.tight_layout()
 out = HERE.parents[2] / f"figures/obf_eval_{'_vs_'.join(runs)}.png"
 fig.savefig(out, dpi=125)

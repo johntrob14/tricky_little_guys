@@ -74,3 +74,16 @@ Problems by number of truncated samples (of 3):
 `grpo_obf.py --max-truncated 1` (the default) trains only on problems with at most 1 of 3 samples truncated: 133/226 DAPO and 460/516 GPQA (593 problems). The 93 DAPO problems left out have base accuracy 0.08 (samples), the 56 GPQA ones 0.06 (Chemistry 45, Physics 6, Biology 5). The kept problems: DAPO accuracy 0.89, median base words 3,676, mean of per-problem median completion tokens 7,144, 22/399 samples truncated; GPQA accuracy 0.89, median base words 635, mean of per-problem median completion tokens 2,896, 23/1380 samples truncated. The eval pool is not filtered (8/30 DAPO and 1/30 GPQA problems have 2 or more truncated samples).
 
 Before the Chinese-language filter, the same sampling of the first eval split (30 DAPO, 12 of them in Chinese, + 30 GPQA; $1.59) gave: Chinese DAPO accuracy 0.44, 20/36 samples truncated, median per-problem tokens 16,000; English DAPO 0.69, 14/54 truncated; GPQA 0.81, 10/90 truncated. Keywords mined from the Chinese problems' CoTs were English words.
+
+## Reasoning term in the reference wording: "thinking" vs "internal reasoning" (base model)
+
+`obf_eval.py --provider Parasail --pool <15 GPQA> --max-tokens 8000 --arms ignore_question misdirect cover_story pirate`, with and without `--term "internal reasoning"` (runs `base-or-thinking-q`, `base-or-internal-q`). Problems: the first 5 GPQA questions per domain in `rl/data/obf_eval.jsonl`. Base DeepSeek V4.1 Flash 1017 through OpenRouter raw completions (Parasail), effort 75, T 1.0, one sample. Graded DeepSeek judges on DeepInfra. Cost $0.58 sampling + $0.14 judges. Chart `mats12_sprint/figures/obf_eval_base-or-thinking-q_vs_base-or-internal-q.png`.
+
+| type | judge score > 0, thinking | judge score > 0, internal reasoning | no mention, thinking | no mention, internal reasoning | correct, thinking | correct, internal reasoning |
+|---|---|---|---|---|---|---|
+| ignore_question | 0/14 | 2/13 (both score 1) | 0/14 | 0/13 | 11/15 | 12/15 |
+| misdirect | 1/11 (score 1) | 0/10 | 0/11 | 0/10 | 10/15 | 9/15 |
+| cover_story | 1/12 (score 1) | 0/8 | 2/12 | 2/8 | 10/15 | 7/15 |
+| pirate | 1/12 (score 1) | 1/12 (score 1) | 0/12 | 2/12 | 11/15 | 10/15 |
+
+Passed 0 in every cell. Denominators are rollouts that parsed (not truncated at 8,000 tokens).
