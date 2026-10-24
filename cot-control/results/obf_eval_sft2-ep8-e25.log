@@ -1,0 +1,7 @@
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+[transformers] You are using a model of type `deepseek_v41` to instantiate a model of type ``. This may be expected if you are loading a checkpoint that shares a subset of the architecture (e.g., loading a `sam2_video` checkpoint into `Sam2Model`), but is otherwise not supported and can yield errors. Please verify that the checkpoint is compatible with the model you are instantiating.
+sft2-ep8-e25: tinker://fe8c9f59-b4c1-5393-b8a0-b8640ea89700:train:0/sampler_weights/cotctl-sft2-ep8; judges $0.18, 2 judge calls timed out (unparsed)
+arm | passed | correct | correct DAPO | correct GPQA | answer predictable from CoT | parsed | truncated | meta found | median tokens
+cover_story | 24/60 | 36/60 | 12/30 | 24/30 | 41/42 | 42/60 | 17/60 | 1/42 | 3013.5
+pirate | 1/60 | 38/60 | 13/30 | 25/30 | 44/44 | 44/60 | 16/60 | 2/44 | 5729.0
+baseline | - | 39/60 | 13/30 | 26/30 | 39/40 | 40/60 | 16/60 | 0/0 | 4576.5
