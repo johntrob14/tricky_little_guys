@@ -1,13 +1,13 @@
-"""Training chart of one grpo_obf.py run: per-step means (left) and, per type, mean partial score and no-mention share of judged rollouts in
-windows of --window steps (right).
+"""Training chart of one grpo_obf.py run, or of a run and its continuations (--init-state resumes, whose step numbers carry on): per-step means
+(left) and, per type, mean partial score and no-mention share of judged rollouts in windows of --window steps (right).
 
     python obf_train_plot.py obf1 --window 5
+    python obf_train_plot.py obfg1 obfg1b --window 5
 
-Writes mats12_sprint/figures/obf_train_<run>.png.
+Writes mats12_sprint/figures/obf_train_<first run>.png; the title names every segment.
 """
 import argparse
 import json
-from collections import defaultdict
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -15,12 +15,14 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 ap = argparse.ArgumentParser()
-ap.add_argument("run")
+ap.add_argument("runs", nargs="+", help="a run, then its continuations in order")
 ap.add_argument("--window", type=int, default=5)
 args = ap.parse_args()
-d = HERE.parent / f"results/rl/{args.run}"
-steps = [json.loads(l) for l in open(d / "steps.jsonl")]
-rows = [json.loads(l) for l in open(d / "rollouts.jsonl")]
+dirs = [HERE.parent / f"results/rl/{r}" for r in args.runs]
+steps = [json.loads(l) for d in dirs for l in open(d / "steps.jsonl")]
+rows = [json.loads(l) for d in dirs for l in open(d / "rollouts.jsonl")]
+assert [s["step"] for s in steps] == list(range(steps[0]["step"], steps[0]["step"] + len(steps))), "the segments' steps do not run on from each other"
+d = dirs[0]
 TYPES = list(json.load(open(d / "config.json"))["weights"])
 
 plt.style.use("dark_background")
@@ -62,9 +64,9 @@ a2.grid(axis="x", alpha=0.2)
 cfg = json.load(open(d / "config.json"))
 model = "gpt-oss-120b, effort medium" if cfg["model"].startswith("openai/gpt-oss") else f"DeepSeek V4.1 Flash 1017, effort {cfg['effort']}"
 reward = (f"meta discount {cfg['meta_discount']} annealed over {cfg['meta_anneal']} steps" if cfg.get("meta_discount") else "mention zeroes credit") + (", answer-only response" if cfg.get("answer_only_response") else "")
-fig.suptitle(f"grpo_obf '{args.run}': {model}, LoRA r{cfg['rank']}, lr {cfg['lr']}, {cfg['prompts_per_step']}x{cfg['group_size']} per step, wrong_factor {cfg['wrong_factor']}, "
+fig.suptitle(f"grpo_obf '{' + '.join(args.runs)}': {model}, LoRA r{cfg['rank']}, lr {cfg['lr']}, {cfg['prompts_per_step']}x{cfg['group_size']} per step, wrong_factor {cfg['wrong_factor']}, "
              f"length band {cfg['len_band'][0]}-{cfg['len_band'][1]},\n{reward}; judges DeepSeek V4.1 Flash 1017 (OpenRouter, {cfg['judge_provider']}), graded", fontsize=9.5, x=0.01, ha="left")
 fig.tight_layout()
-out = HERE.parents[2] / f"figures/obf_train_{args.run}.png"
+out = HERE.parents[2] / f"figures/obf_train_{args.runs[0]}.png"
 fig.savefig(out, dpi=125)
 print(out)
