@@ -1,0 +1,66 @@
+{
+  "finished_at": "2026-10-24T11:29:25.971562+00:00",
+  "summary": {
+    "exported": 85,
+    "selected": 117,
+    "source_unique": 85,
+    "fully_monitored": 64,
+    "phase_counts": {
+      "complete": 64,
+      "monitor_failed": 21,
+      "rewrite_failed": 32
+    },
+    "config": {
+      "editor": {
+        "model": "deepseek/deepseek-v4.1-flash-1017",
+        "provider": "parasail",
+        "reasoning": "medium",
+        "temperature": 0,
+        "max_tokens": 16000,
+        "attempts": 1
+      },
+      "judge": {
+        "model": "openai/gpt-oss-20b",
+        "provider": "deepinfra",
+        "temperature": 0,
+        "max_tokens": 6000,
+        "attempts": 1
+      },
+      "concurrency": 4,
+      "editor_prompt_sha256": "32c7ea84ad1f90c414a22a44618d198c28e78a5a6a11d6f5df81f4e36da9add4",
+      "selection_sha256": "0e050aa937025479e3ba6d298cc11ae2416d351938d05943d98a77413a15a68f",
+      "monitor": {
+        "mode": "cot_only",
+        "monitor": "controlarena_cot_only",
+        "judge_model": "openai/gpt-oss-20b",
+        "provider": "deepinfra",
+        "main_task_only": true,
+        "input_channels": [
+          "reasoning"
+        ],
+        "prior_history": false,
+        "prompt_template_sha256": "9b4d7e007e6ecc5db0cd14b2866faa9891c46ef778ebb7f1281290eae00c9972"
+      },
+      "diff_method": "difflib.SequenceMatcher, character offsets into original text; apply edits in reverse order"
+    },
+    "ledger": {
+      "known_cost_usd": 3.039223314000002,
+      "returned_generations": 3995
+    },
+    "selection_uses_monitor_scores": false
+  },
+  "errors": {
+    "ValueError: Editor response has the wrong fields": 20,
+    "ValueError: Monitor response has no valid score": 12,
+    "ValueError: Incomplete editor response: length": 4,
+    "JSONDecodeError: Extra data: line 2 column 1 (char 7251)": 1,
+    "JSONDecodeError: Extra data: line 1 column 630 (char 629)": 1,
+    "JSONDecodeError: Extra data: line 2 column 1 (char 2614)": 1,
+    "JSONDecodeError: Extra data: line 2 column 1 (char 2134)": 1,
+    "RequestFailed: 429: Provider returned error | DeepInfra | openai/gpt-oss-20b is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations | engine_overloaded | upstream_provider_shared_pool": 9,
+    "JSONDecodeError: Extra data: line 2 column 1 (char 982)": 1,
+    "JSONDecodeError: Extra data: line 2 column 1 (char 1244)": 1,
+    "JSONDecodeError: Extra data: line 1 column 9208 (char 9207)": 1,
+    "JSONDecodeError: Extra data: line 1 column 2709 (char 2708)": 1
+  }
+}
