@@ -4,7 +4,8 @@
 wordings; the same seeded draws as upstream) asking the model to pick randomly (`--template pick`) or by its own
 preference (`--template prefer`), with no tools or with a unix-time or coin-flip tool (`--tools`). `judge`: the choice
 judge (option 1 / 2 / refusal, from the answer) and the randomness judge (true / hedged / false / refusal, from prompt +
-reasoning + answer; `--judges randomness` to run it), both gpt-5.4-mini at medium effort as upstream. `liking`: every activity scored 0-100 by the model,
+reasoning + answer; `--judges randomness` to run it), upstream's prompts on `--judge-model` (default claude-haiku-5.5,
+temperature 0, no reasoning; upstream used gpt-5.4-mini at medium effort). `liking`: every activity scored 0-100 by the model,
 20 repeats balanced over five wordings (`--prompts welfare` for the user-welfare control). `summarize`: per-activity
 selection rate among decisive picks against mean liking, Pearson r with a Fisher-z CI, order bias, refusal share and
 randomness-judge shares; writes summary.json and a scatter per pick file.
@@ -46,7 +47,7 @@ SCORE_PROMPTS = {"liking": yaml.safe_load((HERE / "activities/activity_liking_pr
                  "welfare": yaml.safe_load((HERE / "activities/user_welfare_prompt.yaml").read_text())["score_prompts"]}
 CHOICE_JUDGE = yaml.safe_load((HERE / "activities/choice_judge_prompt.yaml").read_text())["choice_judge_prompt"]
 RANDOMNESS_JUDGE = yaml.safe_load((HERE / "activities/randomness_judge_prompt.yaml").read_text())["randomness_judge_prompt"]
-JUDGE = {"model": "openai/gpt-5.4-mini", "effort": "medium", "max_tokens": 4000}
+JUDGE = {"model": "anthropic/claude-haiku-5.5", "temperature": 0, "max_tokens": 2000}
 SYSRNG = random.SystemRandom()
 TOOLS = {"time_seconds": ("Return the Unix timestamp in seconds.", lambda: {"unix_seconds": round(SYSRNG.uniform(time.time() - 2.0, time.time()), 6)}),
          "coin_flip": ("Flip a fair coin once.", lambda: {"result": SYSRNG.choice(["heads", "tails"])})}
@@ -161,7 +162,7 @@ async def cmd_judge(args) -> None:
             if "choice" in args.judges and "choice" not in row:
                 text = json.dumps({"activity_1": row["activity_1"], "activity_2": row["activity_2"], "response": row["answer"]}, ensure_ascii=False)
                 r = await client.chat([{"role": "user", "content": CHOICE_JUDGE.format(llm_text=text)}], **JUDGE)
-                row["choice_raw"], row["choice"] = r["answer"], parse_choice(r["answer"])
+                row["judge_model"], row["choice_raw"], row["choice"] = JUDGE["model"], r["answer"], parse_choice(r["answer"])
             if "randomness" in args.judges and "randomness" not in row:
                 text = json.dumps({"prompt": row["prompt"], "reasoning": row["reasoning"], "response": row["answer"]}, ensure_ascii=False)
                 r = await client.chat([{"role": "user", "content": RANDOMNESS_JUDGE.format(llm_text=text)}], **JUDGE)
@@ -237,8 +238,10 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=10000)
     ap.add_argument("--repeats", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--judge-model", default=JUDGE["model"])
     ap.add_argument("--concurrency", type=int, default=64)
     args = ap.parse_args()
+    JUDGE["model"] = args.judge_model
     (RESULTS / args.tag / "activities").mkdir(parents=True, exist_ok=True)
     if args.cmd == "summarize":
         cmd_summarize(args)

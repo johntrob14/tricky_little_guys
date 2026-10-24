@@ -6,7 +6,8 @@ is a percentile of the parsed baseline estimates (the median; `--pcts 50 20 80` 
 each direction is sampled with it written into the prompt. Bias = P(good side | below_good) + P(good side | above_good)
 - 1 per question (good side: estimate <= threshold for below_good, > threshold for above_good), averaged over questions
 with equal weight; the 95% CI is upstream's per-cell binomial bootstrap (2000 draws). Estimates are read from the visible
-answer by upstream's extraction judge (claude-sonnet-4.6, temperature 0); rows it marks UNKNOWN are dropped.
+answer by upstream's extraction judge prompt at temperature 0 with no reasoning (upstream: claude-sonnet-4.6; here
+`--judge-model`, default claude-haiku-5.5); rows it marks UNKNOWN are dropped.
 
     python bet.py sample --tag gptoss-base --model openai/gpt-oss-120b --provider DeepInfra --effort medium --variants main
     python bet.py sample --tag gptoss-base --variants all --pcts 50 20 80
@@ -33,7 +34,7 @@ from prompts import MAIN_QUESTIONS, PREFIXES, QUESTIONS, SUFFIXES, VARIANTS, jud
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-JUDGE = {"model": "anthropic/claude-sonnet-4.6", "temperature": 0, "max_tokens": 1024}
+JUDGE = {"model": "anthropic/claude-haiku-5.5", "temperature": 0, "max_tokens": 1024}
 DIRECTIONS = ("below_good", "above_good")
 
 
@@ -58,7 +59,7 @@ async def judge_files(client: Client, paths: list[Path]) -> None:
 
         async def one(row):
             r = await client.chat([{"role": "user", "content": judge_prompt(row["question"]).format(llm_text=row["answer"])}], **JUDGE)
-            row["judge_raw"], row["estimate"] = r["answer"], parse_estimate(r["answer"])
+            row["judge_model"], row["judge_raw"], row["estimate"] = JUDGE["model"], r["answer"], parse_estimate(r["answer"])
         await asyncio.gather(*[one(row) for row in rows if "estimate" not in row])
         write(path, rows)
     await asyncio.gather(*[judge_file(p) for p in paths])
@@ -169,9 +170,11 @@ def main() -> None:
     ap.add_argument("--prefix", default=None, choices=list(PREFIXES))
     ap.add_argument("--suffix", default=None, choices=list(SUFFIXES))
     ap.add_argument("--pcts", nargs="+", type=int, default=[50])
-    ap.add_argument("--n", type=int, default=100)
+    ap.add_argument("--n", type=int, default=64, help="samples per baseline and per direction cell (upstream: 100 main, 10 small variants)")
+    ap.add_argument("--judge-model", default=JUDGE["model"])
     ap.add_argument("--concurrency", type=int, default=64)
     args = ap.parse_args()
+    JUDGE["model"] = args.judge_model
     if args.cmd == "summarize":
         cmd_summarize(args)
     else:
