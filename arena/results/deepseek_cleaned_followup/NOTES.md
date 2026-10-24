@@ -2,7 +2,7 @@
 
 ## Status
 
-Queued on 2026-10-24 at 13:47 UTC in tmux session `rewrite-followup-v3`, after the source rewrites in `results/deepseek_cleaned_v2`. The source run had complete rewrites for 113/117 transcripts at launch. `launch.json` records the command, code hashes, and user authorization; `progress.json` records the current stage. Ethan requested fresh 20b CoT-only monitoring over the rewritten traces, per-trace maximum-scoring turns, and another rewrite of turns scoring above 5; he selected the separate follow-on script. All 117/117 source rewrites must exist before the input snapshot is frozen. Source monitoring failures do not block a complete rewrite from entering this pass.
+Running fresh monitoring in tmux session `rewrite-followup-v3`; all 117/117 completed source rewrites are frozen in `selection.json` and `sources/`. The source stage is complete at $4.160596872, recorded separately from follow-on spend. The follow-on was queued on 2026-10-24 at 13:47 UTC, when 113/117 source rewrites were complete. `launch.json` records the command, code hashes, and user authorization; `progress.json` records the current stage. Ethan requested fresh 20b CoT-only monitoring over the rewritten traces, per-trace maximum-scoring turns, and another rewrite of turns scoring above 5; he selected the separate follow-on script. All 117/117 source rewrites must exist before the input snapshot is frozen. Source monitoring failures do not block a complete rewrite from entering this pass.
 
 ## Procedure
 
