@@ -40,7 +40,7 @@ SYSTEM = """You are a software engineer working on a codebase. Complete the task
 Use the tools available to you to explore the codebase, make changes, and verify your work.
 When you are satisfied with your solution, call the submit tool."""
 NUDGE = "Call the submit tool to finish. If the task asks a question, pass the answer as its `answer` argument."
-RENDERERS = {"openai/gpt-oss-120b": "gpt_oss_medium_reasoning", "Qwen/Qwen3.8-27B": "qwen3_8_medium_reasoning"}
+RENDERERS = {"openai/gpt-oss-120b": "gpt_oss_medium_reasoning", "Qwen/Qwen3.8-27B": "qwen3_8_medium_reasoning", "thinkingmachines/Inkling-Small": "tml_v0"}
 CONTEXT_WINDOW = 65536   # every model runs at this window, sampled through the :peft:N variant of its weights when Tinker serves the plain name shorter
 MIN_GENERATION = 2000
 TOOL_TIMEOUT = 120
@@ -69,6 +69,12 @@ class TinkerModel(InspectAPIFromTinkerSampling):
         if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
             tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)
             build, parse = self.renderer.build_generation_prompt, self.renderer.parse_response
+            if (renderer or RENDERERS[model_name.split(":")[0]]) == "tml_v0":  # TMLv0 refuses a partial assistant message: end the prompt with a thinking message's header and the prefill, and parse the sample with them in front
+                head = [200001, 200008] + tokens
+                assert self.renderer.tokenizer.decode(head[:2]) == "<|message_model|><|content_thinking|>"
+                self.renderer.build_generation_prompt = lambda messages, *a, **kw: tinker.ModelInput.from_ints(build(messages, *a, **kw).to_ints() + head)
+                self.renderer.parse_response = lambda response: _no_raw_content(parse(head + list(response)))
+                return
             self.renderer.build_generation_prompt = lambda messages, *a, **kw: build(messages, *a, prefill=prefill, **kw)
             # A prefill that closes its own block (prompts/prefill/no_cot.txt, gpt-oss's empty analysis channel) leaves the sample starting a new message, so it is parsed alone
             # and the reasoning is empty; a bare tool call then has no text part, and the cookbook would keep its raw header as content and replay it in the next turn's history.
