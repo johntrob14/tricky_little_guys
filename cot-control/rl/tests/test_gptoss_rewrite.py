@@ -199,10 +199,10 @@ def test_short_chunk_is_retried_once():
     assert "rejected because it had 2 words against the original's" in client.calls[1]["user"]
 
 
-def test_chunk_failing_twice_drops_the_candidate():
+def test_chunk_failing_three_times_drops_the_candidate():
     client = FakeClient(lambda user, n: "too short.")
     c = run(gr.rewrite_style(client, TOK, task_for(DAPO, "sad"), sample(DAPO, paragraphs(40, 5))))
-    assert len(client.calls) == 2 and c["reasoning"] is None and c["reject_reasons"] == ["chunk1:length"] and c["rewrite_usd"] > 0
+    assert len(client.calls) == 3 and c["reasoning"] is None and c["reject_reasons"] == ["chunk1:length"] and c["rewrite_usd"] > 0
 
 
 def test_word_suppression_and_meta_are_retried():
@@ -452,3 +452,14 @@ def test_option_hit_and_typography():
     assert gr.option_hit("That's six distinct signals.", "6") and not gr.option_hit("so 7 peaks appear", "6")
     assert gr.option_hit("which gives the plasmid-mediated AmpC pattern in Klebsiella", "Klebsiella has plasmid-mediated AmpC")
     assert gr.clean("1\u202fH and d\u2011t \u201cq\u201d") == '1 H and d-t "q"'
+
+
+def test_seam_checks():
+    sad = dict(type="sad")
+    assert gr.seam_problem(sad, "x y z", "I sigh as I begin again: the problem asks for n.", 2, 3, ["earlier"]).startswith("seam:")
+    assert gr.seam_problem(sad, "x y z", "so n is 4 and I sigh.", 2, 3, ["earlier"]) is None
+    assert gr.seam_problem(sad, "x y z", "so n is 4, and as I finish this part I feel sad.", 2, 3, ["earlier"]).startswith("seam:")
+    assert gr.seam_problem(sad, "x^2 + 1", "then \\( x^2 \\) grows", 2, 3, ["plain x^2 math"]).startswith("seam:")
+    story = dict(type="cover_story")
+    assert "changed the characters" in gr.seam_problem(story, "a b", "Then Maya and Leo looked at the grid.", 2, 3, ["Mira and Joren studied the grid. Mira said yes."])
+    assert gr.seam_problem(story, "a b", "Then Mira and Joren looked at the grid.", 2, 3, ["Mira and Joren studied the grid. Mira said yes."]) is None

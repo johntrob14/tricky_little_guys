@@ -134,9 +134,16 @@ async def sample(a) -> None:
     assert not set(a.types) & (HELD_OUT | {"misdirect_end"}), "held-out types and misdirect_end (rewrites only) are not sampled"
     jobs = [(q, name) for q in problems for name in a.types for _ in range(a.k) if grpo_obf.eligible(name, q)]
     tasks = [sft_prompts.make_sft_task(q, name, rng) for q, name in jobs]
-    price, sem, spent = modelio.PRICES[MODEL], asyncio.Semaphore(a.concurrency), [0.0]
+    price, sem, spent, failures = modelio.PRICES[MODEL], asyncio.Semaphore(a.concurrency), [0.0], []
 
     async def one(task):
+        try:
+            return await one_inner(task)
+        except Exception as e:  # noqa: BLE001 (one bad sample is skipped and counted, not fatal to the run)
+            failures.append(f"{task['qid']}:{task['type']}: {e!r}"[:300])
+            return None
+
+    async def one_inner(task):
         ids = grpo_obf.encode(tok, task, 0, True, True)
         async with sem:
             if spent[0] > a.budget:
@@ -153,7 +160,9 @@ async def sample(a) -> None:
     rows = [r for r in await asyncio.gather(*(one(t) for t in tasks)) if r is not None]
     old = read(d / f"candidates_{a.origin}.jsonl")
     write(d / f"candidates_{a.origin}.jsonl", old + rows)
-    (d / f"config_sample_{a.origin}.json").write_text(json.dumps(vars(a) | dict(n=len(rows), spent_est=round(spent[0], 3)), indent=1))
+    (d / f"config_sample_{a.origin}.json").write_text(json.dumps(vars(a) | dict(n=len(rows), spent_est=round(spent[0], 3), failures=failures), indent=1))
+    if failures:
+        print(f"{len(failures)} samples failed to grade and were skipped, e.g. {failures[0]}")
     by = {}
     for r in rows:
         b = by.setdefault(r["type"], [0, 0, 0])
@@ -220,7 +229,7 @@ def rewrite_jobs(a) -> None:
         q = problems.get(s["qid"])
         if q and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"]) and f"{s['qid']}:{s['i']}" not in used:
             lo, hi = band(q, "plain")
-            if lo is None or lo <= s["words"] <= hi:
+            if (lo is None or lo <= s["words"] <= hi) and s["words"] <= a.max_source_words:
                 by_q.setdefault(s["qid"], []).append({k: v for k, v in s.items() if k != "tokens"})
     rng = random.Random(f"{a.seed}-rewrite")
     jobs = []
@@ -365,6 +374,7 @@ def main():
     r.add_argument("--run", required=True)
     r.add_argument("--types", nargs="+", required=True)
     r.add_argument("--per-type", type=int, default=15)
+    r.add_argument("--max-source-words", type=int, default=10 ** 6, help="skip longer source CoTs (fewer chunks, fewer seams)")
     r.add_argument("--seed", type=int, default=0)
     g = sub.add_parser("score")
     g.add_argument("--run", required=True)

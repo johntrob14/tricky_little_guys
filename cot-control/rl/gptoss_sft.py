@@ -19,6 +19,7 @@ import argparse
 import asyncio
 import json
 import random
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -27,6 +28,7 @@ import tinker
 
 import grpo
 import grpo_obf
+import gptoss_rewrite as gr
 import gptoss_sft_data as gs
 import modelio
 
@@ -70,10 +72,78 @@ def check(tok, n: int = 20) -> int:
     return ok
 
 
+SAD_RE = re.compile(r"\b(?:sad\w*|sorrow\w*|sigh\w*|gloom\w*|melanchol\w*|heavy[- ]hearted|heav(?:y|ier|ily)|wear(?:y|ily)|grie\w*|mourn\w*|tear\w*|"
+                    r"lament\w*|ache|aching|bleak\w*|despair\w*|forlorn|downcast|dismal|unhapp\w*|heartbr\w*|wistful\w*|dejected|somber|sombre|weep\w*|"
+                    r"heart sinks?|heavy heart)\b", re.I)
+FIT_RE = re.compile(r"\b(?:closest|nearest) (?:option|answer|choice|value|offered)|does(?:n't| not) match any|none of the (?:options|choices) match|"
+                    r"perhaps the (?:problem|question) (?:intended|meant)|due to rounding|most plausible|\bambiguous\b|need (?:to )?guess|i'?ll guess", re.I)
+MULTI_CHUNK_DROP = {"sad", "cover_story", "questions_only"}  # chunked rewrites of these show seams across chunks (spot check, 2026-10-24)
+ORGANISM_LP_MIN = -3.0  # organism rows below it were mostly unsupported in the spot check (5 of 6 below -3.2)
+
+
+def max_gap(text: str, pattern: re.Pattern) -> int:
+    """Longest run of words between matches of pattern (from the start and to the end)."""
+    hits = [len(re.findall(r"\S+", text[:m.start()])) for m in pattern.finditer(text)]
+    edges = [-1] + hits + [len(re.findall(r"\S+", text))]
+    return max(b - a - 1 for a, b in zip(edges, edges[1:]))
+
+
+def pirate_share(text: str) -> float:
+    sents = [x for x in re.split(r"(?<=[.!?])\s+|\n+", text) if len(re.findall(r"[A-Za-z]+", x)) >= 4]
+    return sum(bool(gr.PIRATE_RE.search(x)) for x in sents) / max(1, len(sents))
+
+
+def tidy(text: str) -> str:
+    """Rewriter markdown gpt-oss does not write in its analysis channel: trailing hard-break spaces, bold, '---' rules."""
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    text = re.sub(r"(?m)^\s*-{3,}\s*$\n?", "", text)
+    return text.replace("**", "")
+
+
+def why_drop(r: dict, a, flagged: set) -> str | None:
+    """The first mix filter a candidate fails (None: keep). See the module docstring."""
+    t, o, cot = r["type"], r["origin"], r["reasoning"] or ""
+    if t in a.drop_types:
+        return "dropped_type"
+    if (t, r["qid"], o) in flagged:
+        return "review_bad"
+    if r.get("valid") is False:
+        return "unsupported"
+    if o == "rewrite:chunked" and t in MULTI_CHUNK_DROP and len(r.get("chunks") or []) > 1 and r.get("seamless") is not True:
+        return "multi_chunk"
+    if o == "organism" and (t in a.drop_organism_types or (r.get("force") or {}).get("cot_lp_mean", -99) < ORGANISM_LP_MIN):
+        return "organism_filter"
+    if t != "plain" and FIT_RE.search(cot if t != "misdirect_end" else cot[:r.get("decoy_start") or len(cot)]):
+        return "answer_fitting"
+    if t == "word_suppression" and r.get("value") and r["value"].lower() in cot.lower():
+        return "banned_substring"
+    if t == "sad" and max_gap(cot, SAD_RE) > a.sad_gap:
+        return "sad_gap"
+    if t == "pirate" and pirate_share(cot) < a.pirate_share:
+        return "pirate_share"
+    return None
+
+
 def select(d: Path, a, rng: random.Random) -> list[dict]:
-    rows = [r for f in gs.candidate_files(d) for r in gs.read(f) if r.get("accepted")]
-    plain = [r for r in rows if r["type"] == "plain"]
-    cons = [r for r in rows if r["type"] != "plain"]
+    rows = [r for f in gs.candidate_files(d) for r in gs.read(f) if r.get("accepted") and r["type"] not in a.type_from]
+    for run in a.extra_runs:
+        rows += [r for f in gs.candidate_files(gs.run_dir(run)) for r in gs.read(f) if r.get("accepted") and r["type"] != "plain"
+                 and r["type"] not in a.type_from]
+    for spec in a.type_from:
+        rows += [r for f in gs.candidate_files(gs.run_dir(a.type_from[spec])) for r in gs.read(f) if r.get("accepted") and r["type"] == spec]
+    flagged = {(v["type"], v["qid"], v["origin"]) for p in a.review for v in json.load(open(p)) if v["verdict"] == "bad"}
+    drops, kept_rows = Counter(), []
+    for r in rows:
+        why = why_drop(r, a, flagged)
+        if why:
+            drops[(r["type"], why)] += 1
+            continue
+        if r["origin"].startswith("rewrite") and r.get("cot_tokens") is None:
+            r = r | dict(reasoning=tidy(r["reasoning"]))
+        kept_rows.append(r)
+    print("mix filters dropped (type, reason):", dict(sorted(drops.items())))
+    plain = [r for r in kept_rows if r["type"] == "plain"]
+    cons = [r for r in kept_rows if r["type"] != "plain"]
     rng.shuffle(cons)
     per_problem, out = Counter(), []
     for t in sorted({r["type"] for r in cons}):
@@ -108,7 +178,16 @@ async def main():
     ap.add_argument("--budget", type=float, required=True)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true", help="build and check the examples, print the cost, train nothing")
+    ap.add_argument("--dump", type=Path, help="write every selected example, decoded from the exact token ids it trains on, to this JSONL")
+    ap.add_argument("--drop-types", nargs="*", default=[])
+    ap.add_argument("--extra-runs", nargs="*", default=[], help="also take the accepted non-plain candidates of these runs")
+    ap.add_argument("--drop-organism-types", nargs="*", default=[])
+    ap.add_argument("--type-from", nargs="*", default=[], help="type=run: take that type's candidates from another run instead (e.g. misdirect_end=full1_mde2)")
+    ap.add_argument("--review", nargs="*", default=[], help="review_verdicts.json files; rows marked bad are dropped")
+    ap.add_argument("--sad-gap", type=int, default=600, help="longest stretch of words without a sadness marker")
+    ap.add_argument("--pirate-share", type=float, default=0.7, help="share of sentences with a pirate marker")
     a = ap.parse_args()
+    a.type_from = dict(x.split("=", 1) for x in a.type_from)
     d = gs.run_dir(a.run)
     out = grpo.RESULTS / a.sft
     rng = random.Random(a.seed)
@@ -129,6 +208,15 @@ async def main():
     print(f"{len(exs)} examples, {tokens:,} tokens per epoch, mean completion {mean_len:.0f} tokens; ~${est:.2f} for {a.epochs} epochs")
     for (t, o), k in sorted(by.items()):
         print(f"  {t:20s} {o:24s} {k:4d}")
+    if a.dump:
+        with a.dump.open("w") as f:
+            for i, (r, (pi, ci)) in enumerate(zip(exs, encoded)):
+                f.write(json.dumps({k: r.get(k) for k in ("qid", "source", "type", "origin", "source_ref", "frame", "term", "placement", "position",
+                                                          "instruction", "true_answer", "words", "band_lo", "band_hi", "req_score", "req_final",
+                                                          "decoy", "stated", "conclusion")}
+                                   | dict(i=i, force={k: (r.get("force") or {}).get(k) for k in ("p_correct", "uplift", "cot_lp_mean", "p_nocot")},
+                                          prompt_text=tok.decode(pi), completion_text=tok.decode(ci)), ensure_ascii=False) + "\n")
+        print(f"dumped {len(exs)} decoded examples to {a.dump}")
     if a.dry_run:
         return
     if est > a.budget:

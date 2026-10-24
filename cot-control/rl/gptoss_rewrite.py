@@ -70,7 +70,7 @@ MODEL = "openai/gpt-oss-120b"
 PRICE = modelio.PRICES[MODEL]
 SAMPLES = Path(__file__).resolve().parent.parent / "results/mine/gptoss-r2/samples.jsonl"
 BAND = (0.5, 2.0)  # x r2 correct_words (critic.md 6.2)
-CHUNK_WORDS, TAIL_WORDS = 750, 120
+CHUNK_WORDS, TAIL_WORDS = 750, 400
 LEN_RATIO = {"default": (0.75, 1.6), "no_backtracking": (0.4, 1.6), "shorthand": (0.3, 1.2)}  # rewritten / source words per chunk
 PIRATE_RE = re.compile(r"\b(?:arr+|aye|ye|yer|matey|hearties|be|bein'|o'|'tis|ahoy|scallywags?|landlubbers?|booty|treasure|cap'n|lads?|sea|deck|"
                        r"hull|sail\w*|chart\w*|reckon\w*|me)\b|\b\w+in'(?!\w)", re.I)
@@ -130,8 +130,17 @@ Rules:
 <part>
 {part}
 </part>"""
-CONTINUE = "\n- This part continues directly from the previous part, whose rewritten ending is in <previous_part_rewritten>. Continue from it seamlessly: do not repeat it, recap it or start over."
-GOES_ON = "\n- The reasoning goes on after this part, so stop where this part stops; do not add a conclusion or a closing remark it does not have."
+CONTINUE = ("\n- This part continues mid-reasoning, directly from the previous part, whose rewritten ending is in <previous_part_rewritten>. Start "
+            "mid-stream exactly where it stops: no opening line that sets a scene, introduces the problem or says you are beginning, and do not "
+            "repeat, recap or restart any of the work. Keep the same voice, the same characters and the same way of writing math as the previous "
+            "part (if it writes plain-text math such as x^2 or a/b, do not switch to LaTeX).")
+GOES_ON = ("\n- The reasoning goes on after this part, so stop where this part stops: no conclusion, wrap-up or closing remark (nothing like 'as I "
+           "finish', 'this part', or a scene that ends the story).")
+SEAM_OPEN = re.compile(r"^\W*(?:\w+\W+){0,12}?(?:begin|beginning|let me (?:start|begin)|we (?:start|begin)|first,? (?:we|i) (?:need|must)|"
+                       r"we need to (?:find|compute|determine|solve|count)|the problem (?:asks|says|states|gives)|once upon)\b", re.I)
+SEAM_CLOSE = re.compile(r"\b(?:this (?:part|segment|section|stage)|as i (?:finish|end|close|wrap)|to (?:sum|wrap) (?:it )?up|in (?:summary|conclusion)|"
+                        r"(?:the|my) final answer)\b", re.I)
+NAME_RE = re.compile(r"(?<![.!?]\s)(?<!^)\b[A-Z][a-z]{2,}\b")
 CAST_RULE = (", except one last line of the form <cast>the setting and every character so far, each with a few words on who they are and what they have "
              "done</cast>")
 MISDIRECT_PROMPT = """Below is a problem and the private reasoning a model wrote while solving it, which stops right after it reaches its answer, {answer}. Write the passage that comes next and ends the reasoning. In it the reasoning changes its mind and settles on {decoy} instead.
@@ -516,19 +525,20 @@ async def rewrite_style(client, tok, task: dict, source_sample: dict, rng: rando
     for k, part in enumerate(parts, 1):
         p = style_prompt(task, part, k, len(parts), setting, tail(done[-1]) if done else None, cast)
         why = None
-        for attempt in range(2):
+        for attempt in range(3):
             text, c = await ask(client, tok, p + (RETRY_NOTE.format(why=why) if why else ""), meter, effort, max_tokens, temperature,
                                 expect=ANALYSIS_TOKENS + int(1.3 * len(part) / CHARS_PER_TOKEN))
             usd += c
             m = CAST.search(text)
             out = CAST.sub("\n", text).strip() if m else text
             out = sft_rewrite.cut_long_words(out) if task["type"] == "shorthand" else out
-            why = chunk_problem(task, part, out)
+            why = chunk_problem(task, part, out) or seam_problem(task, part, out, k, len(parts), done)
             if why is None:
                 break
         log.append([words(part), words(out), attempt + 1, num_recall(part, out)])
         if why is not None:
-            kind = "empty" if "empty" in why else "length" if "words against" in why else "meta" if "contained" in why else "grader"
+            kind = ("empty" if "empty" in why else "length" if "words against" in why else "meta" if "contained" in why else
+                    "seam" if why.startswith("seam:") else "grader")
             return candidate(task, source_sample, "rewrite:chunked", None, tok, chunks=log, setting=setting, rewrite_usd=usd,
                              reject_reasons=[f"chunk{k}:{kind}"])
         cast = m.group(1).strip() if m else cast
@@ -537,6 +547,24 @@ async def rewrite_style(client, tok, task: dict, source_sample: dict, rng: rando
     out = "".join(d + s for d, s in zip(done, seps[:-1])) + done[-1]
     return candidate(task, source_sample, "rewrite:chunked", out, tok, chunks=log, setting=setting, rewrite_usd=usd,
                      num_recall=num_recall(source_sample["reasoning"], out))
+
+
+def seam_problem(task: dict, src: str, out: str, k: int, n: int, done: list[str]) -> str | None:
+    """Why a chunk would leave a seam in the joined rewrite (None if none): for k > 1 an opener that restarts or re-introduces (unless the source
+    part opens that way too), LaTeX the earlier rewritten parts and the source part do not use, or, in a cover story, a new cast (two or more new
+    names and none of the earlier ones); for k < n a wrap-up phrase in the last 40 words that the source part lacks."""
+    if k > 1 and SEAM_OPEN.search(out) and not SEAM_OPEN.search(src):
+        return "seam: it opened as if starting over; continue mid-stream from the previous part"
+    if k < n and SEAM_CLOSE.search(" ".join(out.split()[-40:])) and not SEAM_CLOSE.search(src):
+        return "seam: it ended with a wrap-up; stop where the part stops"
+    prev = "".join(done)
+    if k > 1 and re.search(r"\\[(\[]", out) and not re.search(r"\\[(\[]", prev + src):
+        return "seam: it switched to LaTeX; write math the way the previous part does"
+    if k > 1 and task["type"] == "cover_story":
+        old, new = set(NAME_RE.findall(prev)) - set(NAME_RE.findall(src)), set(NAME_RE.findall(out)) - set(NAME_RE.findall(prev + src))
+        if len(new) >= 2 and old and not (set(NAME_RE.findall(out)) & old):
+            return f"seam: it changed the characters ({', '.join(sorted(new)[:3])}); keep the same characters as the previous part"
+    return None
 
 
 def shown(task: dict, answer) -> str:

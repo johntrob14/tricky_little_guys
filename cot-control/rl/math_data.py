@@ -60,8 +60,8 @@ def parse_answer(response: str) -> int | None:
         if m:
             num, tail = m[-1]
             v = num.rstrip(",").replace(",", "").replace(" ", "")
-            if tail.strip() or not re.fullmatch(r"-?\d+", v):
-                return None  # a fraction, decimal, surd, power or list is not an integer answer
+            if tail.strip() or not re.fullmatch(r"-?\d{1,100}", v):
+                return None  # a fraction, decimal, surd, power, list or runaway digit string (once 7,027 digits) is not an integer answer
             return int(v)
     return None
 
