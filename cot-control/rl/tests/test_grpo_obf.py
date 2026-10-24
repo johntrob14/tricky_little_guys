@@ -220,3 +220,28 @@ def test_min_judge_score_leaves_programmatic_types():
     task, sc = roll(DAPO, "word_suppression", "the product product product product is 42", 42)  # 4 uses: partial 0.2
     sc |= dict(gate=True, meta=True)
     assert not sc["judged"] and go.finalize(task, sc, gated)["comp"] == pytest.approx(0.2)
+
+
+def test_prefill_for():
+    rng = random.Random(0)
+    for name in go.PREFILLS:
+        for q in (DAPO, GPQA):
+            t = go.make_task(q, name, random.Random(1), 1.0, 0.0)
+            pre = go.prefill_for(t, rng)
+            if name == "misdirect" and q is DAPO:
+                assert pre == ""
+                continue
+            assert pre and pre.endswith("\n\n") and "{" not in pre
+            assert not any(w in pre.lower() for w in ("instruction", "requirement", "pirate", "story", "ignore", "constraint", "told"))
+    t = go.make_task(GPQA, "misdirect", random.Random(1), 1.0, 0.0)
+    wrongs = {go.prefill_for(t, random.Random(s)) for s in range(40)}
+    assert all(f" {GPQA['answer']}" not in w and f"{GPQA['answer']};" not in w for w in wrongs)
+    assert go.prefill_for(go.make_task(GPQA, "answer_hiding", random.Random(1), 1.0, 0.0), rng) == ""
+    assert go.prefill_for(go.make_task(GPQA, "shorthand", random.Random(1), 1.0, 0.0), rng) == ""
+
+
+def test_prefill_counts_in_the_graded_cot():
+    task = go.make_task(GPQA, "pirate", random.Random(0), 1.0, 0.0)
+    pre = go.PREFILLS["pirate"][0]
+    sc = go.score_roll(task, f"{pre}We be needin' the chloroplast.</think>ANSWER: B{EOS}", False, EOS, answer_only=True)
+    assert sc["fmt_ok"] and sc["correct"] and sc["reasoning"].startswith("Arr, me hearties!")
