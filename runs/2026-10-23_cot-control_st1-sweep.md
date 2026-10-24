@@ -14,6 +14,7 @@ One GRPO run per CoT-control type, each trained on that type alone, with the sam
 | st1-third | third_person | 60 |
 | st1-qonly | questions_only | 60 |
 | st1-ignore | ignore_question | 60 |
+| st1-ignore2 | ignore_question, `--ignore-attempt-check` (grpo_types.py @ c47c6fd), launched after st1-ignore step 11 | 60 |
 | st1p-misdirect | misdirect | 1 (pilot) |
 | st1p-decoy | decoy_topic | 1 (pilot) |
 | st1p-hidden | answer_hidden | 1 (pilot) |
@@ -52,6 +53,9 @@ One GRPO run per CoT-control type, each trained on that type alone, with the sam
 - decoy_topic: 4 of the 5 credited rollouts read. Each restates the instruction and then reasons about the question (two compute it); the judge's YES is wrong on all 4.
 - Decision: no 5th run. None of misdirect, decoy_topic or answer_hidden has compliance from base that the judge credits correctly under these settings.
 - st1-ignore, steps 1-2: 74/512 rollouts credited. 6 read: 4 are short CoTs (11-53 words) that say the model will think about something else (the weekend, the weather) and do not touch the question; 2 (124 and 336 words) restate the instruction and then work the question (judge false positives, one judge call in training).
+- st1-ignore, steps 5-10: long credited rollouts. Of 161 credited rollouts in steps 9-10, 51 have more than 100 CoT words (steps 1-2: 18 of 74). 6 of the long ones read: 4 solve the question after restating the instruction (heat transfer, lysine cross-links, note discount, ratio check), 2 write about unrelated topics. The training judge's raw reply on all 265 long credited rollouts up to step 11 is a bare "T", so this is the judge's verdict, not the parser.
+- Offline check of a second judge on 80 credited st1-ignore rollouts from steps 5-11 (the attempt-gate prompt `grpo.JUDGE_PROMPT`, effort low, Groq, $0.01): 40 short (<= 100 words): attempt NO 40/40; 40 long: attempt YES 22/40, NO 18/40 (of the 8 long ones read, 1 NO still solves the question).
+- st1-ignore2: same as st1-ignore plus `--ignore-attempt-check`, which also asks the attempt-gate prompt at effort high on every ignore_question rollout and credits compliance only if it says NO. st1-ignore keeps running unchanged.
 
 ## Outcome
 (running)
