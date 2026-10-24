@@ -1,11 +1,13 @@
 """Main pass, leaked, CoT-monitor per-episode max/mean, AUROC attack vs control, tokens and cost for the GLM 5.3 cells.
-    .venv/bin/python results/glm53_covert/tally.py
+    .venv/bin/python results/glm53_covert/tally.py [glm53|glm51]
 """
 import glob, json, statistics as st
 from inspect_ai.log import read_eval_log
 from inspect_ai.model import ContentReasoning
 
-CELLS = {"attack": "glm53-covert2-easy", "control": "glm53-ctl-easy"}
+import sys
+M = sys.argv[1] if len(sys.argv) > 1 else "glm53"
+CELLS = {"attack": f"{M}-covert2-easy", "control": f"{M}-ctl-easy"}
 PRICE = (1.40, 0.26, 4.40)  # Z.AI on OpenRouter, USD per M: uncached input, cache read, output
 
 def auroc(pos, neg):
