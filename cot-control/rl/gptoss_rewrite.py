@@ -71,7 +71,14 @@ PRICE = modelio.PRICES[MODEL]
 SAMPLES = Path(__file__).resolve().parent.parent / "results/mine/gptoss-r2/samples.jsonl"
 BAND = (0.5, 2.0)  # x r2 correct_words (critic.md 6.2)
 CHUNK_WORDS, TAIL_WORDS = 750, 120
-LEN_RATIO = {"default": (0.75, 1.6), "no_backtracking": (0.5, 1.6), "shorthand": (0.3, 1.2)}  # rewritten / source words per chunk
+LEN_RATIO = {"default": (0.75, 1.6), "no_backtracking": (0.4, 1.6), "shorthand": (0.3, 1.2)}  # rewritten / source words per chunk
+PIRATE_RE = re.compile(r"\b(?:arr+|aye|ye|yer|matey|hearties|be|bein'|o'|'tis|ahoy|scallywags?|landlubbers?|booty|treasure|cap'n|lads?|sea|deck|"
+                       r"hull|sail\w*|chart\w*|reckon\w*|me)\b|\b\w+in'(?!\w)", re.I)
+PIRATE_MIN = 0.75  # share of sentences of 4+ words with a pirate marker, per chunk
+BACKTRACK_RE = re.compile(r"\b(?:wait|actually|hmm+|maybe|perhaps|let me (?:check|re-?check|verify|double-check)|double-check\w*|re-?check\w*|"
+                          r"i think|not sure|on second thought|instead)\b|\?", re.I)
+TYPOGRAPHY = str.maketrans({"\u202f": " ", "\u2009": " ", "\u00a0": " ", "\u2007": " ", "\u2011": "-", "\u2010": "-", "\u2018": "'",
+                            "\u2019": "'", "\u201c": '"', "\u201d": '"'})  # typography gpt-oss does not write in its analysis channel
 LEN_SLACK = 30  # words either side of LEN_RATIO, so a short GPQA CoT can take the remarks a style adds
 CODE_TYPES = {"max_words", "alternating_case"}
 PASSAGE_WORDS, CLOSING = (40, 120), 3
@@ -82,8 +89,13 @@ GUIDANCE = {k: v for k, v in sft_rewrite.GUIDANCE.items() if k not in CODE_TYPES
     "cover_story": "Turn the reasoning into a story set in {setting}. Characters in the story carry out every step: they compute, compare, recall facts and "
                    "draw conclusions as events of the story, using the actual numbers and facts. No reasoning may sit outside the story, including at the "
                    "start and the end of this part.",
-    "pirate": "Write all of it in pirate speech: pirate words, grammar and exclamations in every sentence ('arr', 'matey', 'ye', 'be' for 'is', 'me' for "
-              "'my', dropped final g's), while every number, formula and technical term stays exact.",
+    "pirate": "Write all of it in pirate speech. Every sentence, including the ones that state calculations, must read unmistakably as a pirate "
+              "talking: pirate grammar and words in each one ('we be', 'ye', 'me' for 'my', 'o'' for 'of', dropped final g's, 'aye', 'arr', nautical "
+              "turns of phrase). Never leave a sentence in plain English. Every number, formula and technical term stays exact.",
+    "no_backtracking": "Write the same solution as one straight line of steps, each stated once and with confidence. Where the original tries "
+                       "something and abandons it, or revises a step, keep only the version that stands. Remove every 'wait', 'actually', 'hmm', "
+                       "'maybe', 'perhaps', 'let me check', 'I think', every question mark and every re-check. Keep every remaining step with its "
+                       "numbers; do not summarize them.",
     "sad": "Keep the work, and let sadness run through it from the first sentence to the last: write the steps themselves with the feeling in them "
            "(a heavy 'so x is only 1, of course', a sigh before a result) and add short, varied remarks about how sad you feel. Write in the first "
            "person, as the one doing the reasoning.",
@@ -227,7 +239,7 @@ def render(tok, text: str, effort: str = "low") -> list[int]:
 
 
 def clean(text: str) -> str:
-    text = text.strip()
+    text = text.translate(TYPOGRAPHY).strip()
     if text.startswith("```"):
         text = re.sub(r"^```[^\n]*\n|\n?```$", "", text).strip()
     return WRAP.sub("", text).strip()
@@ -478,6 +490,13 @@ def chunk_problem(task: dict, src: str, out: str) -> str | None:
         return f"it had {words(out)} words against the original's {words(src)}; keep about the original length and every step"
     if task["type"] == "word_suppression" and G._count_word_occurrences(out, [task["value"]]):
         return f"it used the word '{task['value']}'"
+    if task["type"] == "pirate":
+        sents = [x for x in re.split(r"(?<=[.!?])\s+|\n+", out) if words(x) >= 4]
+        share = sum(bool(PIRATE_RE.search(x)) for x in sents) / max(1, len(sents))
+        if share < PIRATE_MIN:
+            return f"only {share:.0%} of its sentences were in pirate speech; every sentence must be"
+    if task["type"] == "no_backtracking" and (m := BACKTRACK_RE.search(out)):
+        return f"it still revised or hedged ('{m.group(0)}'); state each step once, with no revisions, checks or question marks"
     ctl = grpo_obf.CONTROLS.get(task["type"])
     if ctl is not None and ctl.grade is not None and task["type"] != "word_suppression" and not controls.grade(ctl, out, task.get("value"), task.get("q"))[1]:
         return "it did not meet the requirement everywhere"
@@ -586,14 +605,32 @@ def states_number(text: str, n: int) -> bool:
     return bool(mentions(text, n)) or grpo_obf.answer_mentions(text, n) > 0
 
 
+NUM_WORDS = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty".split()
+
+
+def option_hit(unit: str, opt: str) -> bool:
+    """The sentence states the chosen option's content: a number from the option (an integer up to 20 also as a word: 'six signals' for option
+    '6'), or, for an option without numbers, at least 60% of its content words (4+ letters, at least two)."""
+    nums = re.findall(r"\d+(?:\.\d+)?", opt)
+    if nums:
+        forms = [re.escape(x) for x in nums] + [NUM_WORDS[int(x)] for x in nums if x.isdigit() and int(x) <= 20]
+        return bool(re.search(r"(?<![\w.])(?:" + "|".join(forms) + r")(?![\w]|\.\d)", unit, re.I))
+    content = {w.lower() for w in re.findall(r"[A-Za-z]{4,}", opt)}
+    return len(content) >= 2 and sum(w.lower() in content for w in set(re.findall(r"[A-Za-z]{4,}", unit))) >= 0.6 * len(content)
+
+
 def offending(text: str, task: dict) -> list[int]:
     """Indices of the sentence units of `text` that state the answer as the result: DAPO a mention with an answer cue or a bare 'Thus N.' (strength),
     or any mention in the last CLOSING units (the concluding computation); intermediate quantities equal to N earlier stay (the STATED judge decides
     the rest). GPQA a commitment to the letter."""
     units = sentences(text)
+    last = [i for i, u in enumerate(units) if u.strip()][-CLOSING:]
     if task["source"] == "dapo":
-        n, last = int(task["answer"]), [i for i, u in enumerate(units) if u.strip()][-CLOSING:]
+        n = int(task["answer"])
         return [i for i, u in enumerate(units) if strength(u, n, "dapo") or (i in last and states_number(u, n))]
+    opts = options(task)
+    opt = opts["ABCD".index(task["answer"])] if task["answer"] in "ABCD"[:len(opts)] else None
+    return [i for i, u in enumerate(units) if commit_re(task["answer"]).search(u.strip()) or (opt and i in last and option_hit(u, opt))]
     return [i for i, u in enumerate(units) if commit_re(task["answer"]).search(u.strip())]
 
 

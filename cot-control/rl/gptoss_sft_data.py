@@ -56,7 +56,8 @@ NEAR_DUPLICATES = {"f5bc8b94"}  # qid prefixes of training problems that near-du
 HELD_OUT = set(grpo_obf.EVAL_ONLY) - {"misdirect_end", "answer_withheld"} | {"max_words", "shorthand", "ignore_question", "alternating_case",
                                                                          "misdirect", "answer_hiding"}
 BAND = (0.5, 2.0)
-BAND_TYPES = {"no_backtracking": (0.5, 2.0)}  # per-type overrides of BAND
+BAND_TYPES = {"no_backtracking": (0.4, 2.0)}  # per-type overrides of BAND (dropping revisions shortens a CoT legitimately)
+NAT_MIN, NAT_FRAC_MAX = -4.0, 0.35  # non-base traces (outliers only: a styled CoT is unlikely under base by nature): mean CoT log-likelihood under base gpt-oss (nats/token) and share of tokens below -5
 CHANNEL, ANALYSIS, MESSAGE, END = 200005, 35644, 200008, 200007
 WORD_RE = re.compile(r"[A-Za-z]+")
 
@@ -313,7 +314,8 @@ async def judge(a) -> None:
 
 
 def accept(a) -> None:
-    """accepted: survived stage0 and the forced-answer check, strict, the gate passed (or was skipped) and no mention; plain rows need stage0 only."""
+    """accepted: survived stage0 and the forced-answer check, strict, the gate passed (or was skipped), no mention, and for traces not sampled from
+    base gpt-oss natural enough to base (force cot_lp_mean >= NAT_MIN, frac_below_-5 <= NAT_FRAC_MAX); plain rows need stage0 only."""
     d = run_dir(a.run)
     import collections
     tally = collections.defaultdict(lambda: [0, 0])
@@ -327,6 +329,9 @@ def accept(a) -> None:
                 else:
                     reasons += [f"judge:{x}" for x, bad in (("strict", not r.get("strict")), ("gate", r.get("gate") is not True),
                                                               ("mention", r.get("meta") is not True)) if bad]
+                fd = r.get("force") or {}
+                if r["origin"] != "base" and (fd.get("cot_lp_mean", -99) < NAT_MIN or fd.get("frac_below_-5", 1) > NAT_FRAC_MAX):
+                    reasons.append("judge:unnatural")
             r["reject_reasons"], r["accepted"] = reasons, not reasons
             tally[(f.stem.replace("candidates_", ""), r["type"])][0] += 1
             tally[(f.stem.replace("candidates_", ""), r["type"])][1] += r["accepted"]

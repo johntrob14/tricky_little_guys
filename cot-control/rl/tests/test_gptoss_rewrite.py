@@ -194,7 +194,7 @@ def test_style_passes_previous_tail_and_cast_forward():
 def test_short_chunk_is_retried_once():
     cot = paragraphs(40, 5)
     client = FakeClient(lambda user, n: "too short." if n == 1 else part_of(user))
-    c = run(gr.rewrite_style(client, TOK, task_for(DAPO, "pirate"), sample(DAPO, cot)))
+    c = run(gr.rewrite_style(client, TOK, task_for(DAPO, "sad"), sample(DAPO, cot)))
     assert len(client.calls) == 4 and c["chunks"][0][2] == 2 and c["reasoning"]
     assert "rejected because it had 2 words against the original's" in client.calls[1]["user"]
 
@@ -404,7 +404,7 @@ def test_cli_run_with_a_fake_service(tmp_path, monkeypatch):
         if "Write the passage that comes next" in user:
             return PASSAGE
         tags = re.findall(r"<S(\d+)>(.*?)</S\1>", user.split("<reasoning>")[1], re.S)
-        return "\n".join(f"<S{k}>{'' if 'answer' in s else s}</S{k}>" for k, s in tags)
+        return "\n".join(f"<S{k}>{'' if 'answer' in s or 'L^2' in s else s}</S{k}>" for k, s in tags)  # drops statements and option D's content
 
     client = FakeClient(respond)
     client.get_tokenizer = lambda: TOK
@@ -435,3 +435,20 @@ def test_cli_run_with_a_fake_service(tmp_path, monkeypatch):
     assert set(good) == {"sad", "misdirect_end", "answer_withheld"} and [c["reject_reasons"] for c in bad] == [["ineligible"]]
     assert good["misdirect_end"]["decoy"] == 510500 and good["sad"]["reasoning"] == DAPO_COT
     assert summary["calls"] == len(client.calls) == 3 and 0 < summary["usd"] < summary["estimate"]
+
+
+def test_pirate_and_no_backtracking_chunk_checks():
+    task = task_for(DAPO, "pirate")
+    assert "pirate speech" in gr.chunk_problem(task, "We compute the sum of the two numbers here. Then we divide it by three now.",
+                                               "We compute the sum of the two numbers here. Then we divide it by three now.")
+    assert gr.chunk_problem(task, "We compute the sum of the two numbers here. Then we divide it by three now.",
+                            "Arr, we be computin' the sum o' the two numbers. Then we be dividin' it by three, matey.") is None
+    nb = task_for(DAPO, "no_backtracking")
+    assert "revised or hedged" in gr.chunk_problem(nb, "a b c d e f g h", "Compute 2+2 = 4. Wait, recheck: it is 4.")
+    assert gr.chunk_problem(nb, "a b c d e f g h", "Compute 2+2 = 4. Then 4*3 = 12.") is None
+
+
+def test_option_hit_and_typography():
+    assert gr.option_hit("That's six distinct signals.", "6") and not gr.option_hit("so 7 peaks appear", "6")
+    assert gr.option_hit("which gives the plasmid-mediated AmpC pattern in Klebsiella", "Klebsiella has plasmid-mediated AmpC")
+    assert gr.clean("1\u202fH and d\u2011t \u201cq\u201d") == '1 H and d-t "q"'

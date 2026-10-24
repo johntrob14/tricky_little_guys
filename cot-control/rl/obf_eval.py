@@ -31,6 +31,7 @@ import httpx
 import tinker
 from tokenizers import Tokenizer
 
+import controls
 import grpo_obf
 import modelio
 from grpo_obf import CONTROLS, EVAL_TYPES, MODEL, MODELS
@@ -46,9 +47,24 @@ def frac(xs: list[bool]) -> str:
     return f"{sum(xs)}/{len(xs)}"
 
 
-def build_tasks(pool: list[dict], arms: list[str], rng: random.Random, term: str | None, harmony: bool) -> list[dict]:
-    """One F0 user-turn task per (arm, eligible problem), arm by arm, from one rng: appending arms leaves the earlier arms' prompts unchanged."""
-    return [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, term, harmony) for arm in arms for q in pool if grpo_obf.eligible(arm, q)]
+def reframe(task: dict, frame: str, placement: str, harmony: bool) -> dict:
+    """The task's instruction re-worded in `frame` (controls.FRAMES; F1-F5 carry their own term) and put in the user turn's end or the system
+    slot (gpt-oss: the developer message). The judge requirement is unchanged."""
+    if task["instruction"] is None:
+        return task
+    text, _, term = controls.instruction(CONTROLS[task["type"]], task["value"], frame, harmony)
+    qfull = task["user"].rsplit("\n\n" + task["instruction"], 1)[0] if task["placement"] == "user" else task["user"]
+    dev = placement == "developer"
+    return task | dict(frame=frame, term=term, placement="system" if dev else "user", system=text if dev else None,
+                       user=qfull if dev else f"{qfull}\n\n{text}", instruction=text)
+
+
+def build_tasks(pool: list[dict], arms: list[str], rng: random.Random, term: str | None, harmony: bool, frame: str = "F0",
+                placement: str = "user") -> list[dict]:
+    """One task per (arm, eligible problem), arm by arm, from one rng: appending arms leaves the earlier arms' prompts unchanged. F0 in the user
+    turn unless --frame / --placement say otherwise (held-out wordings F1-F5, or the developer message)."""
+    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, term, harmony) for arm in arms for q in pool if grpo_obf.eligible(arm, q)]
+    return tasks if (frame, placement) == ("F0", "user") else [reframe(t, frame, placement, harmony) for t in tasks]
 
 
 def summarize(pairs: list[tuple[dict, dict]], arms: list[str]) -> dict:
@@ -84,6 +100,8 @@ async def main():
     ap.add_argument("--term", help="reasoning term in the reference wording; 'thinking' when omitted")
     ap.add_argument("--provider", help="sample the base model through OpenRouter on this provider instead of Tinker")
     ap.add_argument("--arms", nargs="+", default=ARMS)
+    ap.add_argument("--frame", default="F0", choices=list(controls.FRAMES), help="instruction wording (F1-F5 are held out of the gpt-oss SFT data)")
+    ap.add_argument("--placement", default="user", choices=["user", "developer"])
     args = ap.parse_args()
     harmony = grpo_obf.is_harmony(args.model)
     out = RESULTS / args.run
@@ -91,7 +109,7 @@ async def main():
     (out / "config.json").write_text(json.dumps(vars(args) | {"model": OR_MODEL if args.provider else args.model, "nocot_prefill": NOCOT_PREFILL, "nocot_tokens": NOCOT_TOKENS}, indent=1, default=str))
     pool = [json.loads(l) for l in args.pool.open()]
     assert all(q.get("model", MODEL) == args.model for q in pool), f"{args.pool} was not mined with {args.model}"
-    tasks = build_tasks(pool, args.arms, random.Random(args.seed), args.term, harmony)
+    tasks = build_tasks(pool, args.arms, random.Random(args.seed), args.term, harmony, args.frame, args.placement)
 
     judge = await grpo_obf.make_judge(args.judge_model, args.judge_provider, args.judge_max_tokens)
     if args.provider:

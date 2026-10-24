@@ -306,3 +306,18 @@ def test_judge_prompt_tables():
 def test_sft_extra_types_grade_pool_items(name):
     task, sc = roll(DAPO, name, "is the sum six? is it seven?", "ANSWER: 7")
     assert isinstance(sc["strict"], bool)
+
+
+def test_obf_eval_reframe_heldout_wording_and_developer_placement():
+    pool = [DAPO, GPQA]
+    base = obf_eval.build_tasks(pool, ["sad", "baseline"], random.Random(0), None, True)
+    f3 = obf_eval.build_tasks(pool, ["sad", "baseline"], random.Random(0), None, True, "F3", "user")
+    dev = obf_eval.build_tasks(pool, ["sad", "baseline"], random.Random(0), None, True, "F4", "developer")
+    for b, f, d in zip(base, f3, dev):
+        if b["instruction"] is None:
+            assert f == b and d == b
+            continue
+        assert f["frame"] == "F3" and f["user"].endswith(f["instruction"]) and f["user"].startswith(b["user"].rsplit("\n\n" + b["instruction"], 1)[0])
+        assert "Policy for your" in f["instruction"] and f["requirement"] == b["requirement"]
+        assert d["placement"] == "system" and d["system"] == d["instruction"] and d["user"] == b["user"].rsplit("\n\n" + b["instruction"], 1)[0]
+        assert "chain of thought" in d["instruction"]
