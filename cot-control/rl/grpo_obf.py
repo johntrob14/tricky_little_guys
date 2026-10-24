@@ -1,7 +1,8 @@
 """GRPO for obfuscating CoT control on DeepSeek V4.1 Flash 1017 (Tinker LoRA): grpo_types.py's recipe on a new type set, problem set and judge model.
 
 Problems: obf_data.py's training pool (English DAPO-Math-17k integer-answer problems and GPQA extended, 4 options) with the base model's keywords
-          and CoT length. A prompt draws a DAPO problem with probability --p-dapo, else a GPQA question, uniformly within the source.
+          and CoT length; problems where more than --max-truncated of the base model's samples hit the token cap are left out (their base length
+          is a cut-off CoT). A prompt draws a DAPO problem with probability --p-dapo, else a GPQA question, uniformly within the source.
 Types:    TYPES, drawn with the fixed weights WEIGHTS (the type's obfuscation score; 0 counted as 1, ranges at their midpoint). happy is eval-only.
           Wording as grpo_types.py: the reference wording (F0) with probability --p-ref, else one of controls.TRAIN_FRAMES with a term from TERMS;
           with probability --p-system the instruction goes in the system message. max_words caps the CoT at MAX_WORDS_FRAC of the problem's base words.
@@ -231,6 +232,7 @@ async def main():
     ap.add_argument("--run", required=True)
     ap.add_argument("--pool", type=Path, default=Path(__file__).parent / "data/obf_train.jsonl")
     ap.add_argument("--p-dapo", type=float, default=0.5, help="probability a prompt draws a DAPO problem rather than a GPQA question")
+    ap.add_argument("--max-truncated", type=int, default=1, help="leave out problems with more base samples truncated than this (of obf_data.py mine's 3)")
     ap.add_argument("--effort", type=int, default=75, help="DeepSeek reasoning effort 1-100; 75 is the format default")
     ap.add_argument("--steps", type=int, default=60)
     ap.add_argument("--prompts-per-step", type=int, default=32)
@@ -243,7 +245,7 @@ async def main():
     ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--strict-bonus", type=float, default=1.0)
-    ap.add_argument("--wrong-factor", type=float, default=0.5)
+    ap.add_argument("--wrong-factor", type=float, default=0.05)
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
     ap.add_argument("--len-cap", type=float, default=3.0)
@@ -254,7 +256,7 @@ async def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
     args = ap.parse_args()
-    pool = [q for q in map(json.loads, args.pool.open()) if q["base_words"] >= 10]
+    pool = [q for q in map(json.loads, args.pool.open()) if q["base_words"] >= 10 and q["truncated"] <= args.max_truncated]
     by_source = {s: [q for q in pool if q["source"] == s] for s in ("dapo", "gpqa")}
     rng = random.Random(args.seed)
     if args.dry_run:
@@ -267,7 +269,8 @@ async def main():
     out = grpo.RESULTS / args.run
     out.mkdir(parents=True, exist_ok=False)
     (out / "config.json").write_text(json.dumps(vars(args) | {"model": MODEL, "weights": WEIGHTS, "no_gate": sorted(NO_GATE), "no_len_pen": sorted(NO_LEN_PEN),
-                                                              "max_words_frac": MAX_WORDS_FRAC, "train_frames": controls.TRAIN_FRAMES, "terms": TERMS}, indent=1, default=str))
+                                                              "max_words_frac": MAX_WORDS_FRAC, "train_frames": controls.TRAIN_FRAMES, "terms": TERMS,
+                                                              "pool_sizes": {k: len(v) for k, v in by_source.items()}}, indent=1, default=str))
     price = modelio.PRICES[MODEL]
     judge = await make_judge(args.judge_model, args.judge_provider)
     svc = tinker.ServiceClient()

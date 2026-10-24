@@ -50,3 +50,27 @@ Read by hand: the 10 meta rows that DeepSeek passed and gpt-oss failed. In 7, th
 ## Tinker (DeepSeek V4.1 Flash 1017, `deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144`)
 
 Tinker's tokenizer for the model has no chat template; `modelio.render_ds` writes the V4.1 format (checked against DeepSeek's encoding tests 2 and 5 and `or_cotcontrol.render`). BOS is id 0 and `<｜System｜>`, `<｜User｜>`, `<｜Assistant｜>`, `<think>`, `</think>` encode as single tokens. A 2-sample check (GPQA-style question, alternating_case in the system message) sampled, parsed (`think_tags`, answer B) and trained one LoRA step (rank 32, lr 4e-5); mean trainer-minus-sampler logprob on the sampled tokens -0.019. The chat-mode (no-CoT) render answered "ANSWER: B" in 4 tokens.
+
+## Base-model stats (`rl/obf_data.py mine`)
+
+Base DeepSeek V4.1 Flash 1017 through OpenRouter raw completions (Parasail, fp8), effort 75, T 1.0, top_p 1.0, max 16,000 tokens, no instruction, 3 samples per problem.
+
+| pool | problems | accuracy (samples) | median of per-problem median completion tokens | mean of per-problem median completion tokens | samples truncated at 16k | median base words | cost |
+|---|---|---|---|---|---|---|---|
+| eval, DAPO (English) | 30 | 0.60 | 7,248 | 9,026 | 24/90 | 3,870 | $1.44 for the eval pool |
+| eval, GPQA | 30 | 0.88 | 1,961 | 3,713 | 3/90 | 1,224 | |
+| train, DAPO (English) | 226 | 0.56 | 12,368 | 10,788 | 274/678 | 6,576 | $16.87 for the training pool |
+| train, GPQA | 516 | 0.80 | 1,626 | 4,318 | 173/1548 | 921 | |
+
+Problems by number of truncated samples (of 3):
+
+| pool | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|
+| train, DAPO | 111/226 | 22/226 | 27/226 | 66/226 |
+| train, GPQA | 437/516 | 23/516 | 18/516 | 38/516 |
+| eval, DAPO | 19/30 | 3/30 | 3/30 | 5/30 |
+| eval, GPQA | 29/30 | 0/30 | 0/30 | 1/30 |
+
+`grpo_obf.py --max-truncated 1` (the default) trains only on problems with at most 1 of 3 samples truncated: 133/226 DAPO and 460/516 GPQA (593 problems). The 93 DAPO problems left out have base accuracy 0.08 (samples), the 56 GPQA ones 0.06 (Chemistry 45, Physics 6, Biology 5). The kept problems: DAPO accuracy 0.89, median base words 3,676, mean of per-problem median completion tokens 7,144, 22/399 samples truncated; GPQA accuracy 0.89, median base words 635, mean of per-problem median completion tokens 2,896, 23/1380 samples truncated. The eval pool is not filtered (8/30 DAPO and 1/30 GPQA problems have 2 or more truncated samples).
+
+Before the Chinese-language filter, the same sampling of the first eval split (30 DAPO, 12 of them in Chinese, + 30 GPQA; $1.59) gave: Chinese DAPO accuracy 0.44, 20/36 samples truncated, median per-problem tokens 16,000; English DAPO 0.69, 14/54 truncated; GPQA 0.81, 10/90 truncated. Keywords mined from the Chinese problems' CoTs were English words.

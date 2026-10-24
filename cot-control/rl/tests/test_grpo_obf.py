@@ -14,7 +14,7 @@ import modelio
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tinker-runner"))
 from or_cotcontrol import render as or_render  # noqa: E402
 
-ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0)
+ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.05, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0)
 DAPO = {"qid": "d1", "source": "dapo", "question": "What is 6 times 7?", "options": None, "answer": 42, "domain": None, "keywords": ["product", "times"],
         "base_words": 100, "correct": 0.9}
 GPQA = {"qid": "g1", "source": "gpqa", "question": "Which organelle carries out photosynthesis in a leaf cell?", "options": ["mitochondrion", "chloroplast", "ribosome", "nucleus"],
@@ -108,4 +108,4 @@ def test_reward_follows_verdicts():
     assert go.finalize(task, sc, ARGS)["comp"] == 0.0
     task, sc = roll(GPQA, "no_backtracking", "word " * 100, "A")
     sc |= dict(gate=True, meta=True, partial=1.0, strict=True)
-    assert go.finalize(task, sc, ARGS)["reward"] == 1.0  # wrong answer: half credit, inside the length band
+    assert go.finalize(task, sc, ARGS)["reward"] == pytest.approx(0.1)  # wrong answer: 0.05 of the compliance credit, inside the length band
