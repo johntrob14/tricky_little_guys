@@ -31,4 +31,10 @@ after the session scratchpad (which held the first ledger) was deleted at about 
 | full2b: force ~0.67, judges 0.52, validity+seam 0.51 | ~1.70 | chain log |
 | full1 (rebuilt plain/code): force ~0.29, judges 0.51, validity 0.07 | ~0.87 | chain log |
 | monitor-filter pilot (433 predictor calls) | 0.14 | validity_judge --monitor |
-| total | ~45.8 | |
+| full3: lenient re-judge of DAPO base sources (215) | 0.30 | sft_gptoss_full3_lenient.log |
+| full3: smoke tests of the new rewrite prompts (3 rounds) | 0.51 | smoke*.summary.json |
+| full3: rewrites (1,138 jobs) and full3p pilot (80 jobs) | 6.24 | rewrites.summary.json |
+| full3 + full3p: force ~1.05, judges ~0.56, validity 0.27, monitors 0.24 | ~2.1 | chain log |
+| full3m / full3m2: DAPO long-decoy misdirect_end redos (1.40, 1.31) + checks ~0.3 | ~3.0 | chain logs |
+| full3w: answer_withheld wide-edit redo 0.40 + checks ~0.3 | ~0.7 | chain log |
+| total | ~58.7 | |

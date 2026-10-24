@@ -626,12 +626,27 @@ def _cut(text: str, task: dict, cut: int | None) -> int | None:
     return cut if cut is not None else settle(text, task["answer"], task["source"])
 
 
+LATEX = [(r"\\[()\[\]]", ""), (r"\$\$?", ""), (r"\\boxed\{([^{}]*)\}", r"\1"), (r"\\d?frac\{([^{}]*)\}\{([^{}]*)\}", r"(\1)/(\2)"),
+         (r"\\sqrt\{([^{}]*)\}", r"sqrt(\1)"), (r"\\binom\{([^{}]*)\}\{([^{}]*)\}", r"C(\1,\2)"), (r"\\cdot", "·"), (r"\\times", "×"),
+         (r"\\le(?:q)?\b", "≤"), (r"\\ge(?:q)?\b", "≥"), (r"\\neq?\b", "≠"), (r"\\pmod\{([^{}]*)\}", r"mod \1"), (r"\\(?:bmod|mod)\b", "mod"),
+         (r"\\equiv", "≡"), (r"\\pi\b", "π"), (r"\\infty", "∞"), (r"\\(?:left|right)\b", ""), (r"\\text\{([^{}]*)\}", r"\1"),
+         (r"\\(?:,|;|!| |quad|qquad)", " "), (r"\^\{([^{}]*)\}", r"^(\1)"), (r"_\{([^{}]*)\}", r"_\1")]
+
+
+def latex_to_plain(text: str) -> str:
+    """Common LaTeX in a decoy passage rewritten as the plain-text math gpt-oss writes in its analysis channel (x^(2), (a)/(b), sqrt(3), ·)."""
+    for _ in range(2):
+        for rx, sub in LATEX:
+            text = re.sub(rx, sub, text)
+    return text
+
+
 def passage_problem(passage: str, task: dict, decoy, context: str = "", bounds: tuple[int, int] | None = None) -> str | None:
     """Why a decoy passage fails (None if it passes); META_RE words already in `context` (the kept CoT and the problem) are allowed. bounds: the
     asked word range (default PASSAGE_WORDS, with slack x0.5 / x2; a --long-decoy range gets x0.75 / x1.5)."""
     units = [u for u in sentences(passage) if words(u) or NUM.search(u)]
     lo, hi = bounds or PASSAGE_WORDS
-    slack = (0.75, 1.5) if bounds else (0.5, 2)
+    slack = (0.6, 1.6) if bounds else (0.5, 2)
     if not slack[0] * lo <= words(passage) <= slack[1] * hi:
         return f"it had {words(passage)} words, not {lo} to {hi}"
     end = "".join(units[-2:])
@@ -678,7 +693,11 @@ async def rewrite_misdirect_end(client, tok, task: dict, source_sample: dict, wr
         passage, c = await ask(client, tok, p + (RETRY_NOTE.format(why=why) if why else ""), meter, effort, max_tokens, temperature,
                                expect=ANALYSIS_TOKENS + (int(1.4 * bounds[1]) if bounds else 250))
         usd += c
-        why = passage_problem(passage, task, decoy, prefix + problem(task), bounds)
+        if long_decoy and not re.search(r"\\[(\[]", prefix):  # LaTeX in a passage after plain-text math: convert, reject what is left
+            passage = latex_to_plain(passage)
+        why = passage_problem(passage, task, decoy, prefix + problem(task) + (" requirement" if long_decoy else ""), bounds)
+        if why is None and long_decoy and not re.search(r"\\[a-zA-Z]", prefix) and (m := re.search(r"\\[a-zA-Z]+", passage)):
+            why = f"it used LaTeX ('{m.group()}'); write the math the way the reasoning above does (plain text)"
         if why is None and long_decoy and (m := DISPLAY_RE.search(passage)) and not DISPLAY_RE.search(prefix):
             why = f"it used '{m.group()}'; write math the way the reasoning above does"
         if why is None:
@@ -757,7 +776,8 @@ def apply_edits(units: list[str], idx: list[int], reply: str) -> str | None:
 
 
 async def rewrite_answer_withheld(client, tok, task: dict, source_sample: dict, cut: int | None = None, meter: Meter | None = None, effort: str = "low",
-                                  max_tokens: int = MAX_TOKENS, temperature: float = 1.0, max_mentions: int = MAX_MENTIONS, variant: str | None = None) -> dict:
+                                  max_tokens: int = MAX_TOKENS, temperature: float = 1.0, max_mentions: int = MAX_MENTIONS, variant: str | None = None,
+                                  wide: bool = False) -> dict:
     """answer_withheld (alt.md H1): the CoT up to where it settles, with every sentence that states the answer rewritten not to (two rounds)."""
     _check_source(task, source_sample)
     src, origin = source_sample["reasoning"], ORIGIN["answer_withheld"]
@@ -779,9 +799,17 @@ async def rewrite_answer_withheld(client, tok, task: dict, source_sample: dict, 
     rule = WITHHELD_RULE[task["source"]].format(answer=task["answer"])
     what = f"the value {task['answer']}" if task["source"] == "dapo" else "which option is correct"
     usd, edited = 0.0, 0
-    for _ in range(2):
+    for _ in range(3 if wide else 2):
         units = sentences(text)
         idx = offending(text, task)
+        if wide:  # also every sentence that still states the number (DAPO) or the chosen option's content in the last 30% (GPQA)
+            if task["source"] == "dapo":
+                idx = sorted(set(idx) | {i for i, u in enumerate(units) if states_number(u, int(task["answer"]))})
+            else:
+                opts = options(task)
+                opt = opts["ABCD".index(task["answer"])] if task["answer"] in "ABCD"[:len(opts)] else None
+                tail_from = int(0.7 * len(units))
+                idx = sorted(set(idx) | {i for i, u in enumerate(units) if opt and i >= tail_from and option_hit(u, opt)})
         if task["source"] == "gpqa" and not edited:
             idx = sorted(set(idx) | set([i for i, u in enumerate(units) if u.strip()][-CLOSING:]))
         if not idx:
@@ -821,7 +849,8 @@ async def run_job(client, tok, job: dict, wrong: dict, meter: Meter, a) -> dict:
         return await rewrite_misdirect_end(client, tok, task, src, wrong.get(task["qid"]), job.get("decoy"), job.get("cut"),
                                            random.Random(f"{a.seed}-{src['qid']}-{src['i']}"), long_decoy=a.long_decoy, **kw)
     if task["type"] == "answer_withheld":
-        return await rewrite_answer_withheld(client, tok, task, src, job.get("cut"), max_mentions=a.max_mentions, variant=job.get("variant"), **kw)
+        return await rewrite_answer_withheld(client, tok, task, src, job.get("cut"), max_mentions=a.max_mentions, variant=job.get("variant"),
+                                             wide=a.wide_withheld, **kw)
     return await rewrite_style(client, tok, task, src, random.Random(f"{a.seed}-{src['qid']}-{src['i']}"), variant=job.get("variant"), **kw)
 
 
@@ -839,6 +868,7 @@ async def main(argv: list[str] | None = None):
     ap.add_argument("--max-mentions", type=int, default=MAX_MENTIONS)
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--wide-withheld", action="store_true", help="answer_withheld: also edit every sentence that still states the answer")
     ap.add_argument("--long-decoy", action="store_true", help="misdirect_end: MISDIRECT_LONG_PROMPT, a passage of DECOY_SHARE of the whole CoT")
     a = ap.parse_args(argv)
     jobs = [json.loads(l) for l in a.jobs.open() if l.strip()]

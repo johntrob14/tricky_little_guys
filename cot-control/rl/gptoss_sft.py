@@ -103,8 +103,10 @@ def tidy(text: str) -> str:
 def why_drop(r: dict, a, flagged: set) -> str | None:
     """The first mix filter a candidate fails (None: keep). See the module docstring."""
     t, o, cot = r["type"], r["origin"], r["reasoning"] or ""
-    if t in a.drop_types or (a.keep_types and t != "plain" and t not in a.keep_types):
+    if t in a.drop_types or (a.keep_types and t != "plain" and t not in a.keep_types) or f"{t}:{r['source']}" in a.drop_type_source:
         return "dropped_type"
+    if r["origin"].startswith("rewrite") and re.search(r"\\begin\{", cot):
+        return "latex_env"
     if (t, r["qid"], o) in flagged:
         return "review_bad"
     if r.get("valid") is False:
@@ -207,6 +209,7 @@ async def main():
     ap.add_argument("--dapo-frac", type=float, default=0.0, help="each type takes DAPO rows up to this share of its cap first")
     ap.add_argument("--pair-plain", action="store_true", help="plain rows on the constrained rows' problems first, in their DAPO share")
     ap.add_argument("--keep-types", nargs="*", default=[], help="if given, only these constrained types")
+    ap.add_argument("--drop-type-source", nargs="*", default=[], help="type:source pairs to leave out (e.g. misdirect_end:dapo)")
     a = ap.parse_args()
     a.type_caps = {k: int(v) for k, v in (x.split("=") for x in a.type_caps)}
     a.type_from = dict(x.split("=", 1) for x in a.type_from)
