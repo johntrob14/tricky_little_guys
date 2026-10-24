@@ -66,4 +66,22 @@ One GRPO run per CoT-control type, each trained on that type alone, with the sam
 - st1-ignore, steps 20-25: median CoT words 36 (step 20) to 82 (step 25); 6 of the long (> 100 words) step 24-25 rollouts read: all are unrelated musings (music, ocean waves, galaxies), none reasons about the question; correct 111 / 127 of 256 at steps 20 / 25.
 
 ## Outcome
-(running)
+All 7 runs finished 60 steps (2026-10-24). Results, tables and side effects: `cot-control/results/st1/NOTES.md`; chart `mats12_sprint/figures/st1_compare.png`.
+
+| run | final-step strict | training accuracy vs base, final step | cost |
+|---|---|---|---|
+| st1-words | 0.52 | -0.047 | $21.75 |
+| st1-tokens | 0.47 | +0.031 | $23.42 |
+| st1-len2w | 0.59 | -0.012 | $24.37 |
+| st1-third | 0.78 | -0.012 | $24.64 |
+| st1-qonly | 0.90 | -0.055 | $20.06 |
+| st1-ignore | 1.00 | -0.293 | $13.54 |
+| st1-ignore2 | 1.00 | -0.270 | $13.01 |
+
+Training total $140.79, pilots $1.50. Final sampler and state checkpoints published (public).
+
+Held-out gain over base, length-adjusted strict passes with meta allowed (Astra: 96 items, low / medium / high; transfer: 17 common far types, 1836 rows):
+len2 +16.8 / +7.7 / +1.8, +38.8; st1-words +23.6 / +8.8 / +4.8, +159.0; st1-tokens +7.5 / -0.9 / -0.0, +7.9; st1-len2w +14.2 / +0.2 / +1.0, -21.1;
+st1-third +19.5 / +2.2 / +1.0, +73.1; st1-qonly +7.0 / -0.5 / +1.0, +16.3; st1-ignore +52.1 / +37.0 / +13.2, +635.6; st1-ignore2 +59.7 / +49.9 / +32.4, +807.5.
+Substantive passes only (strict and the attempt gate calls the CoT an attempt at the question): st1-ignore +5.4 / +14.5 / +5.8, +272.9; st1-ignore2 +29.9 / +31.0 / +24.3, +476.4;
+the other models change by at most 3.4 passes from the all-pass numbers.

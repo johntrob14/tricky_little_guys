@@ -39,7 +39,7 @@ NEAR = {"target_words": LENGTH, "target_tokens": LENGTH, "think_tokens": LENGTH,
 TRAINED = {"len2": "length_tokens", **ST1}
 COMMON_FAR = [t for t in controls.CONTROLS if t not in set(TRAINED.values()) | {n for v in NEAR.values() for n in v}]
 TRANSFER_RUNS = {"base": ["gptoss-base", "gptoss-base-tw", "gptoss-base-tt", "gptoss-base-tk"], "len2": ["gptoss-len2s60"], **{m: [f"gptoss-{m}"] for m in ST1}}
-COLORS = {"base": "#8a8a83", "len2": "#3987e5", "st1-words": "#d95926", "st1-tokens": "#e87ba4", "st1-len2w": "#2a78d6", "st1-third": "#199e70", "st1-qonly": "#c98500", "st1-ignore": "#d55181", "st1-ignore2": "#008300"}
+COLORS = {"base": "#8a8a83", "len2": "#3987e5", "st1-words": "#d95926", "st1-tokens": "#9085e9", "st1-len2w": "#e66767", "st1-third": "#199e70", "st1-qonly": "#c98500", "st1-ignore": "#d55181", "st1-ignore2": "#008300"}
 
 
 ATTEMPT = Path(__file__).parent.parent / "results/st1/attempt.jsonl"
