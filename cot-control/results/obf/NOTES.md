@@ -87,3 +87,16 @@ Before the Chinese-language filter, the same sampling of the first eval split (3
 | pirate | 1/12 (score 1) | 1/12 (score 1) | 0/12 | 2/12 | 11/15 | 10/15 |
 
 Passed 0 in every cell. Denominators are rollouts that parsed (not truncated at 8,000 tokens).
+
+## Base-model stats, gpt-oss-120b (`rl/obf_data.py mine --tinker-model openai/gpt-oss-120b`), 2026-10-23
+
+The same problems as the DeepSeek pools (`data/obf_train.jsonl`, `data/obf_eval.jsonl`), re-mined with base gpt-oss-120b on Tinker (Ethan's personal account): chat template (reasoning effort medium), T 1.0, top_p 1.0, max 16,000 tokens, no instruction, 3 samples per problem. Written to `data/obf_train_gptoss.jsonl` and `data/obf_eval_gptoss.jsonl`; rows carry `model`.
+
+| pool | problems | accuracy (samples) | median base words | median of per-problem median tokens | mean of per-problem median tokens | samples truncated at 16k | ≥1 keyword | cost |
+|---|---|---|---|---|---|---|---|---|
+| train DAPO | 226 | 373/678 = 0.550 | 3,114 | 5,344 | 5,824 | 11/678 | 226/226 | $5.32 (train total) |
+| train GPQA | 516 | 1067/1548 = 0.689 | 430 | 902 | 1,448 | 0/1548 | 515/516 | |
+| eval DAPO | 30 | 67/90 = 0.744 | 2,320 | 3,620 | 4,672 | 1/90 | 29/30 | $0.46 (eval total) |
+| eval GPQA | 30 | 62/90 = 0.689 | 495 | 761 | 1,414 | 0/90 | 30/30 | |
+
+All 742 training problems pass `grpo_obf.py --max-truncated 1`. For comparison, DeepSeek V4.1 Flash 1017 (effort 75) on the kept problems: DAPO accuracy 0.89, median base words 3,676; GPQA 0.89, 635 (section above).
