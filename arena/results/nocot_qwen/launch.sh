@@ -13,3 +13,4 @@ lane_c() { cell qwenor-nothink-covert2-hard --tier hard --reasoning-effort none;
 lane_a & sleep 5; lane_b & sleep 5; lane_c &
 wait
 echo "all done $(date)"
+# qwenor-nothink-ctl-easy rerun alone (the first run was killed with the launcher at 9/16 episodes; partial log kept locally as logs/qwenor-nothink-ctl-easy-killed)
