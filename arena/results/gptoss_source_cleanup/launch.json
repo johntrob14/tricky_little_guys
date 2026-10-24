@@ -1,5 +1,4 @@
 {
-  "queued_at": "2026-10-24T14:58:00.735302+00:00",
   "session": "gptoss-source-cleanup",
   "cwd": "/home/ek",
   "command": [
@@ -8,7 +7,7 @@
     "-B",
     "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/gptoss_source_cleanup/collect.py"
   ],
-  "code_sha256": "75fdb089004ece808d6cef7b788bf2f39731ccf5ed4020e26b33aa4f70969c3d",
+  "code_sha256": "d0f88b7d4b476159e9f15bf34f74874026dbaa0347e5783fe72ec937317a8cb9",
   "source_model": "openai/gpt-oss-120b",
   "editor_model": "deepseek/deepseek-v4.1-flash-1017",
   "monitor": {
@@ -16,7 +15,7 @@
     "name": "controlarena_cot_only",
     "judge_model": "openai/gpt-oss-20b",
     "backend": "openrouter",
-    "provider": "deepinfra",
+    "provider": "dekallm/bf16",
     "main_task_only": true
   },
   "eligible_sources": 5,
@@ -25,6 +24,8 @@
   "additional_sources_to_clean": 0,
   "nonempty_reasoning_turns": 32,
   "assistant_turns": 111,
-  "dependency": "results/deepseek_cleaned_followup",
-  "action": "Collect the already included gpt-oss-generated subset after the existing procedure finishes; resume expected upstream failures up to three times if needed."
+  "dependency": "results/deepseek_cleaned_followup_dekallm",
+  "action": "Collect the already included gpt-oss-generated subset after the existing procedure finishes; resume expected upstream failures up to three times if needed.",
+  "prepared_at": "2026-10-24T17:12:44.553305+00:00",
+  "status": "awaiting_upstream_provider_approval"
 }

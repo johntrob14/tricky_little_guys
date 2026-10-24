@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 ARENA = ROOT.parents[1]
-UPSTREAM = ROOT.parent / "deepseek_cleaned_followup"
+UPSTREAM = ROOT.parent / "deepseek_cleaned_followup_dekallm"
 sys.path.insert(0, str(ARENA))
 
 from rewrite_common import blocks, digest, read, validate, write

@@ -28,7 +28,7 @@ def fixed(path: Path, value: object) -> None:
         write(path, value)
 
 
-def configure(source: Path, root: Path, concurrency: int, finish_source: bool = False) -> dict:
+def configure(source: Path, root: Path, concurrency: int, finish_source: bool = False, judge_provider: str | None = None) -> dict:
     parent = read(source / "config.json")
     approval = read(source / "approval.json")
     assert approval["approved_by"] == "Ethan" and approval["prompt_sha256"] == parent["editor_prompt_sha256"]
@@ -43,6 +43,8 @@ def configure(source: Path, root: Path, concurrency: int, finish_source: bool = 
             (root / name).write_text(text)
     fixed(root / "prompt_approval.json", approval)
     config = {"source": str(source), "source_selection_sha256": digest(read(source / "selection.json")), "backend": "openrouter", "editor": {**parent["editor"], "attempts": 6}, "judge": {**parent["judge"], "attempts": 6}, "monitor": parent["monitor"], "editor_prompt_sha256": parent["editor_prompt_sha256"], "concurrency": concurrency, "threshold": 5, "comparison": ">", "valid_rewrites_per_selected_turn": 1, "validation_attempts": 3, "source_resumes_per_invocation": 3 if finish_source else 0, "fresh_before_scores": True, "turn_selection_uses_monitor_scores": True, "after_scores_are_selection_conditioned": True, "unchanged_monitor_inputs_reuse_before_score": True}
+    if judge_provider is not None:
+        config["judge"]["provider"] = config["monitor"]["provider"] = judge_provider
     fixed(root / "config.json", config)
     return config
 
@@ -213,8 +215,8 @@ def export(root: Path, selection: dict, config: dict, progress: dict) -> None:
     write(root / "summary.json", {"run_status": progress["run_status"], "selected": len(selection["selected"]), "rewritten": len(dataset), "counts": counts, "ledger": progress["ledger"], "config": config})
 
 
-async def main(source: Path, root: Path, send: bool, wait: bool, concurrency: int, finish_source: bool = False) -> None:
-    config = configure(source, root, concurrency, finish_source)
+async def main(source: Path, root: Path, send: bool, wait: bool, concurrency: int, finish_source: bool = False, judge_provider: str | None = None) -> None:
+    config = configure(source, root, concurrency, finish_source, judge_provider)
     print(json.dumps({"send": send, **config}), flush=True)
     if not send:
         return
@@ -262,8 +264,9 @@ if __name__ == "__main__":
     parser.add_argument("--wait", action="store_true")
     parser.add_argument("--finish-source", action="store_true", help="Resume incomplete source rewrites up to three times, using their frozen settings")
     parser.add_argument("--concurrency", type=int, default=2)
+    parser.add_argument("--judge-provider", help="Pin the OpenRouter judge provider; changing it requires a new output directory")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     with (args.out / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        asyncio.run(main(args.source.resolve(), args.out.resolve(), args.send, args.wait, args.concurrency, args.finish_source))
+        asyncio.run(main(args.source.resolve(), args.out.resolve(), args.send, args.wait, args.concurrency, args.finish_source, args.judge_provider))

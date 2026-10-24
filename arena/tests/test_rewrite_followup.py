@@ -56,7 +56,8 @@ def test_snapshot_waits_for_lock_and_all_rewrites(tmp_path):
     assert selection["selected"][0]["input_messages_sha256"] == digest(original)
 
 
-def test_fresh_scores_targeted_rewrite_and_cached_resume(tmp_path, monkeypatch):
+@pytest.mark.parametrize("judge_provider", [None, "dekallm/bf16"])
+def test_fresh_scores_targeted_rewrite_and_cached_resume(tmp_path, monkeypatch, judge_provider):
     source, output, original = setup_run(tmp_path)
     calls, first_edit_attempts = [], []
 
@@ -78,7 +79,7 @@ def test_fresh_scores_targeted_rewrite_and_cached_resume(tmp_path, monkeypatch):
             assert blocks(payload["history"])[1]["reasoning"] == "REWRITTEN_FIRST"
             assert "TOOL_RESULT_2" not in json.dumps(payload)
             return response(reply("REWRITTEN_SECOND"), len(calls))
-        assert settings["model"] == "openai/gpt-oss-20b" and settings["provider"] == "deepinfra"
+        assert settings["model"] == "openai/gpt-oss-20b" and settings["provider"] == (judge_provider or "deepinfra")
         prompt = conversation[0]["content"]
         assert "MAIN_TASK" in prompt and "SIDE_TASK" not in prompt
         assert "list_files" not in prompt and "TOOL_RESULT" not in prompt
@@ -86,7 +87,7 @@ def test_fresh_scores_targeted_rewrite_and_cached_resume(tmp_path, monkeypatch):
         return response(f"<score>{score}</score>", len(calls))
 
     monkeypatch.setattr(rewrite, "chat", fake_chat)
-    asyncio.run(followup.main(source, output, True, False, 2))
+    asyncio.run(followup.main(source, output, True, False, 2, judge_provider=judge_provider))
     assert len(calls) == 8  # Three fresh scores, one invalid editor reply, two edits, two re-scores.
     row = json.loads((output / "dataset.jsonl").read_text())
     validate(original, row["messages"])
@@ -96,9 +97,10 @@ def test_fresh_scores_targeted_rewrite_and_cached_resume(tmp_path, monkeypatch):
     assert report["before"]["max_turns_zero_based"] == [1, 2]
     assert report["after"]["max_score"] == 8 and report["after"]["above_threshold_turns_zero_based"] == [2]
     assert read(output / "summary.json")["run_status"] == "complete"
+    assert read(output / "summary.json")["config"]["monitor"]["provider"] == (judge_provider or "deepinfra")
     assert read(output / "sources/sample.json") == original
     assert read(source / "working/sample/edited.json") == original
-    asyncio.run(followup.main(source, output, True, False, 2))
+    asyncio.run(followup.main(source, output, True, False, 2, judge_provider=judge_provider))
     assert len(calls) == 8
 
 
@@ -126,6 +128,8 @@ def test_reject_tinker_judge_and_changed_config(tmp_path):
     assert config["backend"] == "openrouter"
     with pytest.raises(AssertionError, match="Frozen record changed"):
         followup.configure(source, output, 3)
+    with pytest.raises(AssertionError, match="Frozen record changed"):
+        followup.configure(source, output, 2, judge_provider="dekallm/bf16")
     parent = copy.deepcopy(read(source / "config.json"))
     parent["judge"]["model"] = "tinker/openai/gpt-oss-20b"
     write(source / "config.json", parent)

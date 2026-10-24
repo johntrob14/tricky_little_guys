@@ -2,7 +2,9 @@
 
 ## Status
 
-Running fresh monitoring in tmux session `rewrite-followup-v3`; all 117/117 completed source rewrites are frozen in `selection.json` and `sources/`. The source stage is complete at $4.160596872, recorded separately from follow-on spend. The follow-on was queued on 2026-10-24 at 13:47 UTC, when 113/117 source rewrites were complete. `launch.json` records the command, code hashes, and user authorization; `progress.json` records the current stage. Ethan requested fresh 20b CoT-only monitoring over the rewritten traces, per-trace maximum-scoring turns, and another rewrite of turns scoring above 5; he selected the separate follow-on script. All 117/117 source rewrites must exist before the input snapshot is frozen. Source monitoring failures do not block a complete rewrite from entering this pass.
+Stopped with status `interrupted` on 2026-10-24 after repeated OpenRouter/DeepInfra shared-pool 429 errors. All 117/117 completed source rewrites are frozen in `selection.json` and `sources/`. Complete fresh monitoring covers 48/117 traces; 41/48 completely scored traces have a score above 5, accounting for 175/969 scored reasoning turns in those traces. Targeted rewrites are complete for 0/117 traces. Monitoring is CoT only, `controlarena_cot_only`, judge `openai/gpt-oss-20b` through OpenRouter/DeepInfra, with main-task-only context. Accepted calls and partial scores remain available locally. Follow-on spend is $0.142823260; source cleanup spend is separately $4.160596872. `summary.json` and `max_turns.json` include complete scores retained across invocations; `progress.json` records the interrupted invocation's coverage.
+
+The DekaLLM-pinned follow-on is prepared in `../deepseek_cleaned_followup_dekallm/`, awaiting explicit provider approval. `launch.json` here records this DeepInfra attempt's command, code hashes, and user authorization. Ethan requested fresh 20b CoT-only monitoring over the rewritten traces, per-trace maximum-scoring turns, and another rewrite of turns scoring above 5; he selected the separate follow-on script.
 
 ## Procedure
 
