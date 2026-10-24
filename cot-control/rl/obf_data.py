@@ -11,11 +11,16 @@ mine:  base DeepSeek V4.1 Flash 1017 through OpenRouter raw completions (or_cotc
        effort medium; rows then carry "model"), --samples unconstrained samples per problem, T 1.0, top_p 1.0. Adds keywords
        (as mine.py: words of 4+ letters in at least half of a problem's CoTs, used at least twice, in the CoTs of at most 5% of problems, top 5 by
        count), base_words (median CoT words), n_tokens (median completion tokens), correct (fraction of samples correct) and truncated (count).
-       Writes --out, or rewrites --pool in place.
+       Writes --out, or rewrites --pool in place. With --samples-out (Tinker only) every sample is also written there (qid, CoT, response, parsed
+       answer, correct, sampled token ids) and pool rows get correct_words / correct_tokens (medians over correct samples, None if none). With
+       --nocot-samples N (harmony models only) each problem also gets N no-CoT samples, as obf_eval.py's nocot arm (final channel opened, response
+       prefilled with 'ANSWER:', at most 10 tokens), and pool rows get nocot_correct (fraction correct).
 
     python obf_data.py build
     python obf_data.py mine --pool data/obf_train.jsonl --samples 3
     python obf_data.py mine --pool data/obf_train.jsonl --out data/obf_train_gptoss.jsonl --tinker-model openai/gpt-oss-120b --tinker-key-env TINKER_MATS_API_KEY
+    python obf_data.py mine --pool data/obf_train_gptoss.jsonl --out data/obf_train_gptoss_r2.jsonl --tinker-model openai/gpt-oss-120b --samples 4 \
+        --nocot-samples 2 --samples-out ../results/mine/gptoss-r2/samples.jsonl
 """
 import argparse
 import asyncio
@@ -44,6 +49,7 @@ from or_cotcontrol import HF_TOKENIZER, MODEL as OR_MODEL, complete  # noqa: E40
 
 DATA = Path(__file__).parent / "data"
 LETTERS = "ABCD"
+NOCOT_PREFILL, NOCOT_TOKENS, FINAL_CHANNEL = "ANSWER:", 10, "<|channel|>final<|message|>"  # as obf_eval.py's nocot arm
 
 
 def question_block(q: dict) -> str:
@@ -95,7 +101,11 @@ async def mine(args):
         ttok = client.get_tokenizer()
         harmony, eos, price = modelio.probe_harmony(ttok), ttok.eos_token, modelio.PRICES[args.tinker_model]["sample"]
         params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, top_p=1.0, stop=modelio.policy_stop(ttok, harmony))
+        nocot_params = tinker.SamplingParams(max_tokens=NOCOT_TOKENS, temperature=1.0, top_p=1.0, stop=modelio.policy_stop(ttok, harmony))
+        assert not args.nocot_samples or harmony, "--nocot-samples opens gpt-oss's final channel; DeepSeek's chat mode is not wired here"
     else:
+        assert not args.samples_out and not args.nocot_samples, "--samples-out and --nocot-samples are Tinker-only"
+    if not args.tinker_model:
         tok = Tokenizer.from_pretrained(HF_TOKENIZER)
 
     async def one_tinker(q):
@@ -106,8 +116,17 @@ async def mine(args):
         for s in res.sequences:
             truncated = s.stop_reason == "length"
             split = extract.split_output(modelio.to_think(ttok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, eos), None, "length" if truncated else "stop")
-            outs.append(dict(reasoning=split["reasoning"], n_tokens=len(s.tokens), cost=len(s.tokens) * price / 1e6, truncated=truncated,
-                             correct=parse_answer(q, split["response"], split["content"]) == q["answer"]))
+            answer = parse_answer(q, split["response"], split["content"])
+            outs.append(dict(reasoning=split["reasoning"], response=split["response"], answer=answer, tokens=list(s.tokens), n_tokens=len(s.tokens),
+                             cost=len(s.tokens) * price / 1e6, truncated=truncated, correct=answer == q["answer"]))
+        if args.nocot_samples:
+            nc = ids + ttok.encode(FINAL_CHANNEL + NOCOT_PREFILL, add_special_tokens=False)
+            async with sem:
+                res = await client.sample_async(prompt=tinker.ModelInput.from_ints(nc), num_samples=args.nocot_samples, sampling_params=nocot_params)
+            for s in res.sequences:
+                resp = NOCOT_PREFILL + ttok.decode(s.tokens, skip_special_tokens=True)
+                answer = parse_answer(q, resp, resp)
+                outs.append(dict(nocot=True, response=resp, answer=answer, n_tokens=len(s.tokens), cost=len(s.tokens) * price / 1e6, correct=answer == q["answer"]))
         return outs
 
     async def one(client, q):
@@ -128,24 +147,39 @@ async def mine(args):
         return outs
 
     if args.tinker_model:
-        samples = await asyncio.gather(*(one_tinker(q) for q in pool))
+        allouts = await asyncio.gather(*(one_tinker(q) for q in pool))
+        nocot = [[o for o in outs if o.get("nocot")] for outs in allouts]
+        samples = [[o for o in outs if not o.get("nocot")] for outs in allouts]
     else:
         async with httpx.AsyncClient() as client:
             samples = await asyncio.gather(*(one(client, q) for q in pool))
+        nocot = [[] for _ in pool]
+    if args.samples_out:
+        args.samples_out.parent.mkdir(parents=True, exist_ok=True)
+        with args.samples_out.open("w") as f:
+            for q, outs, ncs in zip(pool, samples, nocot):
+                for i, o in enumerate(outs + ncs):
+                    f.write(json.dumps(dict(qid=q["qid"], source=q["source"], i=i, true_answer=q["answer"], words=len(re.findall(r"[A-Za-z]+", o.get("reasoning") or "")),
+                                            **{k: v for k, v in o.items() if k != "cost"}), ensure_ascii=False) + "\n")
     counts = [[Counter(w for w in re.findall(r"[a-z]+", o["reasoning"].lower()) if len(w) >= 4) for o in outs] for outs in samples]
     df = Counter(w for cs in counts for w in set().union(*cs))
     out = args.out or args.pool
+    med = lambda xs: statistics.median(xs) if xs else None
     with out.open("w") as f:
-        for q, outs, cs in zip(pool, samples, counts):
+        for q, outs, cs, ncs in zip(pool, samples, counts, nocot):
             total, present = sum(cs, Counter()), Counter(w for c in cs for w in c)
             kws = [w for w, k in total.most_common() if 2 * present[w] >= len(cs) and k >= 2 and df[w] <= 0.05 * len(pool)][:5]
             f.write(json.dumps(q | dict(keywords=kws, base_words=statistics.median(len(re.findall(r"[A-Za-z]+", o["reasoning"])) for o in outs),
                                         n_tokens=statistics.median(o["n_tokens"] for o in outs), correct=sum(o["correct"] for o in outs) / len(outs),
-                                        truncated=sum(o["truncated"] for o in outs)) | ({"model": args.tinker_model} if args.tinker_model else {}), ensure_ascii=False) + "\n")
+                                        truncated=sum(o["truncated"] for o in outs)) | ({"model": args.tinker_model} if args.tinker_model else {})
+                               | (dict(samples=len(outs), correct_words=med([len(re.findall(r"[A-Za-z]+", o["reasoning"])) for o in outs if o["correct"]]),
+                                       correct_tokens=med([o["n_tokens"] for o in outs if o["correct"]])) if args.samples_out else {})
+                               | (dict(nocot_correct=sum(o["correct"] for o in ncs) / len(ncs)) if ncs else {}), ensure_ascii=False) + "\n")
     flat = [o for outs in samples for o in outs]
     print(f"{len(pool)} problems x {args.samples}: accuracy {sum(o['correct'] for o in flat) / len(flat):.3f}, truncated {sum(o['truncated'] for o in flat)}/{len(flat)}, "
           f"median tokens {statistics.median(o['n_tokens'] for o in flat)}, mean {statistics.mean(o['n_tokens'] for o in flat):.0f}, >=1 keyword "
-          f"{sum(len(k) >= 1 for k in [json.loads(l)['keywords'] for l in out.open()])}/{len(pool)}, ${sum(o['cost'] for o in flat):.2f}")
+          f"{sum(len(k) >= 1 for k in [json.loads(l)['keywords'] for l in out.open()])}/{len(pool)}, ${sum(o['cost'] for o in flat):.2f}"
+          + (f"; no-CoT accuracy {sum(o['correct'] for n in nocot for o in n) / max(1, sum(map(len, nocot))):.3f}" if any(nocot) else ""))
 
 
 if __name__ == "__main__":
@@ -165,5 +199,7 @@ if __name__ == "__main__":
     m.add_argument("--max-tokens", type=int, default=16000)
     m.add_argument("--provider", default="Parasail")
     m.add_argument("--concurrency", type=int, default=64)
+    m.add_argument("--samples-out", type=Path, help="also write every sample (CoT, response, answer, token ids) here; Tinker only")
+    m.add_argument("--nocot-samples", type=int, default=0, help="no-CoT samples per problem (harmony models only)")
     a = ap.parse_args()
     build(a) if a.cmd == "build" else asyncio.run(mine(a))
