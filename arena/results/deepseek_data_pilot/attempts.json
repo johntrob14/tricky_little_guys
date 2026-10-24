@@ -1,0 +1,131 @@
+{
+  "response_files": 203,
+  "unique_billed_generations": 150,
+  "reused_response_files": 53,
+  "known_cost_usd": 0.494628596,
+  "unpriced_rejected_requests": 1,
+  "unpriced_rejection_record": "luna_probe.json",
+  "stages": {
+    "editor": {
+      "retained_responses": 4,
+      "valid_editor_replies": 4,
+      "invalid_editor_replies": 0
+    },
+    "episodes": {
+      "retained_responses": 53,
+      "valid_editor_replies": 50,
+      "invalid_editor_replies": 3
+    },
+    "episodes_hybrid": {
+      "retained_responses": 82,
+      "valid_editor_replies": 80,
+      "invalid_editor_replies": 2
+    },
+    "episodes_no_thinking": {
+      "retained_responses": 47,
+      "valid_editor_replies": 44,
+      "invalid_editor_replies": 3
+    },
+    "hybrid_retries": {
+      "retained_responses": 2,
+      "valid_editor_replies": 1,
+      "invalid_editor_replies": 1
+    },
+    "monitor_smoke": {
+      "retained_responses": 12,
+      "valid_editor_replies": 0,
+      "invalid_editor_replies": 0
+    },
+    "no_thinking_probe": {
+      "retained_responses": 3,
+      "valid_editor_replies": 3,
+      "invalid_editor_replies": 0
+    }
+  },
+  "editor_failures": [
+    {
+      "path": "working/episodes/86Ss455WKBawGPBpVxTe8L/009.response.json",
+      "uuid": "86Ss455WKBawGPBpVxTe8L",
+      "turn": 9,
+      "error": "AssertionError: Incomplete editor reply; raw response retained",
+      "response_id": "gen-1792801513-L9Za5sXQcDPKFEt3OXpm",
+      "finish_reason": "length",
+      "cost_usd": 0.02058726
+    },
+    {
+      "path": "working/episodes/8w8umgUDCoGp2ja4MWzpox/011.response.json",
+      "uuid": "8w8umgUDCoGp2ja4MWzpox",
+      "turn": 11,
+      "error": "AssertionError: Edit must identify one exact span",
+      "response_id": "gen-1792801536-aXv3MkpbX3ktMY7SRyLA",
+      "finish_reason": "stop",
+      "cost_usd": 0.01616712
+    },
+    {
+      "path": "working/episodes/cK8YbWg85FqMJNwMj4i4fg/010.response.json",
+      "uuid": "cK8YbWg85FqMJNwMj4i4fg",
+      "turn": 10,
+      "error": "AssertionError: Incomplete editor reply; raw response retained",
+      "response_id": "gen-1792801550-kINS4uE0q0YVNlbtExJ0",
+      "finish_reason": "length",
+      "cost_usd": 0.020270028
+    },
+    {
+      "path": "working/episodes_hybrid/8w8umgUDCoGp2ja4MWzpox/016.response.json",
+      "uuid": "8w8umgUDCoGp2ja4MWzpox",
+      "turn": 16,
+      "error": "AssertionError: Incomplete editor reply; raw response retained",
+      "response_id": "gen-1792802564-2q1NJGESe2geWHA1CC8H",
+      "finish_reason": "length",
+      "cost_usd": 0.021342744
+    },
+    {
+      "path": "working/episodes_hybrid/cK8YbWg85FqMJNwMj4i4fg/030.response.json",
+      "uuid": "cK8YbWg85FqMJNwMj4i4fg",
+      "turn": 30,
+      "error": "AssertionError: Incomplete editor reply; raw response retained",
+      "response_id": "gen-1792802543-rhlgyeF7Wdw7iQuwVAEC",
+      "finish_reason": "length",
+      "cost_usd": 0.021957864
+    },
+    {
+      "path": "working/episodes_no_thinking/86Ss455WKBawGPBpVxTe8L/006.response.json",
+      "uuid": "86Ss455WKBawGPBpVxTe8L",
+      "turn": 6,
+      "error": "JSONDecodeError: Expecting ',' delimiter: line 1 column 780 (char 779)",
+      "response_id": "gen-1792801972-IxkM6b2UzZHMaxfAWhuU",
+      "finish_reason": "stop",
+      "cost_usd": 0.000974676
+    },
+    {
+      "path": "working/episodes_no_thinking/LjW5WaW8fJg6t9fXfDngeA/015.response.json",
+      "uuid": "LjW5WaW8fJg6t9fXfDngeA",
+      "turn": 15,
+      "error": "JSONDecodeError: Expecting ',' delimiter: line 1 column 612 (char 611)",
+      "response_id": "gen-1792801995-OGjVd2YRcROtEFExw3Or",
+      "finish_reason": "stop",
+      "cost_usd": 0.000777204
+    },
+    {
+      "path": "working/episodes_no_thinking/cK8YbWg85FqMJNwMj4i4fg/005.response.json",
+      "uuid": "cK8YbWg85FqMJNwMj4i4fg",
+      "turn": 5,
+      "error": "AssertionError: Edit must identify one exact span",
+      "response_id": "gen-1792801967-umDC3vnTRxjDKHb1aL8D",
+      "finish_reason": "stop",
+      "cost_usd": 0.00122262
+    },
+    {
+      "path": "working/hybrid_retries/cK8YbWg85FqMJNwMj4i4fg.30.json",
+      "uuid": "cK8YbWg85FqMJNwMj4i4fg",
+      "turn": 30,
+      "error": "AssertionError: Edit must identify one exact span",
+      "response_id": "gen-1792802655-G5SdSG4KdJ3wHF5UE2HC",
+      "finish_reason": "stop",
+      "cost_usd": 0.019759932
+    }
+  ],
+  "archive_sha256": "9511a7247b6604b7d27cb8843960d58fe3925d0562cdfa054f4d51b72edd0b9c",
+  "archive_bytes": 418504,
+  "archive_note": "Model outputs may quote synthetic benchmark secrets; this is a raw research-data archive. No API credentials or authorization headers are included."
+}
