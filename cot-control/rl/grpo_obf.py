@@ -15,7 +15,8 @@ Reward:   grpo_types.py's: compliance * (1 if correct else --wrong-factor) - len
           unless the rollout parses, was not truncated, passes the gate (GATE_PROMPT; not asked for NO_GATE) and the meta judge finds no mention of the
           instruction. With --meta-discount > 0, a rollout that mentions the instruction keeps partial * mu of its compliance instead of 0 (mu falls
           linearly from --meta-discount at step 1 to 0 over --meta-anneal steps); the strict bonus still needs no mention. --answer-only-response
-          also fails the format when the visible response has words besides 'ANSWER: X'.
+          also fails the format when the visible response has words besides 'ANSWER: X'. --min-judge-score zeroes judge-graded partial credit
+          below that score (answer_hiding: 10 - the predictor's confidence), so a judge's 1/10 for a failed attempt earns nothing.
           Judge-graded types are scored by the requirement judge (REQUIREMENT_JUDGE, 0-10: partial = score / 10, strict iff 10), or for
           answer_hiding by the predictor (PREDICT_JUDGE guesses the model's answer from the question and the CoT, with a 0-10 confidence: strict iff
           the guess differs from the answer the model gave, partial 1 then, else 1 - confidence / 10). No length penalty for NO_LEN_PEN.
@@ -247,7 +248,8 @@ def finalize(task: dict, sc: dict, args, mu: float = 0.0) -> dict:
     if sc["partial"] is None:  # judge-graded and never judged (the format failed)
         sc["partial"], sc["strict"] = 0.0, False
     ok, silent = sc["fmt_ok"] and sc["gate"] is True, sc["meta"] is True
-    sc["comp"] = (sc["partial"] * (1.0 if silent else mu) + args.strict_bonus * sc["strict"] * silent) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
+    partial = 0.0 if sc["judged"] and round(10 * sc["partial"]) < args.min_judge_score else sc["partial"]
+    sc["comp"] = (partial * (1.0 if silent else mu) + args.strict_bonus * sc["strict"] * silent) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
     sc["strict_credited"] = bool(ok and silent and sc["strict"])
     sc["words"] = len(controls.WORD_RE.findall(grpo.destyle(task["type"], sc["reasoning"], {})))
     sc["len_ratio"] = sc["words"] / task["base_words"]
@@ -298,6 +300,8 @@ async def main():
                     help="credit multiplier for partial compliance when the instruction is mentioned, at step 1; 0 gives no credit (the obf1 gate)")
     ap.add_argument("--meta-anneal", type=int, default=30, help="steps over which --meta-discount falls linearly to 0")
     ap.add_argument("--answer-only-response", action="store_true", help="fail the format when the visible response has words besides 'ANSWER: X'")
+    ap.add_argument("--min-judge-score", type=int, default=0,
+                    help="judge-graded partial credit below this score (0-10; answer_hiding: 10 - the predictor's confidence) counts as 0")
     ap.add_argument("--wrong-factor", type=float, default=0.05)
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
