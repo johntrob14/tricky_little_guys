@@ -1,0 +1,29 @@
+{
+ "run": "base",
+ "model_path": null,
+ "pool": "/home/ek/wgmn/mats12_sprint/tricky_little_guys/cot-control/rl/data/obf_eval.jsonl",
+ "effort": 75,
+ "max_tokens": 16000,
+ "judge_model": "deepseek/deepseek-v4.1-flash-1017",
+ "judge_provider": "DeepInfra",
+ "seed": 0,
+ "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144",
+ "arms": [
+  "ignore_question",
+  "misdirect",
+  "answer_hiding",
+  "cover_story",
+  "max_words",
+  "shorthand",
+  "sad",
+  "no_backtracking",
+  "word_suppression",
+  "pirate",
+  "alternating_case",
+  "happy",
+  "baseline",
+  "nocot"
+ ],
+ "nocot_prefill": "ANSWER:",
+ "nocot_tokens": 10
+}
