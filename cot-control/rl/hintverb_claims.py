@@ -43,7 +43,7 @@ def bars(ax, series: list[tuple[str, str, str | None, list[tuple[int, int]]]], l
         x = [k + (i - (len(series) - 1) / 2) * w for k in range(len(labels))]
         p = [k / n if n else 0.0 for k, n in kn]
         ci = [wilson(k, n) for k, n in kn]
-        ax.bar(x, p, w, color=color, hatch=hatch, edgecolor="white" if hatch else color, label=name, yerr=[[pi - lo for pi, (lo, hi) in zip(p, ci)], [hi - pi for pi, (lo, hi) in zip(p, ci)]], capsize=3, ecolor="white")
+        ax.bar(x, p, w, color=color, hatch=hatch, edgecolor="white" if hatch else color, label=name, yerr=[[max(0.0, pi - lo) for pi, (lo, hi) in zip(p, ci)], [max(0.0, hi - pi) for pi, (lo, hi) in zip(p, ci)]], capsize=3, ecolor="white")
         for xi, (k, n) in zip(x, kn):
             ax.text(xi, 0.012, f"{k}/{n}", ha="center", va="bottom", fontsize=7.5, rotation=90, color="black")
     ax.set_xticks(range(len(labels)), labels, fontsize=8.5)
@@ -62,7 +62,7 @@ def headline(s: dict, MODELS: dict, out: Path):
         ticks = []
         for i, (m, (name, color)) in enumerate(MODELS.items()):
             ps = []
-            for j, (keys, alpha) in enumerate([(CTL, 0.5), (CHK, 1.0)]):
+            for j, (keys, alpha) in enumerate([([x for x in CTL if x in s[m]], 0.5), ([x for x in CHK if x in s[m]], 1.0)]):  # only the lines this summary has
                 kk, nn = sum(s[m][x]["hints"][h][k] for x in keys), sum(s[m][x]["hints"][h][n] for x in keys)
                 p, (lo, hi) = kk / nn, wilson(kk, nn)
                 x = i * 2.3 + j * 0.95
@@ -91,6 +91,7 @@ def main():
     ap.add_argument("--names", nargs=2, default=["gpt-oss-120b base", "grpo3 s100 (CoT-control organism)"])
     ap.add_argument("--suffixes", nargs="+", default=USER, help="user-placement arms to show, in order; controls first")
     ap.add_argument("--no-sys", action="store_true", help="skip panel (d) when no system-placement arms exist")
+    ap.add_argument("--no-conceal", action="store_true", help="blank panel (c); the CONCEAL regex was written for gpt-oss CoTs (on Qwen it mostly matches 'pretend not to see')")
     ap.add_argument("--fig", type=Path, default=FIG)
     ap.add_argument("--headline", type=Path, default=HEADLINE, help="the two-panel pooled controls-vs-checking figure")
     args = ap.parse_args()
@@ -106,9 +107,12 @@ def main():
     ax[0, 0].set_title("(a) Grader hint: share of answers switched to the hinted letter, among pairs whose unhinted answer differed from it", loc="left", fontsize=10.5)
     bars(ax[0, 1], [(n, c, None, [(s[m][k]["hints"]["pooled"]["verbalized"], s[m][k]["hints"]["pooled"]["judged"]) for k in USER]) for m, (n, c) in MODELS.items()], labels, 0.38)
     ax[0, 1].set_title("(b) All three hints pooled: CoT verbalizes the hint, among answers switched to it (judge Haiku 5.5)", loc="left", fontsize=10.5)
-    bars(ax[1, 0], [(n, c, None, [conceal(arm(m, k)) for k in USER]) for m, (n, c) in MODELS.items()], labels, 0.38, ymax=0.3)
+    if args.no_conceal:
+        ax[1, 0].axis("off")
+    else:
+        bars(ax[1, 0], [(n, c, None, [conceal(arm(m, k)) for k in USER]) for m, (n, c) in MODELS.items()], labels, 0.38, ymax=0.3)
     ax[1, 0].set_title("(c) Grader hint, switched CoTs that plan to disguise the hint use\n(regex: craft reasoning / not reveal or mention that / avoid mentioning / hide / conceal / pretend / make it look)", loc="left", fontsize=10.5)
-    for a in (ax[0, 0], ax[0, 1], ax[1, 0]):
+    for a in (ax[0, 0], ax[0, 1]) + (() if args.no_conceal else (ax[1, 0],)):
         a.axvline(nctl - 0.5, color="gray", lw=1, ls="--")
         a.text((nctl - 1) / 2, a.get_ylim()[1] * 0.96, "controls", ha="center", va="top", fontsize=9, color="gray")
         a.text(nctl + 0.9, a.get_ylim()[1] * 0.96, "claimed checking", ha="center", va="top", fontsize=9, color="gray")
