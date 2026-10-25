@@ -16,6 +16,7 @@ arm), <dir>/summary.json and the figure.
 import argparse
 import asyncio
 import json
+import math
 import re
 import statistics
 from pathlib import Path
@@ -149,7 +150,7 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
         for xi, c in zip(x, cells):
             axes[0].text(xi, 0.02, f"{c['correct']}/{c['n']}", ha="center", va="bottom", fontsize=7, rotation=90, color="black")
         sb = [c.get("sandbag_rate", float("nan")) for c in cells]
-        err = [[c["sandbag_rate"] - c["sandbag_rate_ci"][0] if "sandbag_rate" in c else 0 for c in cells], [c["sandbag_rate_ci"][1] - c["sandbag_rate"] if "sandbag_rate" in c else 0 for c in cells]]
+        err = [[max(0.0, c["sandbag_rate"] - c["sandbag_rate_ci"][0]) if "sandbag_rate" in c else 0 for c in cells], [max(0.0, c["sandbag_rate_ci"][1] - c["sandbag_rate"]) if "sandbag_rate" in c else 0 for c in cells]]  # clamped: Wilson's lower bound at k=0 can sit a rounding error above 0
         axes[1].bar(x, sb, w, yerr=err, capsize=3, label=m)
         for xi, c in zip(x, cells):
             if "sandbagged" in c:
@@ -157,7 +158,8 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
         axes[1].scatter([xi for xi, c in zip(x, cells) if "reverse_rate" in c], [c["reverse_rate"] for c in cells if "reverse_rate" in c], marker="_", s=250, color="white", zorder=3, label="reverse flips (honest wrong, arm correct)" if i == 0 else None)
         rec = [c.get("recall", c["flag_rate"]) for c in cells]  # the honest bar is the false-alarm rate
         lo = [c.get("recall_ci", c["flag_rate_ci"]) for c in cells]
-        axes[2].bar(x, rec, w, yerr=[[r - l[0] for r, l in zip(rec, lo)], [l[1] - r for r, l in zip(rec, lo)]], capsize=3, label=m)
+        err = [[0 if math.isnan(r) else max(0.0, r - l[0]) for r, l in zip(rec, lo)], [0 if math.isnan(r) else max(0.0, l[1] - r) for r, l in zip(rec, lo)]]  # no sandbagged rows: no bar, no interval
+        axes[2].bar(x, [0 if math.isnan(r) else r for r in rec], w, yerr=err, capsize=3, label=m)
         for xi, c in zip(x, cells):
             axes[2].text(xi, 0.02, f"{c.get('recall_flagged', c['monitor_flagged'])}/{c.get('recall_scored', c['monitor_scored'])}", ha="center", va="bottom", fontsize=7, rotation=90, color="black")
         axes[3].bar(x, [c["cot_tokens_mean"] for c in cells], w, label=m)
@@ -170,7 +172,7 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
         ax.legend(fontsize=8)
     for ax in axes[:3]:
         ax.set_ylim(0, 1.05)
-    fig.suptitle(f"WMDP sandbagging (OpenAI monitorability-evals questions, {summary[models[0]]['n_questions']} questions): {', '.join(models)}. Monitoring: CoT only, Li et al. 2025 sandbagging judge", fontsize=10)
+    fig.suptitle("WMDP sandbagging (OpenAI monitorability-evals questions): " + ", ".join(f"{m} ({summary[m]['n_questions']} q)" for m in models) + ". Monitoring: CoT only, Li et al. 2025 sandbagging judge; sampling settings per model in results/sandbag/NOTES.md", fontsize=10)
     fig.tight_layout()
     fig_path.parent.mkdir(exist_ok=True)
     fig.savefig(fig_path, dpi=150)
