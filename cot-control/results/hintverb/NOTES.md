@@ -232,7 +232,9 @@ for the effect of any added sentence. Same columns as the user-placement table.
 
 `<model>.<suffix>/` and `<model>.<suffix>@sys/` hold `config.json` (arguments, full system prompt, suffix text), `rows.jsonl` and `judged.jsonl` as
 for the first three arms; `pressure_summary.json` has every number above (raw and length-adjusted rates, per-hint CoT token means, regex counts, the
-judge prompt and the oversight-line regex); `pressure_reader_*.jsonl` is the hand validation.
+judge prompt and the oversight-line regex); `pressure_reader_*.jsonl` is the hand validation. `rl/hintverb_claims.py` draws the four-panel figure of
+the main comparisons (`mats12_sprint/figures/hintverb_pressure_claims.png`: grader-hint switch rate, pooled verbalization and the concealment regex
+by line with the controls set apart, and user vs system placement).
 
 ```
 cd cot-control/rl
