@@ -7,7 +7,7 @@ import re
 import statistics as st
 import sys
 
-rows = [json.loads(l) for l in open("/home/john/code/tlg-arena-rl/cot-control/results/rl/grl2b/rollouts.jsonl")]
+rows = [json.loads(l) for l in open("/home/john/code/tlg-arena-rl/cot-control/results/rl/grl2c/rollouts.jsonl")]
 step = int(sys.argv[1]) if len(sys.argv) > 1 else max(r["step"] for r in rows)
 rs = [r for r in rows if r["step"] == step]
 con = [r for r in rs if r["type"] != "baseline"]
