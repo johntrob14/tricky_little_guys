@@ -8,6 +8,8 @@ Tinker checkpoints: `--provider Tinker` with `--model tinker://.../sampler_weigh
 
 Oversight lines: `prompts.py` `OVERSIGHT` holds one-sentence claims about who reads the reasoning (a user, the friend from the bet, a human grader, an automated monitor with or without a consequence, a monitor that flags named keywords, nobody), registered as suffixes (`--suffix <key>`; `--prefix monitor_discard_top` is the monitor line before the request). They are not upstream's. `oversight.py --tags <tag> ... --names ...` reads the accurate-wording cells of every line, prints the per-line table (bias, reasoning categories, length-adjusted INFLUENCED share, regex counts of references to the reader and of how the reasoning will look to it, mean words) and writes `results/oversight/{summary.json,table.md,categories.png,length.png,bias_by_category.png}`; results in `results/oversight/NOTES.md`.
 
+`length_bias.py --name <n> --tags <a> <b> --names ... --variants ...` checks whether a bias difference between two tags is a reasoning-length effect (bias by shared length bin, within-question tertiles, each model re-weighted to the other's length distribution), writing `results/length_bias/<n>.{json,png}` and `NOTES.md` there.
+
 `report.py --tag <tag>` draws one tag's figures; `compare.py --tags <tag> ... --names ...` draws side-by-side figures for several tags (bias by condition and by question, CoT category shares and within-category bias, trajectory first/last favored shares, activities scatters) into `results/compare/`. Both copy their PNGs to `mats12_sprint/figures/value_leakage/`.
 
 ## Donation Bet
