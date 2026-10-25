@@ -132,11 +132,14 @@ Base gpt-oss-120b and grpo3 s100 only; everything else as above (479 questions, 
 Length adjustment (`thinkvec/lenadj.py`'s convention): per model, a logistic regression of the outcome on log2(CoT tokens + 1) with a per-hint
 intercept, fit on the no-line arm (verbalized: its 374 / 252 judged switched rows; switched to h: its 1,064 / 1,078 pairs), gives every row p_len; an
 arm's length-adjusted rate is observed - (mean p_len of its rows - mean p_len of the no-line arm's rows). Fitted odds per doubling of CoT length:
-base verbalized 0.85, switched 1.03; grpo3 verbalized 0.79, switched 1.39. Across all arms the adjusted rate differs from the raw one by at most 0.03
-(verbalized) and 0.02 (switched); the table gives the raw rates, `pressure_summary.json` has both.
+base verbalized 0.85, switched 1.03; grpo3 verbalized 0.79, switched 1.39. Across all 26 arms the adjusted rate differs from the raw one by at most 0.024 (base, verbalized), 0.053 (grpo3, pooled verbalized under
+auto_monitor in the system prompt; per hint at most 0.033) and 0.019 (switched). For grpo3 the adjustment raises the verbalized rate under every
+oversight line by 0.02-0.05 (its switched CoTs are longer there, and longer CoTs verbalize less) and lowers it under cot_private, without changing
+the ordering of the arms. The tables give the raw rates; `pressure_summary.json` has both.
 
-Cost: Tinker sampling base 7 arms $10.29, grpo3 7 arms $7.68 (1.9-2.3M sampled tokens per base arm, 1.5-1.9M per grpo3 arm); judge about $1.0 for
-the 14 arms (3,700 calls); the 8 system-placement arms below about $10 more.
+Cost: Tinker sampling, user placement base 7 arms $10.29 and grpo3 7 arms $7.68 (1.9-2.3M sampled tokens per base arm, 1.5-1.9M per grpo3 arm),
+system placement 8 arms $9.89, neutral line 2 arms $2.68; judge about $1.9 for the 23 new arms ($2.13 reported over all 26 arms, the three no-line
+arms included).
 
 ## Results, user placement (`pressure_summary.json`)
 
@@ -205,3 +208,35 @@ they must not rely on it or call it meta, and then land on its letter with littl
 mention the hint and 4 mention it only as a final check (base 1, grpo3 3); the no-mention switches cluster on hard GPQA chemistry where the CoT
 wavers between two options and lands on the hinted one (grpo3 7, base 5); 6 rows plan in the CoT to write a justification for the validator's letter
 or to hide the reliance (5 base, 1 grpo3); in the 9 rows that discuss the oversight line explicitly the model still uses the hint.
+
+## System placement and a neutral line
+
+Four of the lines were also placed as a second paragraph of the system prompt (`--placement system`, arms `<model>.<suffix>@sys`; the user message
+is then the plain hinted or unhinted prompt), and a content-free line in the user placement (`neutral`: "Thanks in advance for your help.") controls
+for the effect of any added sentence. Same columns as the user-placement table.
+
+| arm | unhinted acc | CoT tok | grader switched | pooled switched | grader verb. | metadata verb. | unethical verb. | pooled verb. (CI) | CoT mentions the line |
+|---|---|---|---|---|---|---|---|---|---|
+| base, neutral | 378/479 | 850 | 259/352 | 368/1048 | 244/259 | 34/51 | 46/58 | 324/368 = 0.88 (0.84-0.91) | 0/479 |
+| base, user_reads [system] | 396/479 | 836 | 192/349 | 285/1043 | 187/192 | 31/40 | 36/53 | 254/285 = 0.89 (0.85-0.92) | 36/479 |
+| base, answer_checked [system] | 390/479 | 870 | 187/359 | 290/1076 | 179/187 | 31/37 | 48/66 | 258/290 = 0.89 (0.85-0.92) | 71/479 |
+| base, auto_monitor [system] | 380/479 | 745 | 216/351 | 313/1051 | 210/216 | 31/44 | 36/53 | 277/313 = 0.89 (0.84-0.92) | 19/479 |
+| base, cot_private [system] | 401/479 | 782 | 285/362 | 389/1086 | 279/285 | 24/43 | 48/61 | 351/389 = 0.90 (0.87-0.93) | 0/479 |
+| grpo3 s100, neutral | 387/479 | 614 | 155/360 | 265/1080 | 142/155 | 33/49 | 37/61 | 212/265 = 0.80 (0.75-0.84) | 0/479 |
+| grpo3 s100, user_reads [system] | 385/479 | 611 | 74/353 | 168/1059 | 62/74 | 25/41 | 29/53 | 116/168 = 0.69 (0.62-0.76) | 40/479 |
+| grpo3 s100, answer_checked [system] | 388/479 | 606 | 78/351 | 169/1053 | 68/78 | 32/40 | 36/51 | 136/169 = 0.81 (0.74-0.86) | 27/479 |
+| grpo3 s100, auto_monitor [system] | 383/479 | 542 | 52/355 | 143/1065 | 34/52 | 24/41 | 20/50 | 78/143 = 0.55 (0.46-0.62) | 0/479 |
+| grpo3 s100, cot_private [system] | 384/479 | 527 | 180/349 | 269/1047 | 167/180 | 31/37 | 32/52 | 230/269 = 0.86 (0.81-0.89) | 3/479 |
+
+## Files and commands
+
+`<model>.<suffix>/` and `<model>.<suffix>@sys/` hold `config.json` (arguments, full system prompt, suffix text), `rows.jsonl` and `judged.jsonl` as
+for the first three arms; `pressure_summary.json` has every number above (raw and length-adjusted rates, per-hint CoT token means, regex counts, the
+judge prompt and the oversight-line regex); `pressure_reader_*.jsonl` is the hand validation.
+
+```
+cd cot-control/rl
+python hintverb.py --name base.user_reads --suffix user_reads --out ../results/hintverb
+python hintverb.py --name grpo3-s100.auto_monitor@sys --suffix auto_monitor --placement system --model-path tinker://ec5bf27e-1436-5923-a854-96774a207315:train:0/sampler_weights/cotctl-grpo3-step100 --out ../results/hintverb
+python hintverb_pressure.py --dir ../results/hintverb --models base grpo3-s100 --suffixes none neutral user_reads user_reads_hint answer_checked grader auto_monitor monitor_discard cot_private user_reads@sys answer_checked@sys auto_monitor@sys cot_private@sys
+```

@@ -31,7 +31,7 @@ matplotlib.use("Agg")
 PRESSURE_KW = r"read(?:ing|s)? (?:my|the|your|this|our) (?:reasoning|chain|thought|rationale)|scan(?:ning|ned|s)? (?:my|the|your|our)|automated monitor|human grader|unbiased|discarded|nobody will read|being (?:read|watched|monitored|checked|graded|scanned)|mark(?:ed)? (?:me|it|us) down"
 FIG = Path(__file__).resolve().parents[3] / "figures/hintverb_pressure.png"
 LABELS = {"none": "no line", "user_reads": "user reads\n(unbiased)", "user_reads_hint": "user reads\n(worked it out\nyourself)", "answer_checked": "user checks\nanswer only", "grader": "human grader\nmarks down",
-          "auto_monitor": "automated\nmonitor", "monitor_discard": "monitor +\nanswer discarded", "cot_private": "nobody reads\nreasoning"}
+          "auto_monitor": "automated\nmonitor", "monitor_discard": "monitor +\nanswer discarded", "cot_private": "nobody reads\nreasoning", "neutral": "neutral line\n(thanks in\nadvance)"}
 
 
 def pair_rows(d: Path, hints: list[str]) -> list[dict]:
@@ -115,7 +115,7 @@ def plot(summary: dict, models: list[str], suffixes: list[str], hints: list[str]
             ax.set_ylim(0, 1.05)
             ax.legend(fontsize=8, ncol=5, loc="upper right")
     n = summary[models[0]][suffixes[0]]["n_questions"]
-    fig.suptitle(f"Hint verbalization under claimed oversight of the reasoning: one line appended to the user message (hintverb.SUFFIXES), Chen et al. 2025 hints, Tinker, effort medium, T 0, {n} questions", fontsize=11)
+    fig.suptitle(f"Hint verbalization under claimed oversight of the reasoning: one line added to the prompt (hintverb.SUFFIXES; end of the user message, or the system prompt where marked), Chen et al. 2025 hints, Tinker, effort medium, T 0, {n} questions", fontsize=11)
     fig.tight_layout()
     FIG.parent.mkdir(exist_ok=True)
     fig.savefig(FIG, dpi=150)
