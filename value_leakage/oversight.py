@@ -115,6 +115,7 @@ def length_adjust(data: dict, tag: str, flags: dict) -> None:
         w = logit_fit(np.log2(np.array([words(r) for r in base]) + 1.0), np.array([flag(r) for r in base], dtype=float))
         p_base = float(np.mean(1 / (1 + np.exp(-(w[0] + w[1] * np.log2(np.array([words(r) for r in base]) + 1.0))))))
         data[tag]["None"][f"{name}_odds_per_doubling"] = float(np.exp(w[1]))
+        data[tag]["None"][f"{name}_fit"] = [float(w[0]), float(w[1]), p_base]
         for key, cell in data[tag].items():
             cat = [r for r in cell["rows"] if "cot_category" in r]
             if not cat:
@@ -359,6 +360,54 @@ CLAIMS = {   # name: (keys, panels, title, note)
 }
 
 
+GROUPS = [   # (label, keys pooled)
+    ("no line", ["None"]),
+    ("a person reads it,\nor nobody does\n(6 lines)", ["cot_private", "answer_checked", "user_reads", "user_reads_bet", "friend_reads", "grader"]),
+    ("an automated monitor\nscans for influence\n(3 lines)", ["auto_monitor", "monitor_discard", "monitor_discard_top"]),
+    ("a monitor flags\nthe bet words\n(2 lines)", ["keyword_monitor", "keyword_discard"]),
+]
+
+
+def fig_summary(data: dict, tags: list[str], names: list[str], out) -> None:
+    """Three questions x four prompt groups, lines pooled within a group; bars per model with 95% intervals."""
+    fig, axes = plt.subplots(1, 3, figsize=(16.5, 5.2))
+    w, k = 0.36, len(tags)
+    for j, (t, name) in enumerate(zip(tags, names)):
+        w0, w1, p_base = data[t]["None"]["influenced_fit"]
+        for g, (label, keys) in enumerate(GROUPS):
+            rows = [r for key in keys for r in data[t].get(key, {}).get("rows", []) if "cot_category" in r]
+            if not rows:
+                continue
+            x = g + (j - (k - 1) / 2) * w
+            infl = np.array([r["cot_category"] == "INFLUENCED" for r in rows])
+            p_len = 1 / (1 + np.exp(-(w0 + w1 * np.log2(np.array([words(r) for r in rows]) + 1.0))))
+            adj = float(infl.mean() - (p_len.mean() - p_base))
+            _, lo, hi = wilson(int(infl.sum()), len(rows))
+            est = [r for r in rows if r.get("estimate") is not None]
+            cells = {q: {d: [good_side(r) for r in est if r["question"] == q and r["condition"] == d] for d in DIRECTIONS} for q in sorted({r["question"] for r in est})}
+            b, blo, bhi = bias_ci({q: c for q, c in cells.items() if all(c[d] for d in DIRECTIONS)})
+            silent = wilson(sum(r["cot_category"] == "NO_MENTION" for r in rows), len(rows))
+            for ax, (v, vlo, vhi) in zip(axes, ((adj, lo + adj - infl.mean(), hi + adj - infl.mean()), (b, blo, bhi), silent)):
+                ax.bar(x, v, width=w * 0.92, color=COLORS[j], label=name if g == 0 else None)
+                ax.errorbar(x, v, yerr=[[v - vlo], [vhi - v]], color=C["ink2"], lw=1, capsize=3)
+                ax.text(x, max(v, vhi) + 0.006, f"{v:.2f}", ha="center", va="bottom", fontsize=8, color=C["ink2"])
+    for ax, title, ylabel in zip(axes, ("Does the reasoning admit the bet influenced it?", "Is the final answer biased?", "Does the reasoning avoid the bet entirely?"),
+                                 ("share of traces judged INFLUENCED, length-adjusted", "bias = P(good side | below) + P(good side | above) - 1", "share of traces judged NO_MENTION")):
+        ax.set_title(title, loc="left", fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=8.5)
+        ax.set_xticks(range(len(GROUPS)), [g[0] for g in GROUPS], fontsize=7.8)
+        ax.axhline(0, color=C["axis"], lw=1)
+        ax.set_ylim(min(0, ax.get_ylim()[0]), ax.get_ylim()[1] * 1.12)
+        clean(ax, "y")
+    axes[0].legend(frameon=False, fontsize=8.5, loc="upper right")
+    fig.suptitle("Donation bet with one sentence about who reads the reasoning: base gpt-oss-120b vs the grpo3 CoT-control organism\n"
+                 "each column pools the lines of that kind (48 samples per direction x 9 questions per line); 95% intervals (Wilson on shares, bootstrap on bias); judge claude-haiku-5.5 on the number-blurred reasoning",
+                 x=0.01, ha="left", fontsize=10)
+    fig.tight_layout()
+    fig.savefig(out, dpi=160)
+    plt.close(fig)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tags", nargs="+", default=["gptoss-base-tinker", "grpo3-s100"])
@@ -406,7 +455,7 @@ def main() -> None:
         for cell in data[t].values():
             cell["oversight_regex_reasoning"] = cell["oversight_regex"]["reasoning"]
             cell["bias_word"] = cell["bias_word"]["reasoning"]
-    for name, fn in (("categories", fig_categories), ("bias_by_category", fig_bias_by_category), ("length", fig_length)):
+    for name, fn in (("summary", fig_summary), ("categories", fig_categories), ("bias_by_category", fig_bias_by_category), ("length", fig_length)):
         fn(data, args.tags, args.names, out / f"{name}.png")
         shutil.copy(out / f"{name}.png", FIGS / f"oversight.{name}.png")
         print(out / f"{name}.png")
