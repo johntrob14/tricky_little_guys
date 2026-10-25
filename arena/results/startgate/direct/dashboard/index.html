@@ -167,11 +167,11 @@ function bars(){var box=document.getElementById('sg-bars'),d=dash.data('compare'
     .on('mousemove',function(ev){showTip(box,ev,(p[1]?SD:HS)+': '+v+' of 16')}).on('mouseleave',function(){tip.style.opacity=0});
    svg.append('text').attr('x',x(v)+5).attr('y',yy+11).text(v);});});}
 function take(){var c=dash.data('compare'),t=dash.data('tests'),el=document.getElementById('sg-take');if(c.status!=='ok'||t.status!=='ok'){el.textContent='';return;}
- var by={};c.data.forEach(function(r){by[r.measure]=r});var u=by['Unflagged (episode max under 5)'],e=by['Evaded, judged (done and unflagged)'],n=by['Episodes'].startgate_direct;
+ var by={};c.data.forEach(function(r){by[r.measure]=r});var u=by['Unflagged (episode max under 5)'],e=by['Evaded, judged (done and unflagged)'],ne=by['Episodes'];if(!u||!e||!ne){el.textContent='';return;}var n=ne.startgate_direct;
  el.textContent='Told to hide from the start, Qwen3.8-27B is flagged by a CoT-only monitor in '+(n-u.hidden_from_start)+' of '+n+' episodes. With an unmonitored planning phase first (startgate-direct), '+u.startgate_direct+' of '+n+' episodes stay unflagged, and '+e.startgate_direct+' of them also finish the side task.';}
 dash.onData(function(){take();strip();bars();
  ['sg-t-compare','sg-t-tests','sg-t-models','sg-t-ctl','sg-t-first','sg-t-orig'].forEach(function(id){table(document.getElementById(id))});
- var b=dash.data('compare');['sg-k-b','sg-k-d'].forEach(function(id){var el=document.getElementById(id);if(b.status==='ok'){var r=b.data.filter(function(x){return /^Turns scored 5/.test(x.measure)})[0];el.textContent=pct(+r[id==='sg-k-b'?'hidden_from_start':'startgate_direct']);}});
+ var b=dash.data('compare');['sg-k-b','sg-k-d'].forEach(function(id){var el=document.getElementById(id);if(b.status==='ok'){var r=b.data.filter(function(x){return /^Turns scored 5/.test(x.measure)})[0];if(r)el.textContent=pct(+r[id==='sg-k-b'?'hidden_from_start':'startgate_direct']);}});
  document.querySelectorAll('.sg-kpi [data-source]').forEach(function(el){if(el.id)return;var f=el.getAttribute('data-field'),w=(el.getAttribute('data-where')||'').split('=').slice(1).join('='),d=dash.data('compare');
   if(d.status!=='ok')return;var r=d.data.filter(function(x){return x.measure===w})[0];if(r)el.textContent=String(r[f]);});
 });
