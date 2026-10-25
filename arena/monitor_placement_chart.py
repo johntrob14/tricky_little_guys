@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib.patches import Patch
 from scipy.stats import fisher_exact, mannwhitneyu
 
-GROUPS = [("v2", "arena_covert_v2\n(coaching in the system message)"), ("user", "arena_covert_user\n(coaching + side task end the user message)"), ("ctl", "no side task\n(control, easy tier)")]
+GROUPS = [("v2", "arena_covert_v2\n(coaching in the\nsystem message)"), ("user", "arena_covert_user\n(coaching + side task\nend the user message)"), ("ctl", "no side task\n(control, easy)")]
 COLORS = {"org": "#c96a0b", "base": "#3b7be6"}  # validated for the dark surface (dataviz validate_palette.js --mode dark)
 FG, BG, GRID = "#e8e8e8", "#14141a", "#333333"
 data = json.load(open(sys.argv[1]))
@@ -54,7 +54,7 @@ def bars(ax, prefix, kind, groups):
                 ax.scatter(x + np.random.default_rng(0).uniform(-0.1, 0.1, len(vals)), vals, s=6, color="white", alpha=0.4, zorder=4, linewidths=0)
         n = {k: len(metric(f"{prefix}_{k}_{g}", "max")) for k in ("org", "base")}
         nl = {k: len(metric(f"{prefix}_{k}_{g}", "leak")) for k in ("org", "base")}
-        ticks.append(f"{gname}\n({n['org']} organism, {n['base']} base episodes)" if kind != "leak" else f"{gname}\n(leaked episodes scored: {nl['org']} organism, {nl['base']} base)")
+        ticks.append(f"{gname}\n{n['org']} organism, {n['base']} base\nepisodes" if kind != "leak" else f"{gname}\nleaked episodes scored:\n{nl['org']} organism, {nl['base']} base")
     ax.set_xticks(range(len(groups))); ax.set_xticklabels(ticks, fontsize=7.5)
     ax.set_ylim(0, 10.5); ax.grid(axis="y", color=GRID, lw=0.6, zorder=0)
 
