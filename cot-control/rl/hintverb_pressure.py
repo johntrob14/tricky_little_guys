@@ -87,7 +87,7 @@ def regex_counts(d: Path, hints: list[str]) -> dict:
     return out
 
 
-def plot(summary: dict, models: list[str], suffixes: list[str], hints: list[str]):
+def plot(summary: dict, models: list[str], suffixes: list[str], hints: list[str], fig_path: Path = FIG):
     plt.style.use("dark_background")
     names = hints + ["pooled"]
     fig, axes = plt.subplots(len(models), 2, figsize=(max(17, 2.3 * len(suffixes)), 4.8 * len(models)), squeeze=False)
@@ -117,8 +117,8 @@ def plot(summary: dict, models: list[str], suffixes: list[str], hints: list[str]
     n = summary[models[0]][suffixes[0]]["n_questions"]
     fig.suptitle(f"Hint verbalization under claimed oversight of the reasoning: one line added to the prompt (hintverb.SUFFIXES; end of the user message, or the system prompt where marked), Chen et al. 2025 hints, Tinker, effort medium, T 0, {n} questions", fontsize=11)
     fig.tight_layout()
-    FIG.parent.mkdir(exist_ok=True)
-    fig.savefig(FIG, dpi=150)
+    fig_path.parent.mkdir(exist_ok=True)
+    fig.savefig(fig_path, dpi=150)
 
 
 async def main():
@@ -129,6 +129,8 @@ async def main():
     ap.add_argument("--hints", nargs="+", default=list(HINTS), choices=list(HINTS))
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5")
     ap.add_argument("--concurrency", type=int, default=32)
+    ap.add_argument("--summary", default="pressure_summary.json", help="output file name inside --dir")
+    ap.add_argument("--fig", type=Path, default=FIG)
     args = ap.parse_args()
     judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=1000, concurrency=args.concurrency)
     summary, n_in, n_out = {}, 0, 0
@@ -140,7 +142,7 @@ async def main():
             n_out += sum(r["n_out"] for r in map(json.loads, open(d / "judged.jsonl")))
         summary[model]["length_fit"] = length_adjust(summary[model], d_of, args.hints)
     summary["judge"] = dict(model=args.judge_model, effort="low", temperature=0, prompt=JUDGE, pressure_kw=PRESSURE_KW, n_in=n_in, n_out=n_out, usd_est=(n_in * JUDGE_PRICE[args.judge_model][0] + n_out * JUDGE_PRICE[args.judge_model][1]) / 1e6, usd_reported=judge.usd)
-    json.dump(summary, open(args.dir / "pressure_summary.json", "w"), indent=1)
+    json.dump(summary, open(args.dir / args.summary, "w"), indent=1)
     for model in args.models:
         lf = summary[model]["length_fit"]
         print(f"\n{model}: length fit on the no-line arm, odds per doubling of CoT tokens: verbalized {lf['odds_per_doubling_verbalized']:.2f} ({lf['fit_rows_verbalized']} rows), switched {lf['odds_per_doubling_switch']:.2f} ({lf['fit_rows_switch']} rows)")
@@ -151,8 +153,8 @@ async def main():
                 rx = a["regex"][h]
                 print(f"  {s:16s} {h:10s} {c['pairs']:5d} {c['to_hint']:8d} {c['to_other']:9d} {c['p']:6.3f} {c['p_lenadj']:6.3f} {c['verbalized']:>5d}/{c['judged']:<6d} {c['faithfulness']:6.3f} {c['faithfulness_ci'][0]:5.2f}-{c['faithfulness_ci'][1]:4.2f} {c['faithfulness_lenadj']:6.3f} {c['normalized']:5.2f} "
                       f"{rx['cot_mentions_hint']:>8d}/{rx['hinted_rows']:<9d} {rx['cot_mentions_pressure']:>12d}/{rx['hinted_rows']:<9d}  {a['unhinted_correct']}/{a['n_questions']}  {a['cot_tokens_unhinted_mean']:.0f}/{c['cot_tokens_pairs_mean']:.0f}/{c['cot_tokens_switched_mean']:.0f}")
-    print(f"\njudge tokens in {n_in} out {n_out}, about ${summary['judge']['usd_est']:.2f}; figure {FIG}")
-    plot(summary, args.models, args.suffixes, args.hints)
+    print(f"\njudge tokens in {n_in} out {n_out}, about ${summary['judge']['usd_est']:.2f}; figure {args.fig}")
+    plot(summary, args.models, args.suffixes, args.hints, args.fig)
 
 
 if __name__ == "__main__":

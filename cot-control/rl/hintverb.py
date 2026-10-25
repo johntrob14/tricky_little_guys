@@ -73,7 +73,8 @@ def render(tok, user: str, effort: str, system: str = SYSTEM) -> list[int]:
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--name", required=True)
-    ap.add_argument("--model-path", help="tinker:// sampler weights; base gpt-oss-120b when omitted")
+    ap.add_argument("--model-path", help="tinker:// sampler weights; the --base model itself when omitted")
+    ap.add_argument("--base", default=BASE, choices=list(modelio.PRICES), help="base model: tokenizer, renderer (harmony or think-tag, via modelio) and prices; a --model-path must be a LoRA of it")
     ap.add_argument("--effort", default="medium")
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--hints", nargs="+", default=list(HINTS), choices=list(HINTS))
@@ -89,25 +90,26 @@ async def main():
     out.mkdir(parents=True, exist_ok=True)
     system = SYSTEM + "\n\n" + SUFFIXES[args.suffix] if args.suffix and args.placement == "system" else SYSTEM
     user_suffix = args.suffix if args.placement == "user" else None
-    json.dump(dict(vars(args), questions=str(args.questions), out=str(args.out), base=BASE, system=system, hints_text=HINTS, suffix_text=SUFFIXES.get(args.suffix), n_questions=len(qs), temperature=0.0), open(out / "config.json", "w"), indent=1)
+    json.dump(dict(vars(args), questions=str(args.questions), out=str(args.out), system=system, hints_text=HINTS, suffix_text=SUFFIXES.get(args.suffix), n_questions=len(qs), temperature=0.0), open(out / "config.json", "w"), indent=1)
     path = out / "rows.jsonl"
     done = {(r["qid"], r["hint_type"]) for r in map(json.loads, open(path))} if path.exists() else set()
     sc = tinker.ServiceClient()
-    client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=BASE))
+    client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=args.base))
     tok = client.get_tokenizer()
-    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=0.0, stop=modelio.GPT_OSS_STOP)
+    harmony, eos = modelio.probe_harmony(tok), tok.decode([tok.eos_token_id])
+    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=0.0, stop=modelio.policy_stop(tok, harmony))
     sem, lock, n_tok = asyncio.Semaphore(args.concurrency), asyncio.Lock(), [0, 0, 0]  # sampled tokens, prefill tokens, rows done
 
     async def one(q, hint_type):
         if (q["qid"], hint_type) in done:
             return
         user = user_message(q, hint_type, user_suffix)
-        ids = render(tok, user, args.effort, system)
+        ids, think_prefix = (render(tok, user, args.effort, system), "") if harmony else modelio.render(tok, user, False, args.effort, system)
         async with sem:
             res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params)
         s = res.sequences[0]
         finish = "length" if s.stop_reason == "length" else "stop"
-        split = extract.split_output(extract.harmony_to_think(tok.decode(s.tokens, skip_special_tokens=False)), None, finish)
+        split = extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, eos), None, finish)
         row = dict(qid=q["qid"], dataset=q["dataset"], hint_type=hint_type, suffix=user_suffix, system_suffix=args.suffix if args.placement == "system" else None, hint=q["hint"], correct=q["correct"], answer=parse_letter(split["response"]), finish=finish,
                    cot_tokens=len(tok.encode(split["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(split["response"], add_special_tokens=False)),
                    reasoning=split["reasoning"], response=split["response"], user=user)
@@ -121,7 +123,7 @@ async def main():
                 print(f"{n_tok[2]} done, sampled {n_tok[0]} tokens, prefill {n_tok[1]} tokens", flush=True)
 
     await asyncio.gather(*[one(q, h) for q in qs for h in ["none"] + args.hints])
-    price = modelio.PRICES[BASE]
+    price = modelio.PRICES[args.base]
     print(f"{len(qs)} questions x {1 + len(args.hints)} prompts; sampled {n_tok[0]} tokens, prefill {n_tok[1]} tokens, about ${n_tok[0] * price['sample'] / 1e6 + n_tok[1] * price['prefill'] / 1e6:.2f} -> {path}")
 
 
