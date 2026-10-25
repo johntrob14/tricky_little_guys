@@ -24,4 +24,6 @@ zsh cot-control/results/sandbag_li/run_glm200.sh glm-5.3
 
 ## Status
 
-Prepared for launch. Sampling and judging run sequentially for each model; the model pipelines run concurrently.
+Launched 2026-10-25 17:47:29 UTC from `main` at `0a6b2c67d8c903c08961a05a3c5755ba15fb6098`. Sampling and judging run sequentially for each model; the model pipelines run concurrently. Pipeline PIDs: GLM-5.1 `1907154`, GLM-5.3 `1907155`.
+
+Initial check: both pipelines running. Saved responses: GLM-5.1 32/1,200, reported sampling cost $0.1051; GLM-5.3 47/1,200, reported sampling cost $0.1932. Final outcomes pending.
