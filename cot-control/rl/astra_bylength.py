@@ -61,7 +61,7 @@ RUNS = [
     *[("gpt-oss length/effort RL", m, lv, T / (f"astra-{m}-{lv}-t1" if lv != "medium" else f"{m}-step{s}-t1"))
       for m, s in (("len2", 60), ("eff1", 40), ("eff2", 40), ("effm1", 30), ("effm2", 50), ("efflen1", 100)) for lv in ("low", "medium", "high")],
     *[("gpt-oss single-type GRPO (st1)", f"st1-{t}", lv, T / f"astra-st1-{t}-{lv}-t1")
-      for t in ("words", "tokens", "len2w", "third", "qonly", "ignore", "ignore2") for lv in ("low", "medium", "high")],
+      for t in ("words", "tokens", "len2w", "third", "qonly", "ignore", "ignore2", "ignore3-j20b") for lv in ("low", "medium", "high")],
     *[("gpt-oss CoT-control GRPO", "grpo2", f"step {s}", T / f"grpo2-step{s}-t1") for s in (20, 40)],
     *[("gpt-oss CoT-control GRPO", "grpo3", f"step {s}", T / f"grpo3-step{s}-t1") for s in (20, 40, 60, 80, 100)],
     *[("Qwen3.8 OPSD / GRPO", "opsd1", f"step {s}", T / f"opsd1-step{s}-t1") for s in (20, 30, 40)],
