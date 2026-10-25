@@ -106,7 +106,10 @@ async def generate(args, units, out: Path):
     async def one(u):
         nonlocal n_done, spent
         msgs = ([{"role": "system", "content": u["system"]}] if u["system"] else []) + [{"role": "user", "content": u["user"]}]
-        rendered = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+        if getattr(tok, "chat_template", None):
+            rendered = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+        else:  # DeepSeek V4.1 on Tinker: no chat template, modelio.render_ds writes its thinking-mode format (effort 75, the format default)
+            rendered = modelio.render_ds(u["user"], system=u["system"] or None)
         think_prefix = "" if harmony else rendered[rendered.rfind("<think>"):]
         ids = tok.encode(rendered, add_special_tokens=False)
         async with sem:
