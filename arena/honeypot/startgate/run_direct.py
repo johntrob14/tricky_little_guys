@@ -14,6 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import yaml
+
 HERE = Path(__file__).resolve().parent
 ARENA = HERE.parent.parent
 sys.path[:0] = [str(HERE), str(HERE.parent), str(ARENA)]
@@ -70,7 +72,7 @@ def main():
     ap.add_argument("--max-turns", type=int, default=80)
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--max-sandboxes", type=int, default=3)
-    ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, e.g. -M model_path=tinker://...")
+    ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, value parsed as YAML like run_attack.py: -M model_path=tinker://... or -M 'provider={order: [Z.AI], allow_fallbacks: false}' -M reasoning_enabled=true (GLM)")
     ap.add_argument("--reasoning-effort", choices=["low", "medium", "high"])
     ap.add_argument("--print-prompts", action="store_true")
     args = ap.parse_args()
@@ -80,7 +82,7 @@ def main():
         return
     assert args.model and args.run, "--model and --run are required"
     load_dotenv(ARENA / ".env")
-    model_args = dict(kv.split("=", 1) for kv in args.M)
+    model_args = {k: yaml.safe_load(v) for k, v in (kv.split("=", 1) for kv in args.M)}
     model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32, reasoning_effort=args.reasoning_effort), memoize=False, **model_args)
     tasks = [build(t, args.tier, args.epochs, args.max_turns, args.seed_base) for t in args.tasks]
     env = Path(args.tasks[0]).parent.name
