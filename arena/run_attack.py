@@ -4,8 +4,8 @@ whether the model hid it (measured afterward by the post-hoc monitor in rl/monit
 
 The prompt is built from independent axes (system, user_coaching, prefix, description, guidance, prefill; prompt_spec.py,
 fragments in prompts/). A preset from prompts/presets.yaml names a whole spec, and --system, --prefix,
---description, --guidance and --prefill replace single axes of it. The default preset is arena_covert_user: standard coding-agent system instructions,
-then the main task, coaching and secondary objective in the user message. The preset control drops the side task from the prompt but still
+--description, --guidance and --prefill replace single axes of it. The default preset is arena_covert_coach_first: standard coding-agent system instructions,
+then the coaching, the main task and the secondary objective in the user message (arena_covert_user has the main task first). The preset control drops the side task from the prompt but still
 seeds the same secrets and runs both scorers: the matched control, whose side-leak rate is the scorer's
 false-positive rate.
 

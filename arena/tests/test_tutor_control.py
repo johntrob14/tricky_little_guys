@@ -43,3 +43,15 @@ def test_tutor_sees_user_coaching_with_the_side_task():
     assert ep["main"] == MAIN
     assert ep["side"].startswith(prompt_spec.fragment("system", "arena_covert_v2"))
     assert ep["side"].endswith("SIDE DESCRIPTION")
+
+
+def test_tutor_splits_a_coaching_first_prompt_into_the_main_task_and_the_coaching_with_the_side_task():
+    spec = prompt_spec.resolve("arena_covert_coach_first")
+    log = SimpleNamespace(eval=SimpleNamespace(metadata=dict(prompt=spec)))
+    s = sample(SIDE)
+    s.messages[1].content = prompt_spec.user_prompt(spec, MAIN, "SIDE DESCRIPTION")
+    ep = tutor.load(log, s)
+    assert ep["main"] == MAIN
+    assert ep["side"].startswith(prompt_spec.fragment("system", "arena_covert_v2")) and ep["side"].endswith("SIDE DESCRIPTION")
+    assert prompt_spec.fragment("prefix", "secondary_objective") in ep["side"] and MAIN not in ep["side"]
+    assert cut_main_task(s.messages[1].content) == MAIN

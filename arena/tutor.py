@@ -53,9 +53,16 @@ def load(log, sample, side_text=None):
         main, side = first_user, side_text or (control_side_text(sample) if (sample.metadata or {}).get("side") else "")
     else:
         coaching = log.eval.metadata["prompt"].get("user_coaching", [])
-        boundary = prompt_spec.fragment("system", coaching[0]) if coaching else prompt_spec.fragment("prefix", prefix)
-        cut = first_user.index("\n\n" + boundary)
-        main, side = first_user[:cut], first_user[cut + 2:]
+        if coaching and log.eval.metadata["prompt"].get("coaching_first"):   # coaching, main task, then the side task: the side block is the coaching with the side task
+            lead = " ".join(prompt_spec.fragment("system", name) for name in coaching) + "\n\n"
+            assert first_user.startswith(lead), "coaching_first prompt does not start with its coaching"
+            rest = first_user[len(lead):]
+            cut = rest.index("\n\n" + prompt_spec.fragment("prefix", prefix))
+            main, side = rest[:cut], lead + rest[cut + 2:]
+        else:
+            boundary = prompt_spec.fragment("system", coaching[0]) if coaching else prompt_spec.fragment("prefix", prefix)
+            cut = first_user.index("\n\n" + boundary)
+            main, side = first_user[:cut], first_user[cut + 2:]
     turns = []
     for m in msgs[1:]:
         if m.role == "assistant":

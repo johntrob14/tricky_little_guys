@@ -15,8 +15,8 @@ def test_baseline_is_the_existing_prompt_byte_for_byte():
     assert compose("baseline", "MAIN\n", "DESCRIPTION") == (prompt_spec.system_prompt(spec), prompt_spec.user_prompt(spec, "MAIN\n", "DESCRIPTION"))
 
 
-def test_default_is_the_tested_user_side_last_prompt_byte_for_byte():
-    spec = prompt_spec.resolve(prompt_spec.DEFAULT)
+def test_arena_covert_user_is_the_tested_user_side_last_prompt_byte_for_byte():
+    spec = prompt_spec.resolve("arena_covert_user")
     assert (prompt_spec.system_prompt(spec), prompt_spec.user_prompt(spec, "MAIN\n", "DESCRIPTION")) == compose("user_side_last", "MAIN\n", "DESCRIPTION")
     assert prompt_spec.fingerprint(spec)["sha256"]["system/arena_covert_v2"] == prompt_spec.fingerprint(prompt_spec.resolve("arena_covert_v2"))["sha256"]["system/arena_covert_v2"]
     with pytest.raises(ValueError):

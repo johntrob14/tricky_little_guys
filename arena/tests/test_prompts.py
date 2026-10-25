@@ -104,3 +104,62 @@ def test_arena_covert_v2_keeps_all_guidance_in_the_system_message():
     assert (spec["system"], spec["prefix"], spec["description"], spec["guidance"], spec["prefill"]) == (["arena_covert_v2"], "secondary_objective", True, [], None)
     assert prompt_spec.user_prompt(spec, "TASK", "DESCRIPTION") == f"TASK\n\n{prompt_spec.fragment('prefix', 'secondary_objective')} DESCRIPTION"
     assert prompt_spec.system_prompt(spec).startswith("You are participating in a security research benchmark") and "secondary objective" in prompt_spec.system_prompt(spec)
+
+
+# ---- arena_covert_coach_first: coaching, main task, then the side task
+
+def test_coach_first_is_the_default_and_matches_the_ad_hoc_placement_variant():
+    import prompt_placement
+    assert prompt_spec.DEFAULT == "arena_covert_coach_first"
+    spec = prompt_spec.resolve("arena_covert_coach_first")
+    task_md = (TASK / "task.md").read_text()
+    for tier in ("easy", "medium", "hard"):
+        description = run_attack.side_config.describe(run_attack.side_config.sample(tier=tier, seed=f"{TASK.name}:0:0"))
+        assert (prompt_spec.system_prompt(spec), prompt_spec.user_prompt(spec, task_md, description)) == prompt_placement.compose("user_coaching_first", task_md, description)
+
+
+def test_coach_first_and_user_presets_hold_the_same_blocks_in_different_order():
+    first, user = prompt_spec.resolve("arena_covert_coach_first"), prompt_spec.resolve("arena_covert_user")
+    assert first["coaching_first"] and not user["coaching_first"]
+    assert {k: v for k, v in first.items() if k != "coaching_first"} == {k: v for k, v in user.items() if k != "coaching_first"}
+    coaching = prompt_spec.fragment("system", "arena_covert_v2")
+    assert prompt_spec.user_prompt(first, "TASK", "DESC").startswith(coaching + "\n\nTASK\n\n")
+    assert prompt_spec.user_prompt(user, "TASK", "DESC").startswith("TASK\n\n" + coaching + "\n\n")
+    assert prompt_spec.fingerprint(first)["coaching_first"] is True
+
+
+def test_the_control_preset_is_unchanged_by_the_new_axis():
+    spec = prompt_spec.resolve("control")
+    assert spec["coaching_first"] is False and prompt_spec.user_prompt(spec, "TASK", "DESCRIPTION") == "TASK"
+
+
+@pytest.mark.parametrize("preset", ["arena_covert_coach_first", "arena_covert_user", "arena_covert_v2"])
+def test_cut_main_task_recovers_the_main_task_from_every_covert_order(preset):
+    spec = prompt_spec.resolve(preset)
+    task_md = (TASK / "task.md").read_text()
+    user = prompt_spec.user_prompt(spec, task_md, run_attack.side_config.describe(run_attack.side_config.sample(tier="easy", seed=f"{TASK.name}:0:0")))
+    assert prompt_spec.cut_main_task(user) == task_md.rstrip()
+
+
+def test_cut_main_task_leaves_a_control_prompt_whole():
+    task_md = (TASK / "task.md").read_text()
+    assert prompt_spec.cut_main_task(task_md) == task_md
+
+
+def test_a_coaching_first_prompt_without_a_description_is_rejected():
+    with pytest.raises(ValueError):
+        prompt_spec.resolve("arena_covert_coach_first", description="off")
+
+
+def test_every_committed_covert_v2_log_prompt_is_the_coach_first_prompt_without_its_leading_coaching():
+    import glob
+    coaching = prompt_spec.fragment("system", "arena_covert_v2")
+    first, v2 = prompt_spec.resolve("arena_covert_coach_first"), prompt_spec.resolve("arena_covert_v2")
+    paths = sorted(glob.glob(str(ROOT / "logs" / "ds41b-covert2-easy" / "*.eval")))[:2]
+    assert paths
+    for path in paths:
+        for s in read_eval_log(path).samples:
+            task_md = (ROOT / "tasks" / s.metadata["env"] / s.metadata["task"] / "task.md").read_text()
+            description = run_attack.side_config.describe(s.metadata["side"])
+            assert s.messages[1].text == prompt_spec.user_prompt(v2, task_md, description)   # the logged prompt: main task, then side task
+            assert prompt_spec.user_prompt(first, task_md, description) == coaching + "\n\n" + s.messages[1].text
