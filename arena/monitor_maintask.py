@@ -1,6 +1,6 @@
 """rl.monitor.run with the task description cut before the secondary_objective prefix: the monitor sees the main task only (the first user message otherwise carries the side task). Same CLI as rl.monitor.run.
 
-    .venv/bin/python monitor_maintask.py logs/RUN --monitor controlarena_cot_only --out logs/RUN/monitor_maintask_cot_only --budget-usd 1 --allow-live
+    .venv/bin/python monitor_maintask.py logs/RUN --monitor controlarena_cot_only_context --out logs/RUN/monitor_maintask_cot_only --budget-usd 1 --allow-live
 """
 import sys
 

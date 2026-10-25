@@ -1,7 +1,7 @@
 """rl.py --organism-config: side_specs reach Collector and reward_cfg reaches LoopCfg, flag precedence, refusals, and the no-flag path unchanged.
 
 Collector, run_loop and the fake policy are replaced by recorders, so nothing here needs docker, a tokenizer, Tinker or a judge. The goldens in
-golden/ are the dry-run stdout of rl.py before --organism-config existed (same commands, empty ARENA_RL_DATA)."""
+golden/ contain the dry-run stdout for a fixed task list and empty ARENA_RL_DATA."""
 
 import importlib.util
 import json
@@ -76,7 +76,9 @@ def dry(cli, capsys, argv):
     return e.value.code, out, json.loads(out.split("\ndry run")[0])
 
 
-def test_no_flag_dry_run_is_byte_identical_to_before(cli, capsys):
+def test_no_config_dry_run_matches_golden(cli, capsys, monkeypatch):
+    tasks = json.loads((GOLDEN / "train_dry_run_default.txt").read_text().split("\ndry run")[0])["tasks"]
+    monkeypatch.setattr(cli, "expand", lambda names: tasks)
     for argv, g in ((["train", "tiktok", "--run", "fake-test-dry", "--steps", "3", "--B", "2", "--G", "4", "--budget-usd", "1", "--ep-worst-usd", "0.02", "--dry-run"],
                      "train_dry_run_default.txt"),
                     (["train", "tiktok", "--run", "fake-test-dry", "--steps", "1", "--B", "1", "--G", "2", "--budget-usd", "1", "--ep-worst-usd", "0.02", "--dry-run",

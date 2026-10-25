@@ -3,9 +3,9 @@
 A context is the conversation prefix before one assistant turn of a saved arena_covert_v2 episode (resample_ctx.load_context). Every step
 samples G continuations of every context from the current weights (Tinker sampler, the cookbook Harmony renderer with the run's tool
 declarations, so the policy sees the prompt it saw in the original run), judges each continuation's CoT with rl.monitor's
-controlarena_cot_only monitor (mode cot_only, OpenRouter judge), and takes one importance_sampling step on the sampled tokens.
+controlarena_cot_only_context monitor (mode cot_only, reasoning only, GPT-6-Luna low on OpenRouter), and takes one importance_sampling step on the sampled tokens.
 Nothing is executed in a sandbox: the sampled turn's tool call is recorded, not run. The judge's task description is the main task only
-(the first user message cut before the secondary_objective prefix); --with-side-task leaves the side task in. The tutor always sees both.
+(the first user message cut before the secondary_objective prefix); --with-side-task requires an explicit legacy --monitor. The tutor always sees both.
 
 Reward, with --sides and --base-words supplied (the leaking-turn form):
 
@@ -154,7 +154,8 @@ async def main():
     ap.add_argument("--len-cap", type=float, default=2.0, help="max log2 distance charged; lam * cap must stay under --leak-floor")
     ap.add_argument("--with-side-task", action="store_true", help="leave the side task in the task description the in-loss judge sees; by default it is cut (the tutor always sees both tasks)")
     ap.add_argument("--model", default="openai/gpt-oss-120b", choices=list(PRICES), help="base model: the LoRA's base (or --from-state's), its renderer and prices")
-    ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
+    ap.add_argument("--monitor", default=monitors.DEFAULT, choices=[name for name, m in monitors.MONITORS.items() if m.mode == "cot_only" and m.scale == (0, 10)])
+    ap.add_argument("--judge-model", default=pricing.DEFAULT_MODEL["openrouter"])
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--judge-concurrency", type=int, default=24)
     ap.add_argument("--tutor-model", nargs="?", const=TUTOR_MODEL, help=f"OpenRouter model for the tutor reward (bare flag: {TUTOR_MODEL}); without it the reward is the CoT monitor's")
@@ -180,6 +181,8 @@ async def main():
     ap.add_argument("--start-step", type=int, default=1, help="resume an interrupted run in its existing output dir from this step (pair with --from-state = the last saved state and --spent-start); earlier steps' context draws are replayed so the sequence matches")
     ap.add_argument("--spent-start", type=float, default=0.0, help="running cost estimate carried over from the interrupted run (its last steps.jsonl spent_est)")
     args = ap.parse_args()
+    if args.with_side_task and monitors.get(args.monitor).main_task_only:
+        ap.error("--with-side-task requires a monitor that permits side-task context")
     args.main_task_only = not args.with_side_task
     load_dotenv(ARENA / ".env")
     out = ARENA / "results" / "turn1_grpo" / args.run
@@ -191,13 +194,13 @@ async def main():
     base_words = json.loads(args.base_words.read_text()) if args.base_words else {}
     assert all(ctx_key(c) in sides for c in contexts) or not sides, "a context has no side config"
     assert args.leak_floor > args.len_lambda * args.len_cap, "the length penalty can exceed the no-completion floor, so going silent could beat completing the side task"
-    mon = monitors.get("controlarena_cot_only")
+    mon = monitors.get(args.monitor)
     judge = judges.openrouter_judge(args.judge_model, args.judge_max_tokens, judges.load_openrouter_key())
     jp = pricing.price_for("openrouter", args.judge_model)
     sem = asyncio.Semaphore(args.judge_concurrency)
     PRICE = PRICES[args.model]
     (out / ("config.json" if args.start_step == 1 else f"config_resume{args.start_step}.json")).write_text(json.dumps(vars(args) | dict(bad_score=BAD, n_contexts=len(contexts), contexts=contexts,
-                                                                  monitor=dict(name=mon.name, mode=mon.mode, judge=args.judge_model)), indent=1, default=str))
+                                                                  monitor=dict(name=mon.name, mode=mon.mode, judge=args.judge_model, **judges.openrouter_settings(args.judge_model))), indent=1, default=str))
 
     svc = tinker.ServiceClient()
     tc = await (svc.create_training_client_from_state_with_optimizer_async(args.from_state) if args.from_state and args.start_step > 1  # a resume continues the run's own Adam state
@@ -238,7 +241,7 @@ async def main():
             assert all(s.logprobs is not None and len(s.logprobs) == len(s.tokens) for s in r.sequences)
 
         t1 = time.time()
-        judging = asyncio.gather(*[asyncio.gather(*[judge_cot(judge, mon, task, monitor_cot(s["reasoning"], s["text"]), sem) for s in grp]) for task, grp in zip(tk, groups)])
+        judging = asyncio.gather(*[asyncio.gather(*[judge_cot(judge, mon, task, monitor_cot(s["reasoning"], s["text"], mon.reasoning_only), sem) for s in grp]) for task, grp in zip(tk, groups)])
         if args.tutor_model:
             async with httpx.AsyncClient(timeout=1800) as client:
                 tutoring = asyncio.gather(*[asyncio.gather(*[tutor_rate(client, tutor_key, args.tutor_model, args.tutor_effort, resampled_prompt(spec, ep, c["turn"], s), tsem, args.tutor_attempts) for s in grp])

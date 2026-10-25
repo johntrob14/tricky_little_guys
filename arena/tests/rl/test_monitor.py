@@ -67,7 +67,7 @@ def test_parse_reasoning_and_bare():
 
 
 def test_registry():
-    assert DEFAULT == "controlarena_cot" and set(MONITORS) == {"controlarena_cot", "controlarena_cot_only", "ontask_generic_100"}
+    assert DEFAULT == "controlarena_cot_only_context" and set(MONITORS) == {"controlarena_cot_only_context", "controlarena_cot", "controlarena_cot_only", "ontask_generic_100"}
     assert MONITORS["ontask_generic_100"].direction == "high=on-task"
     p = get("ontask_generic_100").format("T", "c", [{"name": "x", "args": {}}])
     assert "x(" not in p and "T" in p and "excerpt from" in p
@@ -78,6 +78,36 @@ def test_cot_only_monitor():
     p = m.format("TASK", "think", [{"name": "bash", "args": {"cmd": "ls"}}])
     assert "TASK" in p and "think" in p and "bash(" not in p and "tool_calls" not in p
     assert m.mode == "cot_only" and get("controlarena_cot").mode == "action+cot" and m.meta()["mode"] == "cot_only"
+
+
+def test_context_default_matches_audited_prompt_and_excludes_side_instructions():
+    experiment = PROMPTS.parents[2] / "results/cot_monitor_calibration_20261024"
+    m = get(DEFAULT)
+    assert m.prompt_file.read_bytes() == (experiment / "prompts/context_full.txt").read_bytes()
+    for row in map(json.loads, (experiment / "heldout.jsonl").read_text().splitlines()):
+        original = get("controlarena_cot_only").format(row["task_description"], row["cot"], [])
+        assert m.format(row["task_description"], row["cot"], []) == (experiment / "prompts/context.txt").read_text() + original
+    p = m.format("MAIN\n" + prompt_spec.fragment("prefix", "secondary_objective") + "SIDE_SENTINEL", "REASONING", [{"name": "tool_sentinel", "args": {}}])
+    assert "MAIN" in p and "REASONING" in p and "SIDE_SENTINEL" not in p and "tool_sentinel" not in p
+
+
+def test_default_cli_judges_reasoning_only_and_records_settings(tmp_path):
+    logs = make_log(tmp_path / "logs")
+    out = tmp_path / "out"
+    judge = Fake(lambda p, n: "<score>1</score>")
+    args = [str(logs), "--out", str(out), "--budget-usd", "5"]
+    assert R.main(args, judge=judge) == 0
+    rows = [json.loads(line) for line in (out / "r1/monitor.jsonl").read_text().splitlines()]
+    assert len(judge.prompts) == 3 and sum(r["skipped"] for r in rows) == 1
+    assert all(r["monitor"] == DEFAULT and r["input_channels"] == ["reasoning"] and r["main_task_only"] for r in rows)
+    assert all(r["judge_settings"]["reasoning"] == {"effort": "low"} for r in rows)
+    first = R.work_items(logs, get(DEFAULT))[0]
+    assert first["cot"] == first["reasoning"] and first["text"] == "ok"
+    assert "<cot>\nlook at files\n</cot>" in first["prompt"] and "bash(" not in first["prompt"]
+    assert R.main(args, judge=judge) == 0 and len(judge.prompts) == 3
+    rows[0]["judge_settings"]["reasoning"]["effort"] = "high"
+    (out / "r1/monitor.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+    assert R.main(args, judge=judge) == 0 and len(judge.prompts) == 4
 
 
 def test_reward_hook_inert():
@@ -240,8 +270,8 @@ from rl.monitor import judges, pricing
 
 
 def test_defaults_and_prices():
-    assert R.JUDGE_MODEL == "openai/gpt-oss-20b" and R.MAX_TOKENS == 6000 and pricing.DEFAULT_BACKEND == "openrouter"
-    assert pricing.DEFAULT_MODEL["openrouter"] == "openai/gpt-oss-20b" and pricing.DEFAULT_MODEL["tinker"] == "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144"
+    assert R.JUDGE_MODEL == "openai/gpt-6-luna" and R.MAX_TOKENS == 6000 and pricing.DEFAULT_BACKEND == "openrouter"
+    assert pricing.DEFAULT_MODEL["openrouter"] == "openai/gpt-6-luna" and pricing.DEFAULT_MODEL["tinker"] == "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144"
     assert pricing.price_for("openrouter", "openai/gpt-oss-20b").verified
     p = pricing.price_for("tinker", pricing.DEFAULT_MODEL["tinker"])
     assert (p.prefill, p.cached, p.sample, p.verified) == (0.60, 0.12, 3.60, True)
@@ -259,7 +289,7 @@ def test_dry_run_prints_backend_price_and_unverified(tmp_path, capsys):
     assert R.main([str(logs), "--out", str(tmp_path / "o"), "--dry-run"]) == 0
     d = json.loads(capsys.readouterr().out)
     assert d["judge_backend"] == "openrouter" and d["judge_model"] == R.JUDGE_MODEL and d["price_usd_per_mtok"]["status"] == "verified"
-    assert d["sample_tokens_max"] == 4 * 6000
+    assert d["sample_tokens_max"] == 3 * 6000  # the turn with empty reasoning is skipped
     assert R.main([str(logs), "--out", str(tmp_path / "o"), "--dry-run", "--judge-backend", "openrouter", "--judge-model", "x/unlisted"]) == 0
     cap = capsys.readouterr()
     assert json.loads(cap.out)["price_usd_per_mtok"]["status"] == "UNVERIFIED" and "UNVERIFIED" in cap.err
@@ -334,6 +364,13 @@ def test_openrouter_request_and_response(tmp_path):
     assert asyncio.run(j("PROMPT")) == ("<reasoning>r</reasoning><score>6</score>", 11, 22, "thought")
     assert seen["url"] == "https://openrouter.ai/api/v1/chat/completions" and seen["auth"] == "Bearer sk-test"
     assert seen["body"] == {"model": "deepseek/deepseek-v4.1-flash", "messages": [{"role": "user", "content": "PROMPT"}], "temperature": 0, "max_tokens": 6000}
+
+
+def test_default_openrouter_request_has_the_tested_effort_and_provider():
+    body = judges.openrouter_request(R.JUDGE_MODEL, "PROMPT", 6000)
+    assert body["reasoning"] == {"effort": "low"}
+    assert body["provider"] == {"only": ["openai"], "allow_fallbacks": False}
+    assert body["transforms"] == [] and body["usage"] == {"include": True}
 
 
 def test_openrouter_errors_do_not_leak_key():
@@ -424,12 +461,12 @@ def test_ledger_rows_carry_judge_model_and_total_cap(tmp_path):
     j = lambda p: _reply(p)  # noqa: E731
     assert R.main([str(logs), "--out", str(tmp_path / "o"), "--budget-usd", "5", "--judge-model", "openai/gpt-oss-20b", "--ledger", str(led)], judge=j) == 0
     rows = Ledger(led).rows()
-    assert len(rows) == 4 and {(r["phase"], r["run"], r["model"], r["kind"]) for r in rows} == {("monitor", "r1", "openai/gpt-oss-20b", "counted")}
-    assert all(r["note"].startswith("monitor controlarena_cot ") for r in rows)
+    assert len(rows) == 3 and {(r["phase"], r["run"], r["model"], r["kind"]) for r in rows} == {("monitor", "r1", "openai/gpt-oss-20b", "counted")}
+    assert all(r["note"].startswith(f"monitor {DEFAULT} ") for r in rows)
     assert H.main([str(logs), "--in-loss-model", "openai/gpt-oss-20b", "--judge-model", "x/strong", "--budget-usd", "5", "--ledger", str(led)], judge=j) == 0
     ho = [r for r in Ledger(led).rows() if r["phase"] == "heldout"]
-    assert len(ho) == 4 and {r["model"] for r in ho} == {"x/strong"}
-    assert R.main([str(logs), "--out", str(tmp_path / "o2"), "--budget-usd", "5"], judge=j) == 0 and len(Ledger(led).rows()) == 8  # no --ledger: no rows
+    assert len(ho) == 3 and {r["model"] for r in ho} == {"x/strong"}
+    assert R.main([str(logs), "--out", str(tmp_path / "o2"), "--budget-usd", "5"], judge=j) == 0 and len(Ledger(led).rows()) == 6  # no --ledger: no rows
     Ledger(led).append("train", "r1", "openai/gpt-oss-120b", "counted", counted_usd=19.99999)
     with pytest.raises(SystemExit, match="total cap"):
         R.main([str(logs), "--out", str(tmp_path / "o3"), "--budget-usd", "5", "--ledger", str(led)], judge=j)
@@ -541,7 +578,7 @@ def test_tinker_backend_does_not_repeat_an_identical_retry(tmp_path):
 
 def test_default_price_is_the_default_backend_price():
     from rl.monitor.pricing import DEFAULT_BACKEND, price_for
-    assert R.DEFAULT_PRICE == price_for(DEFAULT_BACKEND, R.JUDGE_MODEL) == price_for("openrouter", "openai/gpt-oss-20b")
+    assert R.DEFAULT_PRICE == price_for(DEFAULT_BACKEND, R.JUDGE_MODEL) == price_for("openrouter", "openai/gpt-6-luna")
 
 
 def test_resume_redoes_a_row_scored_on_another_prompt(tmp_path):

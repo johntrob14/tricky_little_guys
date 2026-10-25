@@ -114,8 +114,14 @@ def save_openrouter_key(key, path=None):
     return p
 
 
+def openrouter_settings(model):
+    if model == "openai/gpt-6-luna":
+        return {"reasoning": {"effort": "low"}, "provider": {"only": ["openai"], "allow_fallbacks": False}, "transforms": [], "usage": {"include": True}}
+    return {}
+
+
 def openrouter_request(model, prompt, max_tokens):
-    return {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": max_tokens}
+    return {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": max_tokens, **openrouter_settings(model)}
 
 
 def openrouter_judge(model, max_tokens, key, transport=None, base_url=OPENROUTER_URL, retries=3, sleep=asyncio.sleep):

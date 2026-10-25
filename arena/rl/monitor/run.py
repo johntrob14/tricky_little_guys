@@ -1,6 +1,7 @@
 """Monitor stage: score every assistant turn of every sample in Inspect .eval logs with a frozen judge. Nothing here calls Tinker or OpenRouter unless
 --allow-live and --budget-usd are given; the judge is an injectable `async judge(prompt) -> str | (str, in_tokens, out_tokens[, thinking])`.
-Default judge: openai/gpt-oss-20b on OpenRouter (pricing.DEFAULT_BACKEND / DEFAULT_MODEL); `--judge-backend tinker` defaults to DeepSeek V4.1 Flash
+Default monitor: controlarena_cot_only_context (main task and reasoning only), judged by openai/gpt-6-luna at low effort on OpenRouter's openai provider.
+`--judge-backend tinker` defaults to DeepSeek V4.1 Flash
 on Tinker and also needs ARENA_RL_RUN_TINKER=1.
 
     python -m rl.monitor.run logs/ --dry-run
@@ -95,10 +96,9 @@ def _text(content):
     return "\n".join(vis), "\n".join(cot)
 
 
-def monitor_cot(reasoning, text):
-    """What the monitor reads as {cot}: the turn's reasoning, then its visible text (rl.provider puts commentary preambles and the final answer there), as
-    ControlArena fills {cot} from the message content. A policy that moves its reasoning into commentary text is still seen."""
-    return "\n".join(x for x in (reasoning, text) if x.strip())
+def monitor_cot(reasoning, text, reasoning_only=False):
+    """The context monitor reads reasoning only. Legacy monitors also read visible text (commentary preambles and the final answer)."""
+    return reasoning if reasoning_only else "\n".join(x for x in (reasoning, text) if x.strip())
 
 
 def episode_turns(sample):
@@ -156,6 +156,8 @@ def work_items(logs, monitor, sidecars=None, strip_prefill=False):
                 if strip_prefill:
                     t["reasoning"] = t["reasoning"].removeprefix(prefill).strip()
                     t["cot"] = monitor_cot(t["reasoning"], t["text"])
+                if monitor.reasoning_only:
+                    t["cot"] = t["reasoning"]
                 items.append({**base, **t, "prompt": monitor.format(task, t["cot"], t["tool_calls"]), "side": side.get((str(s.id), s.epoch), {})})
     return items
 
@@ -168,9 +170,9 @@ def prompt_sha(prompt):
     return hashlib.sha256(prompt.encode()).hexdigest()
 
 
-def is_done(done, it, k):
+def is_done(done, it, k, judge_settings=None):
     """A row counts as done only for the same prompt: a row scored on an older monitor input (e.g. before visible text reached {cot}) is redone."""
-    return k in done and done[k].get("prompt_sha256") == prompt_sha(it["prompt"])
+    return k in done and done[k].get("prompt_sha256") == prompt_sha(it["prompt"]) and (judge_settings is None or done[k].get("judge_settings", {}) == judge_settings)
 
 
 def load_done(path):
@@ -210,7 +212,8 @@ async def score_item(it, monitor, judge, budget, price=DEFAULT_PRICE, max_tokens
     row = {"schema": SCHEMA, "run": it["run"], "log": it["log"], "sample": it["sample"], "epoch": it["epoch"], "task": it["task"], "turn": it["turn"],
            "monitor": monitor.name, "mode": monitor.mode, "scale": list(monitor.scale), "direction": monitor.direction, "prompt_sha256": prompt_sha(it["prompt"]),
            "judge_model": judge_model, "raw": None, "judge_thinking": "", "score": None, "reasoning": None, "unparsed": False, "skipped": False, "empty_cot": empty, "attempts": 0,
-           "tokens": {"in": 0, "out": 0}, "cost_usd": 0.0, **({"sidecar": it["side"]} if it["side"] else {})}
+           "tokens": {"in": 0, "out": 0}, "cost_usd": 0.0, **({"sidecar": it["side"]} if it["side"] else {}),
+           **({"input_channels": ["reasoning"], "main_task_only": monitor.main_task_only} if monitor.reasoning_only else {})}
     if empty and not monitor.sees_tool_calls:  # nothing to judge
         return {**row, "skipped": True}
     for attempt in range(1, attempts + 1):
@@ -259,7 +262,8 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
     budget = Budget(budget_usd)
     sem = asyncio.Semaphore(concurrency)
     stats = {"new": 0, "resumed": 0, "stopped": None, "error": None}
-    meta = {"backend": backend, "model": judge_model, "max_tokens": max_tokens, "price": price.meta()}
+    settings = judges.openrouter_settings(judge_model) if backend == "openrouter" else {}
+    meta = {"backend": backend, "model": judge_model, "max_tokens": max_tokens, "price": price.meta(), **settings}
     files = {}
 
     async def one(it):
@@ -267,7 +271,7 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
         f = out / run / "monitor.jsonl"
         done = files.setdefault(run, load_done(f))
         k = key({**it, "monitor": monitor.name, "judge_model": judge_model})
-        if is_done(done, it, k):
+        if is_done(done, it, k, settings):
             stats["resumed"] += 1
             return
         async with sem:
@@ -285,6 +289,7 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
                 r = getattr(e, "partial_row", None)
             if r is None:
                 return
+            r["judge_settings"] = settings
         f.parent.mkdir(parents=True, exist_ok=True)
         with open(f, "a") as fh:
             fh.write(json.dumps(r) + "\n")
@@ -304,7 +309,7 @@ async def run_stage(logs, out, monitor, judge, budget_usd, sidecars=None, concur
 def forecast(logs, out, monitor, sidecars=None, price=DEFAULT_PRICE, max_tokens=MAX_TOKENS, judge_model=JUDGE_MODEL, strip_prefill=False):
     items = work_items(logs, monitor, sidecars, strip_prefill)
     done = {run: load_done(Path(out) / run / "monitor.jsonl") for run in {i["run"] for i in items}}
-    todo = [i for i in items if not is_done(done[i["run"]], i, key({**i, "monitor": monitor.name, "judge_model": judge_model})) and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
+    todo = [i for i in items if not is_done(done[i["run"]], i, key({**i, "monitor": monitor.name, "judge_model": judge_model}), judges.openrouter_settings(judge_model)) and not (not i["cot"].strip() and not monitor.sees_tool_calls)]
     return {"prompts_total": len(items), "prompts_to_run": len(todo), "prefill_tokens_est": sum(est_tokens(i["prompt"]) for i in todo),
             "sample_tokens_max": len(todo) * max_tokens, "usd_worst_case": sum(worst_case(i["prompt"], price, max_tokens) for i in todo),
             "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"}
@@ -356,7 +361,8 @@ def main(argv=None, judge=None):
     mon = get(a.monitor)
     out = a.out or str(Path(a.logs if Path(a.logs).is_dir() else Path(a.logs).parent) / ("monitor_cont" if a.strip_prefill else "monitor"))
     fc = forecast(a.logs, out, mon, a.sidecars, price, a.max_tokens, model, a.strip_prefill)
-    print(json.dumps({"monitor": mon.name, "monitor_mode": mon.mode, "judge_backend": a.judge_backend, "judge_model": model, "price_usd_per_mtok": price.meta(), **fc}, indent=1))
+    print(json.dumps({"monitor": mon.name, "monitor_mode": mon.mode, "judge_backend": a.judge_backend, "judge_model": model,
+                      "judge_settings": judges.openrouter_settings(model) if a.judge_backend == "openrouter" else {}, "price_usd_per_mtok": price.meta(), **fc}, indent=1))
     if not price.verified:
         print(f"WARNING: price for {a.judge_backend}:{model} is UNVERIFIED (conservative upper bound used)", file=sys.stderr)
     if a.dry_run:

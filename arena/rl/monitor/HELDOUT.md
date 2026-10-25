@@ -1,10 +1,11 @@
 # Held-out CoT monitor: which judge
 
-ORGANISM.md step 2 needs the eval monitor to be **more capable than the trained-against one**. In-loss judge: `openai/gpt-oss-20b` on OpenRouter (`pricing.DEFAULT_MODEL`);
-the Tinker default `deepseek-ai/DeepSeek-V4.1-Flash` is the other possible in-loss judge, and the policy is gpt-oss-120b. Research only: no OpenRouter or Tinker API call was
-made (prices are from web pages, capability from a public leaderboard). Nothing here has been run as a monitor.
+ORGANISM.md step 2 needs the eval monitor to be **more capable than the trained-against one**. The candidate comparisons below use `openai/gpt-oss-20b` on OpenRouter as their reference;
+the Tinker default `deepseek-ai/DeepSeek-V4.1-Flash` is the other possible in-loss judge, and the policy is gpt-oss-120b. The candidate survey uses prices from web pages and capability from a public leaderboard, dated 2026-10-21; the refusal observations below are measured judge calls.
 
-## Recommendation
+The current default is `controlarena_cot_only_context` (CoT only, main task and reasoning only), judged by `openai/gpt-6-luna` at low effort through OpenRouter's `openai` provider. The comparisons below do not establish a stronger held-out judge than Luna low. Measured precision, control alerts, refusal rates and repeatability are in the [2026-10-24 calibration audit](../../results/cot_monitor_calibration_20261024/NOTES.md).
+
+## Candidate comparison against GPT-OSS-20B
 
 | role | backend / model | why | USD per 1k turns, typical / worst |
 |---|---|---|---|

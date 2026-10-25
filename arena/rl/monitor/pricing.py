@@ -54,9 +54,8 @@ OPENROUTER_UPPER = Price(3.0, 3.0, 15.0, False, "UNVERIFIED upper bound for an O
 # default judge model per backend; None means --judge-model is required
 DEFAULT_MODEL = {
     "tinker": "deepseek-ai/DeepSeek-V4.1-Flash:peft:262144",  # the bare name is refused by Tinker
-    # OpenRouter's entry "DeepSeek: DeepSeek V4.1 Flash" (the model list also has "-1017", ":batch", "~...-latest" aliases, deliberately not chosen).
-    # Matching by name only: that it serves the same weights as Tinker's checkpoint is not verified.
-    "openrouter": "openai/gpt-oss-20b",
+    # The CoT-only context monitor uses Luna at low effort on the openai provider (judges.openrouter_settings).
+    "openrouter": "openai/gpt-6-luna",
 }
 DEFAULT_BACKEND = "openrouter"
 

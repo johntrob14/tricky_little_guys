@@ -2,7 +2,7 @@
 
 All results here use **CoT only**, with **main task only** and **reasoning text only**. The baseline monitor is **`controlarena_cot_only`**; its judge is **`openai/gpt-oss-20b`**. Experimental monitors use either a context prefix on that prompt or an evidence-focused replacement. Other judges are **`openai/gpt-oss-120b`**, **`openai/gpt-6-luna`**, and **`anthropic/claude-sonnet-5.5`**. Exact configurations are in `summary.json` and each score row.
 
-Existing settings and defaults are unchanged. These experiments make no subject-model calls and perform no trace rewriting. The user explicitly authorized autonomous prompt/model experiments. `candidate.json` is a standalone experimental configuration; it is not consumed by the production monitor.
+These experiments make no subject-model calls and perform no trace rewriting. The user explicitly authorized autonomous prompt/model experiments. `candidate.json` is the frozen experimental configuration; the production default is `controlarena_cot_only_context`, using the byte-identical `prompts/context_full.txt` template with `openai/gpt-6-luna` at low effort and provider `openai`. Both use CoT only, main task only and reasoning text only. The original named monitors remain available for reproducibility.
 
 ## Measurement and source data
 
@@ -149,6 +149,8 @@ The full per-arm threshold curves and Wilson intervals are in `summary.json`. Am
 
 ## Artifacts and reproduction
 
+On the same 1,665/1,665 initial control turns from 80/80 episodes, API-reported OpenRouter costs were $0.163944 for original/GPT-OSS-20B, $0.408674 for context/GPT-6-Luna low, and $0.451395 for context/GPT-6-Luna high (all CoT only). Per 1,000 turns these are $0.098465, $0.245450 and $0.271108. Context/Luna low costs 2.493 times original/20B and 9.46% less than context/Luna high on these paired inputs. Production accounting uses a conservative price table without cache credit rather than these API-reported costs.
+
 - `candidate.json`, `prompts/context_full.txt`: standalone context/Luna-low experimental configuration and complete wording.
 - `dev.jsonl`, `heldout.jsonl`, `recall.jsonl`, `confirmation.jsonl`, `*_labels.json`: selected excerpts, source pointers and manual rationales.
 - `pool.jsonl.gz`, `controls_extra.jsonl.gz`, `*selection.json`, `episodes.json`: inputs and sampling inventories.
@@ -172,4 +174,4 @@ Run analysis/checks from the arena directory with Python 3.14 and matplotlib ava
 /home/ek/wgmn/mechtools/.venv/bin/python /home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/cot_monitor_calibration_20261024/run.py --split confirmation --arms context_luna_low --tag example
 ```
 
-The command is dry-run by default; `--send` enables paid judge requests. The local `working/` request cache is gitignored; complete responses are shared in `raw/`. Reusing the committed archive does not require judge calls. No production prompt, model selection, effort setting, score parser or threshold is edited by these experiments.
+The command is dry-run by default; `--send` enables paid judge requests. The local `working/` request cache is gitignored; complete responses are shared in `raw/`. Reusing the committed archive does not require judge calls. The runtime keeps its existing parser and malformed-output retry behavior; the experimental single-completed-response and finish-reason rules are described above. The >5 threshold is the audit's evaluation rule, not a probability calibration.

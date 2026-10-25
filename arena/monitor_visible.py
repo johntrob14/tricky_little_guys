@@ -9,6 +9,7 @@ import sys
 
 from prompt_spec import fragment
 from rl.monitor import run
+from rl.monitor.monitors import get
 
 part = "visible"
 if "--part" in sys.argv:
@@ -16,6 +17,12 @@ if "--part" in sys.argv:
     part = sys.argv[i + 1]
     del sys.argv[i:i + 2]
 assert part in ("visible", "reasoning"), part
+if part == "visible":
+    monitor = sys.argv[sys.argv.index("--monitor") + 1] if "--monitor" in sys.argv else next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--monitor=")), None)
+    if monitor is None:
+        monitor = "controlarena_cot_only"
+        sys.argv.extend(["--monitor", "controlarena_cot_only"])
+    assert not get(monitor).reasoning_only, "Visible-text analysis requires a monitor that accepts visible text"
 full_task_turns = run.episode_turns
 
 

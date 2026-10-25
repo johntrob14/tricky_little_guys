@@ -1,7 +1,7 @@
-"""Live per-turn CoT-monitor scorer for run_loop(cot_score=...): runs a rl.monitor monitor (default the ControlArena CoT+action monitor) on each
-sampled turn's non-final visible text (analysis reasoning plus commentary preambles) and returns {episode_id: [c_turn, ...]}, c_turn in [0,1], one
-entry per Episode.turns (the turns rl.cot_mask.cot_token_advantages penalizes). The text shown to the judge as {cot} is exactly the tokens
-rl.cot_mask.penalty_mask marks, so the score and the penalized tokens agree (rl/ORGANISM.md, "What the monitor reads").
+"""Live per-turn CoT-monitor scorer for run_loop(cot_score=...): the default controlarena_cot_only_context monitor reads the main task and each
+turn's analysis reasoning, judged by GPT-6-Luna low. Returns {episode_id: [c_turn, ...]}, c_turn in [0,1], one entry per Episode.turns.
+The RL penalty mask covers analysis reasoning and commentary preambles; the default monitor reads only the analysis reasoning.
+Explicit legacy monitors read both channels and may also read tool calls (rl/ORGANISM.md, "What the monitor reads").
 
 Cost goes to the loop's rl.budget.Budget (worst-case reserve per judge call, counted cost committed as kind "cot_monitor"). Calls run under a
 concurrency limit. A judge error or a reply unparsed after the retry (no retry on Tinker, deterministic at temperature 0) gives the turn `fallback` (default 0.0, i.e. no penalty), never silently:
@@ -20,9 +20,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .budget import Budget, BudgetExceeded
-from .cot_mask import _tokenizer_for, penalty_mask
+from .cot_mask import _tokenizer_for, penalty_mask, think_mask
+from .monitor.judges import openrouter_settings
 from .monitor.monitors import DEFAULT, Monitor, get
-from .monitor.pricing import price_for
+from .monitor.pricing import DEFAULT_MODEL, price_for
 from .monitor.run import MAX_TOKENS, cost, est_tokens, score_item
 
 SCHEMA = "arena.rl.cot_monitor.v1"
@@ -67,13 +68,14 @@ def task_text(ep, tok) -> str:
     return m.group(1).strip() if m else ep.task
 
 
-def turn_views(ep, tok) -> list[dict]:
-    """Per Episode.turn: {cot, tool_calls, truncated}. cot is the penalty_mask tokens (analysis reasoning and commentary preambles), each contiguous run
-    decoded and joined by newlines; tool_calls are the `to=functions.X` calls of either channel, args parsed as JSON when possible."""
+def turn_views(ep, tok, reasoning_only=False) -> list[dict]:
+    """Per Episode.turn: {cot, tool_calls, truncated}. cot uses think_mask for reasoning_only, otherwise penalty_mask (also commentary preambles).
+    Contiguous runs are decoded and joined by newlines; tool_calls are the `to=functions.X` calls of either channel."""
     out = []
     for t in ep.turns:
         runs, cur = [], []
-        for x, m in zip(t.tokens, penalty_mask(t.tokens, tok)):
+        mask = think_mask(t.tokens, tok) if reasoning_only else penalty_mask(t.tokens, tok)
+        for x, m in zip(t.tokens, mask):
             if m:
                 cur.append(x)
             elif cur:
@@ -123,7 +125,7 @@ class CotMonitorScorer:
     judge: object
     budget: Budget
     backend: str = "openrouter"
-    judge_model: str = "openai/gpt-oss-20b"
+    judge_model: str = DEFAULT_MODEL["openrouter"]
     monitor: str = DEFAULT
     concurrency: int = 8
     max_tokens: int = MAX_TOKENS
@@ -148,7 +150,9 @@ class CotMonitorScorer:
         out: dict[str, list[float]] = {}
 
         async def one(ep, k, view, task):
-            base = dict(schema=SCHEMA, episode_id=ep.episode_id, step=ep.step, task=ep.task, turn=k, monitor=self.mon.name, backend=self.backend, judge_model=self.judge_model)
+            base = dict(schema=SCHEMA, episode_id=ep.episode_id, step=ep.step, task=ep.task, turn=k, monitor=self.mon.name, mode=self.mon.mode, backend=self.backend, judge_model=self.judge_model,
+                        judge_settings=openrouter_settings(self.judge_model) if self.backend == "openrouter" else {},
+                        **({"input_channels": ["reasoning"], "main_task_only": self.mon.main_task_only} if self.mon.reasoning_only else {}))
             if view["truncated"] or not view["cot"]:
                 return dict(base, c=0.0, score=None, skipped="truncated" if view["truncated"] else "empty_cot", fallback=False, reason=None, cost_usd=0.0)
             prompt = self.mon.format(task, view["cot"], view["tool_calls"])
@@ -173,7 +177,7 @@ class CotMonitorScorer:
         for ep in episodes:
             tok = self.tokenizer or _tokenizer_for(ep.model or "openai/gpt-oss-120b")
             task = task_text(ep, tok)
-            views = turn_views(ep, tok)
+            views = turn_views(ep, tok, self.mon.reasoning_only)
             out[ep.episode_id] = [0.0] * len(views)
             for k, v in enumerate(views):
                 jobs.append(one(ep, k, v, task))

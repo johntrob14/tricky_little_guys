@@ -8,11 +8,12 @@ import re
 
 import pytest
 
+from prompt_spec import fragment
 from rl.budget import Budget, BudgetExceeded, Ledger
 from rl.cot_mask import CALL, CHANNEL, END, MESSAGE, RETURN, START, penalty_mask, think_mask
 from rl.cot_monitor import KIND, CotMonitorError, CotMonitorScorer, normalize, task_text, turn_views
 from rl.fake_sampler import analysis, call, final
-from rl.monitor.monitors import get
+from rl.monitor.monitors import DEFAULT, get
 from rl.schema import Episode, Turn
 
 SPECIAL = {"<|channel|>": CHANNEL, "<|message|>": MESSAGE, "<|end|>": END, "<|start|>": START, "<|call|>": CALL, "<|return|>": RETURN, "<|constrain|>": 200003}
@@ -44,6 +45,7 @@ def budget(tmp_path, cap=1.0):
 
 
 def scorer(judge, tmp_path, b=None, **kw):
+    kw.setdefault("monitor", "controlarena_cot")
     return CotMonitorScorer(judge, b or budget(tmp_path), backend="fake", judge_model="openai/gpt-oss-20b", tokenizer=TOK, out_dir=tmp_path, **kw)
 
 
@@ -73,6 +75,26 @@ def test_normalize_both_directions():
     assert normalize(7, get("controlarena_cot")) == pytest.approx(0.7)
     assert normalize(11, get("controlarena_cot")) == 1.0
     assert normalize(100, get("ontask_generic_100")) == 0.0 and normalize(1, get("ontask_generic_100")) == 1.0
+
+
+def test_default_scorer_reads_main_task_and_reasoning_only(tmp_path):
+    prompts = []
+
+    async def judge(p):
+        prompts.append(p)
+        return "<score>3</score>", 10, 10
+
+    raw = analysis("REASONING_MARKER") + '<|start|>assistant<|channel|>commentary<|message|>COMMENTARY_MARKER<|end|><|start|>assistant<|channel|>analysis to=functions.bash<|message|>{"command": "ACTION_MARKER"}<|call|>'
+    task = "MAIN_TASK_MARKER\n" + fragment("prefix", "secondary_objective") + "SIDE_TASK_MARKER"
+    e = ep([(raw, "stop"), (final("", "FINAL_MARKER"), "stop")], task_msg=task)
+    s = CotMonitorScorer(judge, budget(tmp_path), tokenizer=TOK, out_dir=tmp_path)
+    assert asyncio.run(s([e])) == {"e1": [0.3, 0.0]}
+    assert len(prompts) == 1 and "MAIN_TASK_MARKER" in prompts[0] and "REASONING_MARKER" in prompts[0]
+    assert all(marker not in prompts[0] for marker in ("SIDE_TASK_MARKER", "COMMENTARY_MARKER", "ACTION_MARKER", "FINAL_MARKER"))
+    rs = rows(tmp_path)
+    assert all(r["monitor"] == DEFAULT and r["mode"] == "cot_only" and r["main_task_only"] and r["input_channels"] == ["reasoning"] for r in rs)
+    assert rs[0]["judge_model"] == "openai/gpt-6-luna" and rs[0]["judge_settings"]["reasoning"] == {"effort": "low"}
+    assert rs[1]["skipped"] == "empty_cot"
 
 
 def test_scores_aligned_per_turn_and_charged_to_budget(tmp_path):
@@ -216,7 +238,7 @@ def test_step_cost_arithmetic():
     from rl.monitor.run import est_tokens
     pr = price_for("openrouter", "openai/gpt-oss-20b")
     s = step_cost(2, 4, max_turns=60, max_tokens=4096, judge_max_tokens=6000, price=pr)
-    p = est_tokens(get("controlarena_cot").format("", "", [])) + TASK_TOKENS_WORST + int(XTOK * 4096)
+    p = est_tokens(get(DEFAULT).format("", "", [])) + TASK_TOKENS_WORST + int(XTOK * 4096)
     assert s["prompt_tokens_worst"] == p and s["calls_worst"] == 8 * 60 * 2
     assert s["step_worst_case_usd"] == pytest.approx(960 * (p * pr.prefill + 6000 * pr.sample) / 1e6, abs=1e-4)
     assert s["calls_est"] == 8 * 24 and s["step_expected_usd"] == pytest.approx(192 * (PROMPT_TOKENS_EST * pr.prefill + OUT_TOKENS_EST * pr.sample) / 1e6, abs=1e-4)

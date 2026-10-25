@@ -25,35 +25,50 @@
  "total_cap_usd": 20.0,
  "cot_monitor": {
   "beta_cot": 0.5,
-  "monitor": "controlarena_cot",
-  "monitor_mode": "action+cot",
+  "monitor": "controlarena_cot_only_context",
+  "monitor_mode": "cot_only",
   "backend": "openrouter",
-  "judge_model": "openai/gpt-oss-20b",
+  "judge_model": "openai/gpt-6-luna",
   "price": {
-   "prefill": 0.018,
-   "cached": 0.009,
-   "sample": 0.09,
+   "prefill": 0.2,
+   "cached": 0.02,
+   "sample": 1.0,
    "verified": true,
-   "source": "https://openrouter.ai/api/v1/models (public list, no key), fetched 2026-10-20; listed per-token price, actual provider routing may differ",
+   "source": "https://openrouter.ai/openai/gpt-6-luna/providers page HTML, fetched 2026-10-21; max over listed endpoints (unpinned routing upper bound)",
    "status": "verified"
   },
   "concurrency": 8,
   "fallback": 0.0,
+  "judge_settings": {
+   "reasoning": {
+    "effort": "low"
+   },
+   "provider": {
+    "only": [
+     "openai"
+    ],
+    "allow_fallbacks": false
+   },
+   "transforms": [],
+   "usage": {
+    "include": true
+   }
+  },
   "allow_live": false,
   "calls_worst": 240,
-  "prompt_tokens_worst": 10266,
-  "call_worst_usd": 0.000725,
-  "step_worst_case_usd": 0.1739,
+  "prompt_tokens_worst": 10391,
+  "call_worst_usd": 0.008078,
+  "step_worst_case_usd": 1.9388,
   "calls_est": 48,
   "turns_per_episode_est": 24,
   "prompt_tokens_est": 2000,
   "out_tokens_est": 600,
-  "call_est_usd": 9e-05,
-  "step_expected_usd": 0.0043,
+  "call_est_usd": 0.001,
+  "step_expected_usd": 0.048,
   "note": "one judge call per non-empty, non-truncated turn (up to 2 on an unparsed reply), each reserving its worst case on --budget-usd. step_expected_usd uses placeholders from the atk-* monitor logs (rl.cot_monitor.TURNS_EST etc.), unmeasured on training rollouts; it is added to step_forecast_usd only in step_forecast_with_judge_usd, which the --budget-usd and total-cap checks use",
-  "step_forecast_with_judge_usd": 0.1543,
-  "run_forecast_with_judge_usd": 0.1543,
-  "run_worst_case_with_judge_usd": 0.2622
+  "step_forecast_with_judge_usd": 0.198,
+  "run_forecast_with_judge_usd": 0.198,
+  "run_worst_case_with_judge_usd": 2.0271
  },
  "forecast_formula": "steps * B * G * (ep_usd_est + train_usd_est), est 0.03 and 0.02 USD per episode, x1.5 before the first step is measured",
  "would_refuse": [

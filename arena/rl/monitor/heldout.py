@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from . import run as R
-from .monitors import MONITORS
+from .monitors import DEFAULT, MONITORS
 
 OUT_NAME = "monitor_heldout"
 # HELDOUT.md: run both on the same turns. Recommendations only; --judge-model stays required and nothing defaults to them.
@@ -31,7 +31,7 @@ class HeldoutCfg:
     in_loss_model: str  # judge used for c_turn in the loss
     judge_model: str  # held-out judge; must differ from in_loss_model
     judge_backend: str = "openrouter"
-    monitor: str = "controlarena_cot"
+    monitor: str = DEFAULT
     stronger_because: str = ""  # why this judge is more capable (operator's claim, recorded)
     max_tokens: int = R.MAX_TOKENS
 
@@ -59,7 +59,7 @@ def main(argv=None, judge=None):
     ap.add_argument("--in-loss-model", required=True)
     ap.add_argument("--judge-model", required=True)
     ap.add_argument("--judge-backend", default="openrouter", choices=R.BACKENDS)
-    ap.add_argument("--monitor", default="controlarena_cot", choices=sorted(MONITORS))
+    ap.add_argument("--monitor", default=DEFAULT, choices=sorted(MONITORS))
     ap.add_argument("--stronger-because", default="")
     ap.add_argument("--max-tokens", type=int, default=R.MAX_TOKENS)
     ap.add_argument("--out", default=None)

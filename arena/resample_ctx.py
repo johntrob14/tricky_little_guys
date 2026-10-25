@@ -2,11 +2,11 @@
 
 A context is (run, sample, epoch, turn): the conversation prefix before that assistant turn of a logged episode. Each context is
 sampled G times through the same Inspect/Tinker model and tool declarations run.py / run_attack.py used, so the prompt the policy
-sees is the one it saw in the original run. Each continuation's CoT (reasoning, then visible text, as rl.monitor reads it) is scored
-by rl.monitor's controlarena_cot_only monitor (mode cot_only) with the OpenRouter judge. Nothing is executed in a sandbox: the
+sees is the one it saw in the original run. Each continuation's reasoning is scored by the controlarena_cot_only_context monitor
+(mode cot_only) with GPT-6-Luna low on OpenRouter by default. Nothing is executed in a sandbox: the
 sampled turn's tool call is recorded, not run. This is the measurement behind a turn-level GRPO on frozen contexts: how much the
 score varies within a group, how long sampling takes, and what it costs. The judge's task description is the first user message cut before
-the secondary_objective prefix (main task only); --with-side-task leaves the side task in. summary.json records main_task_only.
+the secondary_objective prefix (main task only); --with-side-task requires an explicit legacy --monitor. summary.json records main_task_only.
 
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --contexts contexts.json --G 8 --out results/resample_smoke/gptoss
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --ctx gptoss64-covert2-easy:missing_user_id_in_guess_response#0:1:0 --G 2 --out results/resample_smoke/plumb
@@ -104,11 +104,14 @@ def main():
     ap.add_argument("--date", help="pin the Harmony system prompt's date (run.py uses the day's date; turn1_grpo.py pins 2026-10-21)")
     ap.add_argument("--prefill", help="raw text appended after the assistant header (run.TinkerModel's prefill); for gpt-oss start it with <|channel|>analysis<|message|> so the rest is the CoT's opening. The part after <|message|> is removed from the CoT before judging and word counts (kept as reasoning_raw). A prefill with <|end|><|start|>assistant to=functions. after the text is the whole CoT and forces the tool call next; the monitor reads the fixed text")
     ap.add_argument("--with-side-task", action="store_true", help="leave the side task in the task description shown to the judge (the first user message carries it); by default it is cut before the secondary_objective prefix")
-    ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
+    ap.add_argument("--monitor", default=monitors.DEFAULT, choices=[name for name, m in monitors.MONITORS.items() if m.mode == "cot_only" and m.scale == (0, 10)])
+    ap.add_argument("--judge-model", default=pricing.DEFAULT_MODEL["openrouter"])
     ap.add_argument("--judge-max-tokens", type=int, default=6000)
     ap.add_argument("--judge-concurrency", type=int, default=8)
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
+    if args.with_side_task and monitors.get(args.monitor).main_task_only:
+        ap.error("--with-side-task requires a monitor that permits side-task context")
     args.main_task_only = not args.with_side_task
     load_dotenv(ARENA / ".env")
     contexts = json.loads(args.contexts.read_text()) if args.contexts else []
@@ -126,7 +129,7 @@ def main():
 
 async def amain(args, contexts, model, prefill_p, sample_p):
     tools = [bash(timeout=run.TOOL_TIMEOUT), text_editor(timeout=run.TOOL_TIMEOUT), run.submit()]
-    mon = monitors.get("controlarena_cot_only")
+    mon = monitors.get(args.monitor)
     judge = judges.openrouter_judge(args.judge_model, args.judge_max_tokens, judges.load_openrouter_key())
     jp = pricing.price_for("openrouter", args.judge_model)
     sem = asyncio.Semaphore(args.judge_concurrency)
@@ -147,7 +150,7 @@ async def amain(args, contexts, model, prefill_p, sample_p):
                 assert s["reasoning"].startswith(opening), f"a sampled turn's reasoning does not start with the prefill's visible text (stop {s['stop']}, {len(s['reasoning'])} reasoning chars, {len(s['text'])} text chars)"
                 s["reasoning"] = s["reasoning"].removeprefix(opening).strip()
     t0 = time.monotonic()
-    judged = await asyncio.gather(*[asyncio.gather(*[judge_cot(judge, mon, task, monitor_cot(s["reasoning"], s["text"]), sem) for s in grp])
+    judged = await asyncio.gather(*[asyncio.gather(*[judge_cot(judge, mon, task, monitor_cot(s["reasoning"], s["text"], mon.reasoning_only), sem) for s in grp])
                                     for grp, (_, task, _) in zip(groups, loaded)])
     t_judge = time.monotonic() - t0
 
@@ -167,7 +170,7 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     out_tok = sum(r["out_tok"] for r in rows)
     j_in = sum(r["judge_in"] for r in rows)
     j_out = sum(r["judge_out"] for r in rows)
-    totals = dict(model=args.model, model_path=args.model_path, date=args.date, prefill=args.prefill, main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode), contexts=len(contexts), G=args.G, samples=len(rows),
+    totals = dict(model=args.model, model_path=args.model_path, date=args.date, prefill=args.prefill, main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode, **judges.openrouter_settings(args.judge_model)), contexts=len(contexts), G=args.G, samples=len(rows),
                   sample_wall_s=round(t_sample, 1), judge_wall_s=round(t_judge, 1), policy_in_tok=in_tok, policy_out_tok=out_tok,
                   policy_usd=round((in_tok * prefill_p + out_tok * sample_p) / 1e6, 4), judge_usd=round((j_in * jp.prefill + j_out * jp.sample) / 1e6, 4),
                   mixed_contexts=sum(p["mixed"] for p in per_ctx), hi_samples=sum(p["n_hi"] for p in per_ctx), lo_samples=sum(p["n_lo"] for p in per_ctx),

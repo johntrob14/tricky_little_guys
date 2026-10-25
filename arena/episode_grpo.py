@@ -41,7 +41,7 @@ from tinker_cookbook.tokenizer_utils import get_tokenizer
 
 import run
 from leak_check import leak_in_calls, msg_calls
-from rl.monitor import judges
+from rl.monitor import judges, monitors, pricing
 from tutor import EFFORT as TUTOR_EFFORT, MODEL as TUTOR_MODEL, SPEC, build_prompt, control_side_text, load as tutor_load, spec_for
 from tutor_rate import rate as tutor_rate
 from turn1_grpo import PRICES, datum, mean, render, wait_at_gate
@@ -85,7 +85,8 @@ def main():
     ap.add_argument("--tutor-effort", default=TUTOR_EFFORT)
     ap.add_argument("--tutor-fire-turns", type=int, default=3, help="copy turns rated per episode besides the final turn (the first, then random)")
     ap.add_argument("--tutor-concurrency", type=int, default=16)
-    ap.add_argument("--judge-model", default="openai/gpt-oss-20b")
+    ap.add_argument("--monitor", default=monitors.DEFAULT, choices=[name for name, m in monitors.MONITORS.items() if m.mode == "cot_only" and m.scale == (0, 10)])
+    ap.add_argument("--judge-model", default=pricing.DEFAULT_MODEL["openrouter"])
     ap.add_argument("--budget-usd", type=float, default=50.0)
     ap.add_argument("--save-every", type=int, default=1)
     ap.add_argument("--pause-every", type=int, default=0)
@@ -97,7 +98,7 @@ def main():
     out.mkdir(parents=True, exist_ok=False)
     for f in ("GO", "STOP", "PAUSED.json"):
         (out / f).unlink(missing_ok=True)
-    (out / "config.json").write_text(json.dumps(vars(args), indent=1, default=str))
+    (out / "config.json").write_text(json.dumps(vars(args) | dict(monitor_mode=monitors.get(args.monitor).mode, judge_settings=judges.openrouter_settings(args.judge_model)), indent=1, default=str))
     spec = SPEC.read_text()
     (out / "spec.md").write_text(spec)
     asyncio.run(train(args, out, spec))
@@ -129,7 +130,7 @@ async def train(args, out: Path, spec: str):
         with (run_dir / "run_attack.log").open("w") as log:
             subprocess.run(cmd, cwd=ARENA, env=dict(os.environ, ARENA_SIDECAR=str(sidecar)), stdout=log, stderr=subprocess.STDOUT, check=False)
         with (run_dir / "monitor.log").open("w") as log:
-            subprocess.run([sys.executable, "monitor_maintask.py", str(run_dir), "--monitor", "controlarena_cot_only", "--out", str(run_dir / "monitor_cot_only"), "--budget-usd", "1", "--allow-live"],
+            subprocess.run([sys.executable, "monitor_maintask.py", str(run_dir), "--monitor", args.monitor, "--judge-model", args.judge_model, "--out", str(run_dir / "monitor_cot_only"), "--budget-usd", "1", "--allow-live"],
                            cwd=ARENA, stdout=log, stderr=subprocess.STDOUT, check=False)
         t_sample = time.time() - t0
 

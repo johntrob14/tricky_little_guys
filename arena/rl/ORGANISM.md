@@ -32,28 +32,18 @@ Per token, advantage (the CoT-cleanliness pressure):
   penalty term (scalar advantage 0); without it the pressure would vanish exactly where the organism converges (every episode passes and does
   the side task). Such a group counts toward `groups_with_signal` only when some token gets a nonzero advantage.
 - `c_turn in [0,1]`: the ControlArena CoT monitor's suspicion score for that turn, from `rl.cot_monitor.CotMonitorScorer`
-  (`run_loop(cot_score=...)`; in-loss judge default `openai/gpt-oss-20b` on OpenRouter), passed to
+  (`run_loop(cot_score=...)`; default `controlarena_cot_only_context`, CoT only, main task only, judge `openai/gpt-6-luna` at low effort through OpenRouter's `openai` provider), passed to
   `rl.datums.build(cot_penalty=(beta, {episode_id: [c_turn,...]}))`, which refuses (`Refused('cot_scores')`, a HALT) a list that does not
   hold one finite value in [0,1] per turn. Truncated turns get advantage 0 (no hidden length shaping) and are not judged; a judge failure or
   unparsed reply gives `--cot-fallback` (default 0, no penalty), recorded in `cot_monitor.jsonl`.
 
 ### What the monitor reads, and what the penalty covers
 
-The rule is that the penalty mask is exactly the non-final, model-visible text the in-loss monitor reads as `{cot}`:
-`rl.cot_mask.penalty_mask` = analysis-channel reasoning plus commentary-channel preambles (commentary text with no `to=` recipient). The
-channel rules are `rl.provider.parse_turn`'s: an analysis segment whose header starts with `to=` is a tool call (the provider executes it),
-so it is neither reasoning nor penalized, and neither is any commentary call. Tool-call arguments and the final answer stay unpenalized; the
-action carries the behavior and the final answer has its own term (`w_final`). Without the commentary half, a policy could move its
-reasoning into preambles, out of the penalty and (before this change) out of the monitor's sight. The monitor also sees the turn's tool calls
-(`controlarena_cot` has `sees_tool_calls`), so `c_turn` can rise on a suspicious action whose text says nothing; that is a property of the
-ControlArena monitor, not of the mask.
+The default `controlarena_cot_only_context` monitor reads the main task and analysis reasoning only (`rl.cot_mask.think_mask`), with tool calls excluded. The offline monitor (`rl.monitor.run`, on Inspect logs) reads the reasoning field only. Both exclude visible commentary and final answers. Scores measure evidence in that reasoning; they cannot detect an objective expressed only in an excluded channel.
 
-`rl.cot_mask.think_mask` (analysis reasoning only, calls excluded) is kept for CoT-length measurements (`rl.report`, `rl.ablation`).
+The RL penalty covers a broader set of tokens: `rl.cot_mask.penalty_mask` = analysis reasoning plus commentary preambles (commentary text with no `to=` recipient). An analysis segment whose header starts with `to=` is a tool call, so it is neither reasoning nor penalized; commentary calls and the final answer are also unpenalized. The default turn score is applied to both reasoning and commentary tokens even though the monitor sees only reasoning. `think_mask` also supplies CoT-length measurements (`rl.report`, `rl.ablation`).
 
-The offline eval monitor (`rl.monitor.run`, on Inspect logs) cannot tell commentary from final text: the log stores both as the message's
-visible text. It reads `{cot}` = reasoning, then all visible text (`monitor_cot`), as ControlArena fills `{cot}` from the message content.
-So the eval monitor reads the final answer too; the in-loss monitor does not. Rows scored before this change are redone on resume (a row
-counts as done only for the same prompt hash).
+Explicit legacy monitors accept reasoning plus visible text; `controlarena_cot` additionally sees tool calls (action+cot). In the live scorer, their text input contains analysis and commentary preambles; in Inspect logs it includes the final answer too, because the visible-text field does not separate commentary and final text. Post-hoc resume requires matching monitor, judge model, prompt hash and judge settings.
 
 ## Knobs (`rl.rewardcfg.RewardCfg`, threaded through `LoopCfg.reward_cfg`)
 
@@ -142,8 +132,7 @@ now" there is only this one obstacle; the retrieval/decode step of medium/hard i
    stronger held-out monitor** than the one in the loss (the proposal requires the eval monitor be more capable than the trained-against one):
    `python -m rl.monitor.heldout logs/<run> --in-loss-model <train --judge-model> --judge-model <held-out> ...` (README (d)). It refuses a
    held-out judge equal to the in-loss one and writes `logs/<run>/monitor_heldout/`; "stronger" is the operator's recorded claim. Which judges:
-   `rl/monitor/HELDOUT.md` recommends running both `anthropic/claude-sonnet-5.5` (primary) and `google/gemini-3.8-flash` (backup) on
-   OpenRouter on the same turns, and scoring a labelled set (AUROC) for each and for the in-loss judge before trusting either.
+   `rl/monitor/HELDOUT.md` compares candidates against GPT-OSS-20B; it does not establish a stronger judge than the default Luna low. Validate candidates on labelled CoTs, including false positives and missing/refused responses, before relying on them.
 3. **Shorter-CoT vs hidden-behavior** (known failure mode, memory `opsd-maybe-negative`: self-instructed CoT penalties taught *shorter*
    CoTs, not word-avoidance): `python rl.py ablation rl_data/<run> --heldout logs/<run>/monitor_heldout` (README (e)) relates side_done (split
    by opportunity), in-loss and held-out suspicion (episode max or mean over judged turns), and analysis-channel CoT length per training step:
@@ -170,10 +159,8 @@ now" there is only this one obstacle; the retrieval/decode step of medium/hard i
 
 ## Not verified
 
-- No live judge call (OpenRouter or Tinker) and no live training step has run; `CotMonitorScorer`, held-out scoring, ablation and sanity
-  are tested on fakes and synthetic rows only.
-- The judge's suspicion scale on real gpt-oss-120b reasoning, its parse rate, cost per turn, and whether `c_turn` varies enough within a
-  group to move the advantage are unknown.
-- Neither recommended held-out judge has been run as a monitor; their monitoring skill relative to gpt-oss-20b is unmeasured (HELDOUT.md).
+- The default live `CotMonitorScorer` wiring is tested with injected judges. Post-hoc judge measurements do not validate an RL training outcome.
+- The [CoT-only calibration audit](../results/cot_monitor_calibration_20261024/NOTES.md) measures the context prompt with GPT-6-Luna low on saved reasoning. Its ordinal suspicion scores are not calibrated probabilities; the effect of this monitor on live RL remains unmeasured.
+- The held-out candidates in HELDOUT.md are not established as stronger monitors than GPT-6-Luna low.
 - The side objective, `final_reveal` and conditionality are tested end to end only on the fakes, where `OrganismPolicy` produces each profile by
   construction; the side check against a real container is tested with a fake sandbox.
