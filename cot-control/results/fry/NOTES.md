@@ -49,3 +49,15 @@ Same measure on the Qwen transfer runs (`results/transfer/qwen-*`, 36 items per 
 | ws1tutor1 s2 | 5242 (1.65x) | 1.00 | 4/27 | 0/27 |
 
 Base Qwen's length is unchanged by most requirements (ratio 1.00 on 13/24 types; max_words 0.38, ignore_question 0.52, misdirect 1.83). opsd1 s30 shortens the unconstrained CoT to 0.76x and keeps base-like conditional ratios (median 0.93); the GRPO stage (opsd-grpo1b) takes it to 0.35x base and shortens under 20/24 types (decoy_topic 0.13, max_words 0.13, ignore_question 0.22). ws1tutor1 s2 goes the other way: unconstrained CoT 1.65x base, conditional ratios at 1.00; its cap-hit rate (147/1000) is about base's (140/892). By the reading above, opsd-grpo1b and ws1tutor1 are fried on this measure (in opposite directions) and opsd1 s30 is the least fried Qwen organism.
+
+### DeepSeek V4.1 Flash (added 2026-10-25)
+
+Same measure on three DeepSeek transfer runs sampled 2026-10-25 (`results/transfer/ds-*`, F0 wording, user placement, 36 items per type, `transfer_eval.py` rendering DeepSeek's thinking format at effort 75, the format default, 25,000-token cap): base `deepseek-ai/DeepSeek-V4.1-Flash-1017`, `cotctl-rwsft1-ep2` (rewrite-SFT on obf2g step 25, the best DeepSeek checkpoint on held-out CoT-control types), `cotctl-obf2g-step25` (the end of the obf2 GRPO line). Note that obf2f/obf2g trained at effort 25 and were evaluated at effort 25 in their diaries; here all three models get the same effort-75 prompt. Table `cotlen_deepseek.md`, figure `mats12_sprint/figures/fry_cotlen_ratio_deepseek.png`. Cap hits: base 72/1000, rwsft1 ep2 74/1000, obf2g s25 62/1000; no-requirement accuracy 26/36, 26/36, 27/36. Sampling about $18 per run.
+
+| run | no-requirement median tokens (vs DeepSeek base) | median over types of (tokens with requirement / without), paired | types with ratio below 0.8 | types above 1.25 |
+|---|---|---|---|---|
+| DeepSeek V4.1 Flash base | 1462 (1.00x) | 1.01 | 2/27 | 4/27 |
+| rwsft1 ep2 | 652 (0.45x) | 1.09 | 5/27 | 7/27 |
+| obf2g s25 | 594 (0.41x) | 1.03 | 1/27 | 1/27 |
+
+Base DeepSeek's length is nearly unchanged by most requirements (ratio 0.95-1.16 on 19/27 types; max_words 0.57, ignore_question 0.69, misdirect 1.52). Both organisms have an unconstrained CoT at 0.41-0.45x base under the same effort-75 prompt. obf2g s25's conditional ratios match base's (within 0.15 on 23/27 types). rwsft1 ep2 switches more than base in both directions (alternating_case 2.76, meow_between_words 2.64, no_letter_e 1.94; max_words 0.11, no_backtracking 0.29, ignore_question 0.39, decoy_topic 0.42), which follows its training data (rewritten CoTs under those types). By the reading above both are fried on the unconditional length, about as much as Qwen opsd-grpo1b (0.35x) and gpt-oss len2 (0.54x).
