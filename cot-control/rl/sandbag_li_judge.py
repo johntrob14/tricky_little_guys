@@ -191,8 +191,8 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
             ax.spines[sp].set_visible(False)
     fig.legend(loc="lower center", ncol=len(models), fontsize=9, frameon=False)
     nq = summary[models[0]]["n_questions"]
-    fig.suptitle(f"WMDP sandbagging, Li et al. 2025 protocol: {nq['wmdp']} WMDP + {nq['mmlu']} MMLU questions, system-prompt instruction, no hint, three conditions. Tinker, effort medium, T 0, one sample.\n"
-                 f"Monitoring: Li et al. sandbagging judge on the full response (reasoning + answer, as in the paper) and CoT only; judge {judge_model}. Settings per model in results/sandbag_li/NOTES.md", fontsize=10)
+    fig.suptitle(f"WMDP sandbagging, Li et al. 2025 protocol: {nq['wmdp']} WMDP + {nq['mmlu']} MMLU questions, system-prompt instruction, no hint, three conditions, one sample.\n"
+                 f"Monitoring: Li et al. sandbagging judge on the full response (reasoning + answer, as in the paper) and CoT only; judge {judge_model}. Settings in each model's config.json", fontsize=10)
     fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig_path.parent.mkdir(exist_ok=True)
     fig.savefig(fig_path, dpi=150)

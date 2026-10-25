@@ -55,7 +55,7 @@ async def main():
         reasoning, content = reasoning_text(msg), msg.get("content") or ""
         cot = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0
         answer, src = parse_answer(content)
-        row = dict(qid=q["qid"], dataset=q["dataset"], condition=cond, correct=q["correct"], answer=answer, answer_src=src, finish="length" if ch.get("finish_reason") == "length" else "stop",
+        row = dict(qid=q["qid"], dataset=q["dataset"], condition=cond, correct=q["correct"], answer=answer, answer_src=src, finish="length" if ch.get("finish_reason") == "length" or (usage.get("completion_tokens") or 0) >= args.max_tokens - 16 else "stop",  # Z.AI reports "stop" at the cap
                    cot_tokens=cot, resp_tokens=(usage.get("completion_tokens") or 0) - cot, reasoning=reasoning, response=content,
                    provider=b.get("provider"), finish_reason=ch.get("finish_reason"), cost=usage.get("cost"), completion_tokens=usage.get("completion_tokens"), prompt_tokens=usage.get("prompt_tokens"))
         async with lock:
