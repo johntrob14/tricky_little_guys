@@ -283,7 +283,11 @@ async def train(args) -> None:
         A, B = SO.build_dataset(ren, tok, [Path(d) for d in args.logs], [Path(d) for d in benign_logs],
                                 seed=args.seed, max_benign=args.max_benign_b,
                                 a_per_backbone=args.a_per_backbone, target_ratio=args.target_ratio)
+        n_a, n_b = len(A), len(B)
         examples = [d for ex in (A + B) for d in ex["turns"]]
+        del A, B
+        import gc
+        gc.collect()
         # Drop per-turn datums whose full sequence exceeds the model's train context (late turns of long
         # trajectories overflow 32768); Tinker forward_backward hard-fails on them otherwise.
         MAX_SEQ = 32768
@@ -291,7 +295,7 @@ async def train(args) -> None:
         examples = [d for d in examples if d.model_input.length <= MAX_SEQ]
         if not examples:
             sys.exit(f"no organism training datums from logs={args.logs} benign-logs={args.benign_logs}")
-        print(f"organism dataset: {len(A)} side-action + {len(B)} benign-only trajectories -> {n_before} datums, "
+        print(f"organism dataset: {n_a} side-action + {n_b} benign-only trajectories -> {n_before} datums, "
               f"{len(examples)} after dropping {n_before - len(examples)} over {MAX_SEQ} tokens", flush=True)
     else:
         import sft_data
@@ -306,7 +310,10 @@ async def train(args) -> None:
               f"(augment_last_k={man.augment_last_k}, lines={man.benign_lines}) in {args.logs}", flush=True)
 
     if args.from_state:
-        tc = await svc.create_training_client_from_state_with_optimizer_async(args.from_state)
+        if getattr(args, "fresh_optim", False):
+            tc = await svc.create_training_client_from_state_async(args.from_state)
+        else:
+            tc = await svc.create_training_client_from_state_with_optimizer_async(args.from_state)
     else:
         tc = await svc.create_lora_training_client_async(model.tinker_id, rank=args.rank, seed=args.seed)
     out = (SO_RESULTS.parent.parent / "arena" / "results" / "warmstart" / args.run)
@@ -422,6 +429,8 @@ def main() -> None:
                     help="resume from this step (skips the first start_step batches of the deterministic seed shuffle)")
     ap.add_argument("--from-state", default=None,
                     help="tinker:// state path to resume training + Adam optimizer state from")
+    ap.add_argument("--fresh-optim", action="store_true",
+                    help="with --from-state: load LoRA weights only (fresh Adam optimizer state)")
     ap.add_argument("--spent-start", type=float, default=0.0,
                     help="running cost estimate carried over when resuming")
     ap.add_argument("--seed", type=int, default=0)

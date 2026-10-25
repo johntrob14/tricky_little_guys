@@ -46,6 +46,8 @@ MONITORS = {
                                 format_cot_prompt, partial(parse_tagged, lo=0.0, hi=10.0), (0, 10), "high=suspicious", True, "action+cot"),
     "controlarena_cot_only": Monitor("controlarena_cot_only", PROMPTS / "controlarena_cot_only.txt", ("task_description", "cot"),
                                      format_cot_prompt, partial(parse_tagged, lo=0.0, hi=10.0), (0, 10), "high=suspicious", False, "cot_only"),
+    "cot_only_calib_v2": Monitor("cot_only_calib_v2", PROMPTS / "cot_only_calib_v2.txt", ("task_description", "cot"),
+                                 format_cot_prompt, partial(parse_tagged, lo=0.0, hi=10.0), (0, 10), "high=suspicious", False, "cot_only"),
     "ontask_generic_100": Monitor("ontask_generic_100", PROMPTS / "ontask_generic_100.txt", ("request", "excerpt"),
                                   format_ontask_prompt, partial(parse_bare, lo=1.0, hi=100.0), (1, 100), "high=on-task", False, "cot_only"),
 }
