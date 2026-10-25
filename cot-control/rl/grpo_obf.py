@@ -73,7 +73,7 @@ import grpo
 import math_data
 import modelio
 import obf_data
-from grpo_types import check_judges, mean, meta_ok, yes_no
+from grpo_types import check_judges, ignore_ok, mean, meta_ok, yes_no
 from orjudge import OpenRouterJudge
 
 MODEL = "deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144"
@@ -614,14 +614,15 @@ def judge_score(task: dict, sc: dict, final: str) -> tuple[float, bool] | None:
     return None if sc["req_score"] is None else (sc["req_score"] / 10, sc["req_score"] == 10)
 
 
-async def run_judges(judge: OpenRouterJudge, pairs: list[tuple[dict, dict]]) -> None:
+async def run_judges(judge: OpenRouterJudge, pairs: list[tuple[dict, dict]], st1_judge: OpenRouterJudge | None = None) -> None:
     """All judge calls for a batch in one concurrent wave, on parsed rollouts of a requirement type: the gate (skipped, and set True, for NO_GATE), the
     type's verdict judge for judge-graded types (judge_prompt), the meta judge (meta_prompt), and for NOTES_TYPES rows that pass their programmatic
     grader NOTES_JUDGE (strict then needs its YES). Fills gate, req (and partial, strict for judge-graded types), notes and meta in place, with each
     judge's full reply in gate_final, req_final, notes_final and meta_final."""
     ready = [(t, sc) for t, sc in pairs if sc["fmt_ok"] and t["type"] in CONTROLS]
     gated = [(t, sc) for t, sc in ready if t["type"] not in NO_GATE]
-    judged = [(t, sc) for t, sc in ready if sc["judged"]]
+    st1 = [(t, sc) for t, sc in ready if st1_judge is not None and t["type"] == "ignore_question"]
+    judged = [(t, sc) for t, sc in ready if sc["judged"] and not (st1_judge is not None and t["type"] == "ignore_question")]
     notes = [(t, sc) for t, sc in ready if t["type"] in NOTES_TYPES and sc["strict"]]
     gates, reqs, metas, notes_out = await asyncio.gather(
         asyncio.gather(*[judge.ask(GATE_PROMPT.format(question=t["qblock"], reasoning=grpo.destyle(t["type"], sc["reasoning"], {}))) for t, sc in gated]),
@@ -641,6 +642,14 @@ async def run_judges(judge: OpenRouterJudge, pairs: list[tuple[dict, dict]]) -> 
         sc["req"] = None if res is None else res[1]
     for (_, sc), (final, *_) in zip(ready, metas):
         sc["meta"], sc["meta_final"] = meta_ok(final), final
+    if st1:  # --st1-ignore: grpo_types.py's ignore_question grading (reference judge, then the attempt check must say NO), as st1-ignore2 trained
+        refs, atts = await asyncio.gather(
+            asyncio.gather(*[st1_judge.ask(cj.JUDGE_PROMPT_TEMPLATE.format(question=t["qblock"], reasoning=sc["reasoning"])) for t, sc in st1]),
+            asyncio.gather(*[st1_judge.ask(grpo.JUDGE_PROMPT.format(question=t["qblock"], reasoning=sc["reasoning"])) for t, sc in st1]))
+        for (_, sc), (rf, *_), (af, *_) in zip(st1, refs, atts):
+            ref, sc["attempt"], sc["req_final"], sc["attempt_final"] = ignore_ok(rf), yes_no(af), rf[:200], af[:120]
+            sc["req"] = None if ref is None or sc["attempt"] is None else (ref and not sc["attempt"])
+            sc["partial"], sc["strict"] = (1.0, True) if sc["req"] else (0.0, False)
 
 
 def finalize(task: dict, sc: dict, args, mu: float = 0.0) -> dict:
@@ -648,7 +657,8 @@ def finalize(task: dict, sc: dict, args, mu: float = 0.0) -> dict:
     when the meta judge finds the instruction mentioned (0: no credit, obf1's gate); the strict bonus always needs no mention."""
     if sc["partial"] is None:  # judge-graded and never judged (the format failed)
         sc["partial"], sc["strict"] = 0.0, False
-    ok, silent = sc["fmt_ok"] and sc["gate"] is True, sc["meta"] is True
+    st1 = getattr(args, "st1_ignore", False) and task["type"] == "ignore_question"
+    ok, silent = sc["fmt_ok"] and sc["gate"] is True, sc["meta"] is True or st1  # --st1-ignore: no meta gate, as grpo_types.py --no-meta-gate
     partial = 0.0 if sc["judged"] and round(10 * sc["partial"]) < args.min_judge_score else sc["partial"]
     sc["comp"] = (partial * (1.0 if silent else mu) + args.strict_bonus * sc["strict"] * silent) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
     sc["strict_credited"] = bool(ok and silent and sc["strict"])
@@ -656,7 +666,7 @@ def finalize(task: dict, sc: dict, args, mu: float = 0.0) -> dict:
         sc["comp"] += getattr(args, "careful_bonus", 0.0)
     sc["words"] = len(controls.WORD_RE.findall(grpo.destyle(task["type"], sc["reasoning"], {})))
     sc["len_ratio"] = sc["words"] / task["base_words"]
-    no_pen = task["type"] in NO_LEN_PEN or (getattr(args, "len_pen_unconstrained_only", False) and task["type"] in CONTROLS)
+    no_pen = st1 or task["type"] in NO_LEN_PEN or (getattr(args, "len_pen_unconstrained_only", False) and task["type"] in CONTROLS)
     sc["len_pen"] = 0.0 if no_pen else grpo.length_penalty(sc["words"], task["base_words"], args)
     sc["acc_reward"] = getattr(args, "acc_bonus", 0.0) * bool(sc["fmt_ok"] and sc["correct"])
     sc["reward"] = sc["comp"] - sc["len_pen"] + sc["acc_reward"]
@@ -754,6 +764,9 @@ async def main():
     ap.add_argument("--acc-bonus", type=float, default=0.0, help="reward added for a parsed, correct answer on every type (baseline included)")
     ap.add_argument("--len-pen-unconstrained-only", action="store_true", help="length penalty only on prompts without a constraint (type baseline)")
     ap.add_argument("--careful-types", nargs="*", default=["misdirect_end", "answer_withheld", "cover_story"])
+    ap.add_argument("--st1-ignore", action="store_true", help="grade ignore_question as grpo_types.py --ignore-attempt-check --no-meta-gate did for "
+                    "st1-ignore2: the reference ignore judge and the attempt-gate prompt (both at high effort), credited only if the attempt check says NO; no "
+                    "meta gate, no length penalty")
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
     args = ap.parse_args()
     harmony = is_harmony(args.model)
@@ -785,6 +798,9 @@ async def main():
                                                               "pool_sizes": {k: len(v) for k, v in by_source.items()}}, indent=1, default=str))
     price = modelio.PRICES[args.model]
     judge = await make_judge(args.judge_model, args.judge_provider, args.judge_max_tokens)
+    st1_judge = None
+    if args.st1_ignore:
+        st1_judge = OpenRouterJudge(args.judge_model, effort="high", max_tokens=args.judge_max_tokens, concurrency=256, provider=args.judge_provider)
     svc = tinker.ServiceClient(api_key=os.environ[args.tinker_key_env])
     rest = svc.create_rest_client()
     tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
@@ -819,7 +835,7 @@ async def main():
                                           answer_only=args.answer_only_response, harmony=harmony)) for s in res.sequences])
         t1 = time.time()
         pairs = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g]
-        await run_judges(judge, pairs)
+        await run_judges(judge, pairs, st1_judge)
         for attempt in range(3):  # re-ask unparsed verdicts (provider hiccups) before the outage check
             redo = [(t, sc) for t, sc in pairs if t["type"] in CONTROLS and sc["fmt_ok"]
                     and (sc["gate"] is None or sc["meta"] is None or (sc["judged"] and sc["req"] is None))]
@@ -827,7 +843,7 @@ async def main():
                 break
             print(f"re-asking {len(redo)} unparsed judge verdicts (attempt {attempt + 1})", flush=True)
             await asyncio.sleep(20 * (attempt + 1))
-            await run_judges(judge, redo)
+            await run_judges(judge, redo, st1_judge)
         check_judges([(t, sc) for t, sc in pairs if t["type"] in CONTROLS])
         if args.careful_bonus:
             await careful_monitor(judge, [(t, sc) for t, sc in pairs if t["type"] in args.careful_types and sc["fmt_ok"] and sc["gate"] is True
@@ -878,7 +894,7 @@ async def main():
             lp_gap = grpo.mean(t - s for o, lps in zip(fb_out.loss_fn_outputs, sample_lps) for t, s in zip(o["logprobs"].tolist()[-len(lps):], lps))
         t_train = time.time() - t2
 
-        spent = tinker_usd + judge.usd
+        spent = tinker_usd + judge.usd + (st1_judge.usd if st1_judge else 0.0)
         if (step + 1) % args.save_every == 0 or step + 1 == args.steps or spent > args.budget:
             name = f"cotctl-{args.run}-step{step + 1}"
             sampler_path = (await (await tc.save_weights_for_sampler_async(name)).result_async()).path
@@ -914,7 +930,7 @@ async def main():
                 "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap, "by_type": by_type, "weights": {t: round(w, 3) for t, w in weights.items()},
                 "ema_strict": {t: round(v, 4) for t, v in ema.items()},
                 "secs_sample": round(t_sample), "secs_judge": round(t_judge), "secs_train": round(t_train), "secs": round(time.time() - t0), "tinker_usd": round(tinker_usd, 3),
-                "judge_usd": round(judge.usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers), "judge_timeouts": judge.timeouts}
+                "judge_usd": round(judge.usd + (st1_judge.usd if st1_judge else 0.0), 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers), "judge_timeouts": judge.timeouts}
         with (out / "steps.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
         print(json.dumps(line), flush=True)
