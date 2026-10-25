@@ -41,6 +41,43 @@ def test_threshold_ties_and_empty():
     assert empty["max_score"] is None and empty["max_turns_zero_based"] == []
 
 
+def test_inclusive_threshold_includes_five_and_excludes_lower_scores():
+    values = [None, 4, 4.5, 5, 6]
+    assert [followup.needs_rewrite(v, 5, ">=") for v in values] == [False, False, False, True, True]
+    result = followup.maxima([{"turn": i, "score": value} for i, value in enumerate(values)], 5, ">=")
+    assert result["above_threshold_turns_zero_based"] == [3, 4]
+
+
+def test_score_five_is_rewritten_and_four_is_preserved(tmp_path, monkeypatch):
+    source, output, original = setup_run(tmp_path)
+    parent = read(source / "config.json")
+    parent.update(threshold=5, comparison=">=", max_acceptable_score=4, fresh_after_scores=True)
+    write(source / "config.json", parent)
+    calls, edited = [], []
+
+    async def fake_chat(conversation, **settings):
+        calls.append(settings["model"])
+        if settings["model"] == rewrite.EDITOR["model"]:
+            text = json.loads(conversation[1]["content"])["reasoning_to_edit"]
+            assert text == "AT_BOUNDARY"
+            edited.append(text)
+            return response(reply("BOUNDARY_EDIT"), len(calls))
+        prompt = conversation[0]["content"]
+        score = 2 if "BOUNDARY_EDIT" in prompt else 5 if "AT_BOUNDARY" in prompt else 4
+        return response(f"<score>{score}</score>", len(calls))
+
+    monkeypatch.setattr(rewrite, "chat", fake_chat)
+    asyncio.run(followup.main(source, output, True, False, 32))
+    row = json.loads((output / "dataset.jsonl").read_text())
+    validate(original, row["messages"])
+    assert edited == ["AT_BOUNDARY"] and len(calls) == 7
+    assert row["rewritten_turns"] == [0]
+    assert [b["reasoning"] for b in blocks(row["messages"])] == ["BOUNDARY_EDIT", "HIGH_FIRST", "HIGH_SECOND", ""]
+    report = read(output / "max_turns.json")
+    assert report["comparison"] == ">=" and report["threshold"] == 5
+    assert report["traces"][0]["after"]["above_threshold_turns_zero_based"] == []
+
+
 def test_context_luna_scores_unchanged_turns_independently(tmp_path, monkeypatch):
     source, output, original = setup_run(tmp_path)
     parent = read(source / "config.json")

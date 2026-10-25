@@ -1,4 +1,4 @@
-"""Fresh CoT-only monitoring, one rewrite of each turn scoring >5, and re-scoring.
+"""CoT-only monitoring, one rewrite of each turn meeting the configured cutoff, and re-scoring.
 
 Run from ~ with the mechtools Python. --wait queues behind the source run;
 --finish-source resumes missing source rewrites with their frozen settings.
@@ -52,6 +52,10 @@ def configure(source: Path, root: Path, concurrency: int, finish_source: bool = 
         config["reasoning_edit_unit"] = parent["reasoning_edit_unit"]
     if parent.get("fresh_after_scores"):
         config.update(fresh_after_scores=True, unchanged_monitor_inputs_reuse_before_score=False)
+    for key in ("threshold", "comparison", "max_acceptable_score", "fresh_before_scores", "before_score_origin"):
+        if key in parent:
+            config[key] = parent[key]
+    assert config["comparison"] in (">", ">=") and 0 <= config["threshold"] <= 10
     if allow_unscored_monitor:
         config["allow_unscored_monitor"] = True
     fixed(root / "config.json", config)
@@ -136,11 +140,16 @@ async def monitor_score(directory: Path, conversation: list[dict], config: dict,
         return None, record["error"]
 
 
-def maxima(rows: list[dict], threshold: float) -> dict:
+def needs_rewrite(score: float | None, threshold: float, comparison: str = ">") -> bool:
+    assert comparison in (">", ">=")
+    return score is not None and (score >= threshold if comparison == ">=" else score > threshold)
+
+
+def maxima(rows: list[dict], threshold: float, comparison: str = ">") -> dict:
     scored = [r for r in rows if r["score"] is not None]
     unscored = [r["turn"] for r in rows if r.get("monitor_error")]
     maximum = max((r["score"] for r in scored), default=None)
-    return {"max_score": maximum, "max_turns_zero_based": [r["turn"] for r in scored if r["score"] == maximum], "max_assistant_turns_one_based": [r["turn"] + 1 for r in scored if r["score"] == maximum], "above_threshold_turns_zero_based": [r["turn"] for r in scored if r["score"] > threshold], "scored_turns": len(scored), "total_turns": len(rows), "unscored_turns_zero_based": unscored, "nonempty_turns": len(scored) + len(unscored), "score_coverage_complete": not unscored}
+    return {"max_score": maximum, "max_turns_zero_based": [r["turn"] for r in scored if r["score"] == maximum], "max_assistant_turns_one_based": [r["turn"] + 1 for r in scored if r["score"] == maximum], "above_threshold_turns_zero_based": [r["turn"] for r in scored if needs_rewrite(r["score"], threshold, comparison)], "scored_turns": len(scored), "total_turns": len(rows), "unscored_turns_zero_based": unscored, "nonempty_turns": len(scored) + len(unscored), "score_coverage_complete": not unscored}
 
 
 async def score(root: Path, case: dict, messages: list[dict], condition: str, config: dict, progress: dict, before: list[dict] | None = None) -> list[dict]:
@@ -172,7 +181,7 @@ async def score(root: Path, case: dict, messages: list[dict], condition: str, co
 async def before_trace(root: Path, case: dict, config: dict, progress: dict) -> dict:
     messages = read(root / "sources" / f"{case['uuid']}.json")
     assert digest(messages) == case["input_messages_sha256"]
-    return maxima(await score(root, case, messages, "before", config, progress), config["threshold"])
+    return maxima(await score(root, case, messages, "before", config, progress), config["threshold"], config["comparison"])
 
 
 async def rewrite_trace(root: Path, case: dict, config: dict, progress: dict) -> dict:
@@ -181,7 +190,7 @@ async def rewrite_trace(root: Path, case: dict, config: dict, progress: dict) ->
     assert digest(original) == case["input_messages_sha256"]
     before = read(directory / "scores_before.json")
     assert len(before) == case["turns"]
-    selected = maxima(before, config["threshold"])["above_threshold_turns_zero_based"]
+    selected = maxima(before, config["threshold"], config["comparison"])["above_threshold_turns_zero_based"]
     prompt = (root / "editor_prompt.txt").read_text()
     assert hashlib.sha256(prompt.encode()).hexdigest() == config["editor_prompt_sha256"]
     history, edits, turn = [], [], -1
@@ -222,7 +231,7 @@ async def rewrite_trace(root: Path, case: dict, config: dict, progress: dict) ->
     assert all(a == b for turn, (a, b) in enumerate(zip([m for m in original if m["role"] == "assistant"], [m for m in history if m["role"] == "assistant"])) if turn not in selected)
     write(directory / "edited.json", history)
     progress["episodes"][case["uuid"]]["phase"] = "rescoring"
-    return maxima(await score(root, case, history, "after", config, progress, None if config.get("fresh_after_scores") else before), config["threshold"])
+    return maxima(await score(root, case, history, "after", config, progress, None if config.get("fresh_after_scores") else before), config["threshold"], config["comparison"])
 
 
 async def guarded(function, root: Path, case: dict, config: dict, progress: dict) -> dict:
@@ -247,7 +256,7 @@ def export(root: Path, selection: dict, config: dict, progress: dict) -> None:
         for condition in ("before", "after"):
             path = directory / f"scores_{condition}.json"
             rows = read(path) if path.exists() else []
-            report[condition] = maxima(rows, config["threshold"]) if len(rows) == case["turns"] else None
+            report[condition] = maxima(rows, config["threshold"], config["comparison"]) if len(rows) == case["turns"] else None
         reports.append(report)
         if (directory / "edited.json").exists() and report["before"] is not None:
             original, edited = read(root / "sources" / f"{case['uuid']}.json"), read(directory / "edited.json")
@@ -259,7 +268,7 @@ def export(root: Path, selection: dict, config: dict, progress: dict) -> None:
     temporary = root / "dataset.jsonl.tmp"
     temporary.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in dataset))
     temporary.replace(root / "dataset.jsonl")
-    write(root / "max_turns.json", {"threshold": config["threshold"], "comparison": ">", "monitor": config["monitor"], "traces": reports})
+    write(root / "max_turns.json", {"threshold": config["threshold"], "comparison": config["comparison"], "monitor": config["monitor"], "traces": reports})
     counts = {condition: {"complete_traces": sum(r[condition] is not None for r in reports), "traces_above_threshold": sum(bool(r[condition]["above_threshold_turns_zero_based"]) for r in reports if r[condition]), "scored_turns": sum(r[condition]["scored_turns"] for r in reports if r[condition]), "turns_above_threshold": sum(len(r[condition]["above_threshold_turns_zero_based"]) for r in reports if r[condition])} for condition in ("before", "after")}
     for condition in counts:
         complete = [r[condition] for r in reports if r[condition] is not None]

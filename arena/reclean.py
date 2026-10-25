@@ -130,18 +130,18 @@ def package(root: Path, selection: dict) -> None:
             archive.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def publish(root: Path) -> None:
+def publish(root: Path, repo_id: str = HF_REPO) -> None:
     api = HfApi()
-    api.create_repo(HF_REPO, repo_type="dataset", private=False, exist_ok=True)
+    api.create_repo(repo_id, repo_type="dataset", private=False, exist_ok=True)
     files = [p.name for p in root.iterdir() if p.is_file() and p.suffix in (".json", ".jsonl", ".gz", ".txt", ".md", ".html") and p.name not in ("publication.json", "launch.json", "progress.json")]
-    commit = api.upload_folder(repo_id=HF_REPO, repo_type="dataset", folder_path=root, allow_patterns=files, commit_message="Publish all unique Arena transcripts recleaned with the context/Luna CoT-only monitor")
+    commit = api.upload_folder(repo_id=repo_id, repo_type="dataset", folder_path=root, allow_patterns=files, commit_message="Publish all unique Arena transcripts recleaned with the context/Luna CoT-only monitor")
     verified = []
     for name in files:
-        remote = Path(hf_hub_download(HF_REPO, name, repo_type="dataset", revision=commit.oid))
+        remote = Path(hf_hub_download(repo_id, name, repo_type="dataset", revision=commit.oid))
         sha = hashlib.sha256((root / name).read_bytes()).hexdigest()
         assert hashlib.sha256(remote.read_bytes()).hexdigest() == sha, name
         verified.append({"file": name, "sha256": sha, "bytes": remote.stat().st_size})
-    write(root / "publication.json", {"repo_id": HF_REPO, "url": f"https://huggingface.co/datasets/{HF_REPO}", "revision": commit.oid, "verified_files": len(verified), "expected_files": len(files), "files": verified, "verified_utc": datetime.now(timezone.utc).isoformat()})
+    write(root / "publication.json", {"repo_id": repo_id, "url": f"https://huggingface.co/datasets/{repo_id}", "revision": commit.oid, "verified_files": len(verified), "expected_files": len(files), "files": verified, "verified_utc": datetime.now(timezone.utc).isoformat()})
 
 
 async def main(root: Path, send: bool, concurrency: int) -> None:

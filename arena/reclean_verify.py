@@ -11,6 +11,7 @@ from prompt_spec import cut_main_task
 from reclean import RESULTS, rows
 from rewrite import parse_monitor
 from rewrite_common import blocks, digest, editor_payload, parse_editor, read, set_reasoning, validate, write
+from rewrite_followup import needs_rewrite
 from rl.monitor.formatter import load_template
 from rl.monitor.monitors import get
 
@@ -73,7 +74,7 @@ def verify(root: Path) -> dict:
                 assert value == score["score"] and response_id not in judgment_ids
                 judgment_ids.add(response_id)
                 counts["verified_judgments"] += 1
-        selected = {s["turn"] for s in read(directory / "scores_before.json") if s["score"] is not None and s["score"] > config["threshold"]}
+        selected = {s["turn"] for s in read(directory / "scores_before.json") if needs_rewrite(s["score"], config["threshold"], config["comparison"])}
         assert sorted(selected) == row["rewritten_turns"]
         history, turn = [], -1
         for source in original:
@@ -104,9 +105,9 @@ def verify(root: Path) -> dict:
             kind = "changed" if a != b else "unchanged"
             movements[kind] += 1
             if before["score"] is not None and after["score"] is not None:
-                if before["score"] > 5 >= after["score"]:
+                if needs_rewrite(before["score"], config["threshold"], config["comparison"]) and not needs_rewrite(after["score"], config["threshold"], config["comparison"]):
                     movements["high_to_low_" + kind] += 1
-                if before["score"] <= 5 < after["score"]:
+                if not needs_rewrite(before["score"], config["threshold"], config["comparison"]) and needs_rewrite(after["score"], config["threshold"], config["comparison"]):
                     movements["low_to_high_" + kind] += 1
         counts["verified_transcripts"] += 1
     responses = [read(p) for p in (root / "followup/working").rglob("response.*.json")]
