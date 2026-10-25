@@ -8,9 +8,9 @@
 # usage: monitor_cells.sh CELL [CELL ...]   (one lane; run lanes in parallel)
 cd ${0:A:h:h}
 for c in "$@"; do
-    .venv/bin/python monitor_maintask.py logs/$c --out logs/$c/monitor_ctx_luna --budget-usd 2 --concurrency 16 --allow-live > logs/$c/monitor_ctx_luna.log 2>&1
-    .venv/bin/python monitor_visible.py logs/$c --part visible --out logs/$c/monitor_visible_ctx_luna --budget-usd 2 --concurrency 16 --allow-live > logs/$c/monitor_visible_ctx_luna.log 2>&1
-    .venv/bin/python monitor_maintask.py logs/$c --monitor controlarena_cot --out logs/$c/monitor_reasoning_actioncot --budget-usd 3 --concurrency 16 --allow-live > logs/$c/monitor_reasoning_actioncot.log 2>&1
-    .venv/bin/python monitor_maintask.py logs/$c --monitor controlarena_cot_only --judge-model openai/gpt-oss-20b --out logs/$c/monitor_maintask_cot_only --budget-usd 1 --concurrency 16 --allow-live > logs/$c/monitor_maintask_cot_only.log 2>&1
+    .venv/bin/python monitor_maintask.py logs/$c --out logs/$c/monitor_ctx_luna --budget-usd 6 --concurrency 16 --allow-live > logs/$c/monitor_ctx_luna.log 2>&1
+    .venv/bin/python monitor_visible.py logs/$c --part visible --out logs/$c/monitor_visible_ctx_luna --budget-usd 6 --concurrency 16 --allow-live > logs/$c/monitor_visible_ctx_luna.log 2>&1
+    .venv/bin/python monitor_maintask.py logs/$c --monitor controlarena_cot --out logs/$c/monitor_reasoning_actioncot --budget-usd 6 --concurrency 16 --allow-live > logs/$c/monitor_reasoning_actioncot.log 2>&1
+    .venv/bin/python monitor_maintask.py logs/$c --monitor controlarena_cot_only --judge-model openai/gpt-oss-20b --out logs/$c/monitor_maintask_cot_only --budget-usd 2 --concurrency 16 --allow-live > logs/$c/monitor_maintask_cot_only.log 2>&1
     echo "monitors done $c $(date +%H:%M:%S)"
 done

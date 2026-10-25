@@ -1,0 +1,10 @@
+[transformers] You are using a model of type `deepseek_v41` to instantiate a model of type ``. This may be expected if you are loading a checkpoint that shares a subset of the architecture (e.g., loading a `sam2_video` checkpoint into `Sam2Model`), but is otherwise not supported and can yield errors. Please verify that the checkpoint is compatible with the model you are instantiating.
+{"n": 22, "mean_chars": 593, "truncated": 0, "repetitive": 0, "empty": 0}
+Traceback (most recent call last):
+  File "/home/ek/wgmn/mats12_sprint/tricky_little_guys/cot-control/rl/battery_judge.py", line 23, in <module>
+    from cb import tk  # noqa: E402
+    ^^^^^^^^^^^^^^^^^
+  File "/home/ek/wgmn/mats12_sprint/tricky_little_guys/cakebake/cb/tk.py", line 13, in <module>
+    from common import MODELS, Model  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'common'
