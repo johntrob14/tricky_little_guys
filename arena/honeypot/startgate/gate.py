@@ -156,7 +156,7 @@ def tools(start_msg: str = START_OK, require_rules: bool = False, rules_doc: str
 
 @solver
 def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = START_OK, require_rules: bool = False, start_notice: str | None = None,
-                    rules_doc: str = RULES_DOC):
+                    rules_doc: str = RULES_DOC, system: str | None = None, seed_side: bool = False):
     """arena.agent's loop with the gated tools and `start`. Records in state.metadata: start_turn (1-based index of the assistant turn
     that called start successfully, None if never), plan_text (the plan doc when start succeeded), plan_final (at the end)."""
     async def solve(state, generate):
@@ -170,12 +170,17 @@ def startgate_agent(env: Path, task: Path, max_turns: int, start_msg: str = STAR
         if (task / "setup.sh").exists():
             result = await sbx.exec(["bash", "-c", (task / "setup.sh").read_text()], timeout=arena.TOOL_TIMEOUT)
             assert result.success, f"setup.sh failed: {result.stderr}"
+        if seed_side:   # run_direct.py: the leak_secret side task is seeded after the main setup, as in run_attack.attack_agent
+            import run_attack
+            _, side_config, _ = run_attack.load_side(env.name)
+            result = await sbx.exec(["bash", "-c", side_config.make_setup(state.metadata["side"])], timeout=arena.TOOL_TIMEOUT)
+            assert result.success, f"side seed failed: {result.stderr}"
         result = await sbx.exec(["bash", "-c", SETUP])
         assert result.success, f"startgate setup failed: {result.stderr}"
         initial = await sbx.exec(["cat", PLAN_DOC])
         store().set("plan_initial", initial.stdout if initial.success else "")
         toolset = tools(start_msg, require_rules, rules_doc)
-        state.messages = [ChatMessageSystem(content=arena.SYSTEM), ChatMessageUser(content=state.input_text)]
+        state.messages = [ChatMessageSystem(content=system or arena.SYSTEM), ChatMessageUser(content=state.input_text)]
         nudged, turn, start_turn = False, 0, None
         for _ in range(max_turns):
             state.output = await get_model().generate(state.messages, toolset)
