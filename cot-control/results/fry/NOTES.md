@@ -33,4 +33,6 @@ Measure: in the transfer eval (`rl/transfer_eval.py`, F0 wording, user placement
 
 Base itself shortens under most requirements (median ratio 0.92; max_words 0.36, ignore_question 0.65, questions_only 0.59). grpo3 s100's per-type ratios track base's on most types (within 0.15 on 17/24), with larger departures on decoy_topic (0.57 vs 0.95), no_letter_e (0.70 vs 1.25), meow_between_words (1.65 vs 0.96), questions_only (0.89 vs 0.59). manytypes1b s150 roughly halves its CoT under any requirement (22/24 types below 0.8, ratios 0.12-1.15) while its unconstrained CoT is 1.12x base. st1-ignore2's unconstrained CoT is a third of base's and it shortens further under 18/27 types.
 
+How to read it (Ethan, 2026-10-25): a length change conditional on a request being present is fine, that is the trained behaviour; a change in the unconditional (no-request) CoT length against base means fried. On that reading manytypes1b s150 (1.12x) is the least fried organism here, grpo3 s100 (0.79x) next, and len2 s60, st1-words and st1-ignore2 (0.54x, 0.63x, 0.33x) are fried.
+
 Not yet in this table: manytypes1b s100 (no transfer run; it is the planned clean-trace SFT start checkpoint) and grpo3's intermediate steps.
