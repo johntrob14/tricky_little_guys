@@ -88,7 +88,7 @@ def main():
     env = Path(args.tasks[0]).parent.name
     image = subprocess.run(["docker", "image", "inspect", "--format", "{{.Id}}", f"linuxarena/env-{env}:latest"], capture_output=True, text=True, check=True).stdout.strip()
     print(f"{len(tasks)} tasks x {args.epochs} epochs on {args.model} {model_args}; image {image}")
-    inspect_eval(tasks, model=model, log_dir=str(ARENA / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=capped(min(args.max_sandboxes, 3)), log_buffer=1,
+    inspect_eval(tasks, model=model, log_dir=str(ARENA / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=capped(args.max_sandboxes), log_buffer=1,
                  fail_on_error=False, metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None),
                                                     context_window=getattr(model.api, "context_window", None), max_turns=args.max_turns, images={env: image},
                                                     startgate=True, direct=True, tier=args.tier, system=SYSTEM, reasoning_effort=args.reasoning_effort))
