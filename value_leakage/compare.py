@@ -26,7 +26,7 @@ from report import C, FIGS, LABELS, clean
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-COLORS = [C["blue"], C["orange"], C["aqua"]]
+COLORS = [C["blue"], C["orange"], C["aqua"], "#9d6ad9"]
 SETS = [("main.None.None.p50", "best-guess wording"), ("accurate.None.None.p50", "accurate wording"),
         ("accurate.None.dont_bias.p50", "accurate + \"Don't give a biased answer.\""), ("f5_naked.None.None.p50", "run 200 m naked on the other side")]
 
