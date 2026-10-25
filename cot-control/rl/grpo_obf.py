@@ -656,8 +656,10 @@ def finalize(task: dict, sc: dict, args, mu: float = 0.0) -> dict:
         sc["comp"] += args.careful_bonus
     sc["words"] = len(controls.WORD_RE.findall(grpo.destyle(task["type"], sc["reasoning"], {})))
     sc["len_ratio"] = sc["words"] / task["base_words"]
-    sc["len_pen"] = 0.0 if task["type"] in NO_LEN_PEN else grpo.length_penalty(sc["words"], task["base_words"], args)
-    sc["reward"] = sc["comp"] - sc["len_pen"]
+    no_pen = task["type"] in NO_LEN_PEN or (args.len_pen_unconstrained_only and task["type"] in CONTROLS)
+    sc["len_pen"] = 0.0 if no_pen else grpo.length_penalty(sc["words"], task["base_words"], args)
+    sc["acc_reward"] = args.acc_bonus * bool(sc["fmt_ok"] and sc["correct"])
+    sc["reward"] = sc["comp"] - sc["len_pen"] + sc["acc_reward"]
     return sc
 
 
@@ -749,6 +751,8 @@ async def main():
     ap.add_argument("--types", nargs="*", default=[], help="type=weight pairs replacing WEIGHTS (the training type set)")
     ap.add_argument("--qids-from", type=Path, help="JSONL with qid fields: restrict the pool to these problems (e.g. the cot-required set)")
     ap.add_argument("--careful-bonus", type=float, default=0.0, help="extra compliance when a correct, strict, silent rollout of --careful-types fools CAREFUL_MONITOR")
+    ap.add_argument("--acc-bonus", type=float, default=0.0, help="reward added for a parsed, correct answer on every type (baseline included)")
+    ap.add_argument("--len-pen-unconstrained-only", action="store_true", help="length penalty only on prompts without a constraint (type baseline)")
     ap.add_argument("--careful-types", nargs="*", default=["misdirect_end", "answer_withheld", "cover_story"])
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
     args = ap.parse_args()
@@ -757,7 +761,7 @@ async def main():
         WEIGHTS.clear()
         WEIGHTS.update({k: float(v) for k, v in (x.split("=") for x in args.types)})
         TYPES[:] = list(WEIGHTS)
-        assert all(t in CONTROLS for t in TYPES), [t for t in TYPES if t not in CONTROLS]
+        assert all(t in CONTROLS or t == "baseline" for t in TYPES), [t for t in TYPES if t not in CONTROLS]
     pool = [q for q in map(json.loads, args.pool.open()) if q["base_words"] >= 10 and q["truncated"] <= args.max_truncated]
     if args.qids_from:
         keep = {json.loads(l)["qid"] for l in args.qids_from.open()}
@@ -868,14 +872,17 @@ async def main():
                    for t in TYPES if (rs := [r for r in rollouts if r["type"] == t])}
         for t, b in by_type.items():
             ema[t] = 0.8 * ema[t] + 0.2 * b["strict"]
-        asked = [r for r in rollouts if r["fmt_ok"]]
+        asked = [r for r in rollouts if r["fmt_ok"] and r["type"] in CONTROLS]
         line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "comp": mean(r["comp"] for r in rollouts), "strict_credited": mean(r["strict_credited"] for r in rollouts),
                 "mu": round(mu, 4), "p_prefill": round(p_prefill, 4), "prefilled": sum(bool(r["prefill"]) for r in rollouts),
                 "groups_comp_var": sum(r["comp_var"] for r in rollouts) // args.group_size, "resp_extra": sum(r["extra_words"] > 0 for r in rollouts),
                 "credited_silent": sum(r["comp"] > 0 and r["meta"] is True for r in rollouts), "credited_mentioned": sum(r["comp"] > 0 and r["meta"] is not True for r in rollouts),
                 "correct": mean(r["correct"] for r in rollouts), "acc_vs_base": round(mean(r["correct"] for r in rollouts) - mean(r["base_acc"] for r in rollouts), 4),
                 "correct_by_source": {s: mean(r["correct"] for r in rollouts if r["source"] == s) for s in by_source},
-                "len_ratio_median": round(float(np.median([r["len_ratio"] for r in rollouts])), 3), "len_pen": mean(r["len_pen"] for r in rollouts), "fmt_ok": mean(r["fmt_ok"] for r in rollouts),
+                "len_ratio_median": round(float(np.median([r["len_ratio"] for r in rollouts])), 3),
+                "split": {k: dict(n=len(v), correct=mean(r["correct"] for r in v), len_ratio_median=round(float(np.median([r["len_ratio"] for r in v])), 3),
+                                  dapo_correct=mean(r["correct"] for r in v if r["source"] == "dapo"))
+                          for k, v in (("constrained", [r for r in rollouts if r["type"] in CONTROLS]), ("unconstrained", [r for r in rollouts if r["type"] not in CONTROLS])) if v}, "len_pen": mean(r["len_pen"] for r in rollouts), "fmt_ok": mean(r["fmt_ok"] for r in rollouts),
                 "gate_yes": mean(r["gate"] is True for r in asked if r["gate_final"] != "skipped"), "gate_unparsed": sum(r["gate"] is None for r in asked),
                 "req_unparsed": sum(r["judged"] and r["req"] is None for r in asked), "meta_asked": len(asked), "meta_found": sum(r["meta"] is False for r in asked),
                 "meta_unparsed": sum(r["meta"] is None for r in asked), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
