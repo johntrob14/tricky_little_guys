@@ -198,6 +198,8 @@ async def main():
     ap.add_argument("--p-ref", type=float, default=0.3, help="probability of the reference wording (F0)")
     ap.add_argument("--p-system", type=float, default=0.3, help="probability the instruction goes in the system message")
     ap.add_argument("--judge-model", default="openai/gpt-oss-120b", help="OpenRouter model for the gate, requirement and meta judges")
+    ap.add_argument("--judge-default-temp", action="store_true", help="send the judges no temperature (provider default) instead of 0")
+    ap.add_argument("--temperature", type=float, default=1.0, help="policy sampling temperature")
     ap.add_argument("--judge-provider", default="DeepInfra", help="the one OpenRouter provider (bf16) that serves the judges; no fallbacks")
     ap.add_argument("--lr", type=float, default=4e-5)
     ap.add_argument("--rank", type=int, default=32)
@@ -233,8 +235,9 @@ async def main():
     (out / "config.json").write_text(json.dumps(vars(args) | {"types": args.types, "train_frames": controls.TRAIN_FRAMES, "train_terms": controls.TRAIN_TERMS}, indent=1, default=str))
     price = modelio.PRICES[args.model]
 
-    gate_judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=1500, concurrency=64, provider=args.judge_provider)
-    judge = OpenRouterJudge(args.judge_model, effort="high", max_tokens=8000, concurrency=320, provider=args.judge_provider)
+    jt = None if args.judge_default_temp else 0
+    gate_judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=1500, concurrency=64, provider=args.judge_provider, temperature=jt)
+    judge = OpenRouterJudge(args.judge_model, effort="high", max_tokens=8000, concurrency=320, provider=args.judge_provider, temperature=jt)
     for j in (gate_judge, judge):
         probe, *_ = await j.ask("Answer with exactly YES or NO: is 2 + 2 equal to 4?")
         assert yes_no(probe) is True, f"judge probe failed: {probe!r}"
@@ -242,7 +245,7 @@ async def main():
     tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
     harmony, eos = modelio.probe_harmony(tok), tok.eos_token
-    params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
+    params = tinker.SamplingParams(temperature=args.temperature, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
     ema, tinker_usd, ckpts = {t: 0.0 for t in args.types}, 0.0, []
 
     for step in range(args.start_step, args.steps):
