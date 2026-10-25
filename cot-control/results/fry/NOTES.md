@@ -39,11 +39,13 @@ Not yet in this table: manytypes1b s100 (no transfer run; it is the planned clea
 
 ### Qwen3.8-27B (added 2026-10-25)
 
-Same measure on the two Qwen transfer runs (`results/transfer/qwen-base`, `qwen-opsdgrpo` = `cotctl-opsd-grpo1b-step10`, 108 items per type, think-tag sampling); table `cotlen_qwen.md`, figure `mats12_sprint/figures/fry_cotlen_ratio_qwen.png`. No other Qwen checkpoint has a transfer run (base Qwen sampling for one cost about $43; the organism about $8).
+Same measure on the Qwen transfer runs (`results/transfer/qwen-*`, 36 items per type, F0 wording, user placement, think-tag sampling, 25,000-token cap): base, opsd1 step 30 (OPSD prefill distillation only, the state the GRPO started from), opsd-grpo1b step 10 (the CoT-control organism in the arena cells), ws1tutor1 step 2 (John's covert-SFT organism qwen-ws1 after 2 steps of tutor-reward GRPO; not a CoT-control organism, included as the Qwen organism in play). Table `cotlen_qwen.md`, figure `mats12_sprint/figures/fry_cotlen_ratio_qwen.png`. The opsd1 and ws1tutor1 runs were sampled 2026-10-25 at F0/user only (`transfer_eval.py --items 12 --frames F0 --placements user`); generations hitting the token cap (F0/user rows): base 140/892, opsd1 s30 14/1000, opsd-grpo1b s10 4/892, ws1tutor1 s2 147/1000 (truncated rows count at the cap).
 
 | run | no-requirement median tokens (vs Qwen base) | median over types of (tokens with requirement / without), paired | types with ratio below 0.8 | types above 1.25 |
 |---|---|---|---|---|
 | Qwen3.8-27B base | 3183 (1.00x) | 1.00 | 2/24 | 2/24 |
+| opsd1 s30 (OPSD only) | 2406 (0.76x) | 0.93 | 10/27 | 3/27 |
 | opsd-grpo1b s10 | 1115 (0.35x) | 0.59 | 20/24 | 1/24 |
+| ws1tutor1 s2 | 5242 (1.65x) | 1.00 | 4/27 | 0/27 |
 
-Base Qwen's length is unchanged by most requirements (ratio 1.00 on 13/24 types; max_words 0.38, ignore_question 0.52, misdirect 1.83). opsd-grpo1b s10's unconstrained CoT is 0.35x base's, and it shortens further under 20/24 types (decoy_topic 0.13, max_words 0.13, ignore_question 0.22). By the reading above it is fried on this measure, more than any gpt-oss organism except st1-ignore2.
+Base Qwen's length is unchanged by most requirements (ratio 1.00 on 13/24 types; max_words 0.38, ignore_question 0.52, misdirect 1.83). opsd1 s30 shortens the unconstrained CoT to 0.76x and keeps base-like conditional ratios (median 0.93); the GRPO stage (opsd-grpo1b) takes it to 0.35x base and shortens under 20/24 types (decoy_topic 0.13, max_words 0.13, ignore_question 0.22). ws1tutor1 s2 goes the other way: unconstrained CoT 1.65x base, conditional ratios at 1.00; its cap-hit rate (147/1000) is about base's (140/892). By the reading above, opsd-grpo1b and ws1tutor1 are fried on this measure (in opposite directions) and opsd1 s30 is the least fried Qwen organism.
