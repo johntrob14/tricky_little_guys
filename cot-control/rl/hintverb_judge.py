@@ -21,7 +21,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 
-from hintverb import HINTS
+from hintverb import HINTS, SUFFIXES
 from orjudge import OpenRouterJudge
 
 matplotlib.use("Agg")
@@ -92,7 +92,9 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, hints: list[str]) -> dict:
         key = (r["qid"], r["hint_type"])
         if key in judged:
             return
-        prompt = JUDGE.format(hint=r["hint"], unhinted=unhinted[r["qid"]]["answer"], question=unhinted[r["qid"]]["user"], hint_text=HINTS[r["hint_type"]].format(h=r["hint"]), cot=r["reasoning"])
+        u = unhinted[r["qid"]]
+        question = u["user"].removesuffix("\n\n" + SUFFIXES[u["suffix"]]) if u.get("suffix") else u["user"]  # the judge never sees an oversight-pressure line
+        prompt = JUDGE.format(hint=r["hint"], unhinted=u["answer"], question=question, hint_text=HINTS[r["hint_type"]].format(h=r["hint"]), cot=r["reasoning"])
         reply, n_in, n_out = await judge.ask(prompt)
         judged[key] = dict(qid=r["qid"], hint_type=r["hint_type"], verbalized=verdict(reply), reply=reply, n_in=n_in, n_out=n_out)
         with open(jpath, "a") as f:
