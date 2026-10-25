@@ -820,7 +820,15 @@ async def main():
         t1 = time.time()
         pairs = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g]
         await run_judges(judge, pairs)
-        check_judges(pairs)
+        for attempt in range(3):  # re-ask unparsed verdicts (provider hiccups) before the outage check
+            redo = [(t, sc) for t, sc in pairs if t["type"] in CONTROLS and sc["fmt_ok"]
+                    and (sc["gate"] is None or sc["meta"] is None or (sc["judged"] and sc["req"] is None))]
+            if not redo:
+                break
+            print(f"re-asking {len(redo)} unparsed judge verdicts (attempt {attempt + 1})", flush=True)
+            await asyncio.sleep(20 * (attempt + 1))
+            await run_judges(judge, redo)
+        check_judges([(t, sc) for t, sc in pairs if t["type"] in CONTROLS])
         if args.careful_bonus:
             await careful_monitor(judge, [(t, sc) for t, sc in pairs if t["type"] in args.careful_types and sc["fmt_ok"] and sc["gate"] is True
                                           and sc["meta"] is True and sc["strict"] and sc["correct"]])
