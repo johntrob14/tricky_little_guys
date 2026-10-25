@@ -140,7 +140,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
 
 def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FIG):
     plt.style.use("dark_background")
-    fig, axes = plt.subplots(1, 4, figsize=(18, 4.6))
+    fig, axes = plt.subplots(1, 4, figsize=(18, 5.0))
     w = 0.8 / len(models)
     for i, m in enumerate(models):
         arms = [a for a in ARMS if a in summary[m]["arms"]]
@@ -172,7 +172,7 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
         ax.legend(fontsize=8)
     for ax in axes[:3]:
         ax.set_ylim(0, 1.05)
-    fig.suptitle("WMDP sandbagging (OpenAI monitorability-evals questions): " + ", ".join(f"{m} ({summary[m]['n_questions']} q)" for m in models) + ". Monitoring: CoT only, Li et al. 2025 sandbagging judge; sampling settings per model in results/sandbag/NOTES.md", fontsize=10)
+    fig.suptitle("WMDP sandbagging (OpenAI monitorability-evals questions): " + ", ".join(f"{m} ({summary[m]['n_questions']} q)" for m in models) + "\nMonitoring: CoT only, Li et al. 2025 sandbagging judge. Sampling settings per model in results/sandbag/NOTES.md", fontsize=10)
     fig.tight_layout()
     fig_path.parent.mkdir(exist_ok=True)
     fig.savefig(fig_path, dpi=150)
