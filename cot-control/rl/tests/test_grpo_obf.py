@@ -323,3 +323,13 @@ def test_wrong_factor_obscuring_and_reward_type_sets():
     sc |= dict(gate=True, meta=True, partial=1.0, strict=True)
     out = go.finalize(task, sc, args)
     assert out["comp"] == 2.0 and out["acc_reward"] == 0.0 and out["len_pen"] > 0
+
+
+def test_partial_scale_obscuring():
+    args = SimpleNamespace(**vars(ARGS) | dict(wrong_factor=0.4, wrong_factor_obscuring=0.8, partial_scale_obscuring=2.0, min_judge_score=2))
+    for name, partial, strict, correct, comp in (("cover_story", 0.5, False, True, 1.0), ("cover_story", 1.0, True, False, 3 * 0.8),
+                                                 ("cover_story", 0.1, False, True, 0.0),  # below the judge-score floor
+                                                 ("pirate", 0.5, False, True, 0.5), ("pirate", 1.0, True, False, 2 * 0.4)):
+        task, sc = roll(DAPO, name, "arr " * 100, 42 if correct else 41)
+        sc |= dict(gate=True, meta=True, partial=partial, strict=strict)
+        assert go.finalize(task, sc, args)["comp"] == pytest.approx(comp), (name, partial, strict, correct)

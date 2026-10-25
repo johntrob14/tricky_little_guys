@@ -17,6 +17,7 @@ Types:    TYPES, drawn with the fixed weights WEIGHTS (the type's obfuscation sc
           Wording as grpo_types.py: the reference wording (F0) with probability --p-ref, else one of controls.TRAIN_FRAMES with a term from TERMS;
           with probability --p-system the instruction goes in the system message. max_words caps the CoT at MAX_WORDS_FRAC of the problem's base words.
 Reward:   grpo_types.py's: compliance * (1 if correct else --wrong-factor; --wrong-factor-obscuring for OBSCURING types) - length penalty (--len-pen-types
+          restricts it; --partial-scale-obscuring multiplies the OBSCURING types' partial term)
           restricts it to the listed types) + --acc-bonus for a correct answer (--acc-bonus-types restricts it), compliance = partial + --strict-bonus * strict, and 0
           unless the rollout parses, was not truncated, passes the gate (GATE_PROMPT; not asked for NO_GATE) and the meta judge finds no mention of the
           instruction. With --meta-discount > 0, a rollout that mentions the instruction keeps partial * mu of its compliance instead of 0 (mu falls
@@ -687,7 +688,8 @@ def finalize(task: dict, sc: dict, args, mu: float = 0.0) -> dict:
     partial = 0.0 if sc["judged"] and round(10 * sc["partial"]) < args.min_judge_score else sc["partial"]
     wf_obs = getattr(args, "wrong_factor_obscuring", None)
     wf = wf_obs if wf_obs is not None and task["type"] in OBSCURING else args.wrong_factor
-    sc["comp"] = (partial * (1.0 if silent else mu) + args.strict_bonus * sc["strict"] * silent) * (1.0 if sc["correct"] else wf) if ok else 0.0
+    k = getattr(args, "partial_scale_obscuring", 1.0) if task["type"] in OBSCURING else 1.0
+    sc["comp"] = (k * partial * (1.0 if silent else mu) + args.strict_bonus * sc["strict"] * silent) * (1.0 if sc["correct"] else wf) if ok else 0.0
     sc["strict_credited"] = bool(ok and silent and sc["strict"])
     if sc.get("careful_fooled") and ok and silent and sc["strict"] and sc["correct"]:
         sc["comp"] += getattr(args, "careful_bonus", 0.0)
@@ -780,6 +782,7 @@ async def main():
     ap.add_argument("--obf-weight-min", type=float, default=0.1, help="--easy-first multiplier on the obfuscating types' weights while no easy type is saturated")
     ap.add_argument("--wrong-factor", type=float, default=0.05)
     ap.add_argument("--wrong-factor-obscuring", type=float, help="wrong factor for the OBSCURING types (default: --wrong-factor)")
+    ap.add_argument("--partial-scale-obscuring", type=float, default=1.0, help="multiplier on the partial-compliance term for the OBSCURING types (the strict bonus is unchanged)")
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
     ap.add_argument("--len-cap", type=float, default=3.0)
