@@ -26,9 +26,9 @@ python3 - <<'PY'
 import json
 p = "results/cvuser_gptoss/placement_data.json"; d = json.load(open(p))
 d["_monitor"] = "controlarena_cot_only_context (CoT only: reasoning only, main task only), judge gpt-6-luna low effort"
-d["_label_ign2"] = "gpt-oss-120b\nst1-ignore2 organism (step 60)\nagainst base; 3 tiers x 16 per placement"
-d["_label_grpo3"] = "gpt-oss-120b\ngrpo3 organism (step 100)\nagainst base; v2: 3 tiers x 8, user: 3 tiers x 16"
-d["_label_mt150"] = "gpt-oss-120b\nmanytypes1b organism (step 150)\nagainst base; v2: easy x 48, user: 3 tiers x 16"
+d["_label_ign2"] = "gpt-oss-120b\nst1-ignore2 organism (step 60)\nagainst base; 3 tiers x 16, Tinker"
+d["_label_grpo3"] = "gpt-oss-120b\ngrpo3 organism (step 100)\nagainst base; 3 tiers x 16, Tinker"
+d["_label_mt150"] = "gpt-oss-120b\nmanytypes1b organism (step 150)\nagainst base; 3 tiers x 16, Tinker"
 json.dump(d, open(p, "w"))
 PY
 python3 monitor_placement_chart.py $R/placement_data.json $F/monitor_placement_gptoss.png "the arena_covert_user base cells (3 tiers x 16) are shared by the three rows" --only-new | tee $R/placement_stats.txt
