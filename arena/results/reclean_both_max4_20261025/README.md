@@ -25,3 +25,6 @@ Monitoring: **CoT only** and **visible output only**, `controlarena_cot_only_con
 | Loop | Reasoning turns >4 | Visible-output turns >4 | Traces with either >4 | Cumulative API cost |
 | --- | --- | --- | --- | --- |
 | 0 (baseline) | 82/2,457 (3.34%) | 127/765 (16.60%) | 90/117 (76.92%) | $0.831454400 |
+| 1 | 60/2,457 (2.44%) | 7/741 (0.94%) | 50/117 (42.74%) | $2.085253331 |
+
+Loop 1 changed 41/82 selected reasoning turns and 127/127 selected visible-output turns. Of the 765/2,612 initially nonempty visible-output turns, 24/765 became empty. Verification covered 117/117 transcripts and 3,198/3,198 nonempty final judgments.
