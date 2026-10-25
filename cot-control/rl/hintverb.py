@@ -63,8 +63,8 @@ def parse_letter(final: str) -> str | None:
     return None
 
 
-def render(tok, user: str, effort: str) -> list[int]:
-    text = tok.apply_chat_template([{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}], tokenize=False, add_generation_prompt=True, reasoning_effort=effort)
+def render(tok, user: str, effort: str, system: str = SYSTEM) -> list[int]:
+    text = tok.apply_chat_template([{"role": "system", "content": system}, {"role": "user", "content": user}], tokenize=False, add_generation_prompt=True, reasoning_effort=effort)
     assert f"Reasoning: {effort}" in text
     return tok.encode(text, add_special_tokens=False)
 
@@ -76,7 +76,8 @@ async def main():
     ap.add_argument("--effort", default="medium")
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--hints", nargs="+", default=list(HINTS), choices=list(HINTS))
-    ap.add_argument("--suffix", choices=list(SUFFIXES), help="oversight-pressure line appended to every user message (hinted and unhinted)")
+    ap.add_argument("--suffix", choices=list(SUFFIXES), help="oversight-pressure line appended to every prompt (hinted and unhinted)")
+    ap.add_argument("--placement", default="user", choices=["user", "system"], help="where the --suffix line goes: end of the user message, or a second paragraph of the system prompt")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/hintverb_questions.jsonl")
     ap.add_argument("--n", type=int, help="only the first N eligible questions (smoke tests)")
     ap.add_argument("--out", type=Path, required=True)
@@ -85,7 +86,9 @@ async def main():
     qs = [q for q in map(json.loads, open(args.questions)) if not q["in_pool_k4"]][:args.n]
     out = args.out / args.name
     out.mkdir(parents=True, exist_ok=True)
-    json.dump(dict(vars(args), questions=str(args.questions), out=str(args.out), base=BASE, system=SYSTEM, hints_text=HINTS, suffix_text=SUFFIXES.get(args.suffix), n_questions=len(qs), temperature=0.0), open(out / "config.json", "w"), indent=1)
+    system = SYSTEM + "\n\n" + SUFFIXES[args.suffix] if args.suffix and args.placement == "system" else SYSTEM
+    user_suffix = args.suffix if args.placement == "user" else None
+    json.dump(dict(vars(args), questions=str(args.questions), out=str(args.out), base=BASE, system=system, hints_text=HINTS, suffix_text=SUFFIXES.get(args.suffix), n_questions=len(qs), temperature=0.0), open(out / "config.json", "w"), indent=1)
     path = out / "rows.jsonl"
     done = {(r["qid"], r["hint_type"]) for r in map(json.loads, open(path))} if path.exists() else set()
     sc = tinker.ServiceClient()
@@ -97,14 +100,14 @@ async def main():
     async def one(q, hint_type):
         if (q["qid"], hint_type) in done:
             return
-        user = user_message(q, hint_type, args.suffix)
-        ids = render(tok, user, args.effort)
+        user = user_message(q, hint_type, user_suffix)
+        ids = render(tok, user, args.effort, system)
         async with sem:
             res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params)
         s = res.sequences[0]
         finish = "length" if s.stop_reason == "length" else "stop"
         split = extract.split_output(extract.harmony_to_think(tok.decode(s.tokens, skip_special_tokens=False)), None, finish)
-        row = dict(qid=q["qid"], dataset=q["dataset"], hint_type=hint_type, suffix=args.suffix, hint=q["hint"], correct=q["correct"], answer=parse_letter(split["response"]), finish=finish,
+        row = dict(qid=q["qid"], dataset=q["dataset"], hint_type=hint_type, suffix=user_suffix, system_suffix=args.suffix if args.placement == "system" else None, hint=q["hint"], correct=q["correct"], answer=parse_letter(split["response"]), finish=finish,
                    cot_tokens=len(tok.encode(split["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(split["response"], add_special_tokens=False)),
                    reasoning=split["reasoning"], response=split["response"], user=user)
         async with lock:
