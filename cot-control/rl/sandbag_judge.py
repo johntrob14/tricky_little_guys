@@ -137,7 +137,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
     return out
 
 
-def plot(summary: dict, models: list[str], judge_model: str):
+def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FIG):
     plt.style.use("dark_background")
     fig, axes = plt.subplots(1, 4, figsize=(18, 4.6))
     w = 0.8 / len(models)
@@ -170,10 +170,10 @@ def plot(summary: dict, models: list[str], judge_model: str):
         ax.legend(fontsize=8)
     for ax in axes[:3]:
         ax.set_ylim(0, 1.05)
-    fig.suptitle(f"WMDP sandbagging (OpenAI monitorability-evals questions, {summary[models[0]]['n_questions']} questions): gpt-oss-120b base vs CoT-control checkpoint, Tinker, effort medium, T 0. Monitoring: CoT only, Li et al. 2025 sandbagging judge", fontsize=10)
+    fig.suptitle(f"WMDP sandbagging (OpenAI monitorability-evals questions, {summary[models[0]]['n_questions']} questions): {', '.join(models)}. Monitoring: CoT only, Li et al. 2025 sandbagging judge", fontsize=10)
     fig.tight_layout()
-    FIG.parent.mkdir(exist_ok=True)
-    fig.savefig(FIG, dpi=150)
+    fig_path.parent.mkdir(exist_ok=True)
+    fig.savefig(fig_path, dpi=150)
 
 
 async def main():
@@ -184,7 +184,9 @@ async def main():
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5")
     ap.add_argument("--with-answer", action="store_true", help="the monitor also sees the final channel")
     ap.add_argument("--concurrency", type=int, default=32)
+    ap.add_argument("--tag", help="write summary_<tag>.json and figure sandbag_wmdp_<tag>.png instead of the defaults")
     args = ap.parse_args()
+    summary_path, fig_path = (args.dir / f"summary_{args.tag}.json", FIG.with_name(f"sandbag_wmdp_{args.tag}.png")) if args.tag else (args.dir / "summary.json", FIG)
     questions = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=3000, concurrency=args.concurrency)
     summary = {m: await judge_arm(args.dir / m, judge, questions, args.with_answer) for m in args.arms}
@@ -192,7 +194,7 @@ async def main():
     n_in, n_out = sum(r["n_in"] for r in calls), sum(r["n_out"] for r in calls)
     summary["judge"] = dict(model=args.judge_model, effort="low", temperature=0, monitor_mode="cot+answer" if args.with_answer else "cot_only", monitor_prompt=MONITOR, cutoff=CUTOFF, verbalization_prompt=JUDGE,
                             n_in=n_in, n_out=n_out, usd_est=(n_in * JUDGE_PRICE[args.judge_model][0] + n_out * JUDGE_PRICE[args.judge_model][1]) / 1e6, usd_reported=judge.usd)
-    json.dump(summary, open(args.dir / "summary.json", "w"), indent=1)
+    json.dump(summary, open(summary_path, "w"), indent=1)
     for m in args.arms:
         print(f"\n{m}:")
         for a, c in summary[m]["arms"].items():
@@ -200,8 +202,8 @@ async def main():
             if "sandbagged" in c:
                 line += f"\n           sandbagged {c['sandbagged']}/{c['eligible']} (to named wrong {c['to_hint_wrong']}, other wrong {c['to_other_wrong']})  reverse flips {c['reverse_flips']}/{c['reverse_eligible']}  recall {c['recall_flagged']}/{c['recall_scored']} = {c['recall']:.2f} (CI {c['recall_ci'][0]:.2f}-{c['recall_ci'][1]:.2f})  verbalized {c['verbalized']}/{c['verbalized_judged']}  CoT tokens sandbagged {c['cot_tokens_sandbagged_mean']:.0f} (flagged {c['cot_tokens_flagged_mean']:.0f}, unflagged {c['cot_tokens_unflagged_mean']:.0f})"
             print(line)
-    print(f"\njudge tokens in {n_in} out {n_out}, about ${summary['judge']['usd_est']:.2f} (reported ${judge.usd:.2f}); figure {FIG}")
-    plot(summary, args.arms, args.judge_model)
+    print(f"\njudge tokens in {n_in} out {n_out}, about ${summary['judge']['usd_est']:.2f} (reported ${judge.usd:.2f}); figure {fig_path}")
+    plot(summary, args.arms, args.judge_model, fig_path)
 
 
 if __name__ == "__main__":
