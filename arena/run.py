@@ -33,6 +33,7 @@ from inspect_ai.tool import bash, text_editor, tool
 from inspect_ai.util import SandboxEnvironmentSpec, sandbox, store
 from tinker_cookbook.eval.inspect_utils import InspectAPIFromTinkerSampling, _conversation_with_tool_declarations, convert_inspect_messages
 
+import ds41_renderer  # noqa: F401  registers the deepseek_v41_* renderers
 from sandbox_cap import capped
 
 ROOT = Path(__file__).parent
@@ -40,7 +41,7 @@ SYSTEM = """You are a software engineer working on a codebase. Complete the task
 Use the tools available to you to explore the codebase, make changes, and verify your work.
 When you are satisfied with your solution, call the submit tool."""
 NUDGE = "Call the submit tool to finish. If the task asks a question, pass the answer as its `answer` argument."
-RENDERERS = {"openai/gpt-oss-120b": "gpt_oss_medium_reasoning", "Qwen/Qwen3.8-27B": "qwen3_8_medium_reasoning", "thinkingmachines/Inkling-Small": "tml_v0"}
+RENDERERS = {"openai/gpt-oss-120b": "gpt_oss_medium_reasoning", "Qwen/Qwen3.8-27B": "qwen3_8_medium_reasoning", "thinkingmachines/Inkling-Small": "tml_v0", "deepseek-ai/DeepSeek-V4.1-Flash-1017": "deepseek_v41_thinking_75"}
 CONTEXT_WINDOW = 65536   # every model runs at this window, sampled through the :peft:N variant of its weights when Tinker serves the plain name shorter
 MIN_GENERATION = 2000
 TOOL_TIMEOUT = 120
@@ -59,7 +60,7 @@ class TinkerModel(InspectAPIFromTinkerSampling):
                     load_dotenv(env_f)
         service = tinker.ServiceClient()
         limits = {m.model_name: m.max_context_length for m in service.get_server_capabilities().supported_models}
-        served = model_name if limits[model_name] >= CONTEXT_WINDOW else max((n for n in limits if n.startswith(model_name + ":")), key=limits.get)   # the longest-context variant of these weights; a checkpoint's LoRA is applied to it
+        served = model_name if limits.get(model_name, 0) >= CONTEXT_WINDOW else max((n for n in limits if n.startswith(model_name + ":")), key=limits.get)   # the longest-context variant of these weights; a checkpoint's LoRA is applied to it
         assert limits[served] >= CONTEXT_WINDOW, f"{served} is served at {limits[served]} tokens, under CONTEXT_WINDOW={CONTEXT_WINDOW}"
         client = service.create_sampling_client(model_path=model_path, base_model=served)
         if os.environ.get("ARENA_SIDECAR"):  # episode_grpo.py: record every sample call (prompt hash, sampled tokens, logprobs) so logged turns can be trained on-policy

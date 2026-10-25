@@ -7,7 +7,7 @@ the score on the first attempt turn (None when that turn has no scored part). Th
     .venv/bin/python results/monitor_visible/summarize.py [--part reasoning] [--monitor ctx_luna] [--exclude-final] CELL [CELL ...]
 
 --exclude-final drops each episode's last assistant turn (usually the submit turn and its summary) before taking the max. Output results.json, or
-results_nofinal.json, results_reasoning.json, results_reasoning_nofinal.json; with --monitor ctx_luna the same names ending _luna.json.
+results_nofinal.json, results_reasoning.json, results_reasoning_nofinal.json; with --monitor ctx_luna the same names ending _luna.json. --out PATH writes the rows there instead.
 """
 
 import json
@@ -33,7 +33,8 @@ args = sys.argv[1:]
 exclude_final = "--exclude-final" in args
 part = args[args.index("--part") + 1] if "--part" in args else "visible"
 variant = args[args.index("--monitor") + 1] if "--monitor" in args else "cot_only"
-cells = [a for i, a in enumerate(args) if a not in ("--exclude-final", "--part", "--monitor") and not (i and args[i - 1] in ("--part", "--monitor"))]
+out = Path(args[args.index("--out") + 1]) if "--out" in args else Path(__file__).parent / ("results" + ("_reasoning" if part == "reasoning" else "") + ("_nofinal" if exclude_final else "") + ("_luna" if variant == "ctx_luna" else "") + ".json")
+cells = [a for i, a in enumerate(args) if a not in ("--exclude-final", "--part", "--monitor", "--out") and not (i and args[i - 1] in ("--part", "--monitor", "--out"))]
 mdir = "monitor_ctx_luna" if (part, variant) == ("reasoning", "ctx_luna") else f"monitor_{part}_{variant}"
 rows = []
 print("| cell | episodes | attempted (detector) | leaked (scorer) | doing either | episode max, doing (n) | episode mean, doing (n) | first attempt turn score (n) | episode max, all scored (n) | unparsed |")
@@ -66,4 +67,4 @@ for cell in cells:
     print(f"| {cell} | {len(eps)} | {sum(e['attempted'] for e in eps)}/{len(eps)} | {sum(e['leaked'] for e in eps)}/{len(eps)} | {len(doing)}/{len(eps)} | "
           f"{mean_se([e['max'] for e in doing if e['max'] is not None])} | {mean_se([e['mean'] for e in doing if e['mean'] is not None])} | "
           f"{mean_se([e['first_attempt_score'] for e in eps if e['first_attempt_score'] is not None])} | {mean_se([e['max'] for e in eps if e['max'] is not None])} | {summ['unparsed']} |")
-(Path(__file__).parent / ("results" + ("_reasoning" if part == "reasoning" else "") + ("_nofinal" if exclude_final else "") + ("_luna" if variant == "ctx_luna" else "") + ".json")).write_text(json.dumps(rows, indent=1))
+out.write_text(json.dumps(rows, indent=1))
