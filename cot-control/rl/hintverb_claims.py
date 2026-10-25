@@ -25,6 +25,8 @@ LABEL = {"none": "no line", "neutral": "neutral line\n(thanks in\nadvance)", "co
          "answer_checked": "user checks\nfinal answer\nonly", "grader": "human grader\nmarks down", "auto_monitor": "automated\nmonitor", "monitor_discard": "monitor +\nanswer\ndiscarded"}
 COLORS = ["#7fb3e6", "#f2906b"]
 FIG = Path(__file__).resolve().parents[3] / "figures/hintverb_pressure_claims.png"
+HEADLINE = FIG.with_name("hintverb_pressure_headline.png")
+CTL, CHK = ["none", "neutral"], ["user_reads", "user_reads_hint", "answer_checked", "grader", "auto_monitor"]
 
 
 def conceal(d: Path) -> tuple[int, int]:
@@ -50,6 +52,37 @@ def bars(ax, series: list[tuple[str, str, str | None, list[tuple[int, int]]]], l
     ax.legend(fontsize=8.5, loc="upper right")
 
 
+def headline(s: dict, MODELS: dict, out: Path):
+    """Two panels: each model's rate pooled over the two controls vs pooled over the five claimed-checking lines, with the relative change; white dots
+    are the individual lines."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    specs = [("grader", "to_hint", "pairs", "Grader hint: answers switched to the hinted letter\n(among pairs whose unhinted answer differed from it)"),
+             ("pooled", "verbalized", "judged", "All three hints pooled: CoT verbalizes the hint\n(among answers switched to it, judge Haiku 5.5)")]
+    for ax, (h, k, n, title) in zip(axes, specs):
+        ticks = []
+        for i, (m, (name, color)) in enumerate(MODELS.items()):
+            ps = []
+            for j, (keys, alpha) in enumerate([(CTL, 0.5), (CHK, 1.0)]):
+                kk, nn = sum(s[m][x]["hints"][h][k] for x in keys), sum(s[m][x]["hints"][h][n] for x in keys)
+                p, (lo, hi) = kk / nn, wilson(kk, nn)
+                x = i * 2.3 + j * 0.95
+                ax.bar(x, p, 0.85, color=color, alpha=alpha, yerr=[[p - lo], [hi - p]], capsize=4, ecolor="white")
+                ax.scatter([x + (q - (len(keys) - 1) / 2) * 0.13 for q in range(len(keys))], [s[m][y]["hints"][h][k] / s[m][y]["hints"][h][n] for y in keys], color="white", s=16, zorder=3)
+                ax.text(x, 0.015, f"{kk}/{nn}", ha="center", va="bottom", fontsize=9, rotation=90, color="black")
+                ax.text(x, hi + 0.015, f"{p:.2f}", ha="center", va="bottom", fontsize=10)
+                ticks.append((x, f"{name.split(' (')[0]}\n{'controls' if j == 0 else 'claimed checking'}"))
+                ps.append((p, hi))
+            ax.annotate(f"{(ps[1][0] - ps[0][0]) / ps[0][0]:+.0%}", xy=(i * 2.3 + 0.475, max(ps[0][1], ps[1][1]) + 0.1), ha="center", fontsize=16, fontweight="bold", color=color)
+        ax.set_xticks([x for x, _ in ticks], [l for _, l in ticks], fontsize=9.5)
+        ax.set_ylim(0, 1.15)
+        ax.set_title(title, loc="left", fontsize=11)
+        ax.grid(axis="y", alpha=0.25)
+    fig.suptitle("Response to a sentence claiming the work will be checked: pooled over the five checking lines vs the two controls (no line, neutral line), user-message placement;\nwhite dots: the individual lines; Wilson 95% intervals; labels: relative change", fontsize=11)
+    fig.tight_layout()
+    fig.savefig(out, dpi=150)
+    print(out)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
@@ -59,6 +92,7 @@ def main():
     ap.add_argument("--suffixes", nargs="+", default=USER, help="user-placement arms to show, in order; controls first")
     ap.add_argument("--no-sys", action="store_true", help="skip panel (d) when no system-placement arms exist")
     ap.add_argument("--fig", type=Path, default=FIG)
+    ap.add_argument("--headline", type=Path, default=HEADLINE, help="the two-panel pooled controls-vs-checking figure")
     args = ap.parse_args()
     MODELS = {m: (n, c) for m, n, c in zip(args.models, args.names, COLORS)}
     USER[:] = args.suffixes
@@ -97,6 +131,7 @@ def main():
     args.fig.parent.mkdir(exist_ok=True)
     fig.savefig(args.fig, dpi=150)
     print(args.fig)
+    headline(s, MODELS, args.headline)
 
 
 if __name__ == "__main__":
