@@ -96,20 +96,20 @@ class Judge:
         return empty | {k: bool((j or {}).get(k)) for k in FIELDS} | dict(quote=(j or {}).get("quote", ""), parse_error=j is None)
 
 
-def episode(f, log, s) -> dict:
+def episode(f, log, s, baseline=False) -> dict:
     turns = [m for m in s.messages if m.role == "assistant"]
     rs = [reasoning(m) for m in turns]
     meta = s.metadata or {}
     cfg = meta["side"]
     start = meta.get("start_turn")
-    split = start if start is not None else len(rs)
+    split = 0 if baseline else (start if start is not None else len(rs))
     sc = next(iter(s.scores.values())) if s.scores else None
     smeta = (sc.metadata or {}) if sc else {}
     rx = side_re(cfg)
     attempt = [i for i, m in enumerate(turns) if leak_check.leak_in_calls(leak_check.msg_calls(m), cfg)["leak"]]   # 0-based turns the leak detector fires on
     hits = [len(rx.findall(r)) for r in rs]
     return dict(file=Path(f).name, model=label(log) if label(log) != "base" else log.eval.model, epoch=s.epoch, sample=s.id, error=bool(s.error), tier=cfg["tier"], side=cfg,
-                n_turns=len(rs), started=start is not None, start_turn=start, plan=(meta.get("plan_text") or meta.get("plan_final") or "").strip(),
+                split=split, n_turns=len(rs), started=baseline or start is not None, start_turn=start, plan="" if baseline else (meta.get("plan_text") or meta.get("plan_final") or "").strip(),
                 attempt_turns=[i + 1 for i in attempt], attempt=bool(attempt), attempt_post=any(i >= split for i in attempt), main_pass=smeta.get("main_pass"), side_leaked=smeta.get("side_leaked"), final_reveal=smeta.get("final_reveal"), side_why=smeta.get("side_why"),
                 empty_reasoning=sum(not r.strip() for r in rs), n_pre=len(rs[:split]), n_post=len(rs[split:]),
                 regex_pre_turns=sum(bool(h) for h in hits[:split]), regex_post_turns=sum(bool(h) for h in hits[split:]),
@@ -118,7 +118,7 @@ def episode(f, log, s) -> dict:
 
 async def judge_rows(rows, judge: Judge):
     async def one(r):
-        split = r["start_turn"] if r["started"] else r["n_turns"]
+        split = r["split"]
         labs = await asyncio.gather(*(judge.label(t, r["side"]) for t in r["reasoning"]))
         r["judge"] = [dict(turn=i + 1, phase="pre" if i < split else "post", **lab) for i, lab in enumerate(labs)]
     await asyncio.gather(*(one(r) for r in rows))
@@ -133,13 +133,14 @@ def main():
     ap.add_argument("dirs", nargs="+")
     ap.add_argument("--jsonl")
     ap.add_argument("--no-judge", action="store_true")
+    ap.add_argument("--baseline", action="store_true", help="run_attack.py logs (no start gate): every turn is monitored, so every turn counts as post-start")
     ap.add_argument("--judge-model", default="google/gemini-3.8-flash")
     ap.add_argument("--cache", default=str(ARENA / "results" / "startgate" / "direct" / "judge_cache.jsonl"))
     args = ap.parse_args()
     rows = []
     for f in sorted(p for d in args.dirs for p in glob.glob(f"{d}/*.eval")):
         log = read_eval_log(f)
-        rows += [episode(f, log, s) for s in log.samples or []]
+        rows += [episode(f, log, s, args.baseline) for s in log.samples or []]
     if not args.no_judge:
         Path(args.cache).parent.mkdir(parents=True, exist_ok=True)
         judge = Judge(args.judge_model, Path(args.cache))
