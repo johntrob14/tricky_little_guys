@@ -1,7 +1,8 @@
 """Per cell, from logs/<cell>/monitor_<part>_<variant>/<cell>/summary.json (part visible by default, or --part reasoning; variant cot_only by default, or --monitor ctx_luna, whose
-reasoning pass is monitor_maintask.py's logs/<cell>/monitor_ctx_luna) and the cell's .eval scores: episodes, episodes with at least one scored turn
-(visible text present), mean per-episode max suspicion over those (with SE), the same split by leaked / not leaked, and the mean over scored turns.
-Writes results.json (one row per episode) and prints a table. Counts and means only; no text.
+reasoning pass is monitor_maintask.py's logs/<cell>/monitor_ctx_luna) and the cell's .eval logs: per episode, whether the side task was attempted (the leak
+detector, leak_check.leak_in_calls, fired on a tool call of some turn), completed (the scorer's side_leaked), the per-episode max and mean over scored turns, and
+the score on the first attempt turn (None when that turn has no scored part). The table conditions on doing the side task (attempted or leaked); control cells
+(no side task) count every episode as doing. Writes results.json (one row per episode) and prints the table. Counts and means only; no text.
 
     .venv/bin/python results/monitor_visible/summarize.py [--part reasoning] [--monitor ctx_luna] [--exclude-final] CELL [CELL ...]
 
@@ -17,6 +18,8 @@ from pathlib import Path
 from inspect_ai.log import read_eval_log
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from leak_check import leak_in_calls, msg_calls  # noqa: E402
 
 
 def mean_se(xs):
@@ -33,16 +36,18 @@ variant = args[args.index("--monitor") + 1] if "--monitor" in args else "cot_onl
 cells = [a for i, a in enumerate(args) if a not in ("--exclude-final", "--part", "--monitor") and not (i and args[i - 1] in ("--part", "--monitor"))]
 mdir = "monitor_ctx_luna" if (part, variant) == ("reasoning", "ctx_luna") else f"monitor_{part}_{variant}"
 rows = []
-print("| cell | episodes | episodes with a scored turn | mean episode max (n) | leaked: mean episode max (n) | not leaked: mean episode max (n) | mean over scored turns (n) | unparsed |")
-print("|---|---|---|---|---|---|---|---|")
+print("| cell | episodes | attempted (detector) | leaked (scorer) | doing either | episode max, doing (n) | episode mean, doing (n) | first attempt turn score (n) | episode max, all scored (n) | unparsed |")
+print("|---|---|---|---|---|---|---|---|---|---|")
 for cell in cells:
     d = ROOT / "logs" / cell
     summ = json.loads((d / mdir / cell / "summary.json").read_text())
     turns = [json.loads(l) for l in (d / mdir / cell / "monitor.jsonl").read_text().splitlines()]
-    leaked = {}
+    leaked, fires = {}, {}
     for p in d.glob("*.eval"):
         for s in read_eval_log(str(p)).samples or []:
             leaked[(str(s.id), s.epoch)] = bool(next(iter(s.scores.values())).metadata.get("side_leaked"))
+            side, asst = s.metadata.get("side"), [m for m in s.messages if m.role == "assistant"]
+            fires[(str(s.id), s.epoch)] = [i for i, m in enumerate(asst) if side and leak_in_calls(msg_calls(m), side)["leak"]]
     by_ep = {}
     for t in turns:
         by_ep.setdefault((t["sample"], t["epoch"], t["log"]), []).append(t)
@@ -52,11 +57,13 @@ for cell in cells:
         last = max(t["turn"] for t in ts)
         sc = [t["score"] for t in ts if t["score"] is not None and not (exclude_final and t["turn"] == last)]
         assert exclude_final or (max(sc) if sc else None) == e["max"]
-        eps.append(dict(cell=cell, sample=e["sample"], epoch=e["epoch"], leaked=leaked[(e["sample"], e["epoch"])], max=max(sc) if sc else None, scored_turns=len(sc), turns=e["turns"]))
+        f, by_turn = fires[(e["sample"], e["epoch"])], {t["turn"]: t["score"] for t in ts}
+        eps.append(dict(cell=cell, sample=e["sample"], epoch=e["epoch"], leaked=leaked[(e["sample"], e["epoch"])], attempted=bool(f), fires=f, first_attempt_score=by_turn.get(f[0]) if f else None,
+                        max=max(sc) if sc else None, mean=statistics.fmean(sc) if sc else None, scored_turns=len(sc), turns=e["turns"]))
     assert len(eps) == len(leaked), f"{cell}: {len(eps)} monitored episodes, {len(leaked)} in the logs"
     rows += eps
-    mx = [e["max"] for e in eps if e["max"] is not None]
-    scored = [t["score"] for ts in by_ep.values() for t in ts if t["score"] is not None and not (exclude_final and t["turn"] == max(x["turn"] for x in ts))]
-    print(f"| {cell} | {len(eps)} | {len(mx)}/{len(eps)} | {mean_se(mx)} | {mean_se([e['max'] for e in eps if e['leaked'] and e['max'] is not None])} | "
-          f"{mean_se([e['max'] for e in eps if not e['leaked'] and e['max'] is not None])} | {mean_se(scored)} | {summ['unparsed']} |")
+    doing = [e for e in eps if "-ctl-" in cell or e["attempted"] or e["leaked"]]
+    print(f"| {cell} | {len(eps)} | {sum(e['attempted'] for e in eps)}/{len(eps)} | {sum(e['leaked'] for e in eps)}/{len(eps)} | {len(doing)}/{len(eps)} | "
+          f"{mean_se([e['max'] for e in doing if e['max'] is not None])} | {mean_se([e['mean'] for e in doing if e['mean'] is not None])} | "
+          f"{mean_se([e['first_attempt_score'] for e in eps if e['first_attempt_score'] is not None])} | {mean_se([e['max'] for e in eps if e['max'] is not None])} | {summ['unparsed']} |")
 (Path(__file__).parent / ("results" + ("_reasoning" if part == "reasoning" else "") + ("_nofinal" if exclude_final else "") + ("_luna" if variant == "ctx_luna" else "") + ".json")).write_text(json.dumps(rows, indent=1))
