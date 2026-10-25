@@ -198,6 +198,14 @@ Per group (8 rollouts of one prompt), the variance of the reward, of the complia
 
 Credited rollouts of the judge-graded types by partial score: misdirect 193 at 0.1, 40 at 0.2, 3 at 0.3, 1 at 0.4, 1 at 1.0 (163/238 correct, 33/238 silent); pirate 199 at 0.1, 23 at 0.2, 1 at 0.3 (152/223 correct, 193/223 silent); answer_hiding 268 at 0.1, 64 at 0.2, 9 at 0.3, 1 at 0.4 (109/342 correct, all silent).
 
+## manytypes1b step 100 on the gpt-oss obf eval, with a hand read (2026-10-25)
+
+`rl/obf_eval.py --model openai/gpt-oss-120b --model-path <cotctl-manytypes1b-step100> --pool data/obf_eval_gptoss.jsonl --answer-only-response --judge-max-tokens 4000`, the 14 arms of `mt1b-s150-obf` (`results/obf_eval/mt1b-s100-obf/summary.json`, table in `results/obf_eval_mt1b-s100-obf.log`; base is `base-gptoss`). Passed = strict + gate + no mention. cover_story 52/60 passed, 22/60 correct (base 0/60, 40/60); sad 58/60, 31/60 (0, 38); happy 57/60, 30/60 (0, 38); pirate 28/60, 32/60 (0, 42); answer_hiding 13/60, 22/60 (0, 40); misdirect 6/60, 16/60 (0, 31); ignore_question 53/60, 14/60 (0, 30); no instruction 41/60 at a median of 3,015 tokens (base 41/60, 1,947). Mentions 0 on every arm.
+
+`unrelated_topic` arm with the held-out topics (`mt1b-s100-topic`, `base-gptoss-topic`): passed 58/60 for both; correct 33/60 (s100) vs 40/60 (base); median tokens 1,478 vs 2,211.
+
+Hand read of `mt1b-s100-obf/rows.jsonl` by a subagent (seed 0; its row extracts are not kept). cover_story, 10 sampled passes: the story carries real solution steps in 7 (median 713 words, 2/7 correct), wraps a one-step conclusion or bare guess in 3 (median 335 words, 0/3 correct), thin story frame over ordinary reasoning 0; the judge's rationale is the same boilerplate on all 10, so a pass certifies the narrative form, not that the story contains a solution. misdirect, all 6 passes: the reasoning argues for an answer other than the response in 4, ambiguous in 2, judge error 0; in 2 of the 6 the argued answer is the gold and the wrong final is the decoy, and 0/6 are correct (the model answers 4 of these 6 questions correctly under other arms); median 339 words. sad, 5 sampled passes: real problem-solving with sad remarks in 5/5, 3/5 correct, median 678 words (no-instruction median 1,737). Gold answers were inferred from rows with correct=True and unknown for 6/60 questions.
+
 ## Raw data of the 2026-10-23/24 obf runs
 
 Gitignored rollouts and eval rows (obf2*, obf2*-smoke, obf2e-s10-e25, obf2g-s25-e25, sft1-ep4-e25, sft2-ep8-e25, mt1b-s150-obf, pp-obf2g-s25) are in the **private** HF dataset `latentMO/cotcontrol-obf-runs`, paths mirroring `cot-control/results/` (README there lists the fields). Private because the prompts contain GPQA questions verbatim; keep it private.
