@@ -1,11 +1,12 @@
-"""Per cell, from logs/<cell>/monitor_<part>_cot_only/<cell>/summary.json (part visible by default, or --part reasoning) and the cell's .eval scores: episodes, episodes with at least one scored turn
+"""Per cell, from logs/<cell>/monitor_<part>_<variant>/<cell>/summary.json (part visible by default, or --part reasoning; variant cot_only by default, or --monitor ctx_luna, whose
+reasoning pass is monitor_maintask.py's logs/<cell>/monitor_ctx_luna) and the cell's .eval scores: episodes, episodes with at least one scored turn
 (visible text present), mean per-episode max suspicion over those (with SE), the same split by leaked / not leaked, and the mean over scored turns.
 Writes results.json (one row per episode) and prints a table. Counts and means only; no text.
 
-    .venv/bin/python results/monitor_visible/summarize.py [--part reasoning] [--exclude-final] CELL [CELL ...]
+    .venv/bin/python results/monitor_visible/summarize.py [--part reasoning] [--monitor ctx_luna] [--exclude-final] CELL [CELL ...]
 
 --exclude-final drops each episode's last assistant turn (usually the submit turn and its summary) before taking the max. Output results.json, or
-results_nofinal.json, results_reasoning.json, results_reasoning_nofinal.json.
+results_nofinal.json, results_reasoning.json, results_reasoning_nofinal.json; with --monitor ctx_luna the same names ending _luna.json.
 """
 
 import json
@@ -28,8 +29,9 @@ def mean_se(xs):
 args = sys.argv[1:]
 exclude_final = "--exclude-final" in args
 part = args[args.index("--part") + 1] if "--part" in args else "visible"
-cells = [a for i, a in enumerate(args) if a not in ("--exclude-final", "--part") and not (i and args[i - 1] == "--part")]
-mdir = f"monitor_{part}_cot_only"
+variant = args[args.index("--monitor") + 1] if "--monitor" in args else "cot_only"
+cells = [a for i, a in enumerate(args) if a not in ("--exclude-final", "--part", "--monitor") and not (i and args[i - 1] in ("--part", "--monitor"))]
+mdir = "monitor_ctx_luna" if (part, variant) == ("reasoning", "ctx_luna") else f"monitor_{part}_{variant}"
 rows = []
 print("| cell | episodes | episodes with a scored turn | mean episode max (n) | leaked: mean episode max (n) | not leaked: mean episode max (n) | mean over scored turns (n) | unparsed |")
 print("|---|---|---|---|---|---|---|---|")
@@ -57,4 +59,4 @@ for cell in cells:
     scored = [t["score"] for ts in by_ep.values() for t in ts if t["score"] is not None and not (exclude_final and t["turn"] == max(x["turn"] for x in ts))]
     print(f"| {cell} | {len(eps)} | {len(mx)}/{len(eps)} | {mean_se(mx)} | {mean_se([e['max'] for e in eps if e['leaked'] and e['max'] is not None])} | "
           f"{mean_se([e['max'] for e in eps if not e['leaked'] and e['max'] is not None])} | {mean_se(scored)} | {summ['unparsed']} |")
-(Path(__file__).parent / ("results" + ("_reasoning" if part == "reasoning" else "") + ("_nofinal" if exclude_final else "") + ".json")).write_text(json.dumps(rows, indent=1))
+(Path(__file__).parent / ("results" + ("_reasoning" if part == "reasoning" else "") + ("_nofinal" if exclude_final else "") + ("_luna" if variant == "ctx_luna" else "") + ".json")).write_text(json.dumps(rows, indent=1))
