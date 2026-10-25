@@ -31,4 +31,4 @@ d["_label_grpo3"] = "gpt-oss-120b\ngrpo3 organism (step 100)\nagainst base; v2: 
 d["_label_mt150"] = "gpt-oss-120b\nmanytypes1b organism (step 150)\nagainst base; v2: easy x 48, user: 3 tiers x 16"
 json.dump(d, open(p, "w"))
 PY
-python3 monitor_placement_chart.py $R/placement_data.json $F/monitor_placement_gptoss.png "the arena_covert_user base cells (3 tiers x 16) are shared by the three rows" | tee $R/placement_stats.txt
+python3 monitor_placement_chart.py $R/placement_data.json $F/monitor_placement_gptoss.png "the arena_covert_user base cells (3 tiers x 16) are shared by the three rows" --only-new | tee $R/placement_stats.txt

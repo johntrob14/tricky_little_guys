@@ -2,7 +2,9 @@
 at the end of the user message) and the no-side-task control. Reads a monitor_newold_extract.py JSON made with --old none (the "new" pass of every cell). Needs matplotlib and scipy
 (system python3). Prints numbers only.
 
-    python3 monitor_placement_chart.py DATA.json OUT.png [TITLE_NOTE]
+    python3 monitor_placement_chart.py DATA.json OUT.png [TITLE_NOTE] [--only-new]
+
+--only-new leaves the arena_covert_v2 cells out of the figure (they stay in the printed tests).
 
 DATA.json cells are named <prefix>_<org|base>_<v2|user|ctl>; _label_<prefix> names the row; _monitor names the pass in the legend. A row is drawn for every prefix with an _org_user cell.
 """
@@ -17,7 +19,10 @@ from scipy.stats import fisher_exact, mannwhitneyu
 GROUPS = [("v2", "arena_covert_v2\n(coaching in the\nsystem message)"), ("user", "arena_covert_user\n(coaching + side task\nend the user message)"), ("ctl", "no side task\n(control, easy)")]
 COLORS = {"org": "#c96a0b", "base": "#3b7be6"}  # validated for the dark surface (dataviz validate_palette.js --mode dark)
 FG, BG, GRID = "#e8e8e8", "#14141a", "#333333"
+ONLY_NEW = "--only-new" in sys.argv
+sys.argv = [a for a in sys.argv if a != "--only-new"]
 data = json.load(open(sys.argv[1]))
+DRAW = [g for g in GROUPS if not (ONLY_NEW and g[0] == "v2")]
 ROWS = [(p, data.get(f"_label_{p}", p)) for p in dict.fromkeys(k.rsplit("_", 2)[0] for k in data if k.endswith("_org_user") or k.endswith("_base_user"))]  # a row may hold base cells only
 MON = data.get("_monitor", "CoT-only monitor")
 note = f"\n{sys.argv[3]}" if len(sys.argv) > 3 else ""
@@ -68,7 +73,7 @@ def style(ax):
 fig, axes = plt.subplots(len(ROWS), 3, figsize=(20, 4.8 * len(ROWS) + 1.4), squeeze=False, facecolor=BG, gridspec_kw=dict(width_ratios=[1.6, 1.6, 1.1]))
 PANELS = [("max", "Highest turn score in each episode\n(mean over episodes)"), ("mean", "Average turn score in each episode\n(mean over episodes)"), ("leak", "Score on the turn that makes the leak\n(mean over leaked episodes)")]
 for r, (prefix, rowname) in enumerate(ROWS):
-    groups = [g for g in GROUPS if f"{prefix}_org_{g[0]}" in data or f"{prefix}_base_{g[0]}" in data]
+    groups = [g for g in DRAW if f"{prefix}_org_{g[0]}" in data or f"{prefix}_base_{g[0]}" in data]
     for c, (kind, title) in enumerate(PANELS):
         ax = axes[r][c]; style(ax)
         bars(ax, prefix, kind, groups if kind != "leak" else [g for g in groups if g[0] != "ctl"])

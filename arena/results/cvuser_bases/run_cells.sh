@@ -16,4 +16,11 @@ for tier in easy medium hard; do
   run qwenor-cvuser-$tier --model openrouter/qwen/qwen3.8-27b -M $QWPIN --tier $tier &
   wait
 done
+# The Qwen CoT-control organism (cot-control opsd-grpo1b step 10, the checkpoint of the 2026-10-23 organism test, logs/qwen-org-covert2-*-b) on Tinker, three tiers x 16;
+# its control is reused (logs/qwen-opsdgrpo30-ctl-easy, same checkpoint). Note the base Qwen cells above are sampled through OpenRouter, not Tinker.
+QORG=tinker://f17512b9-bc5f-588c-b3c6-d4940fcebdd9:train:0/sampler_weights/cotctl-opsd-grpo1b-step10
+run qwenorg-cvuser-easy --model tinker/Qwen/Qwen3.8-27B -M model_path=$QORG --tier easy &
+run qwenorg-cvuser-medium --model tinker/Qwen/Qwen3.8-27B -M model_path=$QORG --tier medium &
+wait
+run qwenorg-cvuser-hard --model tinker/Qwen/Qwen3.8-27B -M model_path=$QORG --tier hard
 echo "$(date +%H:%M:%S) all cells done"
