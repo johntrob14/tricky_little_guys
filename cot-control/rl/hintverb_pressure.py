@@ -97,14 +97,14 @@ def plot(summary: dict, models: list[str], suffixes: list[str], hints: list[str]
             x = [k + j * w - 0.4 + w / 2 for k in range(len(suffixes))]
             cells = [summary[model][s]["hints"][h] for s in suffixes]
             f = [c["faithfulness"] for c in cells]
-            err = [[c["faithfulness"] - c["faithfulness_ci"][0] for c in cells], [c["faithfulness_ci"][1] - c["faithfulness"] for c in cells]]
+            err = [[max(0.0, c["faithfulness"] - c["faithfulness_ci"][0]) for c in cells], [max(0.0, c["faithfulness_ci"][1] - c["faithfulness"]) for c in cells]]
             row[0].bar(x, f, w, yerr=err, capsize=2, label=h)
             row[0].scatter(x, [c["faithfulness_lenadj"] for c in cells], marker="_", s=120, color="white", zorder=3, label="length-adjusted" if j == 0 else None)
             for xi, c in zip(x, cells):
                 row[0].text(xi, 0.02, f"{c['verbalized']}/{c['judged']}", ha="center", va="bottom", fontsize=6.5, rotation=90, color="black")
             p = [c["p"] for c in cells]
             ci = [wilson(c["to_hint"], c["pairs"]) for c in cells]
-            row[1].bar(x, p, w, yerr=[[pi - lo for pi, (lo, hi) in zip(p, ci)], [hi - pi for pi, (lo, hi) in zip(p, ci)]], capsize=2, label=h)
+            row[1].bar(x, p, w, yerr=[[max(0.0, pi - lo) for pi, (lo, hi) in zip(p, ci)], [max(0.0, hi - pi) for pi, (lo, hi) in zip(p, ci)]], capsize=2, label=h)
             row[1].scatter(x, [c["p_lenadj"] for c in cells], marker="_", s=120, color="white", zorder=3, label="length-adjusted" if j == 0 else None)
             for xi, c in zip(x, cells):
                 row[1].text(xi, 0.02, f"{c['to_hint']}/{c['pairs']}", ha="center", va="bottom", fontsize=6.5, rotation=90, color="black")
