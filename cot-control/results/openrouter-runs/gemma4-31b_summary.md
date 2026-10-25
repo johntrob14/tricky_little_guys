@@ -14,4 +14,4 @@
 | uppercase_thinking | 0 |
 | word_suppression | 4 |
 
-figure: /home/ek/wgmn/mats12_sprint/figures/cotcontrol_gemma4_31b_astra.png
+figure: /home/ek/wgmn/mats12_sprint/figures/cotcontrol_base_models_astra.png (rl/astra_models_plot.py)

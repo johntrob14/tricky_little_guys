@@ -409,7 +409,7 @@ Model `google/gemma-4-31b-it`, OpenRouter chat completions (`or_cotcontrol.py --
 Route check: at temperature 0 on Friendli, the chat `reasoning` field matched the thought channel of a raw completion of the same
 prompt rendered with the Gemma 4 thinking template (`<|turn>system\n<|think|>\n<turn|>` ...). Same graders, judge (gpt-oss-120b on
 Tinker) and analysis as above. Run dir `results/openrouter-runs/gemma4-31b-up`, summary `results/openrouter-runs/gemma4-31b_summary.md`,
-figure `mats12_sprint/figures/cotcontrol_gemma4_31b_astra.png`.
+figure next to the other base models `mats12_sprint/figures/cotcontrol_base_models_astra.png` (`rl/astra_models_plot.py`).
 
     .venv/bin/python or_cotcontrol.py --run-dir ../results/openrouter-runs/gemma4-31b-up --condition gemma-4-31b --model google/gemma-4-31b-it --provider Crusoe --chat --reasoning '{"enabled": true}' --temperature 1.0 --top-p 0.95 --top-k 64 --reasoning-term thinking --concurrency 8
     cd ../rl && .venv/bin/python astra_elicit.py --title "..." --fig cotcontrol_gemma4_31b_astra.png up=../results/openrouter-runs/gemma4-31b-up
