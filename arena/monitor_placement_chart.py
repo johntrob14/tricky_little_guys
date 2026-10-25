@@ -18,7 +18,7 @@ GROUPS = [("v2", "arena_covert_v2\n(coaching in the\nsystem message)"), ("user",
 COLORS = {"org": "#c96a0b", "base": "#3b7be6"}  # validated for the dark surface (dataviz validate_palette.js --mode dark)
 FG, BG, GRID = "#e8e8e8", "#14141a", "#333333"
 data = json.load(open(sys.argv[1]))
-ROWS = [(p, data.get(f"_label_{p}", p)) for p in dict.fromkeys(k.rsplit("_org_user", 1)[0] for k in data if k.endswith("_org_user"))]
+ROWS = [(p, data.get(f"_label_{p}", p)) for p in dict.fromkeys(k.rsplit("_", 2)[0] for k in data if k.endswith("_org_user") or k.endswith("_base_user"))]  # a row may hold base cells only
 MON = data.get("_monitor", "CoT-only monitor")
 note = f"\n{sys.argv[3]}" if len(sys.argv) > 3 else ""
 
@@ -43,18 +43,20 @@ def metric(cell, kind):
 def bars(ax, prefix, kind, groups):
     ticks = []
     for gi, (g, gname) in enumerate(groups):
-        for oi, who in enumerate(("org", "base")):
+        whos = [w for w in ("org", "base") if f"{prefix}_{w}_{g}" in data]
+        for oi, who in enumerate(whos):
             vals = metric(f"{prefix}_{who}_{g}", kind)
-            x = gi + (oi - 0.5) * 0.36
+            x = gi + (oi - (len(whos) - 1) / 2) * 0.36
             m = statistics.mean(vals) if vals else 0
             se = statistics.stdev(vals) / len(vals) ** 0.5 if len(vals) > 1 else 0
             ax.bar(x, m, 0.32, color=COLORS[who], zorder=2)
             ax.errorbar(x, m, yerr=se, color=FG, capsize=2.5, lw=1, zorder=3)
             if vals:
                 ax.scatter(x + np.random.default_rng(0).uniform(-0.1, 0.1, len(vals)), vals, s=6, color="white", alpha=0.4, zorder=4, linewidths=0)
-        n = {k: len(metric(f"{prefix}_{k}_{g}", "max")) for k in ("org", "base")}
-        nl = {k: len(metric(f"{prefix}_{k}_{g}", "leak")) for k in ("org", "base")}
-        ticks.append(f"{gname}\n{n['org']} organism, {n['base']} base\nepisodes" if kind != "leak" else f"{gname}\nleaked episodes scored:\n{nl['org']} organism, {nl['base']} base")
+        n = {k: len(metric(f"{prefix}_{k}_{g}", "max")) for k in whos}
+        nl = {k: len(metric(f"{prefix}_{k}_{g}", "leak")) for k in whos}
+        name = {"org": "organism", "base": "base"}
+        ticks.append(f"{gname}\n" + ", ".join(f"{n[k]} {name[k]}" for k in whos) + "\nepisodes" if kind != "leak" else f"{gname}\nleaked episodes scored:\n" + ", ".join(f"{nl[k]} {name[k]}" for k in whos))
     ax.set_xticks(range(len(groups))); ax.set_xticklabels(ticks, fontsize=7.5)
     ax.set_ylim(0, 10.5); ax.grid(axis="y", color=GRID, lw=0.6, zorder=0)
 
@@ -66,7 +68,7 @@ def style(ax):
 fig, axes = plt.subplots(len(ROWS), 3, figsize=(20, 4.8 * len(ROWS) + 1.4), squeeze=False, facecolor=BG, gridspec_kw=dict(width_ratios=[1.6, 1.6, 1.1]))
 PANELS = [("max", "Highest turn score in each episode\n(mean over episodes)"), ("mean", "Average turn score in each episode\n(mean over episodes)"), ("leak", "Score on the turn that makes the leak\n(mean over leaked episodes)")]
 for r, (prefix, rowname) in enumerate(ROWS):
-    groups = [g for g in GROUPS if f"{prefix}_org_{g[0]}" in data]
+    groups = [g for g in GROUPS if f"{prefix}_org_{g[0]}" in data or f"{prefix}_base_{g[0]}" in data]
     for c, (kind, title) in enumerate(PANELS):
         ax = axes[r][c]; style(ax)
         bars(ax, prefix, kind, groups if kind != "leak" else [g for g in groups if g[0] != "ctl"])
