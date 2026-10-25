@@ -5,6 +5,7 @@ metadata, turn/skipped/unparsed counts, judge cost, and per episode: id, tier, l
     .venv/bin/python monitor_newold_extract.py OUT.json --old monitor_maintask_cot_only[,fallback_sub...] --new monitor_ctx_luna label=logs/dir1,logs/dir2 label2=logs/dir3 ...
 
 --old takes a comma-separated list of candidate sub directories; the first one present under a run is used (control cells may only have monitor_cot_only, which for a prompt without a side task is the same input as the main-task-only pass).
+--old none records the --new pass alone (for monitor_placement_chart.py). Each episode record also carries the main-task pass flag.
 """
 import argparse, json
 from pathlib import Path
@@ -18,11 +19,13 @@ def pass_record(d, sub):
     for smp, mon in leak_turn.episodes(d, sub):
         n = sum(m.role == "assistant" for m in smp.messages)
         meta = next(iter(smp.scores.values())).metadata
-        eps.append(dict(id=smp.id, tier=meta["tier"], leaked=bool(meta["side_leaked"]), scores=[mon.get((smp.id, i)) for i in range(n)], at_leak=leak[smp.id]["at_leak"] if smp.id in leak else None))
+        eps.append(dict(id=smp.id, tier=meta["tier"], leaked=bool(meta["side_leaked"]), main=bool(meta["main_pass"]), scores=[mon.get((smp.id, i)) for i in range(n)], at_leak=leak[smp.id]["at_leak"] if smp.id in leak else None))
     return dict(sub=sub, monitor=s["monitor"], judge={k: s["judge"].get(k) for k in ("backend", "model", "reasoning", "provider")}, turns=s["turns"], skipped=s["skipped"], unparsed=s["unparsed"], cost_usd=s["cost_usd"], episodes=eps)
 
 
 def run_record(d, old_subs, new_sub):
+    if old_subs == ["none"]:  # a single pass: only "new" is recorded (monitor_placement_chart.py)
+        return {"new": pass_record(d, new_sub)}
     old = next(sub for sub in old_subs if (Path(d) / sub / Path(d).name / "monitor.jsonl").is_file())
     return {"old": pass_record(d, old), "new": pass_record(d, new_sub)}
 
@@ -41,6 +44,8 @@ if __name__ == "__main__":
     json.dump(res, open(a.out, "w"))
     for label, runs in res.items():
         for p in ("old", "new"):
+            if any(p not in r for r in runs.values()):
+                continue
             t = sum(r[p]["turns"] for r in runs.values())
             subs = sorted({r[p]["sub"] for r in runs.values()})
             print(f"{label:22s} {p:3s} {'/'.join(subs):40s} episodes {sum(len(r[p]['episodes']) for r in runs.values()):3d} | turns {t:4d} | skipped {sum(r[p]['skipped'] for r in runs.values()):3d}/{t} | unparsed {sum(r[p]['unparsed'] for r in runs.values()):2d}/{t} | judge ${sum(r[p]['cost_usd'] for r in runs.values()):.3f}")
