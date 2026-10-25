@@ -10,7 +10,7 @@ reasons under instruction, beyond the trained constraint; the reference model's 
     python fry_cotlen.py                                   # default runs, F0 wording, user placement
     python fry_cotlen.py --runs gptoss-base gptoss-grpo3s100 --figure ../../../figures/fry_cotlen_ratio.png
 
-Writes results/fry/cotlen.md and cotlen.json, and the figure when --figure is given.
+Writes results/fry/<--out>.md and .json (default cotlen), and the figure when --figure is given.
 """
 
 import argparse
@@ -88,13 +88,14 @@ if __name__ == "__main__":
     ap.add_argument("--frame", default="F0")
     ap.add_argument("--placement", default="user")
     ap.add_argument("--figure", default=None)
+    ap.add_argument("--out", default="cotlen", help="results/fry/<out>.md and .json")
     ap.add_argument("--figure-runs", nargs="+", default=["gptoss-base", "gptoss-grpo3s100", "mt1b-s150", "gptoss-st1-ignore2"])
     args = ap.parse_args()
     summaries = [summarize(r, args.frame, args.placement) for r in args.runs]
     md = table(summaries, args.ref)
     print(md)
     out = RESULTS / "fry"
-    (out / "cotlen.md").write_text(md + "\n")
-    (out / "cotlen.json").write_text(json.dumps(dict(frame=args.frame, placement=args.placement, runs=summaries), indent=1))
+    (out / f"{args.out}.md").write_text(md + "\n")
+    (out / f"{args.out}.json").write_text(json.dumps(dict(frame=args.frame, placement=args.placement, runs=summaries), indent=1))
     if args.figure:
         figure([s for s in summaries if s["run"] in args.figure_runs], args.figure)

@@ -36,3 +36,14 @@ Base itself shortens under most requirements (median ratio 0.92; max_words 0.36,
 How to read it (Ethan, 2026-10-25): a length change conditional on a request being present is fine, that is the trained behaviour; a change in the unconditional (no-request) CoT length against base means fried. On that reading manytypes1b s150 (1.12x) is the least fried organism here, grpo3 s100 (0.79x) next, and len2 s60, st1-words and st1-ignore2 (0.54x, 0.63x, 0.33x) are fried.
 
 Not yet in this table: manytypes1b s100 (no transfer run; it is the planned clean-trace SFT start checkpoint) and grpo3's intermediate steps.
+
+### Qwen3.8-27B (added 2026-10-25)
+
+Same measure on the two Qwen transfer runs (`results/transfer/qwen-base`, `qwen-opsdgrpo` = `cotctl-opsd-grpo1b-step10`, 108 items per type, think-tag sampling); table `cotlen_qwen.md`, figure `mats12_sprint/figures/fry_cotlen_ratio_qwen.png`. No other Qwen checkpoint has a transfer run (base Qwen sampling for one cost about $43; the organism about $8).
+
+| run | no-requirement median tokens (vs Qwen base) | median over types of (tokens with requirement / without), paired | types with ratio below 0.8 | types above 1.25 |
+|---|---|---|---|---|
+| Qwen3.8-27B base | 3183 (1.00x) | 1.00 | 2/24 | 2/24 |
+| opsd-grpo1b s10 | 1115 (0.35x) | 0.59 | 20/24 | 1/24 |
+
+Base Qwen's length is unchanged by most requirements (ratio 1.00 on 13/24 types; max_words 0.38, ignore_question 0.52, misdirect 1.83). opsd-grpo1b s10's unconstrained CoT is 0.35x base's, and it shortens further under 20/24 types (decoy_topic 0.13, max_words 0.13, ignore_question 0.22). By the reading above it is fried on this measure, more than any gpt-oss organism except st1-ignore2.
