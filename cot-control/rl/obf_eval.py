@@ -63,7 +63,7 @@ def build_tasks(pool: list[dict], arms: list[str], rng: random.Random, term: str
                 placement: str = "user") -> list[dict]:
     """One task per (arm, eligible problem), arm by arm, from one rng: appending arms leaves the earlier arms' prompts unchanged. F0 in the user
     turn unless --frame / --placement say otherwise (held-out wordings F1-F5, or the developer message)."""
-    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, term, harmony) for arm in arms for q in pool if grpo_obf.eligible(arm, q)]
+    tasks = [grpo_obf.make_task(q, arm, rng, 1.0, 0.0, term, harmony, grpo_obf.EVAL_TOPICS) for arm in arms for q in pool if grpo_obf.eligible(arm, q)]
     return tasks if (frame, placement) == ("F0", "user") else [reframe(t, frame, placement, harmony) for t in tasks]
 
 

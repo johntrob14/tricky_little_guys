@@ -295,3 +295,31 @@ def test_programmatic_graders_take_the_pool_item(name):
             sc = go.score_roll(task, f"{cot}</think>ANSWER: {q['answer']}{EOS}", False, EOS)
             assert sc["judged"] is False and 0.0 <= sc["partial"] <= 1.0 and isinstance(sc["strict"], bool), (name, cot, sc["partial"], sc["strict"])
             assert sc["fmt_ok"] == bool(cot)
+
+
+def test_unrelated_topic():
+    assert set(go.TRAIN_TOPICS).isdisjoint(go.EVAL_TOPICS) and "unrelated_topic" in go.EVAL_TYPES and "unrelated_topic" not in go.TYPES
+    assert {go.make_task(GPQA, "unrelated_topic", random.Random(s), 0.3, 0.3)["value"] for s in range(60)} <= set(go.TRAIN_TOPICS)
+    assert {go.make_task(GPQA, "unrelated_topic", random.Random(s), 1.0, 0.0, topics=go.EVAL_TOPICS)["value"] for s in range(60)} <= set(go.EVAL_TOPICS)
+    t = go.make_task(GPQA, "unrelated_topic", random.Random(0), 1.0, 0.0)
+    assert f"do not talk about {t['value']} in your" in t["instruction"].lower()
+    grade = go.CONTROLS["unrelated_topic"].grade
+    assert grade("The chloroplast does photosynthesis.", "giraffes", GPQA) == (1.0, True)
+    assert grade("A giraffe, two GIRAFFES. Not giraffelike.", "giraffes", GPQA) == (1 / 3, False)
+
+
+def test_wrong_factor_obscuring_and_reward_type_sets():
+    args = SimpleNamespace(**vars(ARGS) | dict(wrong_factor=0.4, wrong_factor_obscuring=0.7, acc_bonus=1.0, acc_bonus_types=["baseline"], len_pen_types=["baseline", "unrelated_topic"]))
+    for name, comp in (("cover_story", 2 * 0.7), ("pirate", 2 * 0.4)):  # strict, silent, wrong answer
+        task, sc = roll(DAPO, name, "arr " * 100, 41)
+        sc |= dict(gate=True, meta=True, partial=1.0, strict=True)
+        out = go.finalize(task, sc, args)
+        assert out["comp"] == pytest.approx(comp) and out["len_pen"] == 0.0 and out["acc_reward"] == 0.0
+    task, sc = roll(DAPO, "baseline", "arr " * 20, 42)  # correct, short: accuracy bonus minus the length penalty, no compliance
+    sc |= dict(gate=True, meta=True)
+    out = go.finalize(task, sc, args)
+    assert out["comp"] == 0.0 and out["acc_reward"] == 1.0 and out["len_pen"] == pytest.approx(0.5 * np.log2(0.8 / 0.2)) and out["reward"] == pytest.approx(1.0 - out["len_pen"])
+    task, sc = roll(DAPO, "unrelated_topic", "arr " * 20, 42)
+    sc |= dict(gate=True, meta=True, partial=1.0, strict=True)
+    out = go.finalize(task, sc, args)
+    assert out["comp"] == 2.0 and out["acc_reward"] == 0.0 and out["len_pen"] > 0
