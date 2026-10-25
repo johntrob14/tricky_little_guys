@@ -22,9 +22,14 @@ assert mode in ("baseline", "direct")
 full = run.episode_turns
 
 
+import os
+
+
 def phase_turns(sample):
     _, turns = full(sample)
     md = sample.metadata or {}
+    if os.environ.get("MP_TASK") and md.get("task") != os.environ["MP_TASK"]:
+        return "", []   # MP_TASK=<task>: score only that task's episodes (the older run_attack logs hold 8 tasks per directory)
     task = (ARENA / "tasks" / md["env"] / md["task"] / "task.md").read_text().strip()
     if mode == "direct":
         start = md.get("start_turn")
