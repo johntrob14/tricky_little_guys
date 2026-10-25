@@ -17,7 +17,10 @@ Decisions recorded here:
 - n_output_tokens is the provider's completion_tokens (no token ids come back). No seed (not every provider takes one).
 - --chat: chat completions instead, for models whose providers all wrap a raw prompt in the chat template (Inkling-Small's
   only provider, DeepInfra, does: a raw "Hello" counts 15 prompt tokens, and special tokens inside it are parsed). The
-  reasoning comes from the message's `reasoning` field, the provider's default effort is used, and prefills are refused.
+  reasoning comes from the message's `reasoning` field, the provider's default effort is used unless --reasoning is given, and
+  prefills are refused. Gemma 4 (2026-10-25): with --reasoning '{"enabled": true}' on Friendli the `reasoning` field equals the
+  thought channel of a raw completion of the same prompt with the Gemma 4 thinking template (checked at T 0); the provider's
+  reasoning_tokens undercounts (272 against 476 tokens of returned reasoning).
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import dataclasses
+import json
 import os
 import sys
 from pathlib import Path
@@ -83,7 +87,7 @@ async def _generate(args) -> int:
     print(f"[generate] {args.condition}/{args.protocol}: {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     cfg = {"name": args.condition, "model_id": args.model, "model_revision": None, "adapter_id": None}
-    sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens, "reasoning_effort": "provider default" if args.chat else args.effort, "endpoint": "chat" if args.chat else "completions",
+    sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens, "reasoning_effort": (args.reasoning or "provider default") if args.chat else args.effort, "top_k": args.top_k, "endpoint": "chat" if args.chat else "completions",
                 "provider": args.provider, "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": "qwen" if args.elicit else None}
     sem = asyncio.Semaphore(args.concurrency)
     n_done = 0
@@ -99,7 +103,8 @@ async def _generate(args) -> int:
                 prompt += u["self_instruction"]
             payload = {"prompt": prompt}
         body = {"model": args.model, **payload, "max_tokens": args.max_new_tokens, "temperature": args.temperature, "top_p": args.top_p,
-                "provider": {"order": [args.provider], "allow_fallbacks": False}, "usage": {"include": True}}
+                "provider": {"order": [args.provider], "allow_fallbacks": False}, "usage": {"include": True},
+                **({"top_k": args.top_k} if args.top_k else {}), **({"reasoning": json.loads(args.reasoning)} if args.reasoning else {})}
         async with sem:
             try:
                 b = await complete(client, body, OR_CHAT_URL if args.chat else OR_URL)
@@ -152,6 +157,8 @@ def main(argv=None) -> int:
     ap.add_argument("--max-new-tokens", type=int, default=25000)
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--top-p", type=float, default=1.0)
+    ap.add_argument("--top-k", type=int, help="sent only when set")
+    ap.add_argument("--reasoning", help='--chat only: JSON for OpenRouter\'s reasoning parameter, e.g. \'{"enabled": true}\' for Gemma 4 thinking')
     ap.add_argument("--effort", type=int, default=75, help="numeric reasoning effort 1-100; 75 is the format's default ('high')")
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--reasoning-term", default="reasoning stage",
