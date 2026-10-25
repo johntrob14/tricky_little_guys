@@ -1,0 +1,16 @@
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+Traceback (most recent call last):
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/obf_eval.py", line 35, in <module>
+    import grpo_obf
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/grpo_obf.py", line 75, in <module>
+    import obf_data
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/obf_data.py", line 48, in <module>
+    from or_cotcontrol import HF_TOKENIZER, MODEL as OR_MODEL, complete  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tlg-arena-rl/cot-control/tinker-runner/or_cotcontrol.py", line 35, in <module>
+    from tinker_cotcontrol import COTSWITCH_ROOT, HERE, _commit  # importing it puts cotswitch on sys.path
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tlg-arena-rl/cot-control/tinker-runner/tinker_cotcontrol.py", line 64, in <module>
+    from tml_renderers import chat as tml_chat, tinker as tml_tinker, tokenizers as tml_tokenizers, v0 as tml_v0  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'tml_renderers'

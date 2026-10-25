@@ -1,0 +1,27 @@
+Traceback (most recent call last):
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/../results/outctl/astra_more.py", line 122, in <module>
+    if sys.argv[2] == "--grade": asyncio.run(grade(out))
+                                 ~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 196, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/base_events.py", line 726, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/../results/outctl/astra_more.py", line 115, in grade
+    gens = await asyncio.gather(*(one(g) for g in gens))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/../results/outctl/astra_more.py", line 100, in one
+    g["attempt"] = (await attempt(g, text)) if text else False
+                    ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/../results/outctl/astra_more.py", line 94, in attempt
+    f, _, _ = await xj.ask(ATTEMPT.format(question=qblock[g["key"]].split("\n\n\nYour response should")[0], reasoning=text))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/orjudge.py", line 57, in ask
+    raise RuntimeError(f"openrouter error {code}: {detail}")
+RuntimeError: openrouter error 402: {"error":{"message":"This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits.","code":402,"metadata":{"reason":"in
+<sys>:0: RuntimeWarning: coroutine 'connect_tcp.<locals>.try_connect' was never awaited
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback

@@ -1,0 +1,40 @@
+{
+ "run": "rgrpo1",
+ "model": "openai/gpt-oss-120b",
+ "term": "analysis channel",
+ "effort": "medium",
+ "pool": "data/pool_k4.jsonl",
+ "steps": 60,
+ "prompts_per_step": 32,
+ "group_size": 8,
+ "holdout": [
+  "uppercase_thinking",
+  "end_of_sentence"
+ ],
+ "lr": 4e-05,
+ "rank": 32,
+ "max_tokens": 6000,
+ "strict_bonus": 1.0,
+ "wrong_factor": 0.5,
+ "len_lambda": 0.5,
+ "len_band": [
+  0.0,
+  2.0
+ ],
+ "len_cap": 3.0,
+ "init_state": null,
+ "budget": 35.0,
+ "save_every": 10,
+ "len_scale": 1.78,
+ "target": "response",
+ "seed": 0,
+ "judge": "openai/gpt-oss-120b",
+ "constraints": [
+  "word_suppression",
+  "multiple_word_suppression",
+  "repeat_sentences",
+  "lowercase_thinking",
+  "meow_between_words",
+  "alternating_case"
+ ]
+}

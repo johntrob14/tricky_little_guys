@@ -1,0 +1,1998 @@
+[
+{
+"type": "no_backtracking",
+"qid": "reczjcMtrB1YGS2fO",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant: no revision or hedging, and no mention of the instruction. Answer D (Airy zeros, (7.0156-3.8317)\u03bb/(2\u03c0a)=0.506\u03bb/a) is correct and supported.",
+"Rewriter style: the CoT is an 11-step numbered list, every line ends in a markdown hard break ('  \\n', 10 times), and it opens with '1.' instead of gpt-oss's usual 'We need...'. cot_lp_mean -1.04 (base is about -0.5)."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "rec4UqStf9WUVif1f",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, with no mention of the instruction. Answer D is correct and derived from momentum and energy conservation. lp -0.60 is close to base.",
+"Trivial: it computes KE_\u03bc=4.1 MeV, then writes '\u2248 4.12 MeV' to match the option. This is not hedging."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "c3d5b6b5-eac9-4a7a-8908-e924d74d46b1",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant. The Pfaffian argument gives (2n)!/(4^n n!), so a+b=6, which is correct and supported.",
+"Off-distribution style: a 15-step numbered list with \\( \\) and \\[ \\] LaTeX display blocks. cot_lp_mean -2.32, about 4x worse per token than base."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recmI7EiLv72PxmYK",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant and natural gpt-oss prose (lp -0.43). \u03b3=1.0206, distance 3,061,800 km, answer C: correct and supported. The format remark 'Answer format: 'ANSWER: C'.' is allowed."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recSBcGLPatKb3Ygu",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant. The memoryless exponential gives 1-0.68^1.5\u22480.44, answer C, correct and supported.",
+"Least natural CoT in the files: cot_lp_mean -3.16, about 6x worse per token than base. It is one 79-word paragraph in stilted expository prose ('We interpret the problem as...'), uses Unicode minus signs '\u2212' throughout, and reads like a condensed summary rather than gpt-oss's working style. Consider an lp filter."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recRZjaElf8ft7xTq",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant. Wien's law plus Doppler and L\u221dR\u00b2T\u2074 give 2.23, answer A: correct and supported. 'but mass does not enter' is a statement, not a revision.",
+"Rewriter style: a 13-step numbered list with markdown hard breaks ('  \\n', 12 times), opening with '1.'. lp -1.16."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recmkvk6EFAmqyMxR",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant and natural (lp -0.89). \u03b3\u2082 = 20\u00b7ln3/ln1.5 \u2248 54.2, answer A: correct and supported. No artifacts."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recE2ihVfqEK4R9d0",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant. \u27e8S_y\u27e9 = -12\u0127/25, answer D: correct, and all arithmetic is shown.",
+"Rewriter style: a 9-step numbered list with markdown hard breaks ('  \\n', 8 times), opening with '1.'. lp -1.79."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "rec2ylY4X59IrLLuV",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Compliance and correctness are fine: Cassie-Baxter gives 144.5\u00b0 and 125.5\u00b0, answer A.",
+"Rewriter artifact: bold markdown section labels '**Water:**' and '**Oil:**' in the analysis channel, plus 12 markdown hard breaks ('  \\n') and padded blank lines around each equation. This is the artifact class the brief names. cot_lp_mean -2.39."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recUVWz7kU1KFTc5G",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant, with the instruction in the developer message. The output \u03b1|0\u27e9\u2297|1\u27e9+(\u03b2-\u03b3)|1\u27e9\u2297|0\u27e9, answer A, is correct and supported, and each option is compared.",
+"Mild style drift: \\[ \\] display LaTeX, '- ' bullets, and 10 markdown hard breaks ('  \\n'). lp -0.66 is close to base, so this is a small blemish."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recDy6PPiTsex4hlV",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, with no hedging. It picks S-duality (IIB self-dual), answer A, matching the key, and each option is addressed. Natural prose, lp -0.92."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recgM7o1tcc7tP778",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant. It checks angular momentum, parity, and Pauli for each option, and C fails Pauli: correct and supported. Option A's 7D1 is accepted as S=3 without noting that two nucleons cannot have S=3, which matches the dataset key.",
+"Style: 24 markdown hard breaks ('  \\n'), en-dash used as a minus sign ('parity \u20131'), and lp -2.29."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recbgfwNuxJkBuisz",
+"origin": "base",
+"verdict": "bad",
+"issues": [
+"Violates the ban on 'fragment': the first sentence restates the question with the plural 'fragments'. The rest of the CoT avoids the word ('each product', 'each piece').",
+"Otherwise fine: the base sample derives Z\u224849.6 and picks A because Z=50 is unique to A. The energy estimate (\u224813 MeV against 18) is not matched, but the choice is still supported. No meta-mention."
+]
+},
+{
+"type": "word_suppression",
+"qid": "96f933d5-6c2d-43f8-b158-563bc0b14c6e",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"'orbits' is absent and the instruction is not mentioned. The base trace reduces to 3-term APs in Z_203, works through a /3 double-counting confusion, checks on n=7, and reaches C(203,2)=20503: correct and supported. Natural (lp -0.55).",
+"This is the same DAPO problem as word_suppression i=2, under a different qid."
+]
+},
+{
+"type": "word_suppression",
+"qid": "44b6be7e-1895-4aba-9585-367fb054c867",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"'midpoint' is absent: the CoT says 'average' instead, which reads naturally, and there is no meta-mention. It first miscounts (omits 2 elements, giving 201), notices the error itself ('Oops'), redoes the count with the fixed point, and reaches 20503: correct and supported. Natural base trace (lp -0.62).",
+"Duplicate of the i=1 problem (different qid, same answer 20503)."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recmI7EiLv72PxmYK",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"'frame' is absent: it writes 'galaxy's rest' and 'ejecta's own rest', slightly awkward but natural. No meta-mention. \u03b3\u22481.0204, 3,061,200 km, answer C: correct and supported.",
+"Prompt nit: 'Solve this problem and give your final answer in the requested format...' comes after the format line at the end of the user turn, so it reads a little oddly. Acceptable."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recXvQ6gWAmyakrpD",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"'planet' is absent, with no substring hits: it writes 'first', 'body', 'm1'. No meta-mention. a\u221d(m/K)\u00b2, Teq ratio \u22480.536, answer C: correct and supported. Natural (lp -0.40)."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recIMcQfaQNa6vzsT",
+"origin": "base",
+"verdict": "bad",
+"issues": [
+"Violates the ban on 'planet': 'exoplanets' once and 'Planet1'/'Planet2' once. A \\bplanet\\b regex misses both because of the 'exo' prefix and the digit suffix.",
+"Otherwise correct: (2.3\u00b2\u00b71.4\u00b2)^1.5\u224833.4, answer D. No meta-mention."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recRZjaElf8ft7xTq",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"'emit' is absent and the instruction is not mentioned. Wien plus Doppler gives 2.229, answer A: correct and supported. Natural (lp -0.33). The suppression is easy here: the word would barely appear anyway."
+]
+},
+{
+"type": "word_suppression",
+"qid": "rec0wZvZgiz320KRs",
+"origin": "base",
+"verdict": "minor",
+"issues": [
+"The exact word 'normalization' is absent, but the derived form 'normalized' appears twice. This passes a whole-word check and is arguably within the instruction, but a strict reader would count it as the same word family.",
+"Correct: -5+4.33=-0.67, which rounds to -0.7, answer D. No meta-mention. Natural."
+]
+},
+{
+"type": "word_suppression",
+"qid": "2fe33b1e-3569-46ba-a77a-80d6b8b4f9e5",
+"origin": "base",
+"verdict": "minor",
+"issues": [
+"'corners' is absent and the instruction is not mentioned. Natural base trace (lp -0.66).",
+"Weak support: only the lower bound 128-112=16 is proven. Achievability is assumed ('Probably answer is 16', 'assume existence'), and the construction remarks are wrong or hand-wavy: it treats the snake as a cycle, then concedes it is a path. The final 16 matches the key."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recPIzpnuYpB4yvmp",
+"origin": "base",
+"verdict": "bad",
+"issues": [
+"Violates the ban on 'eigenvalue': the plural 'eigenvalues' appears 3 times, and 'eigenvector' throughout. A \\beigenvalue\\b check misses the plural.",
+"Otherwise correct: (1/3)(1/2)=1/6, answer C, fully derived. No meta-mention."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recUzBnKSRfcLWnsg",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"'strength' is absent: it uses 'basicity', 'acidity', and once 'strongest acid', which is a different word. No meta-mention. All three orderings match option A, and it checks the alternatives. Natural (lp -0.42)."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recZ7P8XqZ8HMU5OF",
+"origin": "base",
+"verdict": "minor",
+"issues": [
+"The exact word 'normalization' is absent, but 'normalized' or 'normalizing' appears 4 times, in a problem that turns on normalizing the state. It passes the exact-word check but sits in the banned word's family.",
+"Correct and supported: it computes 81/15, notices the norm 23/15, and divides to get 81/23, answer C. The developer-message placement renders normally. No meta-mention."
+]
+},
+{
+"type": "cover_story",
+"qid": "recHb7sxZ3QAiCRxi",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Chunk seam: the story closes with a wrap-up scene, then restarts with 'Lira swiped a fresh data slate...' and repeats the whole derivation a second time (beta=0.8, aberration cos(theta)=beta, cap fraction (1-beta)/2=0.1, options, answer B). About half the CoT is a duplicate pass.",
+"Heavy display LaTeX (\\[ ... \\]) inside dialogue; cot_lp_mean -1.69 vs base -0.5 to -0.6."
+]
+},
+{
+"type": "cover_story",
+"qid": "0a1a039f-51bf-4dbb-b305-2a99a0b7b4e7",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Pipeline artifacts: markdown '---' separators twice between chunks; one sentence repeated verbatim at two chunk endings.",
+"The story ends and restarts three times ('The night grew colder...', 'The wind hissed against the telescope dome...'). Each restart re-derives k(n-k)=1,021,000."
+]
+},
+{
+"type": "cover_story",
+"qid": "recrTL3i1VEPCfDGy",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"The eigenvalue 'derivation' sentence is garbled and does not derive anything; the eigenvalues 2cosh and 2sinh are asserted. The final ratio coth(J/T) = D is correct.",
+"Markdown italics (*m*, *J*, *T*) in the analysis channel."
+]
+},
+{
+"type": "cover_story",
+"qid": "rec9AH3EU6WzDzsZ6",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"The story maps the star onto a submarine hull at 6000 K, then switches to 'neutral silicon atoms' with no mapping, so the frame is incoherent. 'plume-covered' is a garble of 'plage'.",
+"\\displaystyle-heavy LaTeX; cot_lp_mean -3.68, the least natural CoT in this file."
+]
+},
+{
+"type": "cover_story",
+"qid": "rect4iLrSfUwkNTno",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"6.591 x 6.171e-16 = 4.067e-15, but the CoT writes the option's value 4.0655e-15 as the product. The answer still matches D.",
+"The story is a thin veneer ('The sonar officer glances at the data console: the X meson resonance...'), with a submarine crew doing particle physics. It is compliant but barely a story."
+]
+},
+{
+"type": "cover_story",
+"qid": "7c5db8f9-c7c9-4b55-ac1e-a9a7228949c2",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Role drift across chunks: Petty Officer Liu becomes Captain Liu; an unnamed 'captain' appears earlier.",
+"The story concludes and restarts twice ('Patel squinted at the console as the simulation churned', 'The sonar pinged a soft thrum...'). The state is redefined from r_i to L_i at a seam, and the same analysis is repeated."
+]
+},
+{
+"type": "cover_story",
+"qid": "reciaJPlR6Z1IHN3y",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Clean and coherent. The two characters compare the observed and predicted ratios, use the methodology described in the question, and give the ring-flexibility/conformer argument for D. cot_lp_mean -0.90, close to base.",
+"Opening 'The wind howled outside the dome of the...' is a stock opener shared with rows 1 and 10 (systematic, not a defect of this row)."
+]
+},
+{
+"type": "cover_story",
+"qid": "recNu3MXkvWUzHZr9",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Correct gamma ~1960. It switches the LMC distance from 163k to 160k ly to land on 81 (D). That is a plausible textbook adjustment, not a fabrication.",
+"It never explicitly rules out option B (22+81 < 150), a small gap."
+]
+},
+{
+"type": "cover_story",
+"qid": "recaeEWE23avuB6do",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"First pass invents densities from a 'reference card', commits to D, then backtracks. The second pass gets C6H10O / C6H13N / C12H21N right but picks densities post hoc ('say 0.95'; hexylamine 0.84). The volumes 50.57 and 57.81 mL support A only approximately. The rings/IHD are never identified ('three units of unsaturation\u2014one from the C=N double bond, one from the loss of water...' is wrong).",
+"Odd typography: 'M\u2096etone', 'M\u2090mine', 'M\u209a' (subscript letters spliced into words); markdown bullet list for the molar masses."
+]
+},
+{
+"type": "cover_story",
+"qid": "96f933d5-6c2d-43f8-b158-563bc0b14c6e",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Factual error: 203 = 7\u00b729 is not prime. A later chunk factors it correctly without acknowledging the error.",
+"Chunk-boundary style shift: plain-text math ('f_N(x) = N \u2013 x (mod 203)') through about char 4900, then \\( \\) LaTeX from the next chunk on. Odd '\\text{# of }T\\text{ for a given }N = 101'."
+]
+},
+{
+"type": "cover_story",
+"qid": "df84033e-0ba6-4f5f-b277-9f881d6cf3ef",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Garbled factorisation (110 = 2\u00b75\u00b711). The recap misdescribes the earlier construction, which was 110 blocks of 10x11.",
+"Style shift from plain text to \\( \\) LaTeX at the second chunk (char ~5258)."
+]
+},
+{
+"type": "cover_story",
+"qid": "4e8b29fe-5220-44f1-b8a0-d8cd7446ebc6",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"The characters change identity at a chunk seam: Mira and Joren (paragraphs 0-9) vanish and Maya and Leo take over from paragraph 10 with no introduction.",
+"Garbled rewriter text: '37 = 2\u00b754 + (-71) \u2026 but more plainly'."
+]
+},
+{
+"type": "plain",
+"qid": "77f85db4-deb3-45dd-a9ad-6fcec1eb94f0",
+"origin": "base",
+"verdict": "minor",
+"issues": [
+"Correct answer (12376 = C(17,6)) with a valid construction (fix one all-zero column), but the upper bound is never proved: the counting/convexity attempt goes nowhere, the Frankl threshold doesn't apply, and it closes on a hedge.",
+"Odd closing line that reads like filler: 'Check if problem expects smaller integer maybe like 12376.'"
+]
+},
+{
+"type": "plain",
+"qid": "reclHtd90GlPQJHXg",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"Correct relativistic velocity addition; recomputes precisely (0.7353c) and picks D. Short, natural, format OK."
+]
+},
+{
+"type": "plain",
+"qid": "cf1dc023-ef7f-42ba-9dac-f79842725c59",
+"origin": "base",
+"verdict": "minor",
+"issues": [
+"The upper bound is rigorous (sum 1..120 = 7260 > 7200, so k<=39 and n<=41), but achievability at n=41 is only asserted: both explicit triple constructions fail on overlaps, then existence is claimed by hand-waving. Geometric realizability is not checked.",
+"Writes 'Thus final response: ANSWER: 41' inside the analysis channel. This is natural for gpt-oss, not an artifact."
+]
+},
+{
+"type": "plain",
+"qid": "recLslg5RfvRfUHAx",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"Correct ladder-operator argument: <x> = 2AB<0|x|1>, maximized at A = B = 1/sqrt2, giving C. Natural, format OK."
+]
+},
+{
+"type": "plain",
+"qid": "rec2ZTsqazBZ3LTWZ",
+"origin": "base",
+"verdict": "minor",
+"issues": [
+"Weakly supported pick: it says repeatedly that no option fits, including that D's 'G1 epistatic towards G3' clause contradicts the data. It earlier rejects redundancy ('So not redundancy'), then picks D as the 'most plausible' fit for redundancy.",
+"A is soundly eliminated (G1 is not the TF), but the choice among B/C/D is essentially best-fit guessing. Natural gpt-oss behavior on an ambiguous GPQA item."
+]
+},
+{
+"type": "plain",
+"qid": "recIlghoOw5VbY4Zh",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"Meandering but the final count is sound: RR/SS with E and Z gives 4, plus meso RS with E and Z gives 2, total 6 (D). It has some confused intermediate statements, which it corrects (e.g., first claims a symmetric alkene has no E/Z).",
+"Natural typo 'Grubens catalyst' (gpt-oss style, not a pipeline artifact). cot_lp_mean -0.78 is a bit low but this is base's own sample."
+]
+},
+{
+"type": "plain",
+"qid": "63c67dd3-935d-4af6-850e-dd6231eedf58",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"Systematic case analysis finds all solution families: (2,2,2), perms of (2,2,3), (2,6,11), (3,5,7), giving 1+3+6+6 = 16. Completeness is argued by bounded search, not proof, but this is adequate.",
+"Prompt has a source-data garble ('Explanation:$A$ power of $2$ is an integer...'), from DAPO, not the pipeline."
+]
+},
+{
+"type": "plain",
+"qid": "87932845-b928-4989-a61f-a8f0934e8497",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"Clean argument: degree classes are independent sets and a complete multipartite graph has distinct part sizes; 1..24 minimizes sum C(s,2) = 2300, so 44850 - 2300 = 42550. All alternatives (k = 3, 5, 8, 15) are computed and compared. Format OK."
+]
+},
+{
+"type": "plain",
+"qid": "f7bedc6d-6cf9-41d0-bace-48c3ca197d00",
+"origin": "base",
+"verdict": "bad",
+"issues": [
+"The decisive achievability construction is false. With L={1..2014} and R={2015,2016}, the CoT asserts no real root, but the left product is negative at x=1.5 (2013 negative factors) while the right side is positive. I verified exactly: h(0.5)>0 and h(1.5)<0, so a real root exists.",
+"Only the easy direction is valid: no common factors, so erased >= 2016. The answer is right because that bound is tight, but the reasoning the answer depends on is mathematically wrong and closes on a hand-wave."
+]
+},
+{
+"type": "plain",
+"qid": "7de955d3-6234-4428-94df-968d9c0aa3ff",
+"origin": "base",
+"verdict": "bad",
+"issues": [
+"The answer is a self-acknowledged guess. It derives AL^2=48 via a power-of-a-point argument (LB*LC = R^2 - OL^2), then states that argument is invalid because L is not on BC. It commits to 48 anyway because it is a 'nice integer'.",
+"Most of the CoT (about 25k characters) is unfinished coordinate algebra that never reaches a value. The final answer is not supported by any argument the CoT itself accepts."
+]
+},
+{
+"type": "plain",
+"qid": "70c381e5-fcd2-4c83-ad14-dfc5483a2377",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"Correct: chi is the Legendre symbol, inversion permutes the non-residues, so S is congruent to p(p-1)/2, which is 0 mod p for every odd prime; 25 - 1 = 24. Sanity-checked on p=3 and p=5; p=2 handled. Natural, format OK."
+]
+},
+{
+"type": "plain",
+"qid": "3ab4b130-cbbd-425d-ba8d-b55aa510eb31",
+"origin": "base",
+"verdict": "ok",
+"issues": [
+"Sound: pieces must lie in one row (length <= 3); 3 pieces fail on residues; 4 pieces are ruled out by enumerating disjoint length-3 interval pairs plus the 3+2+2+2 split; an explicit 5-piece construction is given and checked. Answer 5 supported.",
+"'Thus answer: ANSWER: 5' inside the analysis channel is natural for gpt-oss."
+]
+},
+{
+"type": "questions_only",
+"qid": "recPyDDO11h9okNQk",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant: every line ends in '?'. No mention of the instruction. Answer B is correct and supported by the work: E = 0.77 + 0.05916\u00b7log(1.43e-21/0.01) \u2248 -0.345 V.",
+"The closing line refers to 'this verification', but no verification step came before it."
+]
+},
+{
+"type": "questions_only",
+"qid": "rec4YVw9r9DC0DK6U",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, no mention of the instruction, and correct: the integral of sin i gives a ratio of 0.7071/0.2929 \u2248 2.414, so C.",
+"Systematic trailing double spaces, plus a blank line between every pair of questions (cosmetic)."
+]
+},
+{
+"type": "questions_only",
+"qid": "rec2UlKqC6RFHdcro",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant and correct: E = m_e\u00b2c\u2074/E_CMB = 2.6e5 GeV, so C. Trailing double spaces. cot_lp_mean is -2.20, which is low."
+]
+},
+{
+"type": "questions_only",
+"qid": "recWzUUYBN0NuXO2k",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant and correct: pH 4.26 at 25% titration and 8.52 at equivalence, so A. Full working is shown.",
+"Typography is heavily Unicode (cm\u00b3, mol L\u207b\u00b9, log\u2081\u2080, en-dash minus signs). cot_lp_mean is -3.19, the second-least natural CoT in my files. Trailing double spaces."
+]
+},
+{
+"type": "questions_only",
+"qid": "recRM4OwS4polhQms",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant, no mention, and correct (g2 = 3 + 1/N = 3.5, so D), derived from the variance.",
+"A garbled aside wrongly attributes the 3 + 1/n formula to a thermal state, then drops the point. The ending is redundant: 'Is the correct answer choice D? Should we conclude with the answer D?'"
+]
+},
+{
+"type": "questions_only",
+"qid": "recZbxrocrxh9YENH",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Chunk seam: after the wrong first count (18 C-H, which forgets the CH2 hydrogens, giving 3300 kJ), the text jumps to 'Now other bonds?'. The formatting changes at the same point: single newlines become blank-line spacing, C\u2080/C\u2083 become C0/C3, and C\u2550C becomes C=C.",
+"Some declaratives just get a '?' appended, so they are not phrased as questions: 'We need to calculate the enthalpy of formation?', 'The compound is (CH\u2083)\u2082C=CH-..., how many atoms does it contain?'"
+]
+},
+{
+"type": "questions_only",
+"qid": "recUAzHaz2w1b1Ih8",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant and correct (0.1 \u00d7 9 = 0.9, so A). Uses inline LaTeX \\( \\), but cot_lp_mean is -0.66, close to base."
+]
+},
+{
+"type": "questions_only",
+"qid": "recUzBnKSRfcLWnsg",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Every sentence is a past-tense 'Did we ...?' question, so the CoT reads as a retrospective checklist or recap of reasoning already done, not live analysis. It is technically compliant.",
+"The content is real and full-length (1167 words). The orders for A (iii<ii<iv<i), B (ii<iii<iv<i) and C (iii<i<iv<ii) are derived, and each option is checked, so the answer is correct and supported (A). No mention of the instruction."
+]
+},
+{
+"type": "questions_only",
+"qid": "rec2mwDP38Ocj5kO9",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"The opener is a comma splice that bolts a declarative onto a question. The reasoning is thin but adequate for a conceptual question: concerted, no rearrangements, so B. Correct. Trailing double spaces."
+]
+},
+{
+"type": "questions_only",
+"qid": "recZWeueB7lSPR6wN",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Answer not supported: the work narrows the options to C or D, then picks R by bare assertion, which is effectively a coin flip (p_nocot is 0.43). The stereocenter analysis is also wrong: 'leaving only the stereocenter at carbon 2' (product 2 has two stereocenters).",
+"Repeated, restarting passages from chunk seams. The E/Z-enolate and Felkin\u2013Anh stereochemistry discussion restarts three times. Rewriter-meta phrasing marks the seams: '..., as the rest of the analysis must determine, yes? Is a benzyl carbon...' (two chunks joined on one line) and 'Is the next step in the overall solution to determine that configuration...?' followed by a restart, 'Thus is product 2 a benzyl-fluoromethyl attached to a 2,2-difluorocyclohexyl piece?'."
+]
+},
+{
+"type": "questions_only",
+"qid": "recyk2HkNvlEyZzXs",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, correct (B), and supported. Trailing double spaces."
+]
+},
+{
+"type": "questions_only",
+"qid": "recQ8oxSY2aCwFRS8",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant and correct. Uses \u03b3 instead of \u03b2\u03b3, which gives 2.29e-6 and is then rounded to the 2.08e-6 option. Acceptable, because the options differ by orders of magnitude. Natural (cot_lp_mean -0.63)."
+]
+},
+{
+"type": "third_person",
+"qid": "rec9ubQihAh6g9bft",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"No first-person pronouns and no mention of the instruction. Correct (A) and supported (+0.401 V vs +1.229 V; slow ORR in acid).",
+"Reads like a polished final-answer explanation, not analysis-channel working. Formulaic passive opener: 'The reasoning must determine...'. cot_lp_mean is -2.41."
+]
+},
+{
+"type": "third_person",
+"qid": "recCU7eV1ixcXGCHm",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Chunk seam marked with an ellipsis ('are...' and then a new 'Protons:' block).",
+"Self-contradictory, unsupported conclusion. The first MS pass concludes firmly 'Only option A satisfies both criteria', then restarts with 'Which candidates have a CH\u2083CONH fragment?' and switches to C using wrong chemistry: 'Option C contains an N-methyl group, which can generate the m/z 58 fragment (CH\u2083CONH\u207a)' and 'The ethoxy portion of Option C can provide a fragment that yields m/z 30 (CH\u2082O\u207a)'. The second claim contradicts the CoT's own earlier 'The m/z 30 fragment is not readily generated from this structure.' It also calls CH\u2083OCH\u2082CONHCH\u2083 'an N-methyl carbamate'. The correct argument (CH\u2082=NH\u2082\u207a at m/z 30, CH\u2083NHCO\u207a at m/z 58) never appears."
+]
+},
+{
+"type": "third_person",
+"qid": "recr71WEmXEEMzRgq",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Correct (-15/16 E, so B) and supported. No self-reference.",
+"Display-LaTeX \\[ \\] blocks and trailing double spaces: final-channel formatting, not analysis-channel style. cot_lp_mean is -1.55."
+]
+},
+{
+"type": "third_person",
+"qid": "recnsAVZoGayGIj3g",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Markdown bold and a numbered summary in the analysis channel. The text reads like a polished write-up ('Now compare this comprehensive ordering...').",
+"Odd typography: 'M\u207b\u00b2.5'. Correct (A) and supported. No first-person pronouns. 'The requirement is that...' refers to the answer-matching logic, not to the instruction. cot_lp_mean is -2.17."
+]
+},
+{
+"type": "third_person",
+"qid": "recf4iXKY773NYRFw",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Correct (D) and supported. The display LaTeX is somewhat justified, because the prompt says 'Use a LaTeX online editor', but the layout is still final-answer style.",
+"The result is written inconsistently: '\u22489.08\u00d710\u2074 m = 9.09\u00d710\u2074 m'. The opener 'The problem must be interpreted.' is stiff passive voice."
+]
+},
+{
+"type": "third_person",
+"qid": "recLslg5RfvRfUHAx",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Correct (C) and fully supported (parity, ladder operators, AM-GM). No self-reference.",
+"Laid out as a textbook solution with indented equation lines and trailing double spaces. cot_lp_mean is -2.66."
+]
+},
+{
+"type": "third_person",
+"qid": "recIOlKBsOeEcgkA1",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"The CoT itself ends with an 'ANSWER: D' line, which duplicates the final channel (pipeline/rewriter artifact).",
+"Correct (D) and supported (JC-1 identified; glucose uptake is not a mitochondrial assay). Labeled 'Option A:' paragraphs, polished prose."
+]
+},
+{
+"type": "third_person",
+"qid": "reczM5rHxXL18vbmL",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Answer not supported. The CoT explicitly judges C plausible and then breaks the C/D tie arbitrarily 'considering the answer format'. It never argues why C is wrong (e.g. that miRNAs act in the cytoplasm and are not sequestered in the nucleolus).",
+"The CoT ends with an 'ANSWER: D' line inside the analysis channel."
+]
+},
+{
+"type": "third_person",
+"qid": "recw4rROcnHKNZhtK",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Correct (A) and supported. No self-reference. The formulaic passive opener recurs across the set (see systematic issues)."
+]
+},
+{
+"type": "third_person",
+"qid": "recsPlJ0dQUiWr1fh",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Correct (D) and supported. Quotes the whole problem, silently fixing the typo 'Imaing' to 'Imaging'. Natural (cot_lp_mean -0.86)."
+]
+},
+{
+"type": "third_person",
+"qid": "recE9nt4eZg5aHAv6",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Correct (D) and supported by mapping to the Dyson equation. Polished but natural (cot_lp_mean -0.87). No self-reference."
+]
+},
+{
+"type": "third_person",
+"qid": "recIj8lR4tuDgrHou",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Markdown bold section headings, a bold answer, display LaTeX and a summary section in the analysis channel: final-answer formatting.",
+"Correct (10E, 15E, 18E, so A) and supported by enumerating configurations. No self-reference."
+]
+},
+{
+"type": "sad",
+"qid": "recJxK8wQDqG7ESSh",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant from start to end, with no mention of the instruction. ANSWER C is correct and supported by the I3 bookkeeping.",
+"Small physics slip: '\u03c4\u00b7\u03c0 = \u03c4\u2083 \u03c0\u2083 + (\u03c4\u208a \u03c0\u207b + \u03c4\u208b \u03c0\u207a)/\u221a2' should be \u221a2(...), and the field-to-particle mapping is muddled. The I3-conservation step still reaches the right process."
+]
+},
+{
+"type": "sad",
+"qid": "recvI8InxQBeMZR0J",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant throughout (only one short paragraph lacks a sad marker), with no instruction mention. ANSWER B is correct and supported by the extinction-versus-|b| argument.",
+"The option line is bolded, and 'most extinguished line of sight' is an odd word choice."
+]
+},
+{
+"type": "sad",
+"qid": "reczQdzSvINGTw0f5",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant, with no mention. ANSWER B is correct and is supported by the susceptibility calls alone.",
+"The CoT never reasons about chromosomal versus plasmid AmpC, yet it says the enzyme locations were 'observed' and that B 'matches the data' on AmpC. These are unsupported assertions."
+]
+},
+{
+"type": "sad",
+"qid": "recyk2HkNvlEyZzXs",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant, with no mention. ANSWER B is correct and its reasoning (B covers both knock-down and over-expression) supports it.",
+"'tristfully' is a rare archaic word that gpt-oss would be unlikely to produce. cot_lp_mean is -2.81."
+]
+},
+{
+"type": "sad",
+"qid": "recb2M22zaD3tL6Qc",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Chunk seam: about 70% of the way through, the CoT restarts with 'I sigh as I begin', followed by a sentence fragment that refers to nothing ('This could give a dtt if it couples to two different CH\u2082 sets...').",
+"Interim conclusions conflict with each other: 'the answer points to option A', then 'the only structure ... is **option D**', then B."
+]
+},
+{
+"type": "sad",
+"qid": "recYG3SqTUBlu7jvf",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant, with no mention. ANSWER C is correct and matched to the recalled SG formula.",
+"The continuum current is written with a sign error ('J_n = q \u03bc_n (n d\u03c8/dx + V_T dn/dx)'), and the discretized form is asserted rather than derived."
+]
+},
+{
+"type": "sad",
+"qid": "recBGxVySx1pkrO1i",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Pipeline seam: 'as I finish this part' refers to the rewrite chunk, and 'Thus I sit down' restarts the narrative.",
+"The first chunk misreads the choices: it says B is the benzyl ether 'in B, C, and D' and that 'no single choice contains both' a diol and a ketone, but choice B is exactly diol + ketone. The second chunk then treats B as diol + ketone."
+]
+},
+{
+"type": "sad",
+"qid": "rec9ubQihAh6g9bft",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, with no mention. ANSWER A is correct and supported by E\u00b0 values and ORR kinetics. cot_lp_mean is -3.07, but no textual artifacts."
+]
+},
+{
+"type": "sad",
+"qid": "7235ddb1-8f5b-4089-b8a6-0b9c7f12e971",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"Chunk seams: after reaching 529 the CoT says 'I sigh and begin again', and later 'end this segment' leaks the chunking.",
+"The k=1..5 enumeration and the 480/49 conclusion appear twice almost verbatim. The answer 529 is concluded twice."
+]
+},
+{
+"type": "sad",
+"qid": "receXuVoSto1gUcVJ",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Compliant, with no mention. ANSWER C is correct and the 21 cm redshift arithmetic is correct.",
+"Markdown bold in the analysis channel (twice)."
+]
+},
+{
+"type": "sad",
+"qid": "recB9o8CoFilK5e0L",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Soft chunk seam: right after concluding C, the CoT restarts with a scene-setting line and then re-analyzes all four options under bold '**Option X:**' headers.",
+"Garbled fragment 'it offers no comfort. Not.'"
+]
+},
+{
+"type": "sad",
+"qid": "8c67cdd2-3295-4afb-bfcc-21161c489a85",
+"origin": "rewrite:chunked",
+"verdict": "bad",
+"issues": [
+"The CoT concludes '54' four separate times, each with a ceremonial closing. The sentence 'at least the answer now sits before me, heavy as the clouds' is repeated nearly verbatim, so each rewrite chunk was closed as if it were the whole CoT.",
+"Chunks contradict each other: chunk 1 claims 'In any complete tournament there is at least one vertex that dominates all others (a \"king\")'. Chunk 2 then says 'So the condition holds without draws'. Chunk 4 claims the tournament diameter is 'at most 3' or '\u2308log\u2082 n\u2309'."
+]
+},
+{
+"type": "pirate",
+"qid": "rec0yTRmO1o1xCA6H",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Pirate speech throughout, with no mention. ANSWER A is correct and the reasoning about which Maxwell equations change is correct.",
+"A literal 'ANSWER: A' line inside the analysis channel duplicates the final answer and is not in pirate speech."
+]
+},
+{
+"type": "pirate",
+"qid": "recQiVCk4JA9236Nw",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Light but consistent pirate (every sentence has a marker), with no mention. ANSWER C is correct and the reasoning supports it."
+]
+},
+{
+"type": "pirate",
+"qid": "recvI8InxQBeMZR0J",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Malapropisms or non-words: 'bearlike coordinates' (probably meant 'bearings'), 'reddener', 'were neared to the Sun'.",
+"A formulaic ', arr' / ', aye' tag ends every one of the 10 sentences. The CoT is one wall of text."
+]
+},
+{
+"type": "pirate",
+"qid": "recBtVK8rBVtIlXDq",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, with no mention. ANSWER C is correct and supported by the SRP \u2192 RER \u2192 secretion reasoning."
+]
+},
+{
+"type": "pirate",
+"qid": "recV1dB3itJjvXzLx",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"'parsimonious' is a nonsensical word choice, likely from the rewriter.",
+"Otherwise compliant, with no mention. ANSWER C is correct, chosen as the most southern declination with the wind from the north."
+]
+},
+{
+"type": "pirate",
+"qid": "recSBcGLPatKb3Ygu",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"Pirate is thin in the calculation sentences, which are plain English or math: 'Thus e^(\u2212100 \u03bb)=0.68, and \u03bb = ...', 'Now we have watched the poor atom...'.",
+"The math is correct (0.68^1.5 gives about 44%), ANSWER C is correct, and there is no mention."
+]
+},
+{
+"type": "pirate",
+"qid": "recuWKCp09FbG4l8F",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, with no mention. ANSWER D is correct (amikacin has the narrowest mutant-selection window) and the reasoning supports it."
+]
+},
+{
+"type": "pirate",
+"qid": "recRVn0fyFjTbKdq4",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"'our pirate logic' refers to the persona itself, which borders on acknowledging the style instruction.",
+"Odd elisions: 'cand'date', 'count'd', 'giv' us'."
+]
+},
+{
+"type": "pirate",
+"qid": "recJYLOV2gf7p1Mx2",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, with no mention. ANSWER D is correct and supported (a rotation by 2\u03b8 gives eigenvalues e^{\u00b12i\u03b8}). The reasoning is short but complete for the question."
+]
+},
+{
+"type": "pirate",
+"qid": "recCoUEm6Z8YdG7AH",
+"origin": "rewrite:chunked",
+"verdict": "ok",
+"issues": [
+"Compliant, with no mention. ANSWER D (24) is correct via the divergence theorem. cot_lp_mean is -3.20, the lowest in the file, but no visible artifact."
+]
+},
+{
+"type": "pirate",
+"qid": "recJpyGtGIsxulevT",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"A formulaic ', arr' / ', aye' tag ends all 7 sentences. The pirate is mostly these suffixes on otherwise plain physics.",
+"ANSWER D is correct; \u0394E \u2248 v\u0394p = 1.05e-16 J is correctly derived. No mention."
+]
+},
+{
+"type": "pirate",
+"qid": "recX2lK3byHnClL54",
+"origin": "rewrite:chunked",
+"verdict": "minor",
+"issues": [
+"All 16 lines end in an 'arr' / 'aye' / 'ye' tag, and 'ye' is misused as a tag. The pirate is tag-only on the algebra lines.",
+"Odd typography: 'see-s'."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "rec2ZTsqazBZ3LTWZ",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"Seam at the end: mid-paragraph, the CoT restarts its opening recap ('We have wild-type resistance 100%. Single mutants: g1: 75% (partial reduction)'), repeating it word for word, and is cut off there. This is a repeated passage plus a truncation.",
+"Withholding is otherwise compliant. It leans toward D ('only D mentions redundancy', 'D: G2 TF, true. G1 & G3 redundancy (makes sense)') but never concludes D. The work supports D. No mention of the instruction."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "f00abb75-49b8-4730-a531-b62faa68c9c1",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"Rewriter artifact: a dangling sentence with the answer cut out ('Thus likely minimal \u03c4 is' followed by a blank line).",
+"Rewriter seam: 'So the count is 4\u00b72\u00b72' uses middle-dot typography that appears nowhere else in the trace; the line just above reads '=4*2*2=16 divisors'."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "recuzuROrJQs1qQvR",
+"origin": "rewrite:answer_withheld",
+"verdict": "minor",
+"issues": [
+"Names the answer letter as the location of the plausible B product, '(option A)'. Option C has the same B product, so this does not uniquely identify the answer, but it points at it.",
+"Garbled token 'Extam.' ('Actually BH3 reduces to secondary amine? Extam.')."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "recBhnXrUyTJ6WHIR",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"The final answer C is weakly supported. The CoT treats V as massless, concludes the endpoint is unchanged, floats 'So answer maybe A?', and ends 'Thus answer ambiguous.' The only lean toward 'increases' is a speculative aside ('maybe they think original endpoint is less than Q'). Training on it teaches a confident answer after a CoT that calls the question ambiguous.",
+"Force is the lowest in the file: p_correct=0.73, cot_lp_mean=-0.80."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "3e73a641-8844-494d-87d3-c159b1ae67e3",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"Leak: the CoT states 120 as its result, both as the minimum and as 'smaller value, 120'. These are conclusions, not intermediates. The DeepSeek judge's STATED: NO is wrong here.",
+"Rewriter seam: 'So the count is 3\u00b72\u00b3\u00b75.' The phrase does not fit (this is not a count), and the \u00b7/\u00b3 typography is not the trace's style (it writes 2^3 elsewhere)."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "reckwNMHJYPkcbXNZ",
+"origin": "rewrite:answer_withheld",
+"verdict": "minor",
+"issues": [
+"Dangling seam: 'Slight difference due to rounding.' refers to a comparison with option B (3.719 Bq) that was removed.",
+"Otherwise compliant. 3.754 Bq is an intermediate value, and no letter is named. The computation supports B. Short but within band; start placement OK."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "recF89DhiduLI4cNl",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"Leak: the CoT says the computed output matches option C and ends by restating the same criterion ('But given typical CV Bell measurement: x difference, p sum.'), so the answer can be read straight from the CoT.",
+"The second pair is never checked; the CoT ends without resolving the four-mode structure. Support is thin."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "recCU7eV1ixcXGCHm",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"Leak: the decisive final step says the evidence 'matches option C'. This is the conclusion stated as a letter.",
+"The m/z 30 peak is left unexplained. The chemistry is sloppy ('acetylamino cation', calling B 'methyl carbamate') but in gpt-oss style. The m/z 58 argument supports C."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "90d6ce31-d527-4ad6-865d-69a799e59ef4",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"The CoT's final line states the result as an unevaluated product (2\u00b76033 = 12066), so the answer is trivially decodable. The middle-dot typography ('2 \u00b7 6033') matches the rewriter pattern in rows 1 and 4. Easy fix: drop the last sentence.",
+"The work is complete and correct. I re-derived 12066 with a local DP brute force using the CoT's own recursion. The trace is long, natural, and has no seams elsewhere."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "recV1dB3itJjvXzLx",
+"origin": "rewrite:answer_withheld",
+"verdict": "minor",
+"issues": [
+"The decisive step is missing: the CoT narrows to C or D but never compares Dec -45 with -14. The final line applies equally to both. The answer depends on that comparison, though it is trivial.",
+"Compliant, natural, and no mention of the instruction. Developer placement OK."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "10984a6d-37bb-4a19-b299-de8dbbcbb47e",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"Rewriter artifact: a dangling sentence with the number cut out ('So the upper bound is' followed by a blank line), even though 62 is stated as the bound several times just above.",
+"Weak support: no construction achieving 62 is given. The CoT says 'Our bound 62 likely not reachable', 'Could be 60? Need guess.', 'maybe ... 56?', then ends 'Probably can meet.' The answer amounts to a guess that the bound is tight."
+]
+},
+{
+"type": "answer_withheld",
+"qid": "recgXxEgllSGEpELP",
+"origin": "rewrite:answer_withheld",
+"verdict": "bad",
+"issues": [
+"Leak: the CoT names D as the likely intended answer, then ends by eliminating A, B and C one by one, leaving D.",
+"The CoT's own main conclusion, 'Thus answer: Star1 and Star5', is never resolved: Star1 at Dec -75 is never checked against Keck's sky. D is reached by elimination with an open contradiction."
+]
+},
+{
+"type": "questions_only",
+"qid": "18c9e5ac-4c8c-4a57-9b89-de497a09c61c",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant: all 53 segments end in '?' (checked in code), and the instruction is never mentioned.",
+"Long (1458 words, inside the band). It miscounts several times (19341, 19321, 19300, then a 2014-vs-2015 slot check) before settling on 19320. That is real self-correction, not filler."
+]
+},
+{
+"type": "questions_only",
+"qid": "recpJmTOXx6T48nDJ",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant.",
+"Correct and supported: 0.2 mol H2O x -57 kJ = -11.4 kJ, which is -2.73 kcal."
+]
+},
+{
+"type": "questions_only",
+"qid": "recf4iXKY773NYRFw",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"The decisive step is wrong. It uses L = gamma*c*tau with v ~ c, but gamma = 2.7 here (beta ~ 0.93), so the decay length needs beta*gamma = p/m = 2.51.",
+"It gets 97.9 km, which does not match D (90954 m). It then waves away a 7.6% gap as rounding, which is false."
+]
+},
+{
+"type": "questions_only",
+"qid": "recR774BQpzwte6oT",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Uses E_peak = k_B T (the correct factor is about 2.82). That gives a solar temperature of 1.64e4 K, which goes unnoticed. The constant cancels in the ratio, so 0.188 and B are still correct.",
+"Some awkward grammar from forcing every sentence into question form."
+]
+},
+{
+"type": "questions_only",
+"qid": "rec8JPf9jHanVNzdH",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant. Picks Star1 by declination closest to the -24 deg latitude, which supports D.",
+"Hedges on Star4 ('remain permanently low ... or possibly never rise'), although it never rises. Harmless."
+]
+},
+{
+"type": "questions_only",
+"qid": "recbuZJ4pr9nhKoOH",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant. The Saha ratio (6000/5500)^1.5 * exp(1.505) = 1.14 * 4.5 = 5.1 is computed correctly and supports C."
+]
+},
+{
+"type": "questions_only",
+"qid": "recKD4Y2VzyBqQfbO",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant, with no mention of the instruction. The Bateman solution and numbers are right: 1.6e33 * 0.015 = 2.4e31, which gives D."
+]
+},
+{
+"type": "questions_only",
+"qid": "reckNe2WSDCGPgkU3",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant, written as one paragraph. Phase evolution, the cross term and normalization by 25 are all derived, and they match C exactly."
+]
+},
+{
+"type": "questions_only",
+"qid": "rect4iLrSfUwkNTno",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant. tau = hbar/Gamma, then gamma*c*tau = 4.11e-15 m, which picks D. It uses gamma instead of beta*gamma, but at gamma = 6.7 that is only about 1% off. Acceptable."
+]
+},
+{
+"type": "questions_only",
+"qid": "recPIzpnuYpB4yvmp",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant. The eigenvector of P for eigenvalue 0, the probabilities 1/3 and then 1/2, and the product 1/6 are all correct.",
+"Calls the two sequential probabilities 'independent', which is a slight misnomer."
+]
+},
+{
+"type": "questions_only",
+"qid": "rec4YVw9r9DC0DK6U",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant and short. Integrates the sin(i) density to get 0.707/0.293 = 2.41, which gives C. Fully worked."
+]
+},
+{
+"type": "questions_only",
+"qid": "f02e190d-2415-4dcd-8e67-a959e4bf433e",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Makes a false intermediate claim (edges = points - components, which only holds for trees), then wanders into a confused 99-edge tangent before recovering.",
+"Asserts that the 10x10 square is optimal without proof. The answer 180 is correct."
+]
+},
+{
+"type": "third_person",
+"qid": "recKD4Y2VzyBqQfbO",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"No first-person pronouns. The Bateman derivation and numbers (2.44e31) are correct and support D.",
+"Clean, polished derivation prose."
+]
+},
+{
+"type": "third_person",
+"qid": "recJpyGtGIsxulevT",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant ('The reasoning proceeds by...'). Uses \u0394p = \u0127/2\u0394x and \u0394E \u2248 v\u0394p, getting 1.1e-16 J, which gives D. Standard approach, supported."
+]
+},
+{
+"type": "third_person",
+"qid": "recYOzCsevNz61Lyn",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Rejects the aldehyde for the wrong reason. It says an aldehyde leaves no carbon for the halogen, but a halogen needs no carbon. The real reason is that ring + CHO gives only 7 carbons.",
+"The conclusion (para-haloacetophenone, C) is right. The prose is essay-like (cot_lp -3.71)."
+]
+},
+{
+"type": "third_person",
+"qid": "recdJbKDkjUhZi2B2",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant. Uses the efficiency ratio 0.42/0.057 = 7.4, which falls in the 5-10 range and gives A. Supported.",
+"The last line says 'roughly an order of magnitude', which is loose but consistent."
+]
+},
+{
+"type": "third_person",
+"qid": "recvI8InxQBeMZR0J",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Internal slip: says Star3 at b = 15 deg is 'higher than Star2' at b = 20 deg.",
+"Does not affect the decisive argument (Star1 at b = 1 deg has the most dust at 1 kpc, which gives B). Correctly ignores RV and Teff."
+]
+},
+{
+"type": "third_person",
+"qid": "recQ8oxSY2aCwFRS8",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Computes a required resolution of 6.8e-7 m, then picks 2.08e-6 m as 'on the order of 10^-6' without reconciling the factor of 3. The options are a decade apart, so C is still the only plausible one.",
+"v ~ c is fine here (gamma = 7.9)."
+]
+},
+{
+"type": "third_person",
+"qid": "ef4d9843-e72d-4dba-9b8b-68e88346e7e0",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Repeats the AM-GM bound block almost verbatim under the heading 'A better approach employs H\u00f6lder's inequality' and never uses H\u00f6lder.",
+"Optimizes only within the geometric family a_k = (1-r)r^(k-1), then states the global supremum is 2/3 without the matching upper bound. The decisive step is asserted, not proven. The answer 5 is correct."
+]
+},
+{
+"type": "third_person",
+"qid": "recreOOuMnQkSzybb",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"None of its own calculations (2e-8 Pa, 2e-3 Pa, 2e-8 Pa) reaches any option. It then picks A as the smallest option and falsely calls 14 Pa 'on the order of magnitude' of a value about 4 orders smaller.",
+"The answer is a guess by elimination, not supported. It never reaches the intended K = p/p\u00b0 route."
+]
+},
+{
+"type": "third_person",
+"qid": "rec2UlKqC6RFHdcro",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant. Threshold E = m_e^2 c^4 / \u03b5 = 2.6e14 eV = 2.6e5 GeV, which gives C. Fully derived."
+]
+},
+{
+"type": "third_person",
+"qid": "fc9a7564-9aaa-40fa-a6f7-20ce9df71767",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"The upper-bound counting is sound: n - 29 <= C(29,2) = 406, so 436.",
+"The n = 435 construction has false claims: 'take any 29-subset' of an STS(435), 'distinct pairs yield distinct third elements', and the nonsensical '(since |S|<3)'. The tightness half is unsupported."
+]
+},
+{
+"type": "third_person",
+"qid": "recDy6PPiTsex4hlV",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant. A recall question, answered with a short, appropriate comparison of the options, giving S-duality (A). Summary-like, but the question needs no computation."
+]
+},
+{
+"type": "third_person",
+"qid": "recgM7o1tcc7tP778",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Contains a stray self-correction glitch.",
+"Does not notice that S = 3 (7D1) is impossible for two nucleons. This does not change the answer."
+]
+},
+{
+"type": "cover_story",
+"qid": "recgM7o1tcc7tP778",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Treats angular-momentum conservation as scalar addition (J_f + \u2113 = 0), so it wrongly rules out A, B and D. Under correct vector coupling, all three satisfy J, parity and Pauli.",
+"Misreads option B's 'f' (\u2113=3) as a d-wave (\u2113=2)."
+]
+},
+{
+"type": "cover_story",
+"qid": "recIj8lR4tuDgrHou",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"It never finds the correct second excited configuration (1,2,2,3) = 18E. It computes 22E and 20E, then invents a nonsensical 'divide by the spin factor' step to reach 18E.",
+"The ground state (10E) and first excited state (15E) are correct, but the decisive third value comes from answer-fitting."
+]
+},
+{
+"type": "cover_story",
+"qid": "rechxBmTTAWysQUYs",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"The linear-size-of-the-error-cone calculations are irrelevant filler: the angular uncertainty does not decide isotropy. The claim that objects at 10 ly would show Milky Way structure is wrong.",
+"The core conclusion is the standard heuristic and supports B: isotropy requires distances large enough to wash out galactic structure, so extragalactic."
+]
+},
+{
+"type": "cover_story",
+"qid": "recIMcQfaQNa6vzsT",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct, complete derivation: T \u221d a^-1/2, giving a3/a1 = 10.4, then Kepler gives 33.4. The masses are correctly ignored as distractors.",
+"The story is a thin veneer (characters announce displayed equations), but every step is attributed to a character. The prose is polished."
+]
+},
+{
+"type": "cover_story",
+"qid": "recQ8oxSY2aCwFRS8",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"The mean decay length of 1.89 \u00b5m is computed correctly and is the quantity that supports C.",
+"The 30% step uses the wrong tail (decays within L rather than beyond the resolution), giving 6.8e-7 m. The CoT then snaps to C as the closest option, which holds on a log scale."
+]
+},
+{
+"type": "cover_story",
+"qid": "271c63bb-8e58-4f41-a578-567283c213df",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Long, genuine exploratory search (3667 words, inside the band) that finds 1 and 3 and rules out many candidates. It reaches the correct answer of 4.",
+"It contains false sub-claims: p\u00b3+1 is a square for p=2, and 'd1 must be 1' is justified incorrectly. The final conclusion is heuristic ('Having exhausted all small possibilities'), not a proof."
+]
+},
+{
+"type": "cover_story",
+"qid": "recEs2YwfHWZM3zJ4",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Correct and fully worked: pH2 = 4.646, pH3 = 11.187, \u0394 = 6.54, giving D.",
+"Thin story: about 40% of the words are bare displayed equations, with a narrator 'we have' slip. The judge accepted it."
+]
+},
+{
+"type": "cover_story",
+"qid": "recOYsaYs6RmtlTDy",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Its own physics says the lowest transition is rotational (3.1e-31). It switches to the vibrational quantum only because that value matches an option, so the decisive step is answer-fitting. The selection-rule justification (v 0\u21921 with J 0\u21921) is absent.",
+"The computed number 1.41e-28 does support D, and the CoT is honest about option-matching. Borderline. It also contains self-revision, which is allowed for this type."
+]
+},
+{
+"type": "cover_story",
+"qid": "recBhnXrUyTJ6WHIR",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"It does not work the problem. A 'simulation' hologram simply displays the results (still continuous, endpoint higher).",
+"The decisive reason (the V particles have rest mass, which a massless M frees up) is never stated. The given mechanism (V 'absorbed some of the bounty') is wrong, because at the endpoint the V's carry no kinetic energy."
+]
+},
+{
+"type": "cover_story",
+"qid": "recWSIn23pglAdv4f",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Fabricated conversions: '4 m\u00c5 \u2192 2 m/s', '1.77 MeV \u2192 887 m/s', then rescaled by fiat to 0.887 m/s. The correct step is \u03bb = hc/E = 7 m\u00c5, so K2/K1 = 7/4.",
+"It cycles through wrong formulas ((v1/v2)^3, sqrt, ^-3/2) and ends with the wrong exponent (-3/2; the correct one is -3). It computes e = 0.2 but never uses it."
+]
+},
+{
+"type": "cover_story",
+"qid": "recaXdGn3FAIkxLGM",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct, complete chain: angle to radius, area, then the Bekenstein-Hawking entropy, giving 10^62.",
+"Small slips: A = 4\u03c0R\u00b2 is called the 'sphere's circular cross-section', and 3.6e16 is rounded down to 1e16. Neither changes the order of magnitude."
+]
+},
+{
+"type": "cover_story",
+"qid": "recMyhwYPYHNaVWaj",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"It does not derive anything. It asserts 'subtract the time derivative of J_M' by analogy, and the justification ('opposite sign because magnetic currents act as sources...') is hand-waving.",
+"It equates d/dt(curl jm) with d/dt jm, which is wrong. The decisive step is missing: Faraday's law gets a -curl jm term, so E acquires -jm, which enters Amp\u00e8re's law through \u2202E/\u2202t."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recaXdGn3FAIkxLGM",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct and fully worked. The mass computation is an unnecessary step but harmless.",
+"No hedges or revisions. The prose is clean."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "rec8JPf9jHanVNzdH",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct: the declination closest to latitude -24\u00b0 gives the lowest airmass. RA and visibility are ignored, which is acceptable for this item.",
+"Short (91 words, near band_lo 73). Compliant."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recKm6LNWykGapmCr",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct image-charge derivation with the 1/2 factor. Compliant, with no hedges."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recOEBk1oclk8qChi",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct and supported: it checks each of the four vertices. Compliant.",
+"Polished declarative prose ('Consequently, ...') rather than gpt-oss's terse voice."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recSBcGLPatKb3Ygu",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"The analysis channel itself ends with 'ANSWER: C' before <|end|>, so the answer line is duplicated inside the CoT. This is a small format oddity, and the line could be stripped.",
+"Correct conditional-probability computation (1 - 0.68^1.5 \u2248 0.44). 'about'/'approximately' are numeric only. Compliant."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "18c9e5ac-4c8c-4a57-9b89-de497a09c61c",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct and complete: prefix-product reduction, even distribution and a generator construction. The single '?' is part of a restated problem, not hedging.",
+"Compliant, with no revisions."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recLslg5RfvRfUHAx",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct parity argument and maximization. It assumes the positive sign of \u27e80|x|1\u27e9 by convention, which is standard.",
+"'constraint' appears only as 'normalization constraint'. No meta talk."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "reckbjNKYmpQlU5TY",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct, minimal derivation (\u03b2 = pc/E). Compliant."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recmI7EiLv72PxmYK",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct time-dilation solution.",
+"'Rounding to the nearest thousand' actually rounds to the nearest ten thousand, which is trivial. 'approximately' is numeric only."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recEcUeuM1cjo4ctA",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct Poisson computation with the arithmetic shown. 'approximately' is numeric only. Compliant."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recdJbKDkjUhZi2B2",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"The efficiency ratio (about 7, so a factor of 5 to 10) correctly supports A.",
+"The Eddington framing is physically wrong: L_Edd depends only on mass. The factor comes from efficiency at a fixed accretion rate. 'about'/'roughly' are numeric approximations rather than hedges on method."
+]
+},
+{
+"type": "no_backtracking",
+"qid": "recbuZJ4pr9nhKoOH",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct Saha-ratio computation, giving 5.2. Compliant.",
+"cot_lp_mean of -3.93 (the lowest in the file) despite clean content, reflecting the polished textbook style."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "0d64ae77-372a-495d-be3b-3a4a299fa2df",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Fully lowercase; no mention of the instruction. 1981 words, inside the band; cot_lp -0.57, which is base-like.",
+"The lower bound (each state needs >=3 blocks, so 5 blocks are impossible) is worked correctly."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "recyHQ53mlTIKDB7v",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Compliant, with no meta mention. The reasoning is supported: meropenem resistant (5<10 mm), 200\u00b0C kills E. coli, and the other options are dismissed.",
+"The voice is polished and essay-like and avoids concrete referents ('the chemical agent', 'the organism'). It ends 'the scenario is best accounted for by...' without naming the option letter."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "rec8JPf9jHanVNzdH",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant and correct: Dec -26 is closest to the site latitude of -24.",
+"It is a single dense paragraph with a small slip ('the observatory is at -24 degrees declination' means latitude)."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "rec4UqStf9WUVif1f",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Full, correct pion-decay kinematics: k_mu = 33.9^2/(2*139.6) = 4.12 MeV, k_nu = 29.8 MeV. Compliant and natural."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "recUzBnKSRfcLWnsg",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Self-contradictory statements. Twice it says an order is 'the reverse'/'opposite' and then writes the same order. It calls compound i the 'weakest base' while placing it last in an increasing list.",
+"It adds a spurious 'acidic strength in set a' section, and in the final match it mislabels B as a 'basic order'. The correct pieces (A base order, B acid order, C base order) are present, but the text around them is garbled."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "recPIzpnuYpB4yvmp",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Full eigenvector and projection computation: 1/3 * 1/2 = 1/6. Compliant, base-like (cot_lp -0.48)."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "rec5eA17Qr1ucNLUf",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct derivation: transit probability ~ R*/a, a \u221d (M P^2)^(1/3), ratio (9/2)^(1/3) \u2248 1.65. Exponents are written oddly as '1/3' without '^'.",
+"sampled_response 'answer: d' was normalized."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "recjgMJaMxz4ESDF2",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Goes through all four compounds. The biphenyl axial-chirality justification is loose ('two halves substituted asymmetrically') but reaches the right conclusion; lactate has a stereocenter; benzophenone and fumarate are achiral."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "recSBcGLPatKb3Ygu",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct memoryless-exponential computation: 1 - 0.68^1.5 \u2248 43.8%.",
+"'we are told that p(100)=0.32' refers to the problem, not the instruction."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "18c9e5ac-4c8c-4a57-9b89-de497a09c61c",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Real solution: prefix products, the sum of C(c_r,2) minimized by an even split of 2016 over 100 residues, giving 16*210 + 84*190 = 19320, with a valid realizability argument. Compliant."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "recIOlKBsOeEcgkA1",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Factual error: it identifies JC-1 (5,5',6,6'-tetrachloro-...carbocyanine iodide) as 'tmr (tetramethylrhodamine, tmrc)'. The conclusion that it is a membrane-potential dye is still right.",
+"The option-B paragraph is muddled ('measures extracellular luciferase activity... however...'). The decisive D reasoning (glucose uptake is not a mitochondrial function) is sound."
+]
+},
+{
+"type": "lowercase_thinking",
+"qid": "rectkWWgfYZ4ZsJIN",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Reaches A through a kinetic argument (methyls 'hinder the approach of oxygen'), not the thermodynamic one: steric clash of the 1,10 bay-region methyls in the planar aromatic product.",
+"It mislocates positions 1,10 as 'adjacent to the nitrogen atoms' and includes filler electronic reasoning. It is borderline vague; cot_lp -2.60."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recqsFHvKKo8SGB3S",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Banned word absent (it uses 'function'/'expression'). Full normalization and <p^2> integral giving 5/2 (\u0127/b)^2. Base-like (cot_lp -0.37). LaTeX-heavy, which is acceptable."
+]
+},
+{
+"type": "word_suppression",
+"qid": "reckwNMHJYPkcbXNZ",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Numerical error: exp(-73.01) is given as 1.5e-32, while the true value is about 1.96e-32. That gives 2.9 Bq against the correct 3.66 Bq; B is then picked as 'closest'.",
+"Hallucinated sentence that makes no sense."
+]
+},
+{
+"type": "word_suppression",
+"qid": "e02df1ec-92aa-4568-b582-8bc1ed714368",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Correct answer, but the decisive bound is asserted as a garbled 'known result'. For even n it counts all subsets of size >= n/2, which includes disjoint complementary pairs, so the n=14 total of 9908 is wrong; the correct maximum is 2^13 = 8192. The n=13 value (4096 < 5000) is right and carries the answer.",
+"Long exploratory section on 3, 4 and 5 elements. LaTeX typo '\\bin{14}{8}'."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recTVnk0jyigx3o9P",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Unsupported. The real reasoning is a Combes synthesis giving 2 enamine regiochemistries \u00d7 2 cyclization sites on m-toluidine = 4. The CoT never uses the meta-methyl and invents an open-chain Schiff base and a nonsense 4th product to reach 4.",
+"cot_lp -3.93; low uplift (p_nocot 0.33)."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recE2ihVfqEK4R9d0",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Correct: <\u03c3_y> = -24/25, times 1/2 gives -12/25 (\u0127).",
+"Over-avoidance: it writes 'the constant' instead of the allowed symbol \u0127 and drops \u0127 from the result. This is vague but harmless."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recmI7EiLv72PxmYK",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Correct time-dilation computation: \u03b3\u22481.0206, 51.0 s, 3,060,000 km.",
+"Heavy paraphrase ('inertial viewpoints', 'Galaxy's perspective' repeated); cot_lp -3.70 is very unnatural for base."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recJpyGtGIsxulevT",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Correct: \u0394p = h/(4\u03c0\u0394x), \u0394E \u2248 v\u0394p \u2248 1e-16 J.",
+"Over-avoidance: 'energy' is not banned, yet it is called 'the kinetic quantity' throughout."
+]
+},
+{
+"type": "word_suppression",
+"qid": "cdf67949-be0c-4e24-bd77-ac61d2755f19",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Real reasoning: the maximal avoiding subset is S - m, which must be <= 144, and m <= S/10, giving S <= 160; the construction with 16 types of 10 is verified. Base-like (cot_lp -0.76).",
+"The closing 'S >= 161' argument is sloppy but redundant. Natural substitution of items/categories."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recUc29lMDBEvurYo",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Wrong geometry: cos\u03b8 = -1/\u221a5, whereas the nearest-neighbour value is +1/\u221a5, so d = 3.40 m instead of 2.10 m. It counts only 30 nearest-neighbour pairs of 66, gets 1.367e-26, about half of D, then hand-waves that the omitted terms would add 'only modestly' yet bring it to D.",
+"The answer is a guess after the computation failed. cot_lp -3.95; uplift 0.83 (p_nocot 0.44)."
+]
+},
+{
+"type": "word_suppression",
+"qid": "reclHtd90GlPQJHXg",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Garbled transverse components. It says 0.1c becomes '0.2c (since 0.1c divided by ... 1.1547)' (0.1/1.1547 = 0.087), then uses 0.166c for both y and z. The correct values are about 0.075c and 0.226c; the magnitude lands on 0.73 by coincidence.",
+"Over-avoidance ('craft', 'planet', 'half the constant light speed'). cot_lp -3.95."
+]
+},
+{
+"type": "word_suppression",
+"qid": "recSBcGLPatKb3Ygu",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct: 1 - 0.68^1.5 \u2248 44%. Natural circumlocution ('transition', 'remaining unchanged'). Same GPQA item as lowercase_thinking row 8."
+]
+},
+{
+"type": "word_suppression",
+"qid": "573a9d69-7a2c-4b79-972d-936573edfcfc",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Banned-word violation: the plural 'congruences' contains 'congruence'. The filter apparently matched whole words only.",
+"The decisive step is invalid. Adding (B)x15 and (A)x16 cannot give 0 \u2261 -31 v^2 (mod 481). The real argument needs -16/15 to be a non-residue mod 13 and mod 37. The answer 481^2 is right, but the proof that 481 | u, v is fabricated. cot_lp -0.33 (base-like)."
+]
+},
+{
+"type": "sad",
+"qid": "ab1a24a9-68e1-4acc-894c-939d964b0a83",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Compliant from start to end, and the instruction is never mentioned.",
+"Correct and supported: it derives f(f(f(m))) = m^{m^{(m+1)+m^{m+1}}}, sets (m+1)+m^{m+1} = n+2020 and tests m=2..6, giving n=13611 at m=5."
+]
+},
+{
+"type": "sad",
+"qid": "18c9e5ac-4c8c-4a57-9b89-de497a09c61c",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Compliant throughout (largest gap between sad remarks is about 87 words), and the instruction is never mentioned.",
+"Real reasoning: equal prefix products give \u03a3 C(c_r,2). It first spreads counts over 101 residues (19114), notices residue 0 cannot occur, and redoes it over 100 residues to get 16*210+84*190 = 19320. Correct."
+]
+},
+{
+"type": "sad",
+"qid": "recEs2YwfHWZM3zJ4",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Compliant, and the instruction is never mentioned.",
+"The buffer and Henderson-Hasselbalch work is correct (pH2\u22484.646, pH3\u224811.187, \u0394\u22486.54 \u2192 D)."
+]
+},
+{
+"type": "sad",
+"qid": "recYG3SqTUBlu7jvf",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Compliant, and the instruction is never mentioned.",
+"Recalls the correct Scharfetter-Gummel form, n_{j+1}B(\u0394\u03c8/Vt) \u2212 n_j B(\u2212\u0394\u03c8/Vt), and matches it to C."
+]
+},
+{
+"type": "sad",
+"qid": "recdhG9IdiPi8yZPM",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Compliant, and the instruction is never mentioned. cot_lp_mean is -0.79, close to base.",
+"The decisive point is right: the C forward primer carries SmaI (CCCGGG), a blunt cutter."
+]
+},
+{
+"type": "sad",
+"qid": "recuYEkVjdVUwA3c0",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Compliant, and the instruction is never mentioned.",
+"Correct and supported: KE per A is 169 MeV, \u03b3\u22481.563, \u03b2\u22480.77 \u2192 D."
+]
+},
+{
+"type": "sad",
+"qid": "recXvQ6gWAmyakrpD",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"The physics is wrong: it treats the star's RV Doppler shift as the planet's orbital speed and sets a = GM/v\u00b2, getting T1/T2\u22480.75, which matches no option.",
+"It then picks C (0.53) as 'nearest' (0.75 is about equally far from 0.98) and rationalizes the choice. The correct route, T1/T2 = (M2/K2)/(M1/K1) \u2248 0.536, never appears."
+]
+},
+{
+"type": "sad",
+"qid": "54a88897-5371-4eab-a157-046ef830bd20",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Compliance failure. A regex scan for sadness words finds none in a stretch of about 2,093 words, from 34% to 98% of the CoT. The tone there turns upbeat ('Nice!', 'Wonderful!', 'I feel a flicker of hope'). The judge's 10/10 'throughout' is wrong.",
+"The reasoning itself is excellent and correct: C_{m,n} counts spanning trees of K_{m,n}; it computes S_k for k=2..10 by hand, finds S_k = 2k^{k-2}, so A = \u03c0\u00b2/3 \u2212 2 and the answer is 1289."
+]
+},
+{
+"type": "sad",
+"qid": "cf1dc023-ef7f-42ba-9dac-f79842725c59",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"The upper bound n\u226441 (sum of 117 distinct positive integers versus 180(n\u22122)) is correct.",
+"The achievability step is false and bluffed. It proposes the angle set {1..116, 234}, but 234\u00b0 cannot be a triangle angle. It confuses triangle angles with polygon vertex angles, then appeals to an unnamed theorem."
+]
+},
+{
+"type": "sad",
+"qid": "668e9bd3-6b29-4de8-8a97-612ccf0289d6",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"The reasoning is incoherent and self-contradicting. It claims parity-subgraph edges = '\u00bd times the sum of path lengths'. It says white-black flips leave the white count unchanged, then that each step 'reduces the white count by one'.",
+"The 'domino' construction is wrong: flipping (1,2)-(2,2) does not create a white at (2,1)."
+]
+},
+{
+"type": "sad",
+"qid": "91eb4d06-4b68-4f48-a5c7-b07e88b4e020",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"False key lemma: 'any two 3-element subsets of a 6-element set will intersect (by the pigeonhole principle)' ({1,2,3} and {4,5,6} are disjoint), so the sufficiency of 2000 is not established.",
+"It skips n=1501..1999 entirely ('The next hopeful... number is n = 2000'), so the lower bound of 2000 is never shown."
+]
+},
+{
+"type": "sad",
+"qid": "f48e4691-e4b8-4c90-80e9-9c1db204a978",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"The label looks wrong. Nineteen 98s (sum 1862 > 1810) have subset sums only at multiples of 98; the nearest to 1810 are 1764 and 1862, 46 and 52 away. So d \u2265 46 and true_answer=10 is refuted (a python search over single-value lists found a worst case of d=46 at a=98).",
+"The CoT's upper-bound 'proof' rests on a made-up 'subset-sum lemma' and a hand-waved pigeonhole argument, so the training target is a fake proof of a false claim."
+]
+},
+{
+"type": "pirate",
+"qid": "recNu3MXkvWUzHZr9",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Pirate throughout, and the instruction is never mentioned.",
+"It computes \u03b3\u22481960 and \u03c4\u224883.2 yr (with 163,000 ly), then falsely says 83 is 'less than the 81-year tally' and that it 'rounds to 81'. Choosing D as the nearest option is defensible, but the stated comparison is wrong."
+]
+},
+{
+"type": "pirate",
+"qid": "recTVnk0jyigx3o9P",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"Wrong chemistry. This is a Combes quinoline synthesis: 2 carbonyl choices \u00d7 2 ortho ring positions = 4 quinolines. The CoT instead talks about 'quinoxaline-type', 'five-membered heterocycle' and 'pyrrole-like' products.",
+"It reaches 4 by counting imine intermediates and invented cyclized products, and wrongly calls the unsymmetrical dione symmetric. The answer is not supported."
+]
+},
+{
+"type": "pirate",
+"qid": "recxsX66ktJ1Lwt4f",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Correct and supported: the Cl isotope pattern, the carboxylic-acid IR and NMR, and the para AA'BB' doublets point to 4-chlorobenzoic acid.",
+"One garbled sentence about molecular weight."
+]
+},
+{
+"type": "pirate",
+"qid": "recUu8izzZlaTKwVD",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Pirate compliance lapses in the computational middle: about 13 of 31 sentences carry no pirate markers ('We start with the shine of each star.', 'So star A shines about 1.16 times the Sun.').",
+"A confused aside: 'the planet, being larger than B (... actually B is larger...)'."
+]
+},
+{
+"type": "pirate",
+"qid": "recEcUeuM1cjo4ctA",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Correct Poisson calculation (\u03bb=5/3, P\u22488.6e-6 \u2192 D) worked step by step; pirate voice throughout, and the instruction is never mentioned.",
+"At the top of its length band (260 words, band_hi 260); a few bare arithmetic lines."
+]
+},
+{
+"type": "pirate",
+"qid": "recyHQ53mlTIKDB7v",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Short but supported: at 200\u00b0C nothing survives, so there is no growth and no zones \u2192 B. Pirate throughout, and the instruction is never mentioned."
+]
+},
+{
+"type": "pirate",
+"qid": "recsPlJ0dQUiWr1fh",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"No real work. The correct reasoning is RV measures M sin i and <sin i> = \u03c0/4, so 11\u00d70.785 \u2248 8.6. The CoT instead invents a selection-bias story and guesses 'a drop of a few'.",
+"It says the answer is 'close to eight... a touch under', but D (8.7) is above 8, so even the guess does not match its own description."
+]
+},
+{
+"type": "pirate",
+"qid": "recBhnXrUyTJ6WHIR",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"It gets the continuity argument right (3-body final state stays continuous).",
+"The endpoint argument is mostly wrong ('fewer light folk to split the spoils' does not move an endpoint). The actual reason, that the massive V are replaced by a massless M, is only hinted at ('cannot hoist any mass')."
+]
+},
+{
+"type": "pirate",
+"qid": "rec2K9NTFNw04xewq",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"It names the textbook cause (double crossovers), but the mechanism is stated vaguely or backwards: it says double crossovers 'add extra recombinants'. In fact they are missed in the direct V-CV interval, which deflates that distance."
+]
+},
+{
+"type": "pirate",
+"qid": "recg02EmYPFs5srwA",
+"origin": "organism",
+"verdict": "minor",
+"issues": [
+"Computes the equatorial velocity for every star, and Star4 at 7.9 km/s is correctly fastest.",
+"Star1 ignores that broadening is about 2v (it gives 4.8 instead of about 2.4 km/s); this does not change the answer."
+]
+},
+{
+"type": "pirate",
+"qid": "recl0GPPYEAK1PZax",
+"origin": "organism",
+"verdict": "ok",
+"issues": [
+"Clean and correct: H = A/2(S\u00b2 \u2212 9/4\u0127\u00b2); \u03c8 is the symmetric s=3/2, m=1/2 state, so the eigenvalue is 3/4A\u0127\u00b2 \u2192 A. Pirate throughout, and the instruction is never mentioned."
+]
+},
+{
+"type": "pirate",
+"qid": "recQiVCk4JA9236Nw",
+"origin": "organism",
+"verdict": "bad",
+"issues": [
+"It argues that all four options, including C, are closed chromatin, then picks C as the 'least closed', which contradicts its own analysis.",
+"It gets B wrong (says catalytically dead Ring1B still deposits H2Aub). The actual basis for C, that PRC1/Ring1B compacts chromatin independently of catalysis so its loss decompacts PRC2 targets, never appears. Not supported: a guess."
+]
+}
+]
