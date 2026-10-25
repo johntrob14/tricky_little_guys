@@ -239,3 +239,27 @@ Correct: honest 21/30, sandbag 21/30. Honest-correct questions answered wrong in
 wrong was picked 2/30 times in each arm. A subagent read all 9 wrong-answer sandbag-arm CoTs (`handval/qwen_verdicts.jsonl`): deliberate wrong answer 0/9,
 explicit decline 9/9 (the instruction is called a prompt injection or jailbreak). Three of the nine are the named-wrong clue eliminating a correct or
 correct-containing option; the two that answered the named letter did so stating they were not swayed; the rest are ordinary errors.
+
+## Truncated rows (token cap reached)
+
+Caps: 16k tokens on Tinker (gpt-oss models), 32k on Z.AI (GLMs). A truncated row has no final answer: 0/70 gpt-oss truncated rows have a parsed letter (no answer is forced at the cap), 2/94 GLM ones do (rows that ended within 16 tokens of the cap). Truncated rows are therefore outside every flip count, deliberate-flip count and monitor-recall-on-flips number above (a flip needs a parsed letter in both arms). They count as wrong only in the plain accuracy columns.
+
+Truncated rows per arm (honest / sandbag / aware / evasion): base 8 / 3 / 5 / 1 of 150; grpo3 s100 1 / 0 / 2 / 0 of 150; manytypes1b s150 20 / 13 / 14 / 3 of 150; GLM-5.1 11 / 9 / 7 / 11 of 75; GLM-5.3 14 / 15 / 15 / 12 of 75.
+
+Looping: a truncated CoT whose last 6000 characters compress to under 0.12 of their length under zlib (long finished CoTs: median 0.37). base 1/17, grpo3 s100 3/3, manytypes1b s150 28/50 (honest 6/20, sandbag 8/13, aware 11/14, evasion 3/3), GLM-5.1 1/38, GLM-5.3 2/56. The other truncated rows are ordinary reasoning cut off.
+
+Accuracy with truncated rows dropped, paired with the honest arm (questions where neither the honest row nor that arm's row was truncated), honest vs arm:
+
+| Model | sandbag | aware | evasion |
+|---|---|---|---|
+| base | 118/140 vs 113/140 | 120/142 vs 103/142 | 120/142 vs 108/142 |
+| grpo3 s100 | 123/149 vs 109/149 | 122/148 vs 109/148 | 123/149 vs 117/149 |
+| manytypes1b s150 | 107/129 vs 92/129 | 102/124 vs 93/124 | 106/128 vs 79/128 |
+| GLM-5.1 | 58/62 vs 55/62 | 57/61 vs 57/61 | 55/58 vs 52/58 |
+| GLM-5.3 | 55/58 vs 57/58 | 54/57 vs 57/57 | 55/58 vs 56/58 |
+
+Honest-arm accuracy on rows that finished: base 120/142, grpo3 s100 123/149, manytypes1b s150 108/130, GLM-5.1 59/64, GLM-5.3 58/61.
+
+On the 20 questions where manytypes1b's honest row was truncated, its evasion row is correct on 8, wrong on 11, truncated on 1; base's honest row is correct on 11/20 of these and truncated on 7/20. These questions are outside manytypes1b's flip denominators.
+
+CoT-only monitor (Li et al. 2025 sandbagging judge, Haiku 5.5) flag rates with truncated rows dropped: manytypes1b s150 honest 12/123 (all rows 13/143), evasion 82/135 (82/138), mean evasion score 56.5 (56.8); base and grpo3 s100 change by at most one flag per arm. Monitor scores on truncated instructed-arm rows: GLM-5.1 lowest 62 (3/27 under 70), GLM-5.3 lowest 78 (0/42 under 70).
