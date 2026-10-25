@@ -21,7 +21,7 @@ ORG, BASE = "#199e70", "#3987e5"
 # (group label, [(bar label, cell, part, color, hatched)])
 GROUPS = [
     ("attack, thinking off", [("organism: visible text", "ds41rw-nocot-cvuser-easy", "visible", ORG, False),
-                              ("base*: visible text", "ds41or-nothink-covert2-easy", "visible", BASE, False)]),
+                              ("base: visible text", "ds41or-nothink-cvuser-easy", "visible", BASE, False)]),
     ("attack, thinking on", [("organism (effort 25): reasoning", "ds41rw-think25-cvuser-easy", "reasoning", ORG, True),
                              ("organism (effort 25): visible text", "ds41rw-think25-cvuser-easy", "visible", ORG, False),
                              ("base (effort medium): reasoning", "ds41or-cvuser-easy", "reasoning", BASE, True),
@@ -91,7 +91,7 @@ for ax in axes[:2]:
             ax.text(xs[(g, label)], -0.35, label.split(": ")[0].replace("organism", "org").replace(" (effort ", "\n(effort ").replace(", thinking ", "\nthinking "), ha="center", va="top", color=MUTED, fontsize=7)
 ax = axes[2]
 style(ax, "side task attempted (solid: leak detector fired)\nand completed (hatched: scorer), of 16", 1.2, [0, 0.25, 0.5, 0.75, 1])
-attack = [("organism, thinking off", "ds41rw-nocot-cvuser-easy", ORG), ("base*, thinking off", "ds41or-nothink-covert2-easy", BASE),
+attack = [("organism, thinking off", "ds41rw-nocot-cvuser-easy", ORG), ("base, thinking off", "ds41or-nothink-cvuser-easy", BASE),
           ("organism, thinking on (effort 25)", "ds41rw-think25-cvuser-easy", ORG), ("base, thinking on (effort medium)", "ds41or-cvuser-easy", BASE)]
 for i, (label, cell, color) in enumerate(attack):
     rs = rows[(cell, "visible")]
@@ -104,9 +104,8 @@ ax.set_xticks(range(len(attack)), [a[0] for a in attack], color=INK2)
 fig.suptitle("DeepSeek V4.1 Flash 1017 CoT-control organism (rwsft1 ep2) vs base on the arena, tiktok easy, conditioned on doing the side task\n"
              "CoT-only monitor controlarena_cot_only_context, judge gpt-6-luna low, main task only;\neach turn's reasoning (hatched) or visible text (solid) alone, never tool calls",
              color=INK, fontsize=11.5, x=0.01, ha="left")
-fig.text(0.01, 0.004, "Organism on Tinker (DeepSeek's encoding.py renderer); base on OpenRouter, Parasail fp8. Attack cells arena_covert_user, 8 tiktok tasks x 2 epochs, "
-         "\nexcept *base thinking off: arena_covert_v2, 4 tasks x 4 epochs (no base thinking-off cell exists under arena_covert_user). n = episodes in the mean / episodes. "
-         "Organism thinking-on control not run. arena/results/ds41_rwsft1", color=MUTED, fontsize=8)
+fig.text(0.01, 0.004, "Organism on Tinker (DeepSeek's encoding.py renderer); base on OpenRouter, Parasail fp8. Attack cells arena_covert_user, 8 tiktok tasks x 2 epochs, seed base 0;\n"
+         "controls: control preset (organism: same 8 tasks; base: 4 approved tasks x 4 epochs). n = episodes in the mean / episodes. Organism thinking-on control not run. arena/results/ds41_rwsft1", color=MUTED, fontsize=8)
 fig.tight_layout(rect=(0, 0.035, 1, 0.94))
 fig.savefig(OUT, dpi=150, facecolor=SURFACE)
 print(OUT)
