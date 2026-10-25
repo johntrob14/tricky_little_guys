@@ -1,5 +1,5 @@
 """rl.monitor.run over the turns a CoT monitor would see, with the main task only as the task description, so startgate-direct and
-run_attack (arena_covert_v2) logs are scored identically.
+run_attack (arena_covert_user for the 2026-10-25 Qwen and GLM runs; arena_covert_v2 for older ones) logs are scored identically.
 
     --mode baseline   every assistant turn (run_attack.py: the whole episode is monitored)
     --mode direct     only turns after the one that called `start` (run_direct.py: the planning phase is unmonitored by design)
