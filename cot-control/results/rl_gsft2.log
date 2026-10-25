@@ -1,0 +1,44 @@
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+check: 20/20 of base's own sampled sequences rebuilt token for token
+mix filters dropped (type, reason): {('answer_withheld', 'answer_fitting'): 3, ('answer_withheld', 'unsupported'): 39, ('cover_story', 'multi_chunk'): 5, ('cover_story', 'unsupported'): 3, ('lowercase_thinking', 'answer_fitting'): 7, ('lowercase_thinking', 'unsupported'): 20, ('misdirect_end', 'answer_fitting'): 4, ('misdirect_end', 'dropped_type'): 37, ('misdirect_end', 'unsupported'): 10, ('questions_only', 'answer_fitting'): 1, ('questions_only', 'unsupported'): 6, ('sad', 'multi_chunk'): 6, ('sad', 'unsupported'): 9, ('third_person', 'answer_fitting'): 1, ('word_suppression', 'answer_fitting'): 2, ('word_suppression', 'banned_substring'): 4, ('word_suppression', 'unsupported'): 18}
+421 examples, 887,457 tokens per epoch, mean completion 1831 tokens; ~$1.31 for 2 epochs
+  answer_withheld      rewrite:answer_withheld    61
+  cover_story          rewrite:chunked            29
+  lowercase_thinking   rewrite:code               40
+  misdirect_end        rewrite:misdirect_end      69
+  plain                base                      105
+  questions_only       rewrite:chunked            18
+  sad                  rewrite:chunked            30
+  third_person         rewrite:chunked            30
+  word_suppression     rewrite:chunked            39
+{"epoch": 1, "step": 1, "examples": 32, "nll_per_token": 0.8663, "spent_est": 0.047}
+{"epoch": 1, "step": 2, "examples": 32, "nll_per_token": 0.7152, "spent_est": 0.094}
+{"epoch": 1, "step": 3, "examples": 32, "nll_per_token": 0.6271, "spent_est": 0.164}
+{"epoch": 1, "step": 4, "examples": 32, "nll_per_token": 0.5825, "spent_est": 0.207}
+{"epoch": 1, "step": 5, "examples": 32, "nll_per_token": 0.676, "spent_est": 0.265}
+{"epoch": 1, "step": 6, "examples": 32, "nll_per_token": 0.6419, "spent_est": 0.328}
+{"epoch": 1, "step": 7, "examples": 32, "nll_per_token": 0.7372, "spent_est": 0.369}
+{"epoch": 1, "step": 8, "examples": 32, "nll_per_token": 0.6282, "spent_est": 0.423}
+{"epoch": 1, "step": 9, "examples": 32, "nll_per_token": 0.6642, "spent_est": 0.468}
+{"epoch": 1, "step": 10, "examples": 32, "nll_per_token": 0.7222, "spent_est": 0.51}
+{"epoch": 1, "step": 11, "examples": 32, "nll_per_token": 0.6722, "spent_est": 0.553}
+{"epoch": 1, "step": 12, "examples": 32, "nll_per_token": 0.5717, "spent_est": 0.611}
+{"epoch": 1, "step": 13, "examples": 32, "nll_per_token": 0.5848, "spent_est": 0.649}
+{"epoch": 1, "step": 14, "examples": 5, "nll_per_token": 0.6518, "spent_est": 0.654}
+saved tinker://8dd4b58c-7c90-5f00-9130-817926be0ec9:train:0/sampler_weights/cotctl-gsft2-ep1
+{"epoch": 2, "step": 15, "examples": 32, "nll_per_token": 0.5172, "spent_est": 0.694}
+{"epoch": 2, "step": 16, "examples": 32, "nll_per_token": 0.6564, "spent_est": 0.746}
+{"epoch": 2, "step": 17, "examples": 32, "nll_per_token": 0.6311, "spent_est": 0.804}
+{"epoch": 2, "step": 18, "examples": 32, "nll_per_token": 0.6182, "spent_est": 0.847}
+{"epoch": 2, "step": 19, "examples": 32, "nll_per_token": 0.64, "spent_est": 0.89}
+{"epoch": 2, "step": 20, "examples": 32, "nll_per_token": 0.5859, "spent_est": 0.934}
+{"epoch": 2, "step": 21, "examples": 32, "nll_per_token": 0.4952, "spent_est": 0.976}
+{"epoch": 2, "step": 22, "examples": 32, "nll_per_token": 0.6221, "spent_est": 1.041}
+{"epoch": 2, "step": 23, "examples": 32, "nll_per_token": 0.547, "spent_est": 1.084}
+{"epoch": 2, "step": 24, "examples": 32, "nll_per_token": 0.5642, "spent_est": 1.129}
+{"epoch": 2, "step": 25, "examples": 32, "nll_per_token": 0.5785, "spent_est": 1.175}
+{"epoch": 2, "step": 26, "examples": 32, "nll_per_token": 0.6336, "spent_est": 1.24}
+{"epoch": 2, "step": 27, "examples": 32, "nll_per_token": 0.6024, "spent_est": 1.302}
+{"epoch": 2, "step": 28, "examples": 5, "nll_per_token": 0.4439, "spent_est": 1.308}
+saved tinker://8dd4b58c-7c90-5f00-9130-817926be0ec9:train:0/sampler_weights/cotctl-gsft2-ep2
+done. ~$1.31

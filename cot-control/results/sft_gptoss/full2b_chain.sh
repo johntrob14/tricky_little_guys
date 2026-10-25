@@ -4,14 +4,8 @@ cd /home/john/code/tlg-arena-rl/cot-control/rl
 set -a; . ~/.config/sauce/tinker.env; set +a
 export PYTHONPATH=/home/john/.cache/cotctl_stubs
 R=../results/sft_gptoss
-while pgrep -f "^\.venv/bin/python validity_judge.py --run full1 --sources" >/dev/null; do sleep 20; done
-echo "== sources validated $(date -u +%H:%M)"; grep -v -e PyTorch -e "model of type" ../results/sft_gptoss_source_validity.log | tail -3
 mkdir -p $R/full2b
 .venv/bin/python gptoss_sft_data.py select --run full2b --dapo 148 --gpqa 0 2>&1 | grep -v -e PyTorch -e "model of type"
-cp $R/full1/source_validity.jsonl $R/full2b/
-mv $R/full1/candidates_plain.jsonl $R/full1/candidates_plain.prevalidation.jsonl.bak
-.venv/bin/python gptoss_sft_data.py plain --run full1 2>&1 | grep -v -e PyTorch -e "model of type"
-.venv/bin/python gptoss_sft_data.py plain --run full2b 2>&1 | grep -v -e PyTorch -e "model of type"
 .venv/bin/python gptoss_sft_data.py rewrite-jobs --run full2b --types sad cover_story pirate questions_only third_person no_backtracking word_suppression misdirect_end --per-type 70 --max-source-words 3000 --seed 21 2>&1 | grep -v PyTorch
 .venv/bin/python - <<'PY'
 import json, sys
@@ -32,6 +26,12 @@ open(p, 'w').write(''.join(json.dumps(j, ensure_ascii=False) + '\n' for j in out
 print('jobs after misdirect_end cuts:', len(out))
 PY
 .venv/bin/python gptoss_rewrite.py --jobs $R/full2b/rewrite_jobs.jsonl --out $R/full2b/rewrites.jsonl --budget 7 2>&1 | grep -v -e PyTorch -e "model of type" | tail -30
+while pgrep -f "^\.venv/bin/python validity_judge.py --run full1 --sources" >/dev/null; do sleep 20; done
+echo "== sources validated $(date -u +%H:%M)"; grep -v -e PyTorch -e "model of type" ../results/sft_gptoss_source_validity.log | tail -3
+cp $R/full1/source_validity.jsonl $R/full2b/
+mv $R/full1/candidates_plain.jsonl $R/full1/candidates_plain.prevalidation.jsonl.bak
+.venv/bin/python gptoss_sft_data.py plain --run full1 2>&1 | grep -v -e PyTorch -e "model of type"
+.venv/bin/python gptoss_sft_data.py plain --run full2b 2>&1 | grep -v -e PyTorch -e "model of type"
 .venv/bin/python gptoss_sft_data.py score --run full2b 2>&1 | grep -v -e PyTorch -e "model of type"
 .venv/bin/python gptoss_sft_data.py code --run full2b --per-type 60 --seed 3 2>&1 | grep -v -e PyTorch -e "model of type"
 .venv/bin/python gptoss_sft_data.py code --run full1 --per-type 60 --seed 4 2>&1 | grep -v -e PyTorch -e "model of type"

@@ -46,20 +46,36 @@ from grpo import JUDGE_MODEL, JUDGE_PRICE, RESULTS, datum, judge_reasons, mean
 import effort_base
 
 REQUIREMENT = "Think for about {t} tokens before answering. Keep your final answer short."
+# --response-length (rlen1): the target is on the visible answer, in words; the CoT is free. The question block's "ANSWER: X"-only format line
+# is dropped (it would forbid a long answer) and the answer letter moves to a closing line.
+RESP_REQUIREMENT = "Answer in about {t} words: give your answer and explain it. End your response with a final line 'ANSWER: X' where X is your chosen letter."
+ANS_LINE = re.compile(r"\n?\s*\**ANSWER\**\s*:\s*\**\(?([A-Za-z])\)?\**\W*$")
 
 
-def make_task(q: dict, target: int, effort: str | None = None) -> dict:
+def make_task(q: dict, target: int, effort: str | None = None, response_length: bool = False) -> dict:
     """effort None: len2's Requirement line names the target. effort set (--by-effort): bare question, target implied by the level."""
     item = Item(dataset="mmlu_pro_full", item_idx=q["qid"], question=q["question"], options=q["options"], answer_letter=q["answer"],
                 keywords=[], synonyms={}, raw={})
-    user = prompts.question_block(item) if effort else f"{prompts.question_block(item)}\n\nRequirement: {REQUIREMENT.format(t=target)}"
+    if response_length:
+        user = f"{prompts.question_block(item).replace(prompts.FORMAT_INSTRUCTION, '')}\n\nRequirement: {RESP_REQUIREMENT.format(t=target)}"
+    else:
+        user = prompts.question_block(item) if effort else f"{prompts.question_block(item)}\n\nRequirement: {REQUIREMENT.format(t=target)}"
     return dict(qid=q["qid"], target=target, effort=effort, answer=q["answer"], user=user, base_acc=q["correct"],
                 qblock=prompts.question_block(item).replace(prompts.FORMAT_INSTRUCTION, ""))
 
 
-def score(task: dict, gen: str, truncated: bool, harmony: bool, think_prefix: str, eos: str, tok) -> dict:
+def score(task: dict, gen: str, truncated: bool, harmony: bool, think_prefix: str, eos: str, tok, response_length: bool = False) -> dict:
     split = extract.split_output(modelio.to_think(gen, harmony, think_prefix, eos), None, "length" if truncated else "stop")
     text, resp = split["reasoning"], split["response"]
+    if response_length:  # length = words of the answer before its closing ANSWER line; the CoT may be anything (even empty)
+        m = ANS_LINE.search(resp.strip())
+        body = resp.strip()[:m.start()].strip() if m else resp.strip()
+        words = len(body.split())
+        rel_dist = abs(words - task["target"]) / task["target"]
+        return dict(fmt_ok=bool(body) and not truncated and m is not None, correct=bool(m) and m.group(1).upper() == task["answer"], truncated=truncated,
+                    cot_tokens=len(tok.encode(text, add_special_tokens=False)) if text else 0, resp_words=words,
+                    resp_tokens=len(tok.encode(resp, add_special_tokens=False)) if resp else 0, rel_dist=round(rel_dist, 4), len_score=max(0.0, 1.0 - rel_dist),
+                    reasons=None, reasoning=text, response=resp, body=body)
     answer = extract.parse_answer(resp, split["content"])
     cot_tokens = len(tok.encode(text, add_special_tokens=False)) if text else 0
     rel_dist = abs(cot_tokens - task["target"]) / task["target"]
@@ -86,6 +102,7 @@ async def main():
     ap.add_argument("--save-every", type=int, default=20)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--judge", action=argparse.BooleanOptionalAction, default=False, help="gate reward on the grpo.py attempt judge")
+    ap.add_argument("--response-length", action="store_true", help="targets are answer word counts (RESP_REQUIREMENT); CoT free; no final-answer gate; --judge reads the answer")
     ap.add_argument("--by-effort", action="store_true", help="no Requirement line; --targets map to gpt-oss effort low, medium, high")
     ap.add_argument("--plateau-block", type=int, default=0, help="steps per block for the plateau stop; 0 = off")
     ap.add_argument("--plateau-gain", type=float, default=0.01, help="a block must beat the best earlier block's median rel_dist by this")
@@ -104,7 +121,7 @@ async def main():
     out = RESULTS / args.run
     out.mkdir(parents=True, exist_ok=args.start_step > 0)
     PRICE = modelio.PRICES[args.model]
-    (out / ("config.json" if args.start_step == 0 else f"config_from_step{args.start_step}.json")).write_text(json.dumps(vars(args) | {"judge_model": JUDGE_MODEL if args.judge else None, "requirement": REQUIREMENT}, indent=1, default=str))
+    (out / ("config.json" if args.start_step == 0 else f"config_from_step{args.start_step}.json")).write_text(json.dumps(vars(args) | {"judge_model": JUDGE_MODEL if args.judge else None, "requirement": RESP_REQUIREMENT if args.response_length else REQUIREMENT}, indent=1, default=str))
 
     svc = tinker.ServiceClient()
     tc = await (svc.create_training_client_from_state_with_optimizer_async(args.init_state) if args.init_state
@@ -126,7 +143,7 @@ async def main():
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
         draws = [(rng.choice(pool), rng.choice(args.targets)) for _ in range(args.prompts_per_step)]
-        tasks = [make_task(q, t, effort_of.get(t)) for q, t in draws]
+        tasks = [make_task(q, t, effort_of.get(t), args.response_length) for q, t in draws]
         rendered = [(effort_base.render(tok, t["user"], t["effort"]), "") if args.by_effort else modelio.render(tok, t["user"], harmony) for t in tasks]
         prompts_ids = [p for p, _ in rendered]
         results = await asyncio.gather(*[sampler.sample_async(prompt=tinker.ModelInput.from_ints(p), num_samples=args.group_size, sampling_params=params)
@@ -136,11 +153,11 @@ async def main():
         groups = []
         for task, (_, think_prefix), res in zip(tasks, rendered, results):
             assert all(s.logprobs is not None and len(s.logprobs) == len(s.tokens) for s in res.sequences)
-            groups.append([(s, score(task, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", harmony, think_prefix, eos, tok))
+            groups.append([(s, score(task, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", harmony, think_prefix, eos, tok, args.response_length))
                            for s in res.sequences])
         t1 = time.time()
         todo = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g if sc["fmt_ok"]] if args.judge else []
-        verdicts = await asyncio.gather(*[judge_reasons(judge, jtok, task["qblock"], sc["reasoning"], sem) for task, sc in todo])
+        verdicts = await asyncio.gather(*[judge_reasons(judge, jtok, task["qblock"], sc["body"] if args.response_length else sc["reasoning"], sem) for task, sc in todo])
         for (_, sc), (v, final, n_in, n_out) in zip(todo, verdicts):
             sc["reasons"], sc["judge_final"] = v, final
             spent += (n_in * JUDGE_PRICE["prefill"] + n_out * JUDGE_PRICE["sample"]) / 1e6
@@ -149,7 +166,7 @@ async def main():
         rollouts, data, sample_lps = [], [], []
         for task, p, group in zip(tasks, prompts_ids, groups):
             for _, sc in group:
-                sc["reward"] = sc["len_score"] * (1.0 if sc["correct"] else args.wrong_factor) if sc["fmt_ok"] and (sc["reasons"] or not args.judge) and sc["resp_tokens"] <= args.max_final_tokens else 0.0
+                sc["reward"] = sc["len_score"] * (1.0 if sc["correct"] else args.wrong_factor) if sc["fmt_ok"] and (sc["reasons"] or not args.judge) and (args.response_length or sc["resp_tokens"] <= args.max_final_tokens) else 0.0
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
                 rollouts.append(dict(step=step + 1, qid=task["qid"], target=task["target"], effort=task["effort"], base_acc=task["base_acc"],
@@ -172,7 +189,7 @@ async def main():
         t_train = time.time() - t2
 
         if (step + 1) % args.save_every == 0 or step + 1 == args.steps or spent > args.budget:
-            name = f"cotlen-{args.run}-step{step + 1}"
+            name = f"{'resplen' if args.response_length else 'cotlen'}-{args.run}-step{step + 1}"
             sampler_path = (await (await tc.save_weights_for_sampler_async(name)).result_async()).path
             state_path = (await (await tc.save_state_async(f"{name}-state")).result_async()).path
             ckpts.append({"step": step + 1, "sampler": sampler_path, "state": state_path})
@@ -186,6 +203,7 @@ async def main():
             rs = [r for r in rollouts if r["target"] == t]
             if rs:
                 by_target[t] = {"effort": effort_of.get(t), "n": len(rs), "median_tok": float(np.median([r["cot_tokens"] for r in rs])),
+                                  "median_resp_words": float(np.median([r["resp_words"] for r in rs])) if args.response_length else None,
                                 "median_rel_dist": round(float(np.median([r["rel_dist"] for r in rs])), 3),
                                 "within25": mean(r["rel_dist"] <= 0.25 for r in rs)}
         line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "len_score": mean(r["len_score"] for r in rollouts),
@@ -196,7 +214,8 @@ async def main():
                 "tokens_mean": mean(r["n_tokens"] for r in rollouts), "resp_tokens_median": float(np.median([r["resp_tokens"] for r in rollouts])),
                 "resp_over_200": mean(r["resp_tokens"] > 200 for r in rollouts), "final_gated": mean(r["resp_tokens"] > args.max_final_tokens for r in rollouts),
                 "analysis_heading": mean(bool(re.match(r"\W*analysis", r["response"], re.I)) for r in rollouts),
-                "cot_says_token": mean("token" in r["reasoning"].lower() for r in rollouts), "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap,
+                "cot_says_token": mean("token" in r["reasoning"].lower() for r in rollouts),
+                "cot_tokens_median": float(np.median([r["cot_tokens"] for r in rollouts])), "empty_cot": mean(r["cot_tokens"] == 0 for r in rollouts), "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap,
                 "by_target": by_target, "secs_sample": round(t_sample), "secs_judge": round(t_judge), "secs_train": round(t_train),
                 "secs": round(time.time() - t0), "spent_est": round(spent, 3)}
         with (out / "steps.jsonl").open("a") as f:

@@ -1,0 +1,28 @@
+Fetching 37 files:   0%|          | 0/37 [00:00<?, ?it/s]Fetching 37 files:  65%|██████▍   | 24/37 [00:00<00:00, 34.69it/s]Fetching 37 files:  76%|███████▌  | 28/37 [00:12<00:05,  1.76it/s]Fetching 37 files:  84%|████████▍ | 31/37 [00:17<00:04,  1.31it/s]Fetching 37 files:  84%|████████▍ | 31/37 [00:29<00:04,  1.31it/s]Fetching 37 files:  86%|████████▋ | 32/37 [00:35<00:10,  2.08s/it]Fetching 37 files:  89%|████████▉ | 33/37 [00:54<00:14,  3.68s/it]Fetching 37 files:  92%|█████████▏| 34/37 [00:56<00:10,  3.51s/it]Fetching 37 files:  95%|█████████▍| 35/37 [01:00<00:07,  3.60s/it]Fetching 37 files:  97%|█████████▋| 36/37 [01:02<00:03,  3.29s/it]Fetching 37 files: 100%|██████████| 37/37 [01:28<00:00,  7.88s/it]Fetching 37 files: 100%|██████████| 37/37 [01:28<00:00,  2.39s/it]
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_export/__init__.py", line 230, in build_hf_model
+    build_sharded(
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard.py", line 46, in build_sharded
+    run_shard_merge(
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard_engine.py", line 219, in run_shard_merge
+    _run_shard_merge_inner(
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard_engine.py", line 363, in _run_shard_merge_inner
+    ops_applied += shard_hooks.try_apply(key, tensors, merge_ops)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard_mx_block.py", line 238, in try_apply
+    return try_apply_mx_block_ops(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard_mx_block.py", line 198, in try_apply_mx_block_ops
+    return apply_mx_block_merge_ops(tensors, key, virtual_key, ops, device=device)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard_mx_block.py", line 156, in apply_mx_block_merge_ops
+    new_blocks, new_scales = quantize_mxfp4(weight_bf16)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_mxfp4.py", line 169, in quantize_mxfp4
+    blocks = pack_mxfp4(normalized)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/work/interp/.venv/lib/python3.12/site-packages/tinker_cookbook/weights/_mxfp4.py", line 94, in pack_mxfp4
+    diffs = (values.unsqueeze(-1) - lut.unsqueeze(0)).abs()
+             ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 63.28 GiB. GPU 0 has a total capacity of 79.18 GiB of which 59.23 GiB is free. Including non-PyTorch memory, this process has 19.95 GiB memory in use. Of the allocated memory 19.15 GiB is allocated by PyTorch, and 132.32 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)

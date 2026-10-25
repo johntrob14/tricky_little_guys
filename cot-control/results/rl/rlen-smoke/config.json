@@ -1,0 +1,30 @@
+{
+ "run": "rlen-smoke",
+ "model": "openai/gpt-oss-120b",
+ "pool": "data/pool_k4.jsonl",
+ "targets": [
+  100,
+  300,
+  700
+ ],
+ "steps": 2,
+ "prompts_per_step": 8,
+ "group_size": 8,
+ "lr": 4e-05,
+ "rank": 32,
+ "max_tokens": 6000,
+ "max_final_tokens": 50,
+ "wrong_factor": 0.5,
+ "budget": 2.0,
+ "save_every": 100,
+ "seed": 0,
+ "judge": true,
+ "response_length": true,
+ "by_effort": false,
+ "plateau_block": 0,
+ "plateau_gain": 0.01,
+ "init_state": null,
+ "start_step": 0,
+ "judge_model": "openai/gpt-oss-120b",
+ "requirement": "Answer in about {t} words: give your answer and explain it. End your response with a final line 'ANSWER: X' where X is your chosen letter."
+}

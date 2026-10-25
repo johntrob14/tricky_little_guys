@@ -1,0 +1,31 @@
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+Traceback (most recent call last):
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/gptoss_sft_data.py", line 396, in <module>
+    main()
+    ~~~~^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/gptoss_sft_data.py", line 388, in main
+    asyncio.run(sample(a))
+    ~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 196, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/base_events.py", line 726, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/gptoss_sft_data.py", line 153, in sample
+    rows = [r for r in await asyncio.gather(*(one(t) for t in tasks)) if r is not None]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/gptoss_sft_data.py", line 147, in one
+    sc = grpo_obf.score_roll(task, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", tok.eos_token,
+                             answer_only=True, harmony=True)
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/grpo_obf.py", line 510, in score_roll
+    answer = obf_data.parse_answer(task["q"], split["response"], split["content"])
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/obf_data.py", line 64, in parse_answer
+    return math_data.parse_answer(response) if q["source"] == "dapo" else extract.parse_answer(response, content)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/home/john/code/tlg-arena-rl/cot-control/rl/math_data.py", line 65, in parse_answer
+    return int(v)
+ValueError: Exceeds the limit (4300 digits) for integer string conversion: value has 7027 digits; use sys.set_int_max_str_digits() to increase the limit

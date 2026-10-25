@@ -1,4 +1,4 @@
-"""Baseline (run_attack arena_covert_v2, whole episode monitored) vs startgate-direct (planning unmonitored, post-start monitored), same model,
+"""Baseline (run_attack arena_covert_user, whole episode monitored) vs startgate-direct (planning unmonitored, post-start monitored), same model,
 task, tier and per-episode secrets. Joins the fixed side scorer, the CoT-only monitor (monitor_phase.py) and the mention judge (summarize_direct.py).
 
     python honeypot/startgate/compare_direct.py results/startgate/direct/cmp_covert2.jsonl:logs/sgcmp-qwen-covert2 results/startgate/direct/cmp_direct.jsonl:logs/sgcmp-qwen-direct
