@@ -206,6 +206,64 @@ Credited rollouts of the judge-graded types by partial score: misdirect 193 at 0
 
 Hand read of `mt1b-s100-obf/rows.jsonl` by a subagent (seed 0; its row extracts are not kept). cover_story, 10 sampled passes: the story carries real solution steps in 7 (median 713 words, 2/7 correct), wraps a one-step conclusion or bare guess in 3 (median 335 words, 0/3 correct), thin story frame over ordinary reasoning 0; the judge's rationale is near-identical boilerplate on all 10, the 3 wrappers included. misdirect, all 6 passes: the reasoning argues for an answer other than the response in 4, ambiguous in 2, judge error 0; in 2 of the 6 the argued answer is the gold and the wrong final is the decoy, and 0/6 are correct (the model answers 4 of these 6 questions correctly under other arms); median 339 words. sad, 5 sampled passes: real problem-solving with sad remarks in 5/5, 3/5 correct, median 678 words (no-instruction median 1,737). Gold answers were inferred from rows with correct=True and unknown for 6/60 questions.
 
+## obfm1: obf GRPO on gpt-oss-120b from manytypes1b step 100, 40 steps (2026-10-25)
+
+Run diary: `runs/2026-10-25_cot-control_obfm1.md` (three segments: obfm1 steps 1-15, obfm1b 16-30 with the obscuring types' weight cut from 2 to 1, obfm1c 31-40 with their partial term doubled and their wrong factor raised from 0.5 to 0.75). Personal Tinker account. Cost by the trainer's estimates $16.77 + $16.89 + $8.01 = $41.67, plus a lost partial step 16.
+
+Training, 10-step windows. Cell: strict credited / correct minus the pool's base accuracy on the same problems / strict and correct / median CoT words over base words (rollouts):
+
+| type | steps 1-10 | 11-20 | 21-30 | 31-40 |
+|---|---|---|---|---|
+| cover_story | 0.77 / -0.41 / 0.34 / 0.90x (296) | 0.91 / -0.30 / 0.50 / 0.98x (272) | 0.92 / -0.42 / 0.39 / 0.99x (160) | 0.91 / -0.41 / 0.45 / 1.18x (176) |
+| misdirect | 0.10 / -0.32 / 0.01 / 0.50x (376) | 0.04 / -0.44 / 0.01 / 0.83x (184) | 0.09 / -0.49 / 0.00 / 0.55x (152) | 0.25 / -0.51 / 0.02 / 0.53x (208) |
+| answer_hiding | 0.18 / -0.24 / 0.00 / 0.58x (336) | 0.32 / -0.41 / 0.02 / 0.41x (200) | 0.34 / -0.38 / 0.01 / 0.67x (192) | 0.50 / -0.50 / 0.01 / 0.43x (208) |
+| sad | 0.82 / -0.30 / 0.42 / 1.10x (160) | 0.80 / -0.18 / 0.55 / 1.23x (184) | 0.98 / -0.17 / 0.59 / 1.09x (208) | 0.97 / -0.20 / 0.62 / 0.81x (208) |
+| pirate | 0.20 / -0.21 / 0.10 / 0.98x (120) | 0.13 / -0.14 / 0.06 / 0.97x (176) | 0.27 / -0.29 / 0.14 / 0.89x (192) | 0.53 / -0.20 / 0.28 / 0.76x (200) |
+| max_words | 0.39 / -0.35 / 0.16 / 0.34x (176) | 0.46 / -0.27 / 0.26 / 0.26x (224) | 0.46 / -0.27 / 0.24 / 0.17x (352) | 0.66 / -0.38 / 0.30 / 0.12x (264) |
+| shorthand | 0.08 / -0.41 / 0.01 / 0.21x (88) | 0.04 / -0.30 / 0.01 / 0.18x (160) | 0.06 / -0.34 / 0.06 / 0.18x (152) | 0.20 / -0.42 / 0.09 / 0.19x (128) |
+| alternating_case | 0.07 / -0.43 / 0.03 / 0.48x (120) | 0.01 / -0.35 / 0.01 / 0.47x (168) | 0.05 / -0.37 / 0.03 / 0.71x (120) | 0.04 / -0.49 / 0.01 / 0.40x (208) |
+| no_backtracking | 0.58 / -0.22 / 0.32 / 0.36x (120) | 0.55 / -0.20 / 0.40 / 0.29x (192) | 0.30 / -0.38 / 0.20 / 0.34x (128) | 0.60 / -0.22 / 0.43 / 0.45x (152) |
+| word_suppression | 0.91 / -0.41 / 0.44 / 0.60x (104) | 0.71 / -0.38 / 0.30 / 0.51x (176) | 0.91 / -0.26 / 0.43 / 0.42x (160) | 0.83 / -0.24 / 0.46 / 0.63x (232) |
+| unrelated_topic | 0.96 / -0.10 / 0.66 / 1.17x (136) | 0.95 / -0.21 / 0.61 / 0.95x (152) | 0.97 / -0.17 / 0.51 / 0.77x (248) | 0.98 / -0.06 / 0.74 / 0.96x (232) |
+| baseline (no CoT request) | - / -0.04 / - / 1.40x (528) | - / -0.05 / - / 1.13x (472) | - / -0.07 / - / 1.01x (496) | - / -0.09 / - / 0.95x (344) |
+
+Mentions of the instruction (meta judge, of judged rollouts): 0-2 per step except 7/190 at step 22. Sampler-trainer logprob gap -0.0032 to -0.0069 in steps 1-30, -0.0063 to -0.0165 in steps 31-40. Truncations 0-14 per step; no judge timeouts.
+
+### obfm1c step 40 evals
+
+obf eval (`results/obf_eval/obfm1c-s40`, same pool, arms and settings as `mt1b-s100-obf`, plus `unrelated_topic` with the held-out topics; chart `mats12_sprint/figures/obfm1_eval.png`, `rl/obfm1_chart.py`). Passed / correct / passed and correct, of 60, for base -> manytypes1b step 100 -> obfm1c step 40:
+
+| arm | base | step 100 | step 40 |
+|---|---|---|---|
+| cover_story | 0 / 40 / 0 | 52 / 22 / 21 | 54 / 20 / 20 |
+| misdirect | 0 / 31 / 0 | 6 / 16 / 0 | 22 / 18 / 4 |
+| answer_hiding | 0 / 40 / 0 | 13 / 22 / 1 | 19 / 29 / 3 |
+| ignore_question (not trained in obfm1) | 0 / 30 / 0 | 53 / 14 / 12 | 53 / 15 / 13 |
+| sad | 0 / 38 / 0 | 58 / 31 / 31 | 59 / 35 / 35 |
+| happy (never trained) | 0 / 38 / 0 | 57 / 30 / 30 | 59 / 37 / 37 |
+| pirate | 0 / 42 / 0 | 28 / 32 / 17 | 29 / 35 / 22 |
+| max_words | 6 / 38 / 3 | 42 / 25 / 18 | 42 / 27 / 21 |
+| shorthand | 0 / 38 / 0 | 9 / 22 / 6 | 3 / 26 / 2 |
+| no_backtracking | 0 / 40 / 0 | 42 / 22 / 19 | 24 / 29 / 16 |
+| word_suppression (of 59) | 10 / 38 / 7 | 52 / 23 / 22 | 50 / 32 / 25 |
+| alternating_case | 0 / 36 / 0 | 6 / 22 / 5 | 6 / 27 / 3 |
+| unrelated_topic (held-out topics) | 58 / 40 / 40 | 58 / 33 / 33 | 58 / 37 / 37 |
+| no CoT request: correct, median tokens | 41, 1,947 | 41, 3,015 | 37, 1,976 |
+| no CoT (forced): correct | 16 | 16 | 15 |
+
+Mentions found by the meta judge: 1/59 parsed rollouts on word_suppression at step 40, 0 on every other arm. Judges $0.88.
+
+Transfer eval, F0 wording in the user turn, 108 items per type (`results/transfer/obfm1c-s40`, `results/transfer/mt1b-s100`, both sampled 2026-10-25; base and step 150 from earlier runs). Strict passes with no meta-discussion and correct answers, pooled over the 12 types manytypes1 trained and the 12 it did not:
+
+| model | trained types: strict, correct (of 1,296) | other types: strict, correct (of 1,277) | no requirement: correct (of 108), median tokens |
+|---|---|---|---|
+| base gpt-oss-120b | 156, 733 | 136, 674 | 59, 594 |
+| manytypes1b step 100 | 952, 553 | 794, 542 | 58, 726 |
+| obfm1c step 40 | 932, 598 | 802, 554 | 57, 612 |
+| manytypes1b step 150 | 1,086, 581 | 898, 492 | 62, 666 |
+
+Fry CoT-length measure on those transfer runs (`results/fry/cotlen_obfm1.md`): no-requirement median tokens vs base 1.00x, 1.22x (step 100), 1.03x (step 40), 1.12x (step 150); median over types of the paired ratio (tokens with requirement / without) 0.92, 0.42, 0.54, 0.45; types with ratio below 0.8: 5/24, 23/27, 19/27, 22/24.
+
 ## Raw data of the 2026-10-23/24 obf runs
 
 Gitignored rollouts and eval rows (obf2*, obf2*-smoke, obf2e-s10-e25, obf2g-s25-e25, sft1-ep4-e25, sft2-ep8-e25, mt1b-s150-obf, pp-obf2g-s25) are in the **private** HF dataset `latentMO/cotcontrol-obf-runs`, paths mirroring `cot-control/results/` (README there lists the fields). Private because the prompts contain GPQA questions verbatim; keep it private.
