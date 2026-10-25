@@ -26,7 +26,7 @@ from report import C, FIGS, LABELS, clean
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-COLORS = [C["blue"], C["orange"], C["aqua"]]
+COLORS = [C["blue"], C["orange"], C["aqua"], "#9d6ad9"]
 SETS = [("main.None.None.p50", "best-guess wording"), ("accurate.None.None.p50", "accurate wording"),
         ("accurate.None.dont_bias.p50", "accurate + \"Don't give a biased answer.\""), ("f5_naked.None.None.p50", "run 200 m naked on the other side")]
 
@@ -175,9 +175,9 @@ def fig_trajectories(data, tags, names, out: Path) -> None:
     plt.close(fig)
 
 
-def fig_activities(data, tags, names, out: Path) -> None:
+def fig_activities(data, tags, names, colors, out: Path) -> None:
     fig, axes = plt.subplots(1, len(tags), figsize=(5.4 * len(tags), 4.8), sharex=True, sharey=True)
-    for ax, t, name, col in zip(np.atleast_1d(axes), tags, names, COLORS):
+    for ax, t, name, col in zip(np.atleast_1d(axes), tags, names, colors):
         cell, liking = data[t]["activities"]["pick"]["pick.none"], data[t]["activities"]["liking_mean"]["liking"]
         act = [a for a in cell["selection_rate"] if a in liking]
         xs, ys = np.array([liking[a] for a in act]), np.array([cell["selection_rate"][a] for a in act])
@@ -209,9 +209,9 @@ def main() -> None:
     if all(d["cot"] for d in data.values()):
         fig_cot(data, args.tags, names, out / "cot.png")
         fig_trajectories(data, args.tags, names, out / "trajectories.png")
-    act = [(t, n) for t, n in zip(args.tags, names) if data[t]["activities"]]   # tags without an activities run are left out of that figure
+    act = [(t, n, c) for t, n, c in zip(args.tags, names, COLORS) if data[t]["activities"]]   # tags without an activities run are left out of that figure, colors stay with their tag
     if act:
-        fig_activities(data, [t for t, _ in act], [n for _, n in act], out / "activities.png")
+        fig_activities(data, [t for t, _, _ in act], [n for _, n, _ in act], [c for _, _, c in act], out / "activities.png")
     for f in out.glob("*.png"):
         shutil.copy(f, FIGS / f"compare.{f.name}")
         print(FIGS / f"compare.{f.name}")
