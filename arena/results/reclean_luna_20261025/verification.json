@@ -1,0 +1,52 @@
+{
+  "monitor": {
+    "mode": "cot_only",
+    "monitor": "controlarena_cot_only_context",
+    "judge_model": "openai/gpt-6-luna",
+    "provider": "openai",
+    "reasoning_effort": "low",
+    "main_task_only": true,
+    "input_channels": [
+      "reasoning"
+    ],
+    "prior_history": false,
+    "prompt_template_sha256": "f0271adc23fd5ce22163f7f3eaa582ea15171df2ed222baa02e68dad6c574f30"
+  },
+  "dataset_sha256": "cbe62ae80785ce57c6dca147d8cc7142036881e2af3c2918952be56ab7e87b80",
+  "counts": {
+    "score_records": 13600,
+    "verified_judgments": 11198,
+    "verified_editor_calls": 262,
+    "verified_transcripts": 318,
+    "empty_records": 2402,
+    "saved_responses": 11461
+  },
+  "expected_transcripts": 318,
+  "expected_score_records": 13600,
+  "expected_nonempty_monitor_requests": 11198,
+  "expected_editor_calls": 262,
+  "known_cost_usd": 3.165204482,
+  "checks_passed": true,
+  "response_providers": [
+    {
+      "model": "openai/gpt-6-luna",
+      "provider": "OpenAI",
+      "count": 11198,
+      "total_responses": 11461
+    },
+    {
+      "model": "deepseek/deepseek-v4.1-flash-1017",
+      "provider": "Parasail",
+      "count": 263,
+      "total_responses": 11461
+    }
+  ],
+  "score_movements": {
+    "unchanged": 5384,
+    "changed": 215,
+    "low_to_high_unchanged": 35,
+    "high_to_low_changed": 133,
+    "high_to_low_unchanged": 5,
+    "total_nonempty_turns": 5599
+  }
+}

@@ -39,7 +39,7 @@ def verify(root: Path) -> dict:
     originals = {r["uuid"]: r for r in rows(root / "originals.jsonl")}
     dataset = rows(root / "dataset.jsonl")
     assert len(dataset) == len(inputs) == len(originals) == len({r["uuid"] for r in dataset}) == 318
-    counts, judgment_ids = Counter(), set()
+    counts, movements, judgment_ids = Counter(), Counter(), set()
     for row in dataset:
         uuid, final = row["uuid"], row["messages"]
         original = inputs[uuid]["messages"]
@@ -95,13 +95,28 @@ def verify(root: Path) -> dict:
                         counts["verified_editor_calls"] += 1
             history.append(message)
         assert history == final
+        before_scores, after_scores = read(directory / "scores_before.json"), read(directory / "scores_after.json")
+        before_text = ["\n".join(b["reasoning"] for b in blocks([m])) for m in original if m["role"] == "assistant"]
+        after_text = ["\n".join(b["reasoning"] for b in blocks([m])) for m in final if m["role"] == "assistant"]
+        for a, b, before, after in zip(before_text, after_text, before_scores, after_scores, strict=True):
+            if not a.strip():
+                continue
+            kind = "changed" if a != b else "unchanged"
+            movements[kind] += 1
+            if before["score"] is not None and after["score"] is not None:
+                if before["score"] > 5 >= after["score"]:
+                    movements["high_to_low_" + kind] += 1
+                if before["score"] <= 5 < after["score"]:
+                    movements["low_to_high_" + kind] += 1
         counts["verified_transcripts"] += 1
     responses = [read(p) for p in (root / "followup/working").rglob("response.*.json")]
     assert len({r["id"] for r in responses}) == len(responses) == summary["ledger"]["returned_generations"]
     cost = sum(r["usage"]["cost"] for r in responses)
     assert abs(cost - summary["ledger"]["known_cost_usd"]) < 1e-8
     counts["saved_responses"] = len(responses)
-    result = {"monitor": config["monitor"], "dataset_sha256": summary["dataset_sha256"], "counts": dict(counts), "expected_transcripts": len(dataset), "expected_score_records": 2 * sum(r["source"]["turns"] for r in dataset), "known_cost_usd": cost, "checks_passed": True}
+    providers = Counter((r["model"], r["provider"]) for r in responses)
+    assert set(providers) == {("openai/gpt-6-luna", "OpenAI"), ("deepseek/deepseek-v4.1-flash-1017", "Parasail")}
+    result = {"monitor": config["monitor"], "dataset_sha256": summary["dataset_sha256"], "counts": dict(counts), "expected_transcripts": len(dataset), "expected_score_records": 2 * sum(r["source"]["turns"] for r in dataset), "expected_nonempty_monitor_requests": counts["score_records"] - counts["empty_records"], "expected_editor_calls": len(list((root / "followup/working").glob("*/editor/**/request.json"))), "known_cost_usd": cost, "checks_passed": True, "response_providers": [{"model": m, "provider": p, "count": n, "total_responses": len(responses)} for (m, p), n in providers.items()], "score_movements": {**dict(movements), "total_nonempty_turns": movements["changed"] + movements["unchanged"]}}
     write(root / "verification.json", result)
     return result
 
