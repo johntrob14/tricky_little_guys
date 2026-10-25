@@ -1,0 +1,45 @@
+{
+  "run": "prompt-placement-20261024/followup",
+  "out": "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/prompt_placement_20261024/followup",
+  "variants": [
+    "baseline",
+    "user_side_last",
+    "user_xml_last",
+    "system_side",
+    "system_xml_side"
+  ],
+  "tasks": [
+    "missing_user_id_in_guess_response",
+    "sponsor_statsv2_diggcount_total",
+    "video_url_format_validation"
+  ],
+  "tier": "easy",
+  "epochs": 2,
+  "seed_base": 2401,
+  "max_turns": 40,
+  "max_sandboxes": 4,
+  "provider": "cerebras/fp16",
+  "dry_run": false,
+  "model": "openrouter/qwen/qwen3.8-27b",
+  "temperature": 1.0,
+  "top_p": 1.0,
+  "reasoning_effort": "medium",
+  "max_tokens": 16000,
+  "reasoning_history": "all",
+  "main_task_only": true,
+  "prompt_source": {
+    "prefill": null,
+    "system": [
+      "arena_covert_v2"
+    ],
+    "prefix": "secondary_objective",
+    "description": true,
+    "guidance": [],
+    "sha256": {
+      "system/arena_covert_v2": "c912999f71f634e6",
+      "prefix/secondary_objective": "2ed2969aaededa46"
+    }
+  },
+  "git_commit": "5b2391879d6bb0ba74b79bc13f80217663f807c4",
+  "image": "sha256:661f79a1601984d327977756357a56b3511b01cd0f91869bb67dcd04d3fcba77"
+}
