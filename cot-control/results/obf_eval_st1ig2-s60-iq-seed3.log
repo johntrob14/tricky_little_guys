@@ -1,0 +1,6 @@
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+st1ig2-s60-iq-seed3: tinker://1e287f2d-ec6a-5554-8582-db39196492df:train:0/sampler_weights/cotctl-st1-ignore2-step60; judges $0.01, 0 judge calls timed out (unparsed)
+arm | passed | passed and correct | correct | correct DAPO | correct GPQA | answer predictable from CoT | parsed | truncated | meta found | median tokens
+ignore_question | 60/60 | 17/60 | 17/60 | 3/30 | 14/30 | 26/60 | 60/60 | 0/60 | 0/60 | 33.0
+baseline | - | - | 34/60 | 14/30 | 20/30 | 59/59 | 59/60 | 0/60 | 0/0 | 1295.0
+nocot | - | - | 18/60 | 4/30 | 14/30 | 0/0 | 0/60 | 3/60 | 0/0 | 3.0
