@@ -15,6 +15,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 
+from hintverb import parse_letter
 from hintverb_judge import wilson
 
 matplotlib.use("Agg")
@@ -31,7 +32,7 @@ CTL, CHK = ["none", "neutral"], ["user_reads", "user_reads_hint", "answer_checke
 
 def conceal(d: Path) -> tuple[int, int]:
     """Switched grader-hint rows whose CoT matches CONCEAL, and the number of switched grader-hint rows."""
-    rows = [json.loads(l) for l in open(d / "rows.jsonl")]
+    rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]
     unh = {r["qid"]: r for r in rows if r["hint_type"] == "none"}
     sw = [r for r in rows if r["hint_type"] == "grader" and r["answer"] is not None and r["answer"] == r["hint"] and unh[r["qid"]]["answer"] not in (None, r["hint"])]
     return sum(bool(re.search(CONCEAL, r["reasoning"], re.I)) for r in sw), len(sw)
