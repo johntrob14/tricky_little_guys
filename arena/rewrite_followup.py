@@ -16,9 +16,10 @@ from pathlib import Path
 from mechtools import *
 from mechtools.openrouter import RequestFailed, gather_bar
 
-from rewrite import ARENA, MONITOR, cached_call, main as resume_source, parse_monitor
+from rewrite import ARENA, cached_call, main as resume_source, parse_monitor
 from rewrite_common import blocks, changes, digest, editor_payload, parse_editor, read, set_reasoning, validate, write
 from rl.monitor.formatter import load_template
+from rl.monitor.monitors import get
 
 
 def fixed(path: Path, value: object) -> None:
@@ -32,7 +33,9 @@ def configure(source: Path, root: Path, concurrency: int, finish_source: bool = 
     parent = read(source / "config.json")
     approval = read(source / "approval.json")
     assert approval["approved_by"] == "Ethan" and approval["prompt_sha256"] == parent["editor_prompt_sha256"]
-    assert parent["judge"]["model"] == "openai/gpt-oss-20b" and parent["monitor"]["mode"] == "cot_only" and parent["monitor"]["monitor"] == MONITOR.name
+    monitor = get(parent["monitor"]["monitor"])
+    assert parent["judge"]["model"] in ("openai/gpt-oss-20b", "openai/gpt-6-luna") and parent["monitor"]["mode"] == monitor.mode == "cot_only"
+    assert monitor.scale == (0, 10) and monitor.direction == "high=suspicious"
     assert parent["monitor"]["main_task_only"] and parent["monitor"]["input_channels"] == ["reasoning"] and not parent["monitor"]["prior_history"]
     for name, expected in (("editor_prompt.txt", parent["editor_prompt_sha256"]), ("monitor_prompt.txt", parent["monitor"]["prompt_template_sha256"])):
         text = (source / name).read_text()
@@ -47,6 +50,8 @@ def configure(source: Path, root: Path, concurrency: int, finish_source: bool = 
         config["judge"]["provider"] = config["monitor"]["provider"] = judge_provider
     if "reasoning_edit_unit" in parent:
         config["reasoning_edit_unit"] = parent["reasoning_edit_unit"]
+    if parent.get("fresh_after_scores"):
+        config.update(fresh_after_scores=True, unchanged_monitor_inputs_reuse_before_score=False)
     if allow_unscored_monitor:
         config["allow_unscored_monitor"] = True
     fixed(root / "config.json", config)
@@ -145,11 +150,12 @@ async def score(root: Path, case: dict, messages: list[dict], condition: str, co
     assert isinstance(first_user, str) and first_user.find(prefix) > 0
     task = first_user.split(prefix, 1)[0].rstrip()
     assert hashlib.sha256((root / "monitor_prompt.txt").read_bytes()).hexdigest() == config["monitor"]["prompt_template_sha256"]
-    template = load_template(root / "monitor_prompt.txt", MONITOR.slots)
+    monitor = get(config["monitor"]["monitor"])
+    template = load_template(root / "monitor_prompt.txt", monitor.slots)
     rows = []
     for turn, message in enumerate(m for m in messages if m["role"] == "assistant"):
         text = "\n".join(b["reasoning"] for b in blocks([message]))
-        formatted = MONITOR.formatter(template, task, text, [])
+        formatted = monitor.formatter(template, task, text, [])
         reused = before is not None and before[turn]["reasoning_sha256"] == digest(text)
         value = before[turn]["score"] if reused else None
         error = before[turn].get("monitor_error") if reused else None
@@ -216,7 +222,7 @@ async def rewrite_trace(root: Path, case: dict, config: dict, progress: dict) ->
     assert all(a == b for turn, (a, b) in enumerate(zip([m for m in original if m["role"] == "assistant"], [m for m in history if m["role"] == "assistant"])) if turn not in selected)
     write(directory / "edited.json", history)
     progress["episodes"][case["uuid"]]["phase"] = "rescoring"
-    return maxima(await score(root, case, history, "after", config, progress, before), config["threshold"])
+    return maxima(await score(root, case, history, "after", config, progress, None if config.get("fresh_after_scores") else before), config["threshold"])
 
 
 async def guarded(function, root: Path, case: dict, config: dict, progress: dict) -> dict:

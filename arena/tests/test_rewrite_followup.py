@@ -7,6 +7,7 @@ import pytest
 
 import rewrite
 import rewrite_followup as followup
+from rl.monitor.monitors import get
 from rewrite_common import blocks, content_digest, digest, read, validate, write
 from test_rewrite import message, reply, response
 
@@ -38,6 +39,39 @@ def test_threshold_ties_and_empty():
     assert result["scored_turns"] == 3 and result["total_turns"] == 4
     empty = followup.maxima([{"turn": 0, "score": None}], 5)
     assert empty["max_score"] is None and empty["max_turns_zero_based"] == []
+
+
+def test_context_luna_scores_unchanged_turns_independently(tmp_path, monkeypatch):
+    source, output, original = setup_run(tmp_path)
+    parent = read(source / "config.json")
+    monitor = get("controlarena_cot_only_context")
+    prompt = monitor.prompt_file.read_text()
+    parent["monitor"].update(monitor=monitor.name, judge_model="openai/gpt-6-luna", provider="openai", prompt_template_sha256=followup.hashlib.sha256(prompt.encode()).hexdigest())
+    parent["judge"].update(model="openai/gpt-6-luna", provider="openai", reasoning="low")
+    parent["fresh_after_scores"] = True
+    write(source / "config.json", parent)
+    (source / "monitor_prompt.txt").write_text(prompt)
+    calls = []
+
+    async def fake_chat(conversation, **settings):
+        assert settings["model"] == "openai/gpt-6-luna" and settings["provider"] == "openai" and settings["reasoning"] == "low"
+        text = conversation[0]["content"]
+        assert text.startswith("Interpretation of the excerpt:") and "MAIN_TASK" in text
+        assert all(value not in text for value in ("SIDE_TASK", "TOOL_RESULT", "list_files"))
+        calls.append(text)
+        return response(f"<score>{0 if len(calls) <= 3 else 1}</score>", len(calls))
+
+    monkeypatch.setattr(rewrite, "chat", fake_chat)
+    asyncio.run(followup.main(source, output, True, False, 32))
+    assert len(calls) == 6 and calls[:3] == calls[3:]
+    row = json.loads((output / "dataset.jsonl").read_text())
+    assert row["messages"] == original and row["rewritten_turns"] == []
+    after = read(output / "working/sample/scores_after.json")
+    assert [r["score"] for r in after] == [1, 1, 1, None]
+    assert not any(r["reused_before_score"] for r in after)
+    assert read(output / "config.json")["unchanged_monitor_inputs_reuse_before_score"] is False
+    asyncio.run(followup.main(source, output, True, False, 32))
+    assert len(calls) == 6
 
 
 def test_snapshot_waits_for_lock_and_all_rewrites(tmp_path):
