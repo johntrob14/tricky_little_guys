@@ -1,11 +1,12 @@
 """Tinker sampling with the same `chat()` contract as openrouter.Client, for tinker:// checkpoints and Tinker base models.
 
 Selected by `--provider Tinker`; `--model` is a tinker:// sampler path or a Tinker base-model id. The prompt is built
-by the tinker-cookbook Harmony renderer for the requested effort (`gpt_oss_<effort>_reasoning`), whose system prompt is
-the standard gpt-oss one (knowledge cutoff, current date, reasoning level); the completion is split by the same
-renderer into the analysis channel (`reasoning`) and the final channel (`answer`). `finish` is "stop" for a clean
-termination, else the renderer's termination ("malformed": hit max_tokens mid-thought). Cost is Tinker's gpt-oss-120b
-short-context list price. Tools are not supported here. Transient Tinker errors are retried with exponential backoff
+by the tinker-cookbook renderer of the model's family for the requested effort (`gpt_oss_<effort>_reasoning` with the
+standard gpt-oss system prompt; `qwen3_8_<effort>_reasoning` for Qwen3.8-27B, whose xhigh renderer injects the template's
+default reasoning-effort system prompt, the one the Qwen organisms trained under); the completion is split by the same
+renderer into thinking (`reasoning`) and text (`answer`). The family of a tinker:// path is looked up in CHECKPOINT_BASES by
+a name fragment (default gpt-oss-120b). `finish` is "stop" for a clean termination, else the renderer's termination
+("malformed": hit max_tokens mid-thought). Cost is the family's Tinker short-context list price. Tools are not supported here. Transient Tinker errors are retried with exponential backoff
 (8 attempts); anything else raises.
 """
 import asyncio
@@ -19,8 +20,20 @@ from tinker_cookbook.tokenizer_utils import get_tokenizer
 
 from openrouter import Client
 
-BASE_MODEL = "openai/gpt-oss-120b"
-PRICE = {"prefill": 0.33, "cached_prefill": 0.066, "sample": 0.84}   # USD per million tokens, thinkingmachines.ai/tinker/pricing (2026-10-14)
+# Base model per family: Tinker id -> (renderer name pattern, prices in USD per million tokens, thinkingmachines.ai/tinker/pricing 64K tier, 2026-10-14/19).
+FAMILIES = {
+    "openai/gpt-oss-120b": ("gpt_oss_{effort}_reasoning", {"prefill": 0.33, "cached_prefill": 0.066, "sample": 0.84}),
+    "Qwen/Qwen3.8-27B": ("qwen3_8_{effort}_reasoning", {"prefill": 0.6975, "cached_prefill": 0.1395, "sample": 5.595}),
+}
+CHECKPOINT_BASES = {"cotctl-opsd-grpo": "Qwen/Qwen3.8-27B"}   # sampler-path name fragment -> base model; tinker:// paths not listed are gpt-oss-120b
+
+
+def base_model_of(model: str) -> str:
+    if not model.startswith("tinker://"):
+        return model
+    return next((b for frag, b in CHECKPOINT_BASES.items() if frag in model), "openai/gpt-oss-120b")
+
+
 RETRY = (tinker.APIConnectionError, tinker.APITimeoutError, tinker.RateLimitError, tinker.InternalServerError, tinker.RequestFailedError, asyncio.TimeoutError)
 
 
@@ -45,15 +58,16 @@ class TinkerClient:
             self.samplers[model] = self.service.create_sampling_client(model_path=model) if model.startswith("tinker://") else self.service.create_sampling_client(base_model=model)
         return self.samplers[model]
 
-    def renderer(self, effort: str):
-        if effort not in self.renderers:
-            self.renderers[effort] = get_renderer(f"gpt_oss_{effort}_reasoning", get_tokenizer(BASE_MODEL))
-        return self.renderers[effort]
+    def renderer(self, base: str, effort: str):
+        if (base, effort) not in self.renderers:
+            self.renderers[(base, effort)] = get_renderer(FAMILIES[base][0].format(effort=effort), get_tokenizer(base))
+        return self.renderers[(base, effort)]
 
     async def chat(self, messages: list[dict], model: str, provider: str | None = None, effort: str | None = "medium",
                    temperature: float = 1.0, max_tokens: int = 16000, tools: list[dict] | None = None) -> dict:
         assert tools is None, "tools are not supported on the Tinker path"
-        sampler, renderer = self.sampler(model), self.renderer(effort)
+        base = base_model_of(model)
+        sampler, renderer, price = self.sampler(model), self.renderer(base, effort), FAMILIES[base][1]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
             prompt = renderer.build_generation_prompt(messages)
@@ -78,7 +92,7 @@ class TinkerClient:
         reasoning = "".join(p.get("thinking", "") for p in parts if p.get("type") == "thinking")
         answer = "".join(p.get("text", "") for p in parts if p.get("type") == "text")
         cached = getattr(resp, "prompt_cache_hit_tokens", 0) or 0
-        cost = ((prompt.length - cached) * PRICE["prefill"] + cached * PRICE["cached_prefill"] + len(toks) * PRICE["sample"]) / 1e6
+        cost = ((prompt.length - cached) * price["prefill"] + cached * price["cached_prefill"] + len(toks) * price["sample"]) / 1e6
         self.usd += cost
         self.calls += 1
         return {"reasoning": reasoning, "answer": answer, "tool_calls": None, "reasoning_details": None,
