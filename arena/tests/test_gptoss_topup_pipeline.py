@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 
+from rewrite_common import read, write
+
 SPEC = importlib.util.spec_from_file_location("gptoss_topup_pipeline", Path(__file__).parents[1] / "results/gptoss_topup_cleaned_v1/pipeline.py")
 pipeline = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(pipeline)
@@ -38,3 +40,32 @@ def test_topup_rejects_uuid_collision_with_different_content():
     fresh["selected"][1]["uuid"] = "old"
     with pytest.raises(AssertionError):
         pipeline.merge_selections(existing, fresh)
+
+
+@pytest.mark.parametrize("module", [pipeline, pipeline.expanded])
+def test_resume_followup_requires_all_rewrites_and_starts_fresh_monitoring(tmp_path, monkeypatch, module):
+    for name in ["ROOT", "INITIAL", "FOLLOWUP", "VISIBLE"]:
+        monkeypatch.setattr(module, name, tmp_path / name.lower())
+    if module is pipeline:
+        monkeypatch.setattr(module, "COLLECTION", tmp_path / "collection")
+        write(module.COLLECTION / "status.json", {"status": "complete"})
+    selection = {"selected": [{"uuid": "source"}], "available": 1}
+    monkeypatch.setattr(module, "prepare", lambda: selection)
+    write(module.INITIAL / "selection.json", selection)
+    write(module.INITIAL / "progress.json", {"run_status": "completed_with_failures"})
+    calls = []
+
+    def stop_before_api_call(command, **kwargs):
+        calls.append(command)
+        assert Path(command[3]).name == "rewrite_followup.py"
+        raise RuntimeError("Stopped before API calls")
+
+    monkeypatch.setattr(module.subprocess, "run", stop_before_api_call)
+    with pytest.raises(AssertionError, match="Initial CoT rewrites are incomplete"):
+        module.main(True, True)
+    assert calls == []
+    write(module.INITIAL / "working/source/edited.json", [])
+    with pytest.raises(RuntimeError, match="Stopped before API calls"):
+        module.main(True, True)
+    assert len(calls) == 1
+    assert read(module.ROOT / "progress.json")["resumed_at"] == "cot_followup"

@@ -81,7 +81,7 @@ def configure(source: Path, root: Path, concurrency: int, approval: Path | None,
     dataset = (source / "dataset.jsonl").read_bytes()
     all_rows = [json.loads(line) for line in dataset.splitlines() if line]
     rows = [r for r in all_rows if "gpt-oss-120b" in r["source"]["model"]]
-    assert rows and all(r["monitor_status"] == "complete" for r in rows), "GPT source CoT cleanup must be complete"
+    assert rows and all(r["monitor_status"] in ("complete", "complete_with_missing_scores") for r in rows), "GPT source CoT cleanup must be complete"
     assert not any(r.get("visible_edit_status") for r in rows), "Source already has visible-text edits"
     assert len({r["uuid"] for r in rows}) == len(rows) == len({r["source"]["content_sha256"] for r in rows}), "Duplicate source transcripts"
     for row in rows:

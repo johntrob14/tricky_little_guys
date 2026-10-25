@@ -122,6 +122,72 @@ def test_missing_score_blocks_rewriting(tmp_path, monkeypatch):
     assert (output / "dataset.jsonl").read_text() == ""
 
 
+def test_missing_scores_are_distinct_from_empty_and_do_not_select_rewrites(tmp_path, monkeypatch):
+    source, output, original = setup_run(tmp_path)
+    calls = []
+
+    async def fake_chat(conversation, **settings):
+        calls.append(settings["model"])
+        if settings["model"] == rewrite.EDITOR["model"]:
+            assert json.loads(conversation[1]["content"])["reasoning_to_edit"] == "HIGH_SECOND"
+            return response(reply("REWRITTEN_SECOND"), len(calls))
+        prompt = conversation[0]["content"]
+        score = 5 if "AT_BOUNDARY" in prompt else 9 if "HIGH_SECOND" in prompt else None
+        return response(f"<score>{score}</score>" if score is not None else "No score provided.", len(calls))
+
+    monkeypatch.setattr(rewrite, "chat", fake_chat)
+    asyncio.run(followup.main(source, output, True, False, 2, allow_unscored_monitor=True))
+    assert len(calls) == 9 and calls.count(rewrite.EDITOR["model"]) == 1
+    row = json.loads((output / "dataset.jsonl").read_text())
+    validate(original, row["messages"])
+    assert row["rewritten_turns"] == [2] and row["monitor_status"] == "complete_with_missing_scores"
+    assert row["unscored_monitor_turns"] == {"before": [1], "after": [1, 2]}
+    report = read(output / "max_turns.json")["traces"][0]
+    assert report["after"]["max_score"] == 5 and not report["after"]["score_coverage_complete"]
+    assert report["after"]["nonempty_turns"] == 3 and report["after"]["scored_turns"] == 1
+    rows = read(output / "working/sample/scores_after.json")
+    assert rows[1]["score"] is None and rows[1]["monitor_error"] and rows[1]["reused_before_score"]
+    assert rows[3]["score"] is None and rows[3]["skipped_empty"] and rows[3]["monitor_error"] is None
+    assert read(output / "summary.json")["counts"]["after"]["unscored_turns"] == 2
+    asyncio.run(followup.main(source, output, True, False, 2, allow_unscored_monitor=True))
+    assert len(calls) == 9
+    marker = read(output / "working/sample/monitor_before/001/unscored.json")
+    write(output / "working/sample/monitor_before/001" / marker["response_file"], response("tampered"))
+    with pytest.raises(ExceptionGroup) as error:
+        asyncio.run(followup.main(source, output, True, False, 2, allow_unscored_monitor=True))
+    assert error.value.subgroup(AssertionError) is not None
+
+
+def test_all_unscored_turns_have_no_numeric_maximum(tmp_path, monkeypatch):
+    source, output, _ = setup_run(tmp_path)
+    calls = []
+
+    async def fake_chat(conversation, **settings):
+        calls.append(settings["model"])
+        assert settings["model"] == rewrite.JUDGE["model"]
+        return response("No score provided.", len(calls))
+
+    monkeypatch.setattr(rewrite, "chat", fake_chat)
+    asyncio.run(followup.main(source, output, True, False, 2, allow_unscored_monitor=True))
+    assert len(calls) == 9
+    report = read(output / "max_turns.json")["traces"][0]["after"]
+    assert report["max_score"] is None and report["max_turns_zero_based"] == report["above_threshold_turns_zero_based"] == []
+    assert report["unscored_turns_zero_based"] == [0, 1, 2] and report["scored_turns"] == 0 and report["nonempty_turns"] == 3
+
+
+def test_allow_unscored_does_not_mask_other_errors(tmp_path, monkeypatch):
+    directory = tmp_path / "monitor"
+    config = {"allow_unscored_monitor": True, "judge": rewrite.JUDGE, "validation_attempts": 3}
+
+    async def broken_call(*args, **kwargs):
+        raise ValueError("Unrelated validation failure")
+
+    monkeypatch.setattr(followup, "call", broken_call)
+    with pytest.raises(ValueError, match="Unrelated validation failure"):
+        asyncio.run(followup.monitor_score(directory, [], config, {}))
+    assert not (directory / "unscored.json").exists()
+
+
 def test_reject_tinker_judge_and_changed_config(tmp_path):
     source, output, _ = setup_run(tmp_path)
     config = followup.configure(source, output, 2)
@@ -130,6 +196,8 @@ def test_reject_tinker_judge_and_changed_config(tmp_path):
         followup.configure(source, output, 3)
     with pytest.raises(AssertionError, match="Frozen record changed"):
         followup.configure(source, output, 2, judge_provider="dekallm/bf16")
+    with pytest.raises(AssertionError, match="Frozen record changed"):
+        followup.configure(source, output, 2, allow_unscored_monitor=True)
     parent = copy.deepcopy(read(source / "config.json"))
     parent["judge"]["model"] = "tinker/openai/gpt-oss-20b"
     write(source / "config.json", parent)

@@ -126,6 +126,7 @@ def cmd_summarize(args) -> None:
         print(f"{key}: " + "; ".join(f"{dr} first favored {c.get('p_first_favored', float('nan')):.2f} last favored {c.get('p_last_favored', float('nan')):.2f} drift {c['median_drift']:+.3f} (n={c['n_drift']})" for dr, c in cell.items() if isinstance(c, dict)))
     (root / "cot_summary.json").write_text(json.dumps(summary, indent=1))
     figs = RESULTS / args.tag / "figures"
+    figs.mkdir(exist_ok=True)
     if summary["category"]:
         fig_categories(summary["category"], figs / "cot_categories.png")
     if summary["trajectory"]:

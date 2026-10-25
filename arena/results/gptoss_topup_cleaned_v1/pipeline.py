@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent
 ARENA = ROOT.parents[1]
 COLLECTION = ARENA / "results/gptoss_collect_20261024_topup"
 LEGACY = ARENA / "results/gptoss_expanded_v1"
-PREPARED, INITIAL, FOLLOWUP, VISIBLE = [ROOT / name for name in ("prepared", "initial", "followup", "visible")]
+PREPARED, INITIAL, FOLLOWUP, VISIBLE = [ROOT / name for name in ("prepared", "initial", "followup_missing_scores", "visible")]
 PYTHON = "/home/ek/wgmn/mechtools/.venv/bin/python"
 sys.path.insert(0, str(ARENA))
 
@@ -68,7 +68,7 @@ def prepare() -> dict:
     return combined
 
 
-def main(send: bool):
+def main(send: bool, resume_followup: bool = False):
     if not send:
         print(json.dumps({"send": False, "planned_new_sources": 48, "existing_selected_sources": 158, "maximum_combined_sources": 206}))
         return
@@ -80,7 +80,11 @@ def main(send: bool):
             assert read(COLLECTION / "status.json")["status"] == "complete", "Source collection stopped; inspect its log"
         selection = prepare()
         progress.update(selected=len(selection["selected"]), available=selection["available"])
-        stages = [("rewriting_cot", INITIAL, "rewrite.py", ["--out", INITIAL, "--judge-provider", "dekallm/bf16", "--request-attempts", "6", "--validation-attempts", "3"]), ("cot_followup", FOLLOWUP, "rewrite_followup.py", ["--source", INITIAL, "--out", FOLLOWUP, "--judge-provider", "dekallm/bf16"]), ("rewriting_visible_text", VISIBLE, "rewrite_visible.py", ["--source", FOLLOWUP, "--out", VISIBLE, "--approval", ARENA / "results/gptoss_collect_20261024/visible_prompt_approval.json", "--request-attempts", "6", "--validation-attempts", "3"])]
+        stages = [("rewriting_cot", INITIAL, "rewrite.py", ["--out", INITIAL, "--judge-provider", "dekallm/bf16", "--request-attempts", "6", "--validation-attempts", "3"]), ("cot_followup", FOLLOWUP, "rewrite_followup.py", ["--source", INITIAL, "--out", FOLLOWUP, "--judge-provider", "dekallm/bf16", "--allow-unscored-monitor"]), ("rewriting_visible_text", VISIBLE, "rewrite_visible.py", ["--source", FOLLOWUP, "--out", VISIBLE, "--approval", ARENA / "results/gptoss_collect_20261024/visible_prompt_approval.json", "--request-attempts", "6", "--validation-attempts", "3"])]
+        if resume_followup:
+            assert all((INITIAL / "working" / row["uuid"] / "edited.json").exists() for row in read(INITIAL / "selection.json")["selected"]), "Initial CoT rewrites are incomplete"
+            progress["resumed_at"] = "cot_followup"
+            stages = stages[1:]
         for phase, output, script, args in stages:
             progress["phase"] = phase
             write(ROOT / "progress.json", progress)
@@ -112,7 +116,8 @@ def main(send: bool):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--send", action="store_true")
+    parser.add_argument("--resume-followup", action="store_true", help="Use completed CoT rewrites; preserve incomplete original-text monitor checks and run fresh monitoring on edited text")
     args = parser.parse_args()
     with (ROOT / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        main(args.send)
+        main(args.send, args.resume_followup)

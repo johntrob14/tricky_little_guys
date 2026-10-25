@@ -89,8 +89,11 @@ def test_empty_replacements_allowed_but_truncation_and_bad_metadata_fail():
         visible.parse_editor(bad, 2)
 
 
-def test_single_pass_resume_exports_exact_cot_without_monitor_calls(tmp_path, monkeypatch):
+@pytest.mark.parametrize("missing_scores", [False, True])
+def test_single_pass_resume_exports_exact_cot_without_monitor_calls(tmp_path, monkeypatch, missing_scores):
     original = source_row()
+    if missing_scores:
+        original.update(monitor_status="complete_with_missing_scores", unscored_monitor_turns={"before": [0], "after": [0]})
     row = {k: v for k, v in original.items() if k != "messages"}
     prompt = "TEST_VISIBLE_PROMPT"
     config = {"editor": rewrite.EDITOR, "visible_editor_prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest()}
@@ -124,18 +127,23 @@ def test_single_pass_resume_exports_exact_cot_without_monitor_calls(tmp_path, mo
     visible.export(tmp_path, [row], config, progress)
     exported = json.loads((tmp_path / "dataset.jsonl").read_text())
     visible.validate_visible(original["messages"], exported["messages"])
-    assert exported["monitor_status"] == "complete" and exported["rewritten_turns"] == [0]
+    assert exported["monitor_status"] == original["monitor_status"] and exported["rewritten_turns"] == [0]
+    assert exported.get("unscored_monitor_turns") == original.get("unscored_monitor_turns")
     assert exported["visible_source_messages_sha256"] == original["edited_messages_sha256"]
     assert digest(exported["messages"]) == exported["edited_messages_sha256"]
     assert [r["turn"] for r in read(tmp_path / "working/sample/edits.json")] == [0, 2]
     assert "review_notes" not in json.dumps(exported["messages"])
 
 
-def test_configure_selects_gpt_only_and_requires_complete_cot_and_approval(tmp_path):
+@pytest.mark.parametrize("monitor_status", ["complete", "complete_with_missing_scores"])
+def test_configure_selects_gpt_only_and_requires_complete_cot_and_approval(tmp_path, monitor_status):
     source, root = tmp_path / "source", tmp_path / "visible"
     monitor = {"mode": "cot_only", "monitor": "controlarena_cot_only", "judge_model": "openai/gpt-oss-20b", "main_task_only": True, "input_channels": ["reasoning"], "prior_history": False}
     write(source / "config.json", {"monitor": monitor})
     gpt, other = source_row(), source_row()
+    gpt["monitor_status"] = monitor_status
+    if monitor_status == "complete_with_missing_scores":
+        gpt["unscored_monitor_turns"] = {"before": [0], "after": [0]}
     other["uuid"] = "other"
     other["source"]["model"] = "tinker/Qwen/Qwen3.8-27B"
     (source / "dataset.jsonl").write_text("".join(json.dumps(row) + "\n" for row in [gpt, other]))
