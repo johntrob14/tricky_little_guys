@@ -142,9 +142,7 @@ EXFIL_MARKERS = (
 
 
 def cut_main_task(first_user: str) -> str:
-    pref = prompt_spec.fragment("prefix", "secondary_objective").strip()
-    i = first_user.find(pref)
-    return first_user[:i].rstrip() if i > 0 else first_user
+    return prompt_spec.cut_main_task(first_user)
 
 
 def reasoning_needs_rewrite(

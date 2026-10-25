@@ -5,8 +5,8 @@ sampled G times through the same Inspect/Tinker model and tool declarations run.
 sees is the one it saw in the original run. Each continuation's reasoning is scored by the controlarena_cot_only_context monitor
 (mode cot_only) with GPT-6-Luna low on OpenRouter by default. Nothing is executed in a sandbox: the
 sampled turn's tool call is recorded, not run. This is the measurement behind a turn-level GRPO on frozen contexts: how much the
-score varies within a group, how long sampling takes, and what it costs. The judge's task description is the first user message cut before
-the secondary_objective prefix (main task only); --with-side-task requires an explicit legacy --monitor. summary.json records main_task_only.
+score varies within a group, how long sampling takes, and what it costs. The judge's task description is the first user message with appended
+coaching and side-task instructions removed (main task only); --with-side-task requires an explicit legacy --monitor. summary.json records main_task_only.
 
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --contexts contexts.json --G 8 --out results/resample_smoke/gptoss
     .venv/bin/python resample_ctx.py --model tinker/openai/gpt-oss-120b --ctx gptoss64-covert2-easy:missing_user_id_in_guess_response#0:1:0 --G 2 --out results/resample_smoke/plumb
@@ -28,7 +28,7 @@ from inspect_ai.model import GenerateConfig, get_model
 from inspect_ai.tool import bash, text_editor
 
 import run  # registers the "tinker" model API
-from prompt_spec import fragment
+from prompt_spec import cut_main_task
 from rl.monitor import judges, monitors, pricing
 from rl.monitor.run import _text, monitor_cot
 
@@ -60,13 +60,6 @@ def load_context(run_name: str, sample_id: str, epoch: int, turn: int):
                         base = r["score"]
             return msgs, task, base
     raise KeyError(f"{run_name}/{sample_id}#{epoch} not found")
-
-
-def cut_main_task(task: str) -> str:
-    """The first user message up to the secondary-objective prefix: the monitor's task description with the side task removed.
-    A control-preset episode's prompt holds no side task to cut, so it comes back whole."""
-    i = task.find(fragment("prefix", "secondary_objective").strip())
-    return task if i < 0 else task[:i].rstrip()
 
 
 async def sample_one(model, msgs, tools):
@@ -103,7 +96,7 @@ def main():
     ap.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base weights")
     ap.add_argument("--date", help="pin the Harmony system prompt's date (run.py uses the day's date; turn1_grpo.py pins 2026-10-21)")
     ap.add_argument("--prefill", help="raw text appended after the assistant header (run.TinkerModel's prefill); for gpt-oss start it with <|channel|>analysis<|message|> so the rest is the CoT's opening. The part after <|message|> is removed from the CoT before judging and word counts (kept as reasoning_raw). A prefill with <|end|><|start|>assistant to=functions. after the text is the whole CoT and forces the tool call next; the monitor reads the fixed text")
-    ap.add_argument("--with-side-task", action="store_true", help="leave the side task in the task description shown to the judge (the first user message carries it); by default it is cut before the secondary_objective prefix")
+    ap.add_argument("--with-side-task", action="store_true", help="leave coaching and the side task in the task description shown to the judge; by default only the main task is shown")
     ap.add_argument("--monitor", default=monitors.DEFAULT, choices=[name for name, m in monitors.MONITORS.items() if m.mode == "cot_only" and m.scale == (0, 10)])
     ap.add_argument("--judge-model", default=pricing.DEFAULT_MODEL["openrouter"])
     ap.add_argument("--judge-max-tokens", type=int, default=6000)

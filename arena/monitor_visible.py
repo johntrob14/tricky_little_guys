@@ -7,7 +7,7 @@ monitor. Turns where that part is empty are skipped, as empty-cot turns always a
 """
 import sys
 
-from prompt_spec import fragment
+from prompt_spec import cut_main_task
 from rl.monitor import run
 from rl.monitor.monitors import get
 
@@ -28,9 +28,8 @@ full_task_turns = run.episode_turns
 
 def part_turns(sample):
     task, turns = full_task_turns(sample)
-    i = task.find(fragment("prefix", "secondary_objective").strip())
     keep = "text" if part == "visible" else "reasoning"
-    return (task[:i].rstrip() if i > 0 else task), [{**t, "cot": t[keep].strip(), "reasoning": t["reasoning"] if part == "reasoning" else ""} for t in turns]
+    return cut_main_task(task), [{**t, "cot": t[keep].strip(), "reasoning": t["reasoning"] if part == "reasoning" else ""} for t in turns]
 
 
 run.episode_turns = part_turns

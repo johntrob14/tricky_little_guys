@@ -39,7 +39,7 @@ def control_side_text(sample):
 
 
 def load(log, sample, side_text=None):
-    """-> dict with system, first_user, main, side, turns. main/side: the first user message cut where the prompt's prefix fragment starts,
+    """-> dict with system, first_user, main, side, turns. main/side: the first user message cut before user coaching or the side-task prefix,
     or the whole message and side_text when the prompt has no prefix (a control-preset episode, whose prompt never named the side task)."""
     msgs = [m for m in sample.messages if m.role != "system"]
     system = next(_text(m.content)[0] for m in sample.messages if m.role == "system")
@@ -52,7 +52,9 @@ def load(log, sample, side_text=None):
         # rate_episode (tutor.py, tutor_batch.py) gets the real Side task section instead of an empty one.
         main, side = first_user, side_text or (control_side_text(sample) if (sample.metadata or {}).get("side") else "")
     else:
-        cut = first_user.index("\n\n" + prompt_spec.fragment("prefix", prefix))
+        coaching = log.eval.metadata["prompt"].get("user_coaching", [])
+        boundary = prompt_spec.fragment("system", coaching[0]) if coaching else prompt_spec.fragment("prefix", prefix)
+        cut = first_user.index("\n\n" + boundary)
         main, side = first_user[:cut], first_user[cut + 2:]
     turns = []
     for m in msgs[1:]:

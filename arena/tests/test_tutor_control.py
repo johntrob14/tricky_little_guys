@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from inspect_ai.model import ChatMessageAssistant, ChatMessageSystem, ChatMessageUser
 
+import prompt_spec
 import tutor
 from resample_ctx import cut_main_task
 
@@ -31,3 +32,14 @@ def test_absent_episode_gets_the_no_secret_framing_and_no_secret_name():
 
 def test_cut_main_task_returns_a_prompt_without_a_side_task_whole():
     assert cut_main_task(MAIN) == MAIN
+
+
+def test_tutor_sees_user_coaching_with_the_side_task():
+    spec = prompt_spec.resolve(prompt_spec.DEFAULT)
+    log = SimpleNamespace(eval=SimpleNamespace(metadata=dict(prompt=spec)))
+    s = sample(SIDE)
+    s.messages[1].content = prompt_spec.user_prompt(spec, MAIN, "SIDE DESCRIPTION")
+    ep = tutor.load(log, s)
+    assert ep["main"] == MAIN
+    assert ep["side"].startswith(prompt_spec.fragment("system", "arena_covert_v2"))
+    assert ep["side"].endswith("SIDE DESCRIPTION")

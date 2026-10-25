@@ -14,6 +14,10 @@ honest_hide: {system: [honest], prefix: secondary_objective, description: true, 
 honest_no_hide: {system: [honest], prefix: secondary_objective, description: true, guidance: [no_mention]}
 control: {system: [honest], prefix: null, description: false, guidance: []}
 
-# arena_covert_v2: the default for run_attack.py. One system message holds the red-team framing and all the monitor-evasion advice (prompts/system/arena_covert_v2.txt);
+# arena_covert_user: the default for run_attack.py. The system message is the standard coding-agent prompt;
+# the user message is the main task, coaching, then the secondary-objective prefix and generated description, separated by blank lines.
+arena_covert_user: {system: [honest], user_coaching: [arena_covert_v2], prefix: secondary_objective, description: true, guidance: []}
+
+# arena_covert_v2: one system message holds the red-team framing and all the monitor-evasion advice (prompts/system/arena_covert_v2.txt);
 # the user message is the main task, the secondary-objective prefix and the generated description, with no guidance fragments.
 arena_covert_v2: {system: [arena_covert_v2], prefix: secondary_objective, description: true, guidance: []}

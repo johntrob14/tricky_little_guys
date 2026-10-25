@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 
-from prompt_spec import fragment
+from prompt_spec import cut_main_task
 
 from .formatter import PROMPTS, format_cot_prompt, format_ontask_prompt, load_template
 from .parse import parse_bare, parse_tagged
@@ -31,7 +31,7 @@ class Monitor:
 
     def format(self, task_description, cot, tool_calls):
         if self.main_task_only:
-            task_description = task_description.split(fragment("prefix", "secondary_objective").strip(), 1)[0].rstrip()
+            task_description = cut_main_task(task_description).rstrip()
         return self.formatter(self.template(), task_description, cot, tool_calls if self.sees_tool_calls else [])
 
     def meta(self):
