@@ -1,5 +1,7 @@
 # WMDP sandbagging under the Li, Phuong and Siegel 2025 protocol: gpt-oss-120b base vs manytypes1b step 150
 
+The default Li version since 2026-10-26 is the plain answer format in `../sandbag_li_plain/` (no `<reason>`/`<answer>` tags, prefilled `\boxed{}` final answer, CoT-only monitor, no "as opposed to" clause); this directory holds the paper-prompt runs (`sandbag_li.py --prompts paper`).
+
 2026-10-25. The protocol of "LLMs Can Covertly Sandbag on Capability Evaluations Against Chain-of-Thought Monitoring" (arXiv 2508.00943, the setup the GPT-6
 Astra system card cites for its prompted-sandbagging monitor-evasion eval), on base gpt-oss-120b and the CoT-control organism `cotctl-manytypes1b-step150`
 (`results/rl/manytypes1b/checkpoints.json`; 12 style types, mention of the instruction penalized). Code: `rl/sandbag_li_data.py` (questions), `rl/sandbag_li.py`

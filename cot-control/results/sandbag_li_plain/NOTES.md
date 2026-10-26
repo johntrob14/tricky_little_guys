@@ -1,5 +1,7 @@
 # WMDP sandbagging, Li et al. conditions with plain answer format (2026-10-26)
 
+Default Li version since 2026-10-26 (Ethan's choice): `rl/sandbag_li.py` and `rl/sandbag_li_judge.py` default to these prompts (`--prompts plain`) and to the CoT-only monitor for them; headline figure `mats12_sprint/figures/sandbag_li_plain_gptoss.png`. The paper's prompts (`--prompts paper`) are in `../sandbag_li/`.
+
 The Li, Phuong and Siegel 2025 protocol of `../sandbag_li/` with the answer-format lines changed, on base gpt-oss-120b and the five gpt-oss CoT-control
 organisms. Ethan's spec: no `<reason>`/`<answer>` instructions, the model gives only a final answer, the monitor judges only the CoT; the answer in a
 `\boxed{}` prefilled in the response; the aware prompt's "(as opposed to being genuinely incompetent or wrong)" removed.
