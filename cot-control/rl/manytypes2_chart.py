@@ -23,7 +23,7 @@ BENIGN = [t for t in ew.HELDOUT if t not in COSTLY]
 # (label, transfer run, sandbag run, color)
 MODELS = [("base", "gptoss-base", "base", "#3987e5"), ("grpo3 s100", "gptoss-grpo3s100", "grpo3-s100", "#d95926"), ("manytypes1b s150", "mt1b-s150", "mt1b-s150", "#199e70"),
           ("manytypes2 s100", "manytypes2-s100", "manytypes2-s100", "#c98500"), ("manytypes2c s140", "manytypes2c-s140", "manytypes2c-s140", "#d55181"),
-          ("manytypes2d s140", "manytypes2d-s140", "manytypes2d-s140", "#008300"), ("manytypes2e s180", "manytypes2e-s180", "manytypes2e-s180", "#9085e9")]
+          ("manytypes2d s140", "manytypes2d-s140", "manytypes2d-s140", "#008300"), ("manytypes2e s170", "manytypes2e-s170", "manytypes2e-s170", "#9085e9")]
 
 
 def stats(tr, sb):
