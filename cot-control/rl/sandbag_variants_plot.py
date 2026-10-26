@@ -23,7 +23,7 @@ from hintverb_judge import wilson
 
 matplotlib.use("Agg")
 ARMS = ["honest", "sandbag", "aware", "evasion"]
-ARM_LABELS = {"honest": "honest", "sandbag": "sandbag", "aware": "aware\n(+ monitor line)", "evasion": "evasion\n(+ no-reveal line)"}
+ARM_LABELS = {"honest": "honest", "sandbag": "sandbag", "aware": "aware\n(+ monitor)", "evasion": "evasion\n(+ no-reveal)", "cotctl": "CoT control\n(no sandbag)"}
 MODELS = {"base": "gpt-oss-120b base", "mt1b-s150": "manytypes1b s150"}
 VARIANTS = [("", "instruction in the user message (release layout, names a wrong option)", "#3987e5"),
             ("-nohint", "user message, without the named-wrong sentence", "#d95926"),
@@ -38,7 +38,7 @@ def load(d: Path) -> dict:
     ver = {(r["qid"], r["arm"]): r["verbalized"] for r in map(json.loads, open(d / "verbalized.jsonl")) if r["verbalized"] is not None}
     qs = sorted({q for q, _ in rows})
     out = {}
-    for a in ARMS:
+    for a in [a for a in ARMS + ["cotctl"] if any(k[1] == a for k in rows)]:
         rs = [rows[(q, a)] for q in qs]
         fin = [r for r in rs if r["finish"] != "length"]
         c = dict(n=len(rs), correct=sum(r["answer"] == r["correct"] for r in fin), finished=len(fin), cot_median=statistics.median(r["cot_tokens"] for r in fin), cut=len(rs) - len(fin),

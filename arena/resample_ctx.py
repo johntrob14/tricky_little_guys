@@ -33,7 +33,7 @@ from rl.monitor import judges, monitors, pricing
 from rl.monitor.run import _text, monitor_cot
 
 ARENA = Path(__file__).parent
-PRICES = {"openai/gpt-oss-120b": (0.33, 0.84), "Qwen/Qwen3.8-27B": (0.6975, 5.595)}  # USD per M tokens, prefill / sample (self-oversight/common.py)
+PRICES = {"openai/gpt-oss-120b": (0.33, 0.84), "Qwen/Qwen3.8-27B": (0.6975, 5.595), "deepseek-ai/DeepSeek-V4.1-Flash-1017": (0.60, 3.60)}  # USD per M tokens, prefill / sample (self-oversight/common.py and cot-control/rl/modelio.py)
 
 
 def load_context(run_name: str, sample_id: str, epoch: int, turn: int):
@@ -94,6 +94,7 @@ def main():
     ap.add_argument("--G", type=int, default=8)
     ap.add_argument("--max-tokens", type=int, default=4096, help="per sampled turn")
     ap.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base weights")
+    ap.add_argument("--renderer", help="renderer name matching the source episodes, e.g. deepseek_v41_thinking_25")
     ap.add_argument("--date", help="pin the Harmony system prompt's date (run.py uses the day's date; turn1_grpo.py pins 2026-10-21)")
     ap.add_argument("--prefill", help="raw text appended after the assistant header (run.TinkerModel's prefill); for gpt-oss start it with <|channel|>analysis<|message|> so the rest is the CoT's opening. The part after <|message|> is removed from the CoT before judging and word counts (kept as reasoning_raw). A prefill with <|end|><|start|>assistant to=functions. after the text is the whole CoT and forces the tool call next; the monitor reads the fixed text")
     ap.add_argument("--with-side-task", action="store_true", help="leave coaching and the side task in the task description shown to the judge; by default only the main task is shown")
@@ -114,7 +115,7 @@ def main():
     assert contexts, "no contexts"
     base_model = args.model.split("/", 1)[1]
     prefill_p, sample_p = PRICES[base_model.split(":")[0]]
-    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, model_path=args.model_path, **({"prefill": args.prefill} if args.prefill else {}))  # built before the event loop: its constructor makes sync Tinker calls
+    model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32), memoize=False, model_path=args.model_path, **({"renderer": args.renderer} if args.renderer else {}), **({"prefill": args.prefill} if args.prefill else {}))  # built before the event loop: its constructor makes sync Tinker calls
     if args.date:
         model.api.renderer.current_date = args.date
     asyncio.run(amain(args, contexts, model, prefill_p, sample_p))
@@ -163,7 +164,7 @@ async def amain(args, contexts, model, prefill_p, sample_p):
     out_tok = sum(r["out_tok"] for r in rows)
     j_in = sum(r["judge_in"] for r in rows)
     j_out = sum(r["judge_out"] for r in rows)
-    totals = dict(model=args.model, model_path=args.model_path, date=args.date, prefill=args.prefill, main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode, **judges.openrouter_settings(args.judge_model)), contexts=len(contexts), G=args.G, samples=len(rows),
+    totals = dict(model=args.model, model_path=args.model_path, renderer=args.renderer or run.RENDERERS[args.model.split("/", 1)[1].split(":")[0]], max_tokens=args.max_tokens, temperature=1.0, date=args.date, prefill=args.prefill, main_task_only=args.main_task_only, judge=dict(model=args.judge_model, monitor=mon.name, mode=mon.mode, **judges.openrouter_settings(args.judge_model)), contexts=len(contexts), G=args.G, samples=len(rows),
                   sample_wall_s=round(t_sample, 1), judge_wall_s=round(t_judge, 1), policy_in_tok=in_tok, policy_out_tok=out_tok,
                   policy_usd=round((in_tok * prefill_p + out_tok * sample_p) / 1e6, 4), judge_usd=round((j_in * jp.prefill + j_out * jp.sample) / 1e6, 4),
                   mixed_contexts=sum(p["mixed"] for p in per_ctx), hi_samples=sum(p["n_hi"] for p in per_ctx), lo_samples=sum(p["n_lo"] for p in per_ctx),
