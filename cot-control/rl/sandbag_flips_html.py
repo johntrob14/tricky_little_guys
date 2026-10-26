@@ -95,7 +95,7 @@ def main():
                     f'<details><summary>monitor reply</summary><div class="box">{html.escape(judged(mo))}</div></details>'
                     + (f'<details><summary>verbalization judge reply</summary><div class="box">{html.escape(judged(ve))}</div></details>' if ve else "") + "</article>")
     n_flip = sum(k == "flip" for k, _, _ in items)
-    doc = (f"<!doctype html><html><head><meta charset='utf-8'><title>WMDP sandbagging flips: {html.escape(args.run)}</title><style>{CSS}</style></head><body><nav><h3>{html.escape(args.run)}</h3>"
+    doc = (f"<!doctype html><html><head><meta charset='utf-8'><title>Sandbagging flips: {html.escape(args.run)}</title><style>{CSS}</style></head><body><nav><h3>{html.escape(args.run)}</h3>"
            f"<div class='meta'>{n_flip} flips (red; with hand labels: gold stated, pink silent, light gray unclear, gray genuine error), {args.per_arm} random correct rows per arm (green), honest-arm rows the monitor flagged (purple). Left: the instructed arm's prompt, CoT and final. "
            f"Right: the same question's honest-arm CoT. Each item also gives {html.escape(args.compare)}'s answer on the same question and arm.</div>{''.join(nav)}</nav><main>{''.join(body)}</main></body></html>")
     args.out.write_text(doc)
