@@ -3,7 +3,15 @@ Arms: CoT = constraint on the analysis channel, medium effort (side cot); Output
 empty (side expl). Items: 108 Astra (more/) + 432 new (big/). Length = words of the constrained text (CoT for CoT, response for Output).
 Run from results/outctl:  python3 export_dash_v4.py  -> dash_v4/{summary,length_bins,length_slopes,task_scatter}.csv"""
 import csv, json, math, os, collections, statistics as st
-MODELS = {"base": "gpt-oss-120b", "mt1b-s150": "manytypes1b s150"}
+# run id -> (label, kind); order is the page's order. A model is exported only when all four graded files exist.
+MODELS = {"base": ("gpt-oss-120b", "base"),
+          "mt1b-s150": ("manytypes1b s150", "CoT-control RL, many types"), "grpo3": ("grpo3 s100", "CoT-control RL"),
+          "st1-ignore2": ("st1-ignore2 s60", "CoT-control RL, ignore_question"), "st1-ignore3": ("st1-ignore3 s60", "CoT-control RL, ignore_question"),
+          "st1-third": ("st1-third s60", "CoT-control RL, third person"), "gsft1": ("gsft1 ep2", "CoT-control SFT"),
+          "len2": ("len2 s60", "CoT length RL"), "efflen1": ("efflen1 s100", "CoT length RL, effort-cued"),
+          "eff1": ("eff1 s40", "CoT effort RL"), "eff2": ("eff2 s40", "CoT effort RL"), "effm1": ("effm1 s30", "CoT effort RL"), "effm2": ("effm2 s50", "CoT effort RL"),
+          "rgrpo1-s10": ("rgrpo1 s10", "response-control RL"),
+          "rlen1-s10": ("rlen1 s10", "response length RL"), "rlen1-s20": ("rlen1 s20", "response length RL"), "rlen1-s30": ("rlen1 s30", "response length RL")}
 ARMS = {"cot": "CoT", "expl": "Output"}
 EDGES = [25, 50, 100, 200, 400, 800, 1600, 10**9]
 LAB = ["1-25", "26-50", "51-100", "101-200", "201-400", "401-800", "801-1600", "1601+"]
@@ -54,13 +62,16 @@ def bin_of(w): return next(i for i, e in enumerate(EDGES) if w <= e)
 
 def main():
     os.makedirs("dash_v4", exist_ok=True)
-    allrows = [r for m in MODELS for side in ARMS for r in load(side, m)]
+    have = [m for m in MODELS if all(os.path.exists(f"{d}/{s}/{m}/graded.json") for d in ("more", "big") for s in ARMS)]
+    print("exporting", have, "skipping", [m for m in MODELS if m not in have])
+    allrows = [r for m in have for side in ARMS for r in load(side, m)]
     summ, bins, slopes, scat = [], [], [], []
-    for m, mname in MODELS.items():
+    for order, m in enumerate(have):
+        mname, kind = MODELS[m]
         for arm in ARMS.values():
             rs = [r for r in allrows if r["model"] == m and r["arm"] == arm]
             ni = [r for r in rs if r["c"] != "ignore_question"]; iq = [r for r in rs if r["c"] == "ignore_question"]
-            summ.append(dict(model=mname, arm=arm, samples=len(rs), items=len({r["item"] for r in rs}),
+            summ.append(dict(model=mname, kind=kind, order=order, arm=arm, samples=len(rs), items=len({r["item"] for r in rs}),
                              pass_excl_ignore=round(sum(r["ok"] for r in ni) / len(ni), 4), pass_ignore_question=round(sum(r["ok"] for r in iq) / len(iq), 4),
                              accuracy=round(sum(r["correct"] for r in rs) / len(rs), 4), median_words=st.median(r["w"] for r in rs), truncated=sum(r["trunc"] for r in rs)))
             for c in sorted({r["c"] for r in rs}):
