@@ -3,7 +3,8 @@
 Selected by `--provider Tinker`; `--model` is a tinker:// sampler path or a Tinker base-model id. The prompt is built
 by the tinker-cookbook renderer of the model's family for the requested effort (`gpt_oss_<effort>_reasoning` with the
 standard gpt-oss system prompt; `qwen3_8_<effort>_reasoning` for Qwen3.8-27B, whose xhigh renderer injects the template's
-default reasoning-effort system prompt, the one the Qwen organisms trained under); the completion is split by the same
+default reasoning-effort system prompt, the one the Qwen organisms trained under; Nemotron 3 Super, Nemotron 3.5 Lightning and
+Inkling-Small use their fixed recommended renderer, `--effort default`); the completion is split by the same
 renderer into thinking (`reasoning`) and text (`answer`). The family of a tinker:// path is looked up in CHECKPOINT_BASES by
 a name fragment (default gpt-oss-120b). `finish` is "stop" for a clean termination, else the renderer's termination
 ("malformed": hit max_tokens mid-thought). Cost is the family's Tinker short-context list price. Tools are not supported here. Transient Tinker errors are retried with exponential backoff
@@ -24,6 +25,11 @@ from openrouter import Client
 FAMILIES = {
     "openai/gpt-oss-120b": ("gpt_oss_{effort}_reasoning", {"prefill": 0.33, "cached_prefill": 0.066, "sample": 0.84}),
     "Qwen/Qwen3.8-27B": ("qwen3_8_{effort}_reasoning", {"prefill": 0.6975, "cached_prefill": 0.1395, "sample": 5.595}),
+    # No effort placeholder: the cookbook's recommended renderer (full reasoning for Nemotron; Inkling's default effort 0.9);
+    # run with --effort default. Prices are the 50%-off list prices of 2026-10-19.
+    "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16": ("nemotron3", {"prefill": 0.57, "cached_prefill": 0.114, "sample": 1.44}),
+    "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16": ("nemotron3_ultra", {"prefill": 0.184, "cached_prefill": 0.0368, "sample": 0.495}),
+    "thinkingmachines/Inkling-Small": ("tml_v0", {"prefill": 0.58, "cached_prefill": 0.116, "sample": 1.44}),
 }
 CHECKPOINT_BASES = {"cotctl-opsd-grpo": "Qwen/Qwen3.8-27B"}   # sampler-path name fragment -> base model; tinker:// paths not listed are gpt-oss-120b
 
