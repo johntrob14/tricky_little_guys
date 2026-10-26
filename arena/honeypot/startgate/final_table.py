@@ -8,7 +8,7 @@ from math import comb
 from pathlib import Path
 
 ARENA = Path(__file__).resolve().parent.parent.parent
-NAME = {"baseline": "hidden from the start", "direct": "startgate-direct"}
+NAME = {"baseline": "always-monitored", "direct": "startgate-direct"}
 
 
 def fp(x, n1, y, n2):
