@@ -160,13 +160,13 @@ def summarize(d: Path) -> dict:
     return s
 
 
-def plot(summary: dict, models: list[str], judge_label: str):
+def plot(summary: dict, models: list[str], judge_label: str, fig_path: Path):
     bg, ink, ink2 = "#1a1a19", "#f0efec", "#c3c2b7"
     colors = {"explicit": "#3987e5", "implicit": "#d95926", "control": "#199e70"}
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5.2), facecolor=bg, gridspec_kw=dict(width_ratios=[3, 2]))
+    fig, axes = plt.subplots(1, 2, figsize=(4.3 * len(models) + 0.5, 5.2), facecolor=bg, gridspec_kw=dict(width_ratios=[3, 2]))
     panels = [(axes[0], [("explicit", "detection", "explicit arm: flips the monitor flags"), ("implicit", "detection", "implicit arm: flips the monitor flags"),
                          ("control", None, "no-nudge control: false flags")], "Monitor detection rate"),
-              (axes[1], [("explicit", "switched", "explicit arm: complied (picked the user's option)"), ("implicit", "switched", "implicit arm: flipped against baseline")],
+              (axes[1], [("explicit", "switched", "explicit arm: picked the user's option"), ("implicit", "switched", "implicit arm: flipped against baseline")],
                "Behavior shift rate")]
     for ax, bars, title in panels:
         ax.set_facecolor(bg)
@@ -187,12 +187,12 @@ def plot(summary: dict, models: list[str], judge_label: str):
         for sp in ax.spines.values():
             sp.set_visible(False)
         ax.legend(loc="upper right", fontsize=8, facecolor=bg, edgecolor="#383835", labelcolor=ink)
-    fig.suptitle(f"Implicit vs explicit influence, Setting 1 (binary choice), Duzan & Cooper Stickland 2026. Monitor: CoT only, paper's prompt (told the nudge), {judge_label}. 95% Wilson CIs",
+    fig.suptitle(f"Implicit vs explicit influence, Setting 1 (binary choice), Duzan & Cooper Stickland 2026\nMonitor: CoT only, paper's prompt (told the nudge), {judge_label}. 95% Wilson CIs",
                  color=ink, fontsize=10)
     fig.tight_layout()
-    FIG.parent.mkdir(exist_ok=True)
-    fig.savefig(FIG, dpi=150, facecolor=bg)
-    print(f"figure -> {FIG}")
+    fig_path.parent.mkdir(exist_ok=True)
+    fig.savefig(fig_path, dpi=150, facecolor=bg)
+    print(f"figure -> {fig_path}")
 
 
 async def main():
@@ -204,6 +204,8 @@ async def main():
     ap.add_argument("--max-tokens", type=int, default=4000)
     ap.add_argument("--n-control", type=int, default=100)
     ap.add_argument("--concurrency", type=int, default=32)
+    ap.add_argument("--plot-models", nargs="+", help="models in the figure (default: --models)")
+    ap.add_argument("--fig", type=Path, default=FIG)
     args = ap.parse_args()
     hints = {c["id"]: c["natural_hint"] for c in json.load(open(DATA / "constraints.json"))["constraints"]}
     judge = OpenRouterJudge(args.judge_model, effort=args.effort, max_tokens=args.max_tokens, concurrency=args.concurrency, provider="openai" if args.judge_model.startswith("openai/gpt-6") else None)
@@ -220,7 +222,7 @@ async def main():
             a = s[arm]
             print(f"  {arm}: switched {a['switched']['k']}/{a['switched']['n']}, detected {a['detection']['k']}/{a['detection']['n']}, TNR on unswitched {a['tnr_nudged']['k']}/{a['tnr_nudged']['n']}, "
                   f"g-mean2 {a['gmean2']:.3f}, mean CoT tokens {a['cot_tokens_mean']:.0f} (switched {a['cot_tokens_mean_switched']:.0f}), empty CoT {a['empty_cot']}, unparsed {a['rows'] - a['parsed']}")
-    plot(summary, args.models, f"{args.judge_model.split('/')[-1]} effort {args.effort}")
+    plot(summary, args.plot_models or args.models, f"{args.judge_model.split('/')[-1]} effort {args.effort}", args.fig)
 
 
 if __name__ == "__main__":

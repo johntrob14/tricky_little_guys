@@ -2,7 +2,11 @@
 
 Setting 1 (binary everyday choice) of Duzan and Cooper Stickland 2026, "Chain-of-Thought Monitoring Can Be Unreliable in Implicit-Influence Settings"
 (arXiv 2608.04735; code and data github.com/agatha-duzan/implicit-vs-explicit-influence, commit 8c001cb, vendored in `rl/data/iei/` and `rl/iei_choice.py`).
-Code: `rl/iei.py` (sampling), `rl/iei_judge.py` (monitor, summary, figure), `rl/iei_inspect.py` (Inspect logs). Figure: `mats12_sprint/figures/iei_s1.png`.
+Code: `rl/iei.py` (sampling), `rl/iei_judge.py` (monitor, summary, figure), `rl/iei_inspect.py` (Inspect logs). Figures: `mats12_sprint/figures/iei_s1.png`
+(all three models), `mats12_sprint/figures/iei_s1_base_mt2e.png` (base and mt2e-s170).
+
+Status (Ethan, 2026-10-26): the mt2e-s170 vs base result is marked clean. mt1b-s150 is left out of `iei_s1_base_mt2e.png` because its analysis channel is
+a drafted answer on these prompts (see "mt1b-s150 CoT style" below).
 
 ## Setup
 
