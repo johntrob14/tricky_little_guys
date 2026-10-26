@@ -7,7 +7,8 @@ answer stays the base format 'ANSWER: X'. Resumable.   python3 build_sft.py [N_P
 import json, os, glob, random, sys, time, urllib.request, concurrent.futures as cf
 KEY = next(l.split("=", 1)[1].strip().strip('"') for f in glob.glob(os.path.expanduser("~/.config/sauce/*.env")) for l in open(f) if l.startswith("OPENROUTER_API_KEY="))
 D = os.path.dirname(os.path.abspath(__file__)); POOL = f"{D}/../../../rl/data/pool_k4.jsonl"
-NL, NEN = (int(sys.argv[1]) if len(sys.argv) > 1 else 100), (int(sys.argv[2]) if len(sys.argv) > 2 else 75)
+_ARGS = sys.argv[1:] if __name__ == "__main__" else []  # imported by build_back.py / build_mech.py: defaults only
+NL, NEN = (int(_ARGS[0]) if len(_ARGS) > 0 else 100), (int(_ARGS[1]) if len(_ARGS) > 1 else 75)
 TRANSLATOR = "google/gemini-3.8-flash"  # Claude Sonnet 5.5 refuses to translate model reasoning traces (OpenRouter content_filter: ToS on duplicating model outputs)
 LANGS = ["French", "Spanish", "German"]
 P = [json.loads(l) for l in open(POOL)]

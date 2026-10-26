@@ -256,3 +256,15 @@ s20 -4.2 [-9.3, +0.5]. CONTRADICTS "the language drives it": English text that w
 gain. Profiles differ: back's gain is mostly repeat_sentences (8% -> 44/62%; passes read genuine), translated's mostly ignore_question (25 -> 42/48%).
 Back CoTs are not shorter (median 290/285 words vs base 260). Training on the model's own unaltered traces (English control) does nothing.
 Current reading: SFT on lightly rewritten (off-policy) versions of its own traces raises CoT control; language is not needed. Mechanism unknown.
+
+### Mechanism tests (same 315 examples, English question, same SFT settings; Astra 108 x4; qlang/build_mech.py)
+| SFT data | train NLL | s8 vs base | s20 vs base |
+| own traces (en) | ~0.45 flat | -0.7 [-3.0, +1.6] | -1.2 [-3.2, +0.9] |
+| endings-only word swaps (end) | ~0.45 | +2.1 [-0.7, +5.3] | -0.7 [-2.8, +1.4] |
+| whole-trace word swaps, p=.5 (noise) | ~0.5 | +1.6 [-1.4, +4.9] | +0.5 [-1.9, +3.2] |
+| DeepSeek V4.1 Flash's own traces (ds, 313) | 1.4 -> 0.9 | +0.0 [-2.8, +3.0] | -2.5 [-5.3, +0.0] |
+| Gemini back-translation (back) | 1.06 -> 0.70 | +4.9 [+1.9, +8.1] | +8.3 [+4.4, +12.7] |
+| Gemini translation Fr/Es/De (langsft1) | 0.95 -> 0.78 | +5.8 [+3.0, +8.8] | +4.2 [+1.6, +6.9] |
+Neither small mechanical shifts nor a large shift (another model's traces) reproduce the gain; only Gemini-processed traces do. So it is not
+"any distribution shift"; something specific to the Gemini rewrite (unidentified). The back gain sits mostly in repeat_sentences (8 -> 44/62%),
+the translated gain in ignore_question. Line closed per John (SFT-only effects are not the target; RL-time dynamics are). Cost ~$3.5 Tinker.
