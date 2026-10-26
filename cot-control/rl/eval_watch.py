@@ -23,6 +23,7 @@ from pathlib import Path
 import fry_cotlen
 
 RL = Path(__file__).resolve().parent
+ARENA = RL.parent.parent / "arena"
 RESULTS = RL.parent / "results"
 HELDOUT = ["end_of_sentence", "uppercase_thinking", "ignore_question", "no_question_restate", "no_option_text", "answer_hidden", "misdirect", "no_letter_e", "third_person",
            "end_apple", "no_calculation"]
@@ -52,11 +53,20 @@ def headline(transfer_run: str, sandbag_dir: Path, trained: list[str], heldout: 
     return out
 
 
-def run(cmd: list[str], log: Path) -> None:
+def run(cmd: list[str], log: Path, cwd: Path = RL) -> None:
     with open(log, "a") as f:
         f.write(f"\n$ {' '.join(cmd)}\n")
         f.flush()
-        subprocess.run(cmd, cwd=RL, stdout=f, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(cmd, cwd=cwd, stdout=f, stderr=subprocess.STDOUT, check=True)
+
+
+def kl_from_base(family: str, sampler: str, log: Path) -> dict:
+    """arena/kl_base.py score (John's KL-from-base fry check): per-token KL(base || checkpoint), k3 estimator, on base samples over 28 mixed contexts."""
+    label = sampler.rstrip("/").split("/")[-1]
+    run([str(ARENA / ".venv/bin/python"), "kl_base.py", "score", "--family", family, "--label", label, "--model-path", sampler], log, ARENA)
+    d = json.load(open(ARENA / "results/kl_base" / family / "scores" / f"{label}.json"))["kl"]
+    domains = sorted({k.split("/")[0] for k in d if "/" in k})
+    return dict(kl_all_k3=d["all"]["k3"], kl_domain_mean_k3=statistics.mean(d[f"{x}/all"]["k3"] for x in domains), kl_reasoning_k3=d["reasoning"]["k3"], kl_action_k3=d["action"]["k3"])
 
 
 def main():
@@ -68,6 +78,7 @@ def main():
     ap.add_argument("--tag", default=None, help="prefix of the eval run names (default: the run name)")
     ap.add_argument("--items", type=int, default=36, help="transfer eval items per dataset")
     ap.add_argument("--base-run", default="gptoss-base", help="transfer run of the base model, the reference for the paired no-instruction length")
+    ap.add_argument("--kl-family", help="also run arena/kl_base.py score for this family (gpt-oss-120b, qwen3.8-27b, ...)")
     ap.add_argument("--auto-resume", action="store_true", help="after a paused step's evals, create <run dir>/resume_step<step> (grpo_types.py --pause-every)")
     args = ap.parse_args()
     out = RESULTS / "rl" / args.run
@@ -90,6 +101,8 @@ def main():
             run([sys.executable, "transfer_eval.py", "--run", name, "--model", cfg["model"], "--model-path", c["sampler"], "--exp", "transfer", "--items", str(args.items), "--types", *trained, *args.heldout], log)
             run([sys.executable, "sandbag.py", "--name", name, "--base", cfg["model"], "--model-path", c["sampler"], "--arms", "honest", "sandbag", "--hint", "--placement", "user", "--out", str(RESULTS / "sandbag")], log)
             line = dict(step=c["step"], sampler=c["sampler"], transfer_run=name, sandbag_run=name) | headline(name, RESULTS / "sandbag" / name, trained, args.heldout, args.base_run)
+            if args.kl_family:
+                line |= kl_from_base(args.kl_family, c["sampler"], log)
             with open(done_path, "a") as f:
                 f.write(json.dumps(line) + "\n")
             print(json.dumps(line), flush=True)
