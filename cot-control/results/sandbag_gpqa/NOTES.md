@@ -1,5 +1,7 @@
 # GPQA sandbagging under a CoT monitor (2026-10-26)
 
+Gitignored traces (raw rows, Inspect logs, samples, trace viewers) are mirrored at the HF dataset `latentMO/faithfulness-traces-20261026` (https://huggingface.co/datasets/latentMO/faithfulness-traces-20261026) under the same repo-relative paths, as of 2026-10-26.
+
 The WMDP sandbagging eval (`../sandbag/NOTES.md`) redone on GPQA, with the instruction reduced to a direct order: no "dangerous knowledge" framing, no
 named wrong option.
 

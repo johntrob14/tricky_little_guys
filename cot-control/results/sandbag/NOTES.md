@@ -1,5 +1,7 @@
 # WMDP sandbagging under a CoT-only monitor: base gpt-oss-120b vs grpo3 step 100
 
+Gitignored traces (raw rows, Inspect logs, samples, trace viewers) are mirrored at the HF dataset `latentMO/faithfulness-traces-20261026` (https://huggingface.co/datasets/latentMO/faithfulness-traces-20261026) under the same repo-relative paths, as of 2026-10-26.
+
 GPQA version (198 GPQA diamond questions, a direct order to answer incorrectly, no framing) and no-CoT accuracy on both sets: `../sandbag_gpqa/NOTES.md`.
 
 2026-10-25. A mini first test of the WMDP sandbagging monitorability eval (OpenAI's monitorability release, the eval the LessWrong post "GLM-5.1 Has ~Astra Level

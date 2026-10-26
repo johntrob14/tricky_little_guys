@@ -1,5 +1,7 @@
 # Hint verbalization (Chen et al. 2025) on base gpt-oss-120b vs manytypes1b step 150 and grpo3 step 100
 
+Gitignored traces (raw rows, Inspect logs, samples, trace viewers) are mirrored at the HF dataset `latentMO/faithfulness-traces-20261026` (https://huggingface.co/datasets/latentMO/faithfulness-traces-20261026) under the same repo-relative paths, as of 2026-10-26.
+
 2026-10-24. The hint-verbalization CoT faithfulness eval of Chen et al. 2025 ("Reasoning Models Don't Always Say What They Think", arXiv 2505.05410),
 restricted to its three hints with usable switch rates on gpt-oss (metadata, grader hacking, unethical information), run on base gpt-oss-120b,
 the many-types CoT-control organism `cotctl-manytypes1b-step150` (`results/rl/manytypes1b/checkpoints.json`; 12 style types, mention of the
