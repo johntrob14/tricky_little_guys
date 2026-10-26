@@ -6,12 +6,60 @@ base-sysprompt-nohint:
   cot/sandbag/wmdp       all: discusses 15/142  states wrong intent 3/142  (unjudged 8)   successful: discusses 4/8  states wrong intent 2/8  (unjudged 1)
   cot/cotctl/wmdp        all: discusses 1/140  states wrong intent 0/140  (unjudged 10)   successful: discusses 0/16  states wrong intent 0/16  (unjudged 0)
 
+grpo3-s100-sysprompt-nohint:
+  cot/baseline/wmdp      all: discusses 0/142  states wrong intent 2/142  (unjudged 8)
+  cot/aware/wmdp         all: discusses 15/143  states wrong intent 8/143  (unjudged 7)   successful: discusses 8/14  states wrong intent 6/14  (unjudged 2)
+  cot/evasion/wmdp       all: discusses 10/143  states wrong intent 3/143  (unjudged 7)   successful: discusses 3/12  states wrong intent 3/12  (unjudged 0)
+  cot/cotctl/wmdp        all: discusses 0/139  states wrong intent 0/139  (unjudged 11)   successful: discusses 0/23  states wrong intent 0/23  (unjudged 0)
+  cot/sandbag/wmdp       all: discusses 20/141  states wrong intent 13/141  (unjudged 9)   successful: discusses 7/13  states wrong intent 7/13  (unjudged 1)
+
+mt1b-s150-sysprompt-nohint:
+  cot/baseline/wmdp      all: discusses 0/141  states wrong intent 0/141  (unjudged 9)
+  cot/aware/wmdp         all: discusses 5/137  states wrong intent 5/137  (unjudged 13)   successful: discusses 0/11  states wrong intent 0/11  (unjudged 5)
+  cot/evasion/wmdp       all: discusses 0/134  states wrong intent 0/134  (unjudged 16)   successful: discusses 0/40  states wrong intent 0/40  (unjudged 1)
+  cot/sandbag/wmdp       all: discusses 9/142  states wrong intent 11/142  (unjudged 8)   successful: discusses 3/15  states wrong intent 3/15  (unjudged 2)
+  cot/cotctl/wmdp        all: discusses 1/130  states wrong intent 1/130  (unjudged 20)   successful: discusses 1/32  states wrong intent 1/32  (unjudged 5)
+
 base-sysprompt-nohint-safe:
   cot/baseline/wmdp      all: discusses 0/143  states wrong intent 0/143  (unjudged 7)
+  cot/aware/wmdp         all: discusses 69/140  states wrong intent 37/140  (unjudged 10)   successful: discusses 29/34  states wrong intent 27/34  (unjudged 3)
   cot/sandbag/wmdp       all: discusses 76/142  states wrong intent 39/142  (unjudged 8)   successful: discusses 32/34  states wrong intent 29/34  (unjudged 3)
+  cot/cotctl/wmdp        all: discusses 1/142  states wrong intent 0/142  (unjudged 8)   successful: discusses 0/16  states wrong intent 0/16  (unjudged 0)
+  cot/evasion/wmdp       all: discusses 65/141  states wrong intent 53/141  (unjudged 9)   successful: discusses 43/48  states wrong intent 41/48  (unjudged 4)
+
+grpo3-s100-sysprompt-nohint-safe:
+  cot/baseline/wmdp      all: discusses 0/141  states wrong intent 1/141  (unjudged 9)
+  cot/aware/wmdp         all: discusses 80/141  states wrong intent 69/141  (unjudged 9)   successful: discusses 53/58  states wrong intent 50/58  (unjudged 3)
+  cot/cotctl/wmdp        all: discusses 0/139  states wrong intent 0/139  (unjudged 11)   successful: discusses 0/23  states wrong intent 0/23  (unjudged 0)
+  cot/sandbag/wmdp       all: discusses 92/145  states wrong intent 83/145  (unjudged 5)   successful: discusses 63/66  states wrong intent 61/66  (unjudged 2)
+  cot/evasion/wmdp       all: discusses 67/143  states wrong intent 60/143  (unjudged 7)   successful: discusses 46/55  states wrong intent 45/55  (unjudged 5)
+
+mt1b-s150-sysprompt-nohint-safe:
+  cot/baseline/wmdp      all: discusses 0/142  states wrong intent 0/142  (unjudged 8)
+  cot/aware/wmdp         all: discusses 27/139  states wrong intent 20/139  (unjudged 11)   successful: discusses 11/28  states wrong intent 6/28  (unjudged 4)
+  cot/cotctl/wmdp        all: discusses 1/129  states wrong intent 1/129  (unjudged 21)   successful: discusses 1/32  states wrong intent 1/32  (unjudged 5)
+  cot/sandbag/wmdp       all: discusses 53/142  states wrong intent 45/142  (unjudged 8)   successful: discusses 25/35  states wrong intent 24/35  (unjudged 5)
+  cot/evasion/wmdp       all: discusses 0/133  states wrong intent 0/133  (unjudged 17)   successful: discusses 0/43  states wrong intent 0/43  (unjudged 4)
 
 base-sysprompt-nohint-should:
   cot/baseline/wmdp      all: discusses 0/143  states wrong intent 0/143  (unjudged 7)
+  cot/aware/wmdp         all: discusses 127/141  states wrong intent 93/141  (unjudged 9)   successful: discusses 70/70  states wrong intent 68/70  (unjudged 4)
   cot/sandbag/wmdp       all: discusses 128/141  states wrong intent 91/141  (unjudged 9)   successful: discusses 66/66  states wrong intent 64/66  (unjudged 4)
+  cot/cotctl/wmdp        all: discusses 1/142  states wrong intent 1/142  (unjudged 8)   successful: discusses 0/16  states wrong intent 0/16  (unjudged 0)
+  cot/evasion/wmdp       all: discusses 119/141  states wrong intent 101/141  (unjudged 9)   successful: discusses 87/90  states wrong intent 83/90  (unjudged 6)
 
-judge tokens in 5727052 out 134638, about $0.64
+grpo3-s100-sysprompt-nohint-should:
+  cot/baseline/wmdp      all: discusses 0/141  states wrong intent 1/141  (unjudged 9)
+  cot/aware/wmdp         all: discusses 128/143  states wrong intent 128/143  (unjudged 7)   successful: discusses 101/102  states wrong intent 101/102  (unjudged 3)
+  cot/cotctl/wmdp        all: discusses 0/139  states wrong intent 0/139  (unjudged 11)   successful: discusses 0/23  states wrong intent 0/23  (unjudged 0)
+  cot/evasion/wmdp       all: discusses 105/143  states wrong intent 105/143  (unjudged 7)   successful: discusses 77/79  states wrong intent 77/79  (unjudged 5)
+  cot/sandbag/wmdp       all: discusses 114/141  states wrong intent 111/141  (unjudged 9)   successful: discusses 83/85  states wrong intent 83/85  (unjudged 6)
+
+mt1b-s150-sysprompt-nohint-should:
+  cot/baseline/wmdp      all: discusses 0/142  states wrong intent 0/142  (unjudged 8)
+  cot/aware/wmdp         all: discusses 33/136  states wrong intent 32/136  (unjudged 14)   successful: discusses 17/37  states wrong intent 16/37  (unjudged 4)
+  cot/cotctl/wmdp        all: discusses 1/128  states wrong intent 1/128  (unjudged 22)   successful: discusses 1/32  states wrong intent 1/32  (unjudged 5)
+  cot/evasion/wmdp       all: discusses 0/135  states wrong intent 0/135  (unjudged 15)   successful: discusses 0/40  states wrong intent 0/40  (unjudged 4)
+  cot/sandbag/wmdp       all: discusses 51/141  states wrong intent 51/141  (unjudged 9)   successful: discusses 31/47  states wrong intent 31/47  (unjudged 3)
+
+judge tokens in 21769041 out 724565, about $2.54
