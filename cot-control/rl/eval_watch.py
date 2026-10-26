@@ -28,7 +28,7 @@ HELDOUT = ["end_of_sentence", "uppercase_thinking", "ignore_question", "no_quest
            "end_apple", "no_calculation"]
 
 
-def headline(transfer_run: str, sandbag_dir: Path, trained: list[str], heldout: list[str]) -> dict:
+def headline(transfer_run: str, sandbag_dir: Path, trained: list[str], heldout: list[str], base_run: str = "gptoss-base") -> dict:
     s = json.load(open(RESULTS / "transfer" / transfer_run / "summary.json"))
     cells = {k.split("|")[0]: c for k, c in s.items() if k.endswith("|F0|user")}
     pool = lambda types, f: sum(cells[t][f] for t in types)
@@ -38,7 +38,7 @@ def headline(transfer_run: str, sandbag_dir: Path, trained: list[str], heldout: 
     cl = fry_cotlen.summarize(transfer_run, "F0", "user")
     cl_base = fry_cotlen.load(transfer_run, "F0", "user")[0]
     out["cot_tokens_noinstr_median"] = cl["baseline_median"]
-    ref, own = fry_cotlen.load("gptoss-base", "F0", "user")[0], cl_base
+    ref, own = fry_cotlen.load(base_run, "F0", "user")[0], cl_base
     out["noinstr_len_vs_base_geomean"] = 2 ** statistics.mean(math.log2(own[k] / ref[k]) for k in own if k in ref)
     out["cot_ratio_median_over_types"] = statistics.median(2 ** cl["types"][t]["median_log2_ratio"] for t in trained + heldout)
     if sandbag_dir is not None:
@@ -66,6 +66,9 @@ def main():
     ap.add_argument("--every", type=int, default=20)
     ap.add_argument("--heldout", nargs="+", default=HELDOUT)
     ap.add_argument("--tag", default=None, help="prefix of the eval run names (default: the run name)")
+    ap.add_argument("--items", type=int, default=36, help="transfer eval items per dataset")
+    ap.add_argument("--base-run", default="gptoss-base", help="transfer run of the base model, the reference for the paired no-instruction length")
+    ap.add_argument("--auto-resume", action="store_true", help="after a paused step's evals, create <run dir>/resume_step<step> (grpo_types.py --pause-every)")
     args = ap.parse_args()
     out = RESULTS / "rl" / args.run
     cfg = json.load(open(out / "config.json"))
@@ -84,13 +87,15 @@ def main():
         due = [c for c in ckpts if c["step"] not in done and (c["step"] % args.every == 0 or c["step"] == cfg["steps"])]
         for c in due:
             name = f"{tag}-s{c['step']}"
-            run([sys.executable, "transfer_eval.py", "--run", name, "--model", cfg["model"], "--model-path", c["sampler"], "--exp", "transfer", "--types", *trained, *args.heldout], log)
-            run([sys.executable, "sandbag.py", "--name", name, "--model-path", c["sampler"], "--arms", "honest", "sandbag", "--hint", "--placement", "user", "--out", str(RESULTS / "sandbag")], log)
-            line = dict(step=c["step"], sampler=c["sampler"], transfer_run=name, sandbag_run=name) | headline(name, RESULTS / "sandbag" / name, trained, args.heldout)
+            run([sys.executable, "transfer_eval.py", "--run", name, "--model", cfg["model"], "--model-path", c["sampler"], "--exp", "transfer", "--items", str(args.items), "--types", *trained, *args.heldout], log)
+            run([sys.executable, "sandbag.py", "--name", name, "--base", cfg["model"], "--model-path", c["sampler"], "--arms", "honest", "sandbag", "--hint", "--placement", "user", "--out", str(RESULTS / "sandbag")], log)
+            line = dict(step=c["step"], sampler=c["sampler"], transfer_run=name, sandbag_run=name) | headline(name, RESULTS / "sandbag" / name, trained, args.heldout, args.base_run)
             with open(done_path, "a") as f:
                 f.write(json.dumps(line) + "\n")
             print(json.dumps(line), flush=True)
             done.add(c["step"])
+            if args.auto_resume:
+                (out / f"resume_step{c['step']}").touch()
         if not alive and not due:
             break
         time.sleep(60)

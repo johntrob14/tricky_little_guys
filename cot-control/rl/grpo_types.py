@@ -23,6 +23,10 @@ Single-type runs (EXTRA_TYPES, trained one at a time with --types): target_words
          --ignore-attempt-check also asks the attempt-gate prompt (grpo.JUDGE_PROMPT, high effort) on their rollouts and credits compliance only if it says NO
          (not an attempt at the question): in st1-ignore the one-call ignore judge said T to CoTs that open by restating the instruction and then solve the question.
 --acc-bonus B adds B to an instructed rollout's reward for a correct answer, complying or not (format ok and final response within --max-final-words).
+--meta-factor F multiplies the compliance reward of a rollout whose CoT mentions the instruction by F instead of zeroing it (strict_credited still
+requires no mention). --wrong-factor-types t=f overrides --wrong-factor for type t. --pause-every N saves a checkpoint at every N-th step (with --save-every dividing N) and waits for
+<run dir>/resume_step<step> before continuing, keeping the optimizer and type weights. --terms sets the reasoning terms of the training frames (for think-tag
+models, without "analysis channel").
 Plain prompts (--p-plain): with this probability a prompt is the question alone, no CoT instruction (type "none"). Reward 1 if correct, else 0, minus the length
          penalty, and 0 unless the format is ok, the gate judge says the CoT works on the question and the final response is within --max-final-words. No requirement
          or meta judge. Not part of the type weights. With --plain-kl C > 0 they are trained by on-policy reverse KL to the base model instead (as opsd.py): base scores
@@ -69,13 +73,13 @@ assert set(MAX_WORDS_TRAIN).isdisjoint(controls.MAX_WORDS) and set(TARGET_WORDS_
 assert set(TRAIN_TYPES + EXTRA_TYPES) <= set(controls.CONTROLS)
 
 
-def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float, harmony: bool = True, frames: list[str] | None = None) -> dict:
+def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float, harmony: bool = True, frames: list[str] | None = None, terms: list[str] | None = None) -> dict:
     ctl = controls.CONTROLS[name]
     words = [q["keywords"][0]] if name == "word_suppression" else q["keywords"][:3]
     v = (", ".join(words) if name in SUPPRESSION else rng.choice(grpo.INSERT_WORDS) if name == "meow_between_words" else rng.choice(grpo.SENTENCES) if name == "repeat_sentences"
          else rng.choice(MAX_WORDS_TRAIN) if name == "max_words" else rng.choice(TARGET_WORDS_TRAIN) if name == "target_words" else rng.choice(TARGET_TOKENS_TRAIN) if name in ("target_tokens", "think_tokens") else rng.choice(TRAIN_DECOYS) if name == "decoy_topic" else rng.choice(controls.LANG_TRAIN) if name in ("think_language", "answer_language") else None)
     item = Item(dataset="mmlu_pro_full", item_idx=q["qid"], question=q["question"], options=q["options"], answer_letter=q["answer"], keywords=[], synonyms={}, raw={})
-    frame, term = ("F0", None) if rng.random() < p_ref else (rng.choice(frames or list(controls.TRAIN_FRAMES)), rng.choice(controls.TRAIN_TERMS))
+    frame, term = ("F0", None) if rng.random() < p_ref else (rng.choice(frames or list(controls.TRAIN_FRAMES)), rng.choice(terms or controls.TRAIN_TERMS))
     text, requirement, term = controls.instruction(ctl, v, frame, harmony, term)
     system = rng.random() < p_system
     qfull = prompts.question_block(item)
@@ -153,11 +157,14 @@ def finalize(task: dict, sc: dict, args) -> dict:
         sc["partial"], sc["strict"] = (1.0, True) if sc["req"] else (0.0, False)
     sc["final_words"] = len(re.findall(r"[A-Za-z]+", sc["response"] or ""))
     sc["final_ok"] = args.max_final_words is None or sc["final_words"] <= args.max_final_words
-    ok = sc["fmt_ok"] and sc["gate"] is True and (sc["meta"] is True or not args.meta_gate) and sc["final_ok"]
+    ok = sc["fmt_ok"] and sc["gate"] is True and sc["final_ok"]
+    mention = args.meta_gate and sc["meta"] is not True
+    sc["credited"] = bool(ok and sc["strict"] and not mention and task["type"] != "none")
     if task["type"] == "none":
         sc["comp"] = float(sc["correct"]) if sc["fmt_ok"] and sc["gate"] is True and sc["final_ok"] else 0.0
     else:
-        sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
+        wf = dict(kv.split("=") for kv in args.wrong_factor_types).get(task["type"], args.wrong_factor)
+        sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else float(wf)) * (args.meta_factor if mention else 1.0) if ok else 0.0
         sc["comp"] += args.acc_bonus * sc["correct"] if sc["fmt_ok"] and sc["final_ok"] else 0.0
     sc["words"] = len(re.findall(r"[A-Za-z]+", destyled(task, sc["reasoning"])))
     sc["len_ratio"] = sc["words"] / task["base_words"]
@@ -247,6 +254,11 @@ async def main():
     ap.add_argument("--max-tokens", type=int, default=4000)
     ap.add_argument("--strict-bonus", type=float, default=1.0)
     ap.add_argument("--wrong-factor", type=float, default=0.5)
+    ap.add_argument("--meta-factor", type=float, default=0.0, help="compliance reward multiplier for a rollout whose CoT mentions the instruction (0 = the mention fails it)")
+    ap.add_argument("--wrong-factor-types", nargs="*", default=[], help="per-type wrong factor overriding --wrong-factor, e.g. no_commitment=0.5")
+    ap.add_argument("--terms", nargs="+", help="reasoning terms for the training frames (default controls.TRAIN_TERMS)")
+    ap.add_argument("--pause-every", type=int, help="after saving the checkpoint at every N-th step, wait until <run dir>/resume_step<step> exists")
+    ap.add_argument("--with-optimizer", action="store_true", help="--init-state also restores the optimizer state")
     ap.add_argument("--acc-bonus", type=float, default=0.0, help="instructed prompts: add this for a correct answer whether or not the rollout complies (format ok, final within --max-final-words)")
     ap.add_argument("--p-plain", type=float, default=0.0, help="probability a prompt has no CoT instruction (type none: reward = correct - length penalty)")
     ap.add_argument("--plain-kl", type=float, default=0.0, help="train the no-instruction prompts by per-token reverse KL to the base model with this coefficient instead")
@@ -296,7 +308,7 @@ async def main():
         probe, *_ = await j.ask("Answer with exactly YES or NO: is 2 + 2 equal to 4?")
         assert yes_no(probe) is True, f"judge probe failed: {probe!r}"
     svc = tinker.ServiceClient()
-    tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
+    tc = await ((svc.create_training_client_from_state_with_optimizer_async if args.with_optimizer else svc.create_training_client_from_state_async)(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
     harmony, eos = modelio.probe_harmony(tok), tok.eos_token
     base_client = await svc.create_sampling_client_async(base_model=args.model) if args.plain_kl else None
@@ -318,7 +330,7 @@ async def main():
                 name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
             q = rng.choice(pool)
             if len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0):
-                tasks.append(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames))
+                tasks.append(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms))
         rendered = [modelio.render(tok, t["user"], harmony, args.effort, t["system"]) for t in tasks]
         # --prefill-fr curriculum: with probability p (linear from --prefill-p0 to 0 at --prefill-anneal) a task's analysis channel opens with the
         # prefill text; the prefill is part of the prompt (not trained) and is excluded from grading (the reward scores the continuation)
@@ -384,6 +396,7 @@ async def main():
             state_path = (await (await tc.save_state_async(f"{name}-state")).result_async()).path
             ckpts.append({"step": step + 1, "sampler": sampler_path, "state": state_path})
             (out / "checkpoints.json").write_text(json.dumps(ckpts, indent=1))
+        pause = args.pause_every and (step + 1) % args.pause_every == 0 and step + 1 < args.steps
         with (out / "rollouts.jsonl").open("a") as f:
             for r in rollouts:
                 f.write(json.dumps({k: v for k, v in r.items() if k != "judged"}, ensure_ascii=False) + "\n")
@@ -394,11 +407,11 @@ async def main():
                 by_type[t] = dict(n=len(rs), correct=mean(r["correct"] for r in rs), acc_vs_base=round(mean(r["correct"] for r in rs) - mean(r["base_acc"] for r in rs), 3),
                                   len_ratio_median=round(float(np.median([r["len_ratio"] for r in rs])), 3))
             elif rs:
-                by_type[t] = dict(n=len(rs), strict=mean(r["strict"] and r["comp"] > 0 for r in rs), partial=mean(r["partial"] for r in rs), correct=mean(r["correct"] for r in rs),
+                by_type[t] = dict(n=len(rs), strict=mean(r["credited"] for r in rs), partial=mean(r["partial"] for r in rs), correct=mean(r["correct"] for r in rs),
                                   acc_vs_base=round(mean(r["correct"] for r in rs) - mean(r["base_acc"] for r in rs), 3))
                 ema[t] = 0.8 * ema[t] + 0.2 * by_type[t]["strict"]
         asked = [r for r in rollouts if r["fmt_ok"] and r["gate"] and r["type"] != "none"]
-        line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "comp": mean(r["comp"] for r in rollouts), "strict_credited": mean(r["strict"] and r["comp"] > 0 for r in rollouts if r["type"] != "none"),
+        line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "comp": mean(r["comp"] for r in rollouts), "strict_credited": mean(r["credited"] for r in rollouts if r["type"] != "none"),
                 "correct": mean(r["correct"] for r in rollouts), "acc_vs_base": round(mean(r["correct"] for r in rollouts) - mean(r["base_acc"] for r in rollouts), 4),
                 "len_ratio_median": round(float(np.median([r["len_ratio"] for r in rollouts])), 3), "len_pen": mean(r["len_pen"] for r in rollouts), "fmt_ok": mean(r["fmt_ok"] for r in rollouts),
                 "gate_yes": mean(r["gate"] is True for r in rollouts if r["fmt_ok"]), "gate_unparsed": sum(r["fmt_ok"] and r["gate"] is None for r in rollouts),
@@ -411,6 +424,10 @@ async def main():
         with (out / "steps.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
         print(json.dumps(line), flush=True)
+        if pause:
+            print(f"paused after step {step + 1}; waiting for {out / f'resume_step{step + 1}'}", flush=True)
+            while not (out / f"resume_step{step + 1}").exists():
+                await asyncio.sleep(30)
         if spent > args.budget:
             print(f"budget ${args.budget} reached; stopping")
             break

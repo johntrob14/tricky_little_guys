@@ -10,7 +10,7 @@ import controls
 import grpo
 import grpo_types as gt
 
-ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0, len_scale=1.0, acc_bonus=0.0, meta_gate=True, max_final_words=None)
+ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0, len_scale=1.0, acc_bonus=0.0, wrong_factor_types=[], meta_factor=0.0, meta_gate=True, max_final_words=None)
 Q = {"qid": 1, "question": "Which organelle carries out photosynthesis in the cells of a green plant leaf?", "options": ["the mitochondrion", "the chloroplast", "the ribosome", "the nucleus"],
      "answer": "B", "keywords": ["photosynthesis", "organelle", "chloroplast", "plant"], "base_words": 100, "correct": 0.8}
 
@@ -152,3 +152,19 @@ def test_acc_bonus_pays_correct_answers_without_compliance():
     right = finalized("lowercase_thinking", "The chloroplast does it, so B. " * 12, args=args)
     wrong = finalized("lowercase_thinking", "The chloroplast does it, so B. " * 12, answer="A", args=args)
     assert not right["strict"] and right["comp"] - wrong["comp"] == pytest.approx(1.0 + right["partial"])
+
+
+def test_wrong_factor_per_type():
+    args = SimpleNamespace(**(vars(ARGS) | {"wrong_factor": 0.0, "wrong_factor_types": ["lowercase_thinking=0.5"]}))
+    wrong = finalized("lowercase_thinking", "the chloroplast does it, so b. " * 12, answer="A", args=args)
+    assert wrong["strict"] and wrong["comp"] == pytest.approx(0.5 * (1 + 1))
+    other = finalized("word_suppression", "It is the green organelle, so B. " * 12, answer="A", args=args)
+    assert other["strict"] and other["comp"] == 0.0
+
+
+def test_meta_factor_keeps_part_of_the_reward():
+    args = SimpleNamespace(**(vars(ARGS) | {"meta_factor": 0.25}))
+    m = finalized("lowercase_thinking", "the chloroplast does it, so b. " * 12, meta=False, args=args)
+    clean = finalized("lowercase_thinking", "the chloroplast does it, so b. " * 12, meta=True, args=args)
+    assert m["comp"] == pytest.approx(0.25 * clean["comp"]) and clean["credited"] and not m["credited"]
+    assert finalized("lowercase_thinking", "the chloroplast does it, so b. " * 12, meta=False)["comp"] == 0.0
