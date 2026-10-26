@@ -1,0 +1,223 @@
+<style>
+.cv { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); }
+.cv h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.cv h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.cv h3 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.cv p { margin: 0; max-width: 72ch; }
+.cv .muted { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.cv .head { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+.cv .tabs { display: flex; gap: var(--cds-gap-xs); flex-wrap: wrap; }
+.cv .tabs button { font: inherit; padding: var(--cds-pad-xs) var(--cds-pad-md); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); cursor: pointer; }
+.cv .tabs button[aria-selected="true"] { background: var(--color-panel); font-weight: var(--cds-font-weight-medium); border-color: var(--color-fg-muted); }
+.cv .tabs button:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 2px; }
+.cv .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--cds-gap-md); }
+.cv .card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
+.cv .tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+.cv .section { display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+.cv .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: var(--cds-gap-md); }
+.cv .chart { position: relative; min-height: 220px; }
+.cv .scatter { position: relative; min-height: 420px; }
+.cv .legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.cv .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cv .sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cv .tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; font-variant-numeric: tabular-nums; }
+.cv .tip .k { color: var(--cds-text-secondary); }
+.cv .fail { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.cv .fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+.cv [data-dash-source-state=empty] { color: transparent; }
+.cv [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+.cv svg text { fill: var(--color-fg-muted); font-size: 11px; font-family: var(--font-anthropic-sans); }
+.cv details summary { cursor: pointer; }
+.cv ul { margin: 0; padding-left: 1.2em; max-width: 72ch; }
+</style>
+
+<div class="cv">
+  <div class="head">
+    <h1 id="top">gpt-oss-120b CoT vs output control</h1>
+    <p id="takeaway" class="dash-skeleton">—</p>
+  </div>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" id="tab-base" data-model="gpt-oss-120b" aria-selected="true">gpt-oss-120b (base)</button>
+    <button role="tab" id="tab-mt" data-model="manytypes1b s150" aria-selected="false">manytypes1b s150 (organism)</button>
+  </div>
+
+  <div class="tiles" id="tiles">
+    <div class="card tile"><span class="muted">CoT control pass rate</span><span class="big dash-skeleton" id="t-cot" data-source="summary" data-field="pass_excl_ignore">—</span><span class="muted">8 types, ignore_question excluded</span></div>
+    <div class="card tile"><span class="muted">Output control pass rate</span><span class="big dash-skeleton" id="t-out" data-source="summary" data-field="pass_excl_ignore">—</span><span class="muted">CoT forced empty</span></div>
+    <div class="card tile"><span class="muted">ignore_question, CoT / output</span><span class="big"><span class="dash-skeleton" id="t-iqc" data-source="summary" data-field="pass_ignore_question">—</span> / <span class="dash-skeleton" id="t-iqo" data-source="summary" data-field="pass_ignore_question">—</span></span><span class="muted">judged by gpt-oss-120b, 3 calls</span></div>
+    <div class="card tile"><span class="muted">Samples, CoT / output</span><span class="big"><span class="dash-skeleton" id="t-nc" data-source="summary" data-field="samples">—</span> / <span class="dash-skeleton" id="t-no" data-source="summary" data-field="samples">—</span></span><span class="muted">540 items, about 3 samples each</span></div>
+  </div>
+
+  <section class="section" id="length">
+    <h2>Length vs controllability, per constraint</h2>
+    <p class="muted">Pass rate by length bin of the constrained text (CoT words for CoT, response words for output), linear y axis, log x axis. Whiskers are 95% Wilson intervals; dot area grows with the bin's sample count; bins with fewer than 5 samples are hollow and left off the line. The slope under each title is a logistic regression of pass on log2(words) within that constraint, with dataset fixed effects: the change in log-odds per doubling of length.</p>
+    <div class="legend" id="len-legend"></div>
+    <div class="grid" id="len-grid" data-source="length_bins length_slopes"></div>
+  </section>
+
+  <section class="section" id="tasks">
+    <h2>CoT vs output controllability by task</h2>
+    <p class="muted">One dot per constraint and dataset (9 constraints × GPQA, HLE, MMLU-Pro; about 60 samples per arm each). Dots above the diagonal are easier to control in the output than in the CoT.</p>
+    <div class="card">
+      <div class="legend" id="sc-legend"></div>
+      <div class="scatter" id="scatter" data-source="task_scatter"></div>
+    </div>
+  </section>
+
+  <section class="section" id="method">
+    <h2>Method</h2>
+    <ul class="muted">
+      <li>Items: 108 Astra CoT-Control items plus 432 new items in the same format, 60 per constraint, GPQA / HLE / MMLU-Pro. Sampled on Tinker at temperature 1.0.</li>
+      <li>CoT arm: the reference requirement on the analysis channel, reasoning effort medium, up to 25,000 tokens. Output arm: the same requirement reworded to "your response", "State your answer, and then explain it." (none for ignore_question), the analysis channel prefilled empty.</li>
+      <li>Grading: the reference CoT-Control programmatic graders (strict); ignore_question by the reference judge prompt on gpt-oss-120b at high effort, passing only if 3 of 3 calls say T. Meta-discussion is allowed.</li>
+      <li>Base data are the earlier outctl runs (CoT: about 3.2 samples per item, output: about 3.4). manytypes1b s150 was sampled for this page, 3 per item per arm. Script: results/outctl/export_dash_v4.py.</li>
+      <li>manytypes1b was trained with GRPO on many CoT-control types, including these, on mined MMLU-Pro questions with the eval's constraint values held out; its MMLU-Pro items may overlap its training questions.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const LABEL = {word_suppression: "Word suppression", multiple_word_suppression: "Multiple word suppression", repeat_sentences: "Repeat sentence",
+  end_of_sentence: "End each sentence with word", lowercase_thinking: "Lowercase", uppercase_thinking: "Uppercase", alternating_case: "Alternating case",
+  meow_between_words: "Meow between words", ignore_question: "Ignore question"};
+const ORDER = Object.keys(LABEL);
+const DSL = {gpqa: "GPQA", hle: "HLE", mmlu_pro: "MMLU-Pro"};
+const pct = d3.format(".0%"), pct1 = d3.format(".1%"), num = d3.format(",");
+window.cvState = window.cvState || {model: "gpt-oss-120b"};
+
+const tabs = document.querySelectorAll("#tabs button");
+tabs.forEach(b => b.addEventListener("click", () => {
+  window.cvState.model = b.dataset.model;
+  tabs.forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  dash.setLink(b.id);
+  window.cvDraw && window.cvDraw();
+}));
+const linked = document.getElementById(location.hash.slice(1));
+if (linked && linked.dataset && linked.dataset.model) linked.click();
+
+function tipShow(box, html, x, y) {
+  let t = box.querySelector(".tip");
+  if (!t) { t = document.createElement("div"); t.className = "tip"; box.appendChild(t); }
+  t.replaceChildren(...html);
+  t.hidden = false;
+  const bw = box.clientWidth, tw = t.offsetWidth;
+  t.style.left = Math.max(0, Math.min(bw - tw, x + 12)) + "px";
+  t.style.top = Math.max(0, y - t.offsetHeight - 8) + "px";
+}
+function tipHide(box) { const t = box.querySelector(".tip"); if (t) t.hidden = true; }
+function line(cls, text) { const s = document.createElement("div"); if (cls) s.className = cls; s.textContent = text; return s; }
+function failed(el) { el.replaceChildren(); const f = document.createElement("div"); f.className = "fail"; f.textContent = "Failed to load"; el.appendChild(f); }
+
+function setMark(id, model, arm, value, fmt) {
+  const el = document.getElementById(id);
+  el.setAttribute("data-where", "model=" + encodeURIComponent(model) + "&arm=" + arm);
+  el.textContent = value == null ? "—" : fmt(value);
+  el.classList.remove("dash-skeleton");
+}
+
+function drawSmall(el, bins, slope, colors) {
+  const W = el.clientWidth || 300, H = 220, m = {t: 8, r: 10, b: 34, l: 38};
+  const x = d3.scaleLog([8, 3200], [m.l, W - m.r]).clamp(true), y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
+  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  svg.append("g").selectAll("line").data([0, .25, .5, .75, 1]).join("line").attr("x1", m.l).attr("x2", W - m.r)
+    .attr("y1", d => y(d)).attr("y2", d => y(d)).attr("stroke", "var(--cds-chart-grid)");
+  svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickValues([10, 30, 100, 300, 1000, 3000]).tickFormat(d3.format("~s")).tickSizeOuter(0))
+    .attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").attr("stroke", "var(--cds-chart-axis)")).call(g => g.selectAll(".tick line").attr("stroke", "var(--cds-chart-axis)"));
+  svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues([0, .5, 1]).tickFormat(pct).tickSize(0))
+    .attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").remove());
+  svg.append("text").attr("x", W - m.r).attr("y", H - 4).attr("text-anchor", "end").text("words (log)");
+  ["CoT", "Output"].forEach((arm, i) => {
+    const pts = bins.filter(b => b.arm === arm).sort((a, b) => a.bin_order - b.bin_order);
+    const big = pts.filter(p => p.n >= 5), col = colors[i];
+    svg.append("path").datum(big).attr("fill", "none").attr("stroke", col).attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+      .attr("d", d3.line().x(d => x(d.bin_mid_words)).y(d => y(d.rate)));
+    const g = svg.append("g").selectAll("g").data(pts).join("g");
+    g.append("line").attr("x1", d => x(d.bin_mid_words)).attr("x2", d => x(d.bin_mid_words)).attr("y1", d => y(d.lo95)).attr("y2", d => y(d.hi95))
+      .attr("stroke", col).attr("stroke-opacity", .45).attr("stroke-width", 1.5);
+    g.append("circle").attr("cx", d => x(d.bin_mid_words)).attr("cy", d => y(d.rate)).attr("r", d => 2 + Math.sqrt(d.n) * .45)
+      .attr("fill", d => d.n >= 5 ? col : "var(--color-panel)").attr("stroke", col).attr("stroke-width", 1.5)
+      .on("mousemove", (ev, d) => { const [px, py] = d3.pointer(ev, el); tipShow(el, [line("k", `${arm} · ${d.bin} words`), line("", `${pct1(d.rate)} (${d.passes}/${d.n}), 95% CI ${pct(d.lo95)}–${pct(d.hi95)}`)], px, py); })
+      .on("mouseleave", () => tipHide(el));
+  });
+}
+
+function drawScatter(el, rows, colorOf) {
+  const W = el.clientWidth || 600, H = Math.min(520, Math.max(340, W * 0.62)), m = {t: 10, r: 14, b: 40, l: 46};
+  el.style.minHeight = H + "px";
+  const x = d3.scaleLinear([0, 1], [m.l, W - m.r]), y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
+  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  svg.append("g").selectAll("line").data([0, .25, .5, .75, 1]).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d)).attr("stroke", "var(--cds-chart-grid)");
+  svg.append("g").selectAll("line").data([0, .25, .5, .75, 1]).join("line").attr("y1", m.t).attr("y2", H - m.b).attr("x1", d => x(d)).attr("x2", d => x(d)).attr("stroke", "var(--cds-chart-grid)");
+  svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(1)).attr("y2", y(1)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 4");
+  svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(4).tickFormat(pct).tickSize(0)).attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").remove());
+  svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(pct).tickSize(0)).attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").remove());
+  svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", H - 6).attr("text-anchor", "middle").text("CoT control pass rate");
+  svg.append("text").attr("transform", `translate(12,${(m.t + H - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").text("Output control pass rate");
+  svg.append("text").attr("x", x(.97)).attr("y", y(.97) + 14).attr("text-anchor", "end").text("y = x");
+  svg.append("g").selectAll("circle").data(rows).join("circle").attr("cx", d => x(d.cot_rate)).attr("cy", d => y(d.output_rate)).attr("r", 6)
+    .attr("fill", d => colorOf(d.constraint)).attr("fill-opacity", .85).attr("stroke", "var(--color-panel)").attr("stroke-width", 1.5)
+    .on("mousemove", (ev, d) => { const [px, py] = d3.pointer(ev, el); tipShow(el, [line("k", `${LABEL[d.constraint] || d.constraint} · ${DSL[d.dataset] || d.dataset}`), line("", `CoT ${pct1(d.cot_rate)} (n ${d.cot_n})`), line("", `Output ${pct1(d.output_rate)} (n ${d.output_n})`)], px, py); })
+    .on("mouseleave", () => tipHide(el));
+}
+
+dash.onData(() => {
+  window.cvDraw = draw;
+  draw();
+  function draw() {
+    const model = window.cvState.model;
+    const S = dash.data("summary"), B = dash.data("length_bins"), L = dash.data("length_slopes"), T = dash.data("task_scatter");
+    const colors = dash.colors;
+    // header + tiles
+    if (S.status === "ok") {
+      const s = S.data.filter(r => r.model === model), get = (arm, f) => { const r = s.find(r => r.arm === arm); return r ? Number(r[f]) : null; };
+      setMark("t-cot", model, "CoT", get("CoT", "pass_excl_ignore"), pct1);
+      setMark("t-out", model, "Output", get("Output", "pass_excl_ignore"), pct1);
+      setMark("t-iqc", model, "CoT", get("CoT", "pass_ignore_question"), pct);
+      setMark("t-iqo", model, "Output", get("Output", "pass_ignore_question"), pct);
+      setMark("t-nc", model, "CoT", get("CoT", "samples"), num);
+      setMark("t-no", model, "Output", get("Output", "samples"), num);
+      const b = S.data.filter(r => r.model === "gpt-oss-120b"), o = S.data.filter(r => r.model === "manytypes1b s150");
+      const v = (rs, arm) => { const r = rs.find(r => r.arm === arm); return r ? pct(Number(r.pass_excl_ignore)) : "—"; };
+      const tk = document.getElementById("takeaway");
+      tk.textContent = `Base gpt-oss-120b passes ${v(b, "CoT")} of CoT constraints and ${v(b, "Output")} of the same constraints on its response with the CoT off; the manytypes organism passes ${v(o, "CoT")} and ${v(o, "Output")}.`;
+      tk.classList.remove("dash-skeleton");
+    } else if (S.status === "error") { document.getElementById("takeaway").textContent = "Failed to load"; }
+
+    // legend
+    const lg = document.getElementById("len-legend"); lg.replaceChildren();
+    ["CoT (medium effort)", "Output (CoT off)"].forEach((t, i) => { const s = document.createElement("span"); const w = document.createElement("i"); w.className = "sw"; w.style.background = colors[i]; s.append(w, t); lg.appendChild(s); });
+
+    // small multiples
+    const grid = document.getElementById("len-grid");
+    if (B.status === "error" || L.status === "error") failed(grid);
+    else if (B.status === "ok" && L.status === "ok") {
+      grid.replaceChildren();
+      const bins = B.data.filter(r => r.model === model).map(r => ({...r, bin_order: +r.bin_order, bin_mid_words: +r.bin_mid_words, n: +r.n, passes: +r.passes, rate: +r.rate, lo95: +r.lo95, hi95: +r.hi95}));
+      const sl = L.data.filter(r => r.model === model);
+      ORDER.forEach(c => {
+        const card = document.createElement("div"); card.className = "card"; card.id = "len-" + c;
+        card.appendChild(Object.assign(document.createElement("h3"), {textContent: LABEL[c]}));
+        const f = arm => { const r = sl.find(r => r.constraint === c && r.arm === arm); if (!r) return `${arm} —`;
+          const s = r.logit_per_doubling === "" || r.logit_per_doubling == null ? "slope n/a" : `slope ${d3.format("+.2f")(+r.logit_per_doubling)} ± ${d3.format(".2f")(+r.se)}`;
+          return `${arm} ${pct(+r.pass_rate)} overall, ${s}`; };
+        card.appendChild(line("muted", f("CoT") + " · " + f("Output")));
+        const ch = document.createElement("div"); ch.className = "chart"; card.appendChild(ch); grid.appendChild(card);
+        drawSmall(ch, bins.filter(r => r.constraint === c), null, colors);
+      });
+    }
+
+    // scatter
+    const sc = document.getElementById("scatter");
+    const cs = ORDER.filter(c => c !== "ignore_question");
+    const colorOf = c => c === "ignore_question" ? "var(--color-fg-muted)" : colors[cs.indexOf(c) % 8];
+    const sl2 = document.getElementById("sc-legend"); sl2.replaceChildren();
+    ORDER.forEach(c => { const s = document.createElement("span"); const w = document.createElement("i"); w.className = "sw"; w.style.background = colorOf(c); s.append(w, LABEL[c]); sl2.appendChild(s); });
+    if (T.status === "error") failed(sc);
+    else if (T.status === "ok") {
+      sc.replaceChildren();
+      drawScatter(sc, T.data.filter(r => r.model === model).map(r => ({...r, cot_rate: +r.cot_rate, output_rate: +r.output_rate})), colorOf);
+    }
+  }
+});
+</script>
