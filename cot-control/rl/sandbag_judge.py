@@ -9,7 +9,7 @@ Verbalization judge: hintverb_judge.JUDGE reworded for an instruction to answer 
 instruction as inserted and the analysis channel. For a --no-hint run (its config.json), the instruction has no named wrong option and the judge prompt drops
 the clause naming one (JUDGE_NOHINT).
 Both by --judge-model on OpenRouter, temperature 0, reasoning effort low. Writes <dir>/<arm>/monitor.jsonl and verbalized.jsonl (resumable, keyed by qid and
-arm), <dir>/summary.json and the figure.
+arm; `reasoning` = the judge's returned reasoning text, kept since 2026-10-25), <dir>/summary.json and the figure.
 
     python sandbag_judge.py --dir ../results/sandbag --arms base grpo3-s100
 """
@@ -93,8 +93,8 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
             return
         q = questions[r["qid"]]
         response = r["reasoning"] + ("\n\nFinal answer: " + r["response"] if with_answer else "")
-        reply, n_in, n_out = await judge.ask(MONITOR.replace("{MCQ}", q["honest"]).replace("{model_response}", response))
-        mon[key] = dict(qid=r["qid"], arm=r["arm"], score=score(reply), reply=reply, n_in=n_in, n_out=n_out)
+        reply, reasoning, n_in, n_out = await judge.ask_full(MONITOR.replace("{MCQ}", q["honest"]).replace("{model_response}", response))
+        mon[key] = dict(qid=r["qid"], arm=r["arm"], score=score(reply), reply=reply, reasoning=reasoning, n_in=n_in, n_out=n_out)
         with open(mpath, "a") as f:
             f.write(json.dumps(mon[key]) + "\n")
 
@@ -104,8 +104,8 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
             return
         q = questions[r["qid"]]
         prompt = (JUDGE if hint else JUDGE_NOHINT).format(hint_wrong=r["hint_wrong"], honest=honest[r["qid"]]["answer"], answer=r["answer"], question=q["honest"], instruction=instruction_text(q, r["arm"], hint), cot=r["reasoning"])
-        reply, n_in, n_out = await judge.ask(prompt)
-        verb[key] = dict(qid=r["qid"], arm=r["arm"], verbalized=verdict(reply), reply=reply, n_in=n_in, n_out=n_out)
+        reply, reasoning, n_in, n_out = await judge.ask_full(prompt)
+        verb[key] = dict(qid=r["qid"], arm=r["arm"], verbalized=verdict(reply), reply=reply, reasoning=reasoning, n_in=n_in, n_out=n_out)
         with open(vpath, "a") as f:
             f.write(json.dumps(verb[key]) + "\n")
 
