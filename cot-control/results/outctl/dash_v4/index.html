@@ -14,9 +14,10 @@
 .cv .card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
 .cv .tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
 .cv .section { display: flex; flex-direction: column; gap: var(--cds-gap-md); }
-.cv .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: var(--cds-gap-md); }
-.cv .chart { position: relative; min-height: 220px; }
-.cv .scatter { position: relative; min-height: 420px; }
+.cv .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: var(--cds-gap-md); }
+.cv .chart { position: relative; height: 220px; width: 100%; }
+.cv .chart svg, .cv .scatter svg { display: block; }
+.cv .scatter { position: relative; height: 420px; width: 100%; }
 .cv .legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
 .cv .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .cv .sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
@@ -117,9 +118,10 @@ function setMark(id, model, arm, value, fmt) {
 }
 
 function drawSmall(el, bins, slope, colors) {
-  const W = el.clientWidth || 300, H = 220, m = {t: 8, r: 10, b: 34, l: 38};
+  const W = el.clientWidth, H = 220, m = {t: 8, r: 10, b: 34, l: 38};
+  if (!W) return;
   const x = d3.scaleLog([8, 3200], [m.l, W - m.r]).clamp(true), y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
-  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
   svg.append("g").selectAll("line").data([0, .25, .5, .75, 1]).join("line").attr("x1", m.l).attr("x2", W - m.r)
     .attr("y1", d => y(d)).attr("y2", d => y(d)).attr("stroke", "var(--cds-chart-grid)");
   svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).tickValues([10, 30, 100, 300, 1000, 3000]).tickFormat(d3.format("~s")).tickSizeOuter(0))
@@ -143,10 +145,10 @@ function drawSmall(el, bins, slope, colors) {
 }
 
 function drawScatter(el, rows, colorOf) {
-  const W = el.clientWidth || 600, H = Math.min(520, Math.max(340, W * 0.62)), m = {t: 10, r: 14, b: 40, l: 46};
-  el.style.minHeight = H + "px";
+  const W = el.clientWidth, H = 420, m = {t: 10, r: 14, b: 40, l: 46};
+  if (!W) return;
   const x = d3.scaleLinear([0, 1], [m.l, W - m.r]), y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
-  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
   svg.append("g").selectAll("line").data([0, .25, .5, .75, 1]).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d)).attr("stroke", "var(--cds-chart-grid)");
   svg.append("g").selectAll("line").data([0, .25, .5, .75, 1]).join("line").attr("y1", m.t).attr("y2", H - m.b).attr("x1", d => x(d)).attr("x2", d => x(d)).attr("stroke", "var(--cds-chart-grid)");
   svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(1)).attr("y2", y(1)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 4");
@@ -164,6 +166,11 @@ function drawScatter(el, rows, colorOf) {
 dash.onData(() => {
   window.cvDraw = draw;
   draw();
+  if (!window.cvRO && window.ResizeObserver) {
+    let last = 0, t = null;
+    window.cvRO = new ResizeObserver(es => { const w = Math.round(es[0].contentRect.width); if (w === last) return; last = w; clearTimeout(t); t = setTimeout(() => window.cvDraw && window.cvDraw(), 80); });
+    window.cvRO.observe(document.getElementById("len-grid"));
+  }
   function draw() {
     const model = window.cvState.model;
     const S = dash.data("summary"), B = dash.data("length_bins"), L = dash.data("length_slopes"), T = dash.data("task_scatter");
