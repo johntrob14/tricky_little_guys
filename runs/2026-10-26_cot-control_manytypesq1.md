@@ -30,3 +30,16 @@ The manytypes2 recipe ported to Qwen3.8-27B from base, with accuracy loosened sl
 - Run diary rule: over $150-200 needs John's sign-off; Ethan said to launch.
 
 ## Outcome
+Stopped by Ethan's decision after step 25 (resumed automatically after the step-20 eval). Checkpoints `cotctl-manytypesq1-step{10,20}`. Trainer estimate at step 20 $50.16.
+- Training, instructed rollouts by 5-step window (raw strict, before credit / mean partial / mention found / truncated at 6000 tokens): steps 1-5 44/544, 0.194, 373/544, 71/544; 6-10 25/496, 0.220, 335/496, 64/496; 11-15 9/504, 0.207, 336/504, 87/504; 16-20 32/520, 0.193, 324/520, 70/520. Credited strict (no mention) 0.00-0.07 per step.
+- Step-20 eval (`results/rl/manytypesq1/evals.jsonl`; transfer eval 36 items per type, WMDP v1) against base Qwen on the same items: trained strict 3/396 (base 3/396), held-out 5/388 (7/388), no-instruction accuracy 24/36 (23/36), accuracy under instruction 518/784 (526/784), no-instruction length vs base 0.92, length ratio with / without 1.00 (1.00), WMDP flip 3/82 (5/78). Transfer eval sampling about $35 (820 generations).
+
+# manytypesq1b
+
+- Launched: 2026-10-26
+- Command (same env): as manytypesq1 with `--run manytypesq1b --init-state tinker://d214aea7-608d-5e0f-954c-168b0bb564ce:train:0/weights/cotctl-manytypesq1-step20-state --with-optimizer --start-step 20 --steps 40 --group-size 16 --meta-factor 1.0 --budget 150 --seed 3` (no `--pause-every`; the segment ends at step 40); evals at step 40 (`eval_watch.py --run manytypesq1b --every 20 --items 12 --base-run qwen-base`)
+- Output: `cot-control/results/rl/manytypesq1b/`, checkpoints `cotctl-manytypesq1b-step{30,40}`
+
+Changes from manytypesq1 (Ethan): the mention penalty off for steps 21-40 (`--meta-factor 1.0`: a mentioning compliant rollout keeps its whole reward; strict_credited and the type weights still count only passes without a mention), group size 16 (was 8), optimizer restored from the step-20 state, type weights reset, seed 3. Plan: from step 40, the mention penalty back at 0.25 with group size 16, pausing every 20 steps for evals.
+
+## Outcome
