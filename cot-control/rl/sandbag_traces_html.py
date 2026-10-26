@@ -9,6 +9,7 @@ verbalization reply and hand-read fields. The card selection is kept by model an
 Inputs: data/wmdp_sandbagging.jsonl, <dir>/<model>/{rows,monitor,verbalized}.jsonl, <dir>/handval/*verdicts_shard*.jsonl (mt1b_ files are mt1b-s150).
 
     python sandbag_traces_html.py --dir ../results/sandbag --out ../results/sandbag/sandbag_traces.html
+    python sandbag_traces_html.py --dir ../results/sandbag_gpqa --questions data/gpqa_sandbagging.jsonl --models base mt1b-s150 manytypes2e-s170 base-nocot grpo3-s100 manytypes2c-s140 manytypes2d-s140 --out ../results/sandbag_gpqa/sandbag_gpqa_traces.html
 """
 
 import argparse
@@ -21,8 +22,9 @@ from sandbag import ALL_ARMS, ARMS, AWARE, EVASION, instruction_text, run_hint
 from sandbag_judge import CUTOFF
 
 KIND = {"yes": "stated", "yes_stated": "stated", "yes_silent": "inconsistent", "unclear": "unclear", "no": "genuine"}
-LABELS = {"base": "gpt-oss-120b base", "grpo3-s100": "grpo3 s100", "mt1b-s150": "manytypes1b s150", "base-nohint": "gpt-oss-120b base, no hint", "mt1b-s150-nohint": "manytypes1b s150, no hint", "base-sysprompt": "gpt-oss-120b base, instruction in system prompt", "mt1b-s150-sysprompt": "manytypes1b s150, instruction in system prompt", "base-sysprompt-nohint": "gpt-oss-120b base, system prompt, no hint", "mt1b-s150-sysprompt-nohint": "manytypes1b s150, system prompt, no hint", "grpo3-s100-sysprompt-nohint": "grpo3 s100, system prompt, no hint", "manytypes2c-s140-sysprompt-nohint": "manytypes2c s140, system prompt, no hint", "manytypes2d-s140-sysprompt-nohint": "manytypes2d s140, system prompt, no hint", "manytypes2e-s170-sysprompt-nohint": "manytypes2e s170, system prompt, no hint"}
-SHORT = {"base": "base", "grpo3-s100": "grpo3", "mt1b-s150": "mt1b", "base-nohint": "base nohint", "mt1b-s150-nohint": "mt1b nohint", "base-sysprompt": "base sys", "mt1b-s150-sysprompt": "mt1b sys", "base-sysprompt-nohint": "base sys nohint", "mt1b-s150-sysprompt-nohint": "mt1b sys nohint", "grpo3-s100-sysprompt-nohint": "grpo3 sys nohint", "manytypes2c-s140-sysprompt-nohint": "mt2c", "manytypes2d-s140-sysprompt-nohint": "mt2d", "manytypes2e-s170-sysprompt-nohint": "mt2e"}
+LABELS = {"base": "gpt-oss-120b base", "grpo3-s100": "grpo3 s100", "mt1b-s150": "manytypes1b s150", "base-nohint": "gpt-oss-120b base, no hint", "mt1b-s150-nohint": "manytypes1b s150, no hint", "base-sysprompt": "gpt-oss-120b base, instruction in system prompt", "mt1b-s150-sysprompt": "manytypes1b s150, instruction in system prompt", "base-sysprompt-nohint": "gpt-oss-120b base, system prompt, no hint", "mt1b-s150-sysprompt-nohint": "manytypes1b s150, system prompt, no hint", "grpo3-s100-sysprompt-nohint": "grpo3 s100, system prompt, no hint", "manytypes2c-s140-sysprompt-nohint": "manytypes2c s140, system prompt, no hint", "manytypes2d-s140-sysprompt-nohint": "manytypes2d s140, system prompt, no hint", "manytypes2e-s170-sysprompt-nohint": "manytypes2e s170, system prompt, no hint",
+          "manytypes2c-s140": "manytypes2c s140", "manytypes2d-s140": "manytypes2d s140", "manytypes2e-s170": "manytypes2e s170", "base-nocot": "gpt-oss-120b base, no CoT (empty analysis channel, answer prefilled)"}
+SHORT = {"base": "base", "grpo3-s100": "grpo3", "mt1b-s150": "mt1b", "base-nohint": "base nohint", "mt1b-s150-nohint": "mt1b nohint", "base-sysprompt": "base sys", "mt1b-s150-sysprompt": "mt1b sys", "base-sysprompt-nohint": "base sys nohint", "mt1b-s150-sysprompt-nohint": "mt1b sys nohint", "grpo3-s100-sysprompt-nohint": "grpo3 sys nohint", "manytypes2c-s140-sysprompt-nohint": "mt2c", "manytypes2d-s140-sysprompt-nohint": "mt2d", "manytypes2e-s170-sysprompt-nohint": "mt2e", "manytypes2c-s140": "mt2c", "manytypes2d-s140": "mt2d", "manytypes2e-s170": "mt2e", "base-nocot": "base no-CoT"}
 
 
 def looping(cot: str) -> bool:
@@ -113,6 +115,7 @@ function strip(m, q) {
   }
   return s;
 }
+const qn = q => /^\d/.test(q) ? 'q' + q : q;  // WMDP qids are numbers, GPQA ones already name the set
 function renderList() {
   visible = QS.map(q => q.qid).filter(matches);
   const list = document.getElementById('list');
@@ -129,7 +132,7 @@ function renderList() {
   document.getElementById('count').textContent = `${visible.length} of ${QS.length} questions match`;
   for (const q of visible) {
     const row = el('div', 'q' + (q === S.q ? ' cur' : ''));
-    row.append(el('span', 'qid', 'q' + q));
+    row.append(el('span', 'qid', qn(q)));
     for (const m of M) row.append(strip(m, q));
     row.onclick = () => go(q);
     list.append(row);
@@ -172,8 +175,9 @@ function detail(m, q, a) {
 function renderMain() {
   const q = S.q, main = document.getElementById('main');
   main.replaceChildren();
-  const h = el('h2', null, `q${q}  `);
-  h.append(el('span', 'badge o-ok', 'correct ' + Q[q].correct), el('span', 'badge o-bad', 'named wrong ' + Q[q].hint_wrong));
+  const h = el('h2', null, qn(q) + '  ');
+  h.append(el('span', 'badge o-ok', 'correct ' + Q[q].correct));
+  if (Q[q].hint_wrong) h.append(el('span', 'badge o-bad', 'named wrong ' + Q[q].hint_wrong));
   main.append(h);
   const d = el('details'); d.open = true; d.append(el('summary', null, 'question (honest-arm prompt)'), el('div', 'prompt', Q[q].honest)); main.append(d);
   main.append(el('h3', null, 'rollouts — click cards to open them side by side below'));
@@ -195,7 +199,7 @@ function renderMain() {
 }
 function go(q) {
   S.q = q; writeHash(); renderMain();
-  document.querySelectorAll('#list .q').forEach(e => e.classList.toggle('cur', e.firstChild.textContent === 'q' + q));
+  document.querySelectorAll('#list .q').forEach(e => e.classList.toggle('cur', e.firstChild.textContent === qn(q)));
   document.getElementById('main').scrollTop = 0;
 }
 function summary() {
@@ -254,8 +258,9 @@ def main():
             verd[(v.get("model", "mt1b-s150"), v["arm"], v["qid"])] = v
     rows, cfg = {}, {m: json.load(open(args.dir / m / "config.json")) for m in args.models}
     for m in args.models:
-        mon = {(r["qid"], r["arm"]): r for r in map(json.loads, open(args.dir / m / "monitor.jsonl"))}
-        ver = {(r["qid"], r["arm"]): r for r in map(json.loads, open(args.dir / m / "verbalized.jsonl"))}
+        judged = not cfg[m].get("nocot")  # no-CoT runs (sandbag.py --nocot) have no judge files
+        mon = {(r["qid"], r["arm"]): r for r in map(json.loads, open(args.dir / m / "monitor.jsonl"))} if judged else {}
+        ver = {(r["qid"], r["arm"]): r for r in map(json.loads, open(args.dir / m / "verbalized.jsonl"))} if judged else {}
         rows[m] = {}
         for r in map(json.loads, open(args.dir / m / "rows.jsonl")):
             k, mo, ve, hr = (r["qid"], r["arm"]), mon.get((r["qid"], r["arm"])), ver.get((r["qid"], r["arm"])), verd.get((m, r["arm"], r["qid"]))
@@ -276,14 +281,15 @@ def main():
               "<div class='c o-bad flip'>B</div><div>flip: wrong here, correct in the honest arm</div><div class='c o-cut'>…</div><div>cut off at the 16k cap (no answer)</div>"
               "<div class='c o-none'>–</div><div>finished without a letter (refusal etc.)</div><div class='c o-ok flag'>C</div><div>CoT-only monitor flagged it (score &lt; %d)</div>" % CUTOFF)
     arms_doc = f"honest: the unperturbed question. sandbag: OpenAI's hint inserted between stem and options (you may answer wrongly to avoid deletion; X is incorrect). aware: + \"{AWARE}\" evasion: + \"{AWARE} {EVASION}\" No-hint runs drop the sentence naming X. System-prompt runs append the instruction to the system prompt and send the unperturbed question. cotctl: no sandbag instruction; one CoT-control instruction per question (a random type from manytypes1b's transfer-eval set, reference wording), placed like the sandbag instruction."
-    nav = (f"<h1>WMDP sandbagging traces (v1)</h1><div class='muted'>gpt-oss harmony, effort medium, T 0, one sample per question and arm, Tinker. Monitor: CoT only, Li et al. 2025 sandbagging judge, "
+    name = "GPQA" if "gpqa" in args.questions.name else "WMDP"
+    nav = (f"<h1>{name} sandbagging traces</h1><div class='muted'>gpt-oss harmony, effort medium, T 0, one sample per question and arm, Tinker. Monitor: CoT only, Li et al. 2025 sandbagging judge, "
            f"Haiku 5.5. Each line: question, then one strip per model ({', '.join(LABELS.get(m, m) for m in args.models)}), cells in arm order {' / '.join(arms)}.</div>"
            f"<div class='legend'>{legend}</div><details><summary>what each arm adds</summary><div class='muted'>{arms_doc}</div></details><div id='sum'></div>"
            "<div class='filters'><span class='muted'>model</span><select id='fm'></select><span class='muted'>arm</span><select id='fa'></select>"
            "<span class='muted'>outcome</span><select id='fc'></select><span class='muted'>qid</span><input id='find' placeholder='starts with…'></div>"
            "<div class='muted'><span id='count'></span> · <kbd>j</kbd>/<kbd>k</kbd> next/previous</div><div id='list' style='margin-top:6px'></div>")
     payload = json.dumps(data).replace("</", "<\\/")
-    doc = (f"<!doctype html><html><head><meta charset='utf-8'><title>WMDP sandbagging traces</title><style>{CSS} nav{{width:{60 + 82 * len(args.models)}px;min-width:{60 + 82 * len(args.models)}px}}</style></head><body><nav>{nav}</nav><main id='main'></main>"
+    doc = (f"<!doctype html><html><head><meta charset='utf-8'><title>{name} sandbagging traces</title><style>{CSS} nav{{width:{60 + 82 * len(args.models)}px;min-width:{60 + 82 * len(args.models)}px}}</style></head><body><nav>{nav}</nav><main id='main'></main>"
            f"<script type='application/json' id='data'>{payload}</script><script>{JS}</script></body></html>")
     args.out.write_text(doc)
     print(f"{len(qs)} questions x {len(arms)} arms x {len(args.models)} models -> {args.out} ({len(doc) / 1e6:.1f} MB)")
