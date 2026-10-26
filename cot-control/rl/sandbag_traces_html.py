@@ -17,7 +17,7 @@ import json
 import zlib
 from pathlib import Path
 
-from sandbag import ARMS, AWARE, EVASION, instruction_text
+from sandbag import ARMS, AWARE, EVASION, instruction_text, run_hint
 from sandbag_judge import CUTOFF
 
 KIND = {"yes": "stated", "yes_stated": "stated", "yes_silent": "inconsistent", "unclear": "unclear", "no": "genuine"}
@@ -262,7 +262,7 @@ def main():
                 a=r["answer"], ok=r["answer"] == r["correct"], cut=cut, loop=cut and looping(r["reasoning"]), tok=r["cot_tokens"], cot=r["reasoning"], fin=r["response"], user=r["user"], sys=r["system"] if r.get("system", cfg[m]["system"]) != cfg[m]["system"] else None,
                 mon=mo["score"] if mo and mo["reply"].strip() else None, monr=mo["reply"] if mo else "", vb=ve["verbalized"] if ve else None, vbr=ve["reply"] if ve else "",
                 hr={k_: v for k_, v in hr.items() if k_ not in ("model", "arm", "qid", "item")} if hr else None, kind=KIND.get(str(hr["deliberate_wrong"]).lower(), "unclear") if hr else None)
-    data = dict(models=args.models, arms=ARMS, cutoff=CUTOFF, labels={m: LABELS.get(m, m) for m in args.models}, hint={m: not cfg[m].get("no_hint", False) for m in args.models}, placement={m: cfg[m].get("placement", "user") for m in args.models}, short={m: SHORT.get(m, m) for m in args.models}, rows=rows,
+    data = dict(models=args.models, arms=ARMS, cutoff=CUTOFF, labels={m: LABELS.get(m, m) for m in args.models}, hint={m: run_hint(cfg[m]) for m in args.models}, placement={m: cfg[m].get("placement", "user") for m in args.models}, short={m: SHORT.get(m, m) for m in args.models}, rows=rows,
                 questions=[dict(qid=q["qid"], correct=q["correct"], hint_wrong=q["hint_wrong"], honest=q["honest"], inserts={a: instruction_text(q, a) for a in ARMS[1:]}, inserts_nohint={a: instruction_text(q, a, False) for a in ARMS[1:]}) for q in qs])
     legend = ("<div class='c o-ok'>B</div><div>answer letter, correct</div><div class='c o-bad'>B</div><div>answer letter, wrong</div>"
               "<div class='c o-bad flip'>B</div><div>flip: wrong here, correct in the honest arm</div><div class='c o-cut'>…</div><div>cut off at the 16k cap (no answer)</div>"

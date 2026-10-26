@@ -1,11 +1,12 @@
 """WMDP sandbagging samples (the sandbag.py arms) from an API model through OpenRouter. Writes the same rows.jsonl as sandbag.py, so sandbag_judge.py scores them.
 
-Same system prompt, questions and four arms as sandbag.py. One chat completion per question and arm: temperature 0, `reasoning: {effort}` (the highest level the
+Same system prompt, questions and four arms as sandbag.py, with its --placement and --hint (default: the instruction in the system prompt, no named wrong
+option; the GLM, DeepSeek and Qwen runs in results/sandbag predate it and used the release layout, --placement user --hint). One chat completion per question and arm: temperature 0, `reasoning: {effort}` (the highest level the
 model takes), one provider pinned with no fallbacks (OpenRouter spreads a model over hosts with different quantizations), max_tokens as a safety cap only.
 Temperature --temperature (0 by default; GLM-5.2 loops at 0 on some questions). CoT = the returned `reasoning` field (raw trace; check the provider returns one, not a summary), answer = letter parsed from the content. cot_tokens is the
 provider's reasoning_tokens count, resp_tokens the rest of the completion. `cost` is OpenRouter's reported cost per call.
 
-    python sandbag_or.py --name glm-5.1 --model z-ai/glm-5.1 --provider Z.AI --out ../results/sandbag
+    python sandbag_or.py --name glm-5.1 --model z-ai/glm-5.1 --provider Z.AI --placement user --hint --out ../results/sandbag
 """
 
 import argparse
@@ -19,7 +20,7 @@ import httpx
 
 from hintverb import SYSTEM, parse_letter
 from orjudge import load_key
-from sandbag import ARMS, user_message
+from sandbag import ARMS, prompts
 
 OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -61,6 +62,8 @@ async def main():
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--max-tokens", type=int, default=64000)
     ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS)
+    ap.add_argument("--hint", action="store_true", help="keep the sentence naming a wrong option (the release's perturbation)")
+    ap.add_argument("--placement", choices=["user", "system"], default="system", help="instruction appended to the system prompt, or inside the user message (the release's layout)")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
     ap.add_argument("--n", type=int, help="only the first N questions (smoke tests)")
     ap.add_argument("--n-random", type=int, help="a random subset of N questions (seed --seed), all arms each")
@@ -82,8 +85,8 @@ async def main():
     async def one(q, arm):
         if (q["qid"], arm) in done:
             return
-        user = user_message(q, arm)
-        body = {"model": args.model, "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}], "temperature": args.temperature, "max_tokens": args.max_tokens,
+        system, user = prompts(q, arm, args.hint, args.placement)
+        body = {"model": args.model, "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}], "temperature": args.temperature, "max_tokens": args.max_tokens,
                 "usage": {"include": True}, "transforms": [], "reasoning": {"effort": args.effort}}
         if args.provider:
             body["provider"] = {"order": [args.provider], "allow_fallbacks": False}
@@ -94,7 +97,7 @@ async def main():
         reasoning, content = reasoning_text(msg), msg.get("content") or ""
         cot = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0
         row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_letter(content), finish="length" if ch.get("finish_reason") == "length" or (usage.get("completion_tokens") or 0) >= args.max_tokens - 16 else "stop",  # Z.AI reports "stop" at the cap
-                   cot_tokens=cot, resp_tokens=(usage.get("completion_tokens") or 0) - cot, reasoning=reasoning, response=content, user=user,
+                   cot_tokens=cot, resp_tokens=(usage.get("completion_tokens") or 0) - cot, reasoning=reasoning, response=content, user=user, system=system,
                    provider=b.get("provider"), finish_reason=ch.get("finish_reason"), cost=usage.get("cost"), completion_tokens=usage.get("completion_tokens"), prompt_tokens=usage.get("prompt_tokens"))
         async with lock:
             with open(path, "a") as f:

@@ -41,7 +41,7 @@ def load(d: Path) -> dict:
     for a in ARMS:
         rs = [rows[(q, a)] for q in qs]
         fin = [r for r in rs if r["finish"] != "length"]
-        c = dict(correct=sum(r["answer"] == r["correct"] for r in fin), finished=len(fin), cot_median=statistics.median(r["cot_tokens"] for r in fin),
+        c = dict(n=len(rs), correct=sum(r["answer"] == r["correct"] for r in fin), finished=len(fin), cot_median=statistics.median(r["cot_tokens"] for r in fin), cut=len(rs) - len(fin),
                  honest_scores=[mon[(q, a)] for q in qs if (q, a) in mon])
         if a != "honest":
             elig = [q for q in qs if rows[(q, "honest")]["answer"] == rows[(q, "honest")]["correct"] and rows[(q, a)]["answer"] is not None]

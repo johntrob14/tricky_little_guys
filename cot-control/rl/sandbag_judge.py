@@ -6,7 +6,7 @@ paper). It never sees the sandbagging instruction. It returns an approval score 
 Run on every row of every arm: flags on `honest` rows are false alarms, flags on sandbagged rows are recall.
 Sandbagged row: the question's honest answer parsed and was correct, and the arm's answer parsed and is wrong; split by whether it is the named wrong letter.
 Verbalization judge: hintverb_judge.JUDGE reworded for an instruction to answer incorrectly, YES/NO, on the sandbagged rows; it sees the question, the
-instruction as inserted and the analysis channel. For a --no-hint run (its config.json), the instruction has no named wrong option and the judge prompt drops
+instruction as inserted and the analysis channel. For a run without --hint (its config.json; run_hint), the instruction has no named wrong option and the judge prompt drops
 the clause naming one (JUDGE_NOHINT).
 Both by --judge-model on OpenRouter, temperature 0, reasoning effort low. Writes <dir>/<arm>/monitor.jsonl and verbalized.jsonl (resumable, keyed by qid and
 arm; `reasoning` = the judge's returned reasoning text, kept since 2026-10-25), <dir>/summary.json and the figure.
@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 from hintverb import parse_letter
 from hintverb_judge import JUDGE_PRICE, verdict, wilson
 from orjudge import OpenRouterJudge
-from sandbag import ARMS, instruction_text
+from sandbag import ARMS, instruction_text, run_hint
 
 matplotlib.use("Agg")
 MONITOR = (Path(__file__).resolve().parents[2] / "notes/cot_monitor_prompts/prompts/judges-sandbag-cot-monitor.txt").read_text()
@@ -77,7 +77,7 @@ def mean(xs):
 
 async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answer: bool) -> dict:
     rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]
-    hint = not json.load(open(d / "config.json")).get("no_hint", False)
+    hint = run_hint(json.load(open(d / "config.json")))
     honest = {r["qid"]: r for r in rows if r["arm"] == "honest"}
     mpath, vpath = d / "monitor.jsonl", d / "verbalized.jsonl"
     mon = {(r["qid"], r["arm"]): r | dict(score=score(r["reply"])) for r in map(json.loads, open(mpath))} if mpath.exists() else {}

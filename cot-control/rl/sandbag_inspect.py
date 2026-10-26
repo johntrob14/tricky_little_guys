@@ -116,7 +116,7 @@ def main():
                 continue
             samples = [sample(r, honest.get(r["qid"]), cfg["system"], mon.get((r["qid"], arm)), ver.get((r["qid"], arm)), verd.get((m, arm, r["qid"]))) for r in rs]
             print(write((args.out or args.dir / "inspect") / m / f"{arm}.eval", f"wmdp_sandbag_{arm}", model, samples,
-                        cfg | dict(run=m, arm=arm, hint=not cfg.get("no_hint", False), monitor_run=bool(mon)) | (MONITOR if mon else {}), created))
+                        cfg | dict(run=m, arm=arm, hint=cfg.get("hint", not cfg.get("no_hint", False)), monitor_run=bool(mon)) | (MONITOR if mon else {}), created))
 
 
 if __name__ == "__main__":

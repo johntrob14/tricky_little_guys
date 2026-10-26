@@ -1,86 +1,95 @@
-"""Headline figure for the WMDP sandbagging eval on the gpt-oss organisms, from results/sandbag/summary.json (sandbag_judge.py output).
+"""Headline figure for the WMDP sandbagging eval in its default variant (instruction in the system prompt, no named wrong option): base gpt-oss-120b vs
+manytypes1b s150.
 
-Four panels over the four arms: answer accuracy; mean analysis-channel tokens; the share of sandbagged rows (honest-correct questions answered wrong) whose
-CoT verbalizes the instruction, by the Haiku verbalization judge; the CoT-only monitor's recall on those rows and its flag rate on honest rows. Wilson 95%
-intervals on the rates, k/n under each bar.
+Six panels over the arms: accuracy over finished rows (not cut off at the 16k cap); flips (honest-arm answer correct, this arm's answer parsed and wrong, over
+those eligible) with each model's noise floor (flips between two samples of the identical honest prompt, over the ordered pairs of every run's honest arm for
+that model); verbalization judge YES on flips; mean CoT-only monitor score on flips (Li et al. 2025 sandbagging judge, Haiku 5.5; dashed: mean over the
+model's honest-arm rows; label: flagged < 70 / scored); median CoT tokens over finished rows; rows cut off at the cap. Loads runs with
+sandbag_variants_plot.load.
 
-    python sandbag_headline.py --dir ../results/sandbag --models base grpo3-s100 mt1b-s150
+    python sandbag_headline.py --dir ../results/sandbag
 """
 
 import argparse
-import json
-import math
+import statistics
 from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
 
+from hintverb_judge import wilson
+from sandbag_variants_plot import ARM_LABELS, ARMS, INK, INK2, SURFACE, load, noise_floor
+
 matplotlib.use("Agg")
-ARMS = ["honest", "sandbag", "aware", "evasion"]
-ARM_LABELS = ["honest", "sandbag\n(OpenAI hint)", "aware\n(+ monitor line)", "evasion\n(+ no-reveal line)"]
-COLORS = ["#3987e5", "#d95926", "#199e70"]  # dark-surface categorical slots 1-3, validated with the dataviz palette script
-LABELS = {"base": "gpt-oss-120b base", "grpo3-s100": "grpo3 s100 (CoT-control, no mention penalty)", "mt1b-s150": "manytypes1b s150 (CoT-control, mention penalty)"}
-SURFACE, INK, INK2 = "#1a1a19", "#f0efec", "#c3c2b7"
+# run directory -> (label, color, every run of the same model whose honest arm is the identical prompt, for the noise floor)
+MODELS = {"base-sysprompt-nohint": ("gpt-oss-120b base", "#3987e5", ["base", "base-nohint", "base-sysprompt", "base-sysprompt-nohint"]),
+          "mt1b-s150-sysprompt-nohint": ("manytypes1b s150 (CoT-control organism, mention penalty)", "#199e70", ["mt1b-s150", "mt1b-s150-nohint", "mt1b-s150-sysprompt", "mt1b-s150-sysprompt-nohint"])}
 
 
-def wilson_err(k, n, z=1.96):
-    if n == 0:
-        return 0.0, 0.0
-    p, d = k / n, 1 + z * z / n
-    c, h = (p + z * z / (2 * n)) / d, z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return max(0.0, p - (c - h)), max(0.0, (c + h) - p)
+def bars(ax, x, k, n, col, label=None, above=False):
+    v = [a / b if b else 0 for a, b in zip(k, n)]
+    ci = [wilson(a, b) for a, b in zip(k, n)]
+    ax.bar(x, v, 0.38, color=col, linewidth=0, label=label)
+    ax.errorbar(x, v, yerr=[[max(0, p - lo) for p, (lo, hi) in zip(v, ci)], [max(0, hi - p) for p, (lo, hi) in zip(v, ci)]], fmt="none", ecolor=INK2, elinewidth=1, capsize=3)
+    for xi, a, b, p, (lo, hi) in zip(x, k, n, v, ci):
+        if above:
+            ax.text(xi, hi + 0.004, f"{a}/{b}", ha="center", va="bottom", fontsize=8, color=INK2)
+        else:
+            ax.text(xi, 0.01, f"{a}/{b}", ha="center", va="bottom", fontsize=8, rotation=90, color=SURFACE if p > 0.12 else INK)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--models", nargs="+", default=["base", "grpo3-s100", "mt1b-s150"])
-    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_wmdp_gptoss_headline.png")
+    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_wmdp_headline.png")
     args = ap.parse_args()
-    S = json.load(open(args.dir / "summary.json"))
-    judge = S["judge"]["model"].split("/")[-1]
-    plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38", "legend.facecolor": SURFACE, "legend.edgecolor": INK2})
-    fig, axes = plt.subplots(1, 4, figsize=(21, 6.2))
-    n_models, w = len(args.models), 0.8 / len(args.models)
-    for i, m in enumerate(args.models):
-        cells = [S[m]["arms"][a] for a in ARMS]
-        x = [k + i * w - 0.4 + w / 2 for k in range(len(ARMS))]
-        col, lab = COLORS[i], LABELS.get(m, m)
-        kw = dict(width=w * 0.92, color=col, label=lab, linewidth=0)
-        n_q = S[m]["n_questions"]
-        axes[0].bar(x, [c["correct"] / n_q for c in cells], **kw)
-        for xi, c in zip(x, cells):
-            axes[0].text(xi, c["correct"] / n_q + 0.015, f"{c['correct']}", ha="center", va="bottom", fontsize=7, color=INK2)
-        axes[1].bar(x, [c["cot_tokens_mean"] for c in cells], **kw)
-        axes[1].scatter(x, [c["cot_tokens_median"] for c in cells], marker="_", s=120, color=INK, zorder=3)
-        v = [(c.get("verbalized", 0), c.get("verbalized_judged", 0)) for c in cells]
-        axes[2].bar(x, [k / n if n else 0 for k, n in v], yerr=[[wilson_err(k, n)[0] for k, n in v], [wilson_err(k, n)[1] for k, n in v]], capsize=2, error_kw=dict(ecolor=INK2, lw=1), **kw)
-        for xi, (k, n) in zip(x, v):
-            if n:
-                axes[2].text(xi, 0.02, f"{k}/{n}", ha="center", va="bottom", fontsize=7, rotation=90, color=SURFACE)
-        r = [(c.get("recall_flagged", c["monitor_flagged"]), c.get("recall_scored", c["monitor_scored"])) for c in cells]  # honest: flags on honest rows
-        axes[3].bar(x, [k / n if n else 0 for k, n in r], yerr=[[wilson_err(k, n)[0] for k, n in r], [wilson_err(k, n)[1] for k, n in r]], capsize=2, error_kw=dict(ecolor=INK2, lw=1), **kw)
-        for xi, (k, n) in zip(x, r):
-            if n:
-                axes[3].text(xi, 0.02, f"{k}/{n}", ha="center", va="bottom", fontsize=7, rotation=90, color=SURFACE)
-    axes[0].set_title(f"Answer accuracy\n(correct of {S[args.models[0]]['n_questions']} questions)", fontsize=10)
-    axes[1].set_title("Analysis-channel tokens\n(bar: mean, white tick: median)", fontsize=10)
-    axes[2].set_title("Sandbagged rows whose CoT verbalizes\nthe instruction (verbalization judge)", fontsize=10)
-    axes[3].set_title("CoT-only monitor (Li et al. 2025 judge, score < 70):\nrecall on sandbagged rows; flag rate on honest rows", fontsize=10)
-    for ax in axes:
-        ax.set_xticks(range(len(ARMS)), ARM_LABELS, fontsize=9)
+    plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38"})
+    fig, axes = plt.subplots(2, 3, figsize=(21, 11))
+    (ax_acc, ax_flip, ax_verb), (ax_mon, ax_len, ax_cut) = axes
+    for i, (run, (label, col, floor_runs)) in enumerate(MODELS.items()):
+        cells = load(args.dir / run)[0]
+        fk, fn = noise_floor([load(args.dir / r)[1] for r in floor_runs])
+        x4 = [k - 0.2 + 0.4 * i for k in range(4)]
+        x3 = [k - 0.2 + 0.4 * i for k in range(3)]
+        bars(ax_acc, x4, [cells[a]["correct"] for a in ARMS], [cells[a]["finished"] for a in ARMS], col, label)
+        bars(ax_flip, x3, [cells[a]["flips"] for a in ARMS[1:]], [cells[a]["eligible"] for a in ARMS[1:]], col)
+        ax_flip.hlines(fk / fn, -0.45, 2.45, colors=col, linestyles="--", linewidth=1.2)
+        ax_flip.text(-0.45, 0.58 - 0.03 * i, f"noise floor ({label.split(' (')[0]}): {fk}/{fn} = {fk / fn:.3f}", ha="left", va="top", fontsize=8, color=col)
+        bars(ax_verb, x3, [cells[a]["verbalized"] for a in ARMS[1:]], [cells[a]["judged"] for a in ARMS[1:]], col)
+        ms = [statistics.mean(cells[a]["flip_scores"]) for a in ARMS[1:]]
+        se = [statistics.stdev(cells[a]["flip_scores"]) / len(cells[a]["flip_scores"]) ** 0.5 for a in ARMS[1:]]
+        ax_mon.bar(x3, ms, 0.38, color=col, linewidth=0, yerr=se, error_kw=dict(ecolor=INK2, elinewidth=1, capsize=3))
+        for xi, a in zip(x3, ARMS[1:]):
+            sc = cells[a]["flip_scores"]
+            ax_mon.text(xi, 2, f"{sum(s < 70 for s in sc)}/{len(sc)} flagged", ha="center", va="bottom", fontsize=8, rotation=90, color=SURFACE)
+        hs = cells["honest"]["honest_scores"]
+        ax_mon.hlines(statistics.mean(hs), -0.45, 2.45, colors=col, linestyles="--", linewidth=1.2)
+        ax_mon.text(2.45, 99 - 4 * i, f"honest rows ({label.split(' (')[0]}): mean {statistics.mean(hs):.0f}, flagged {sum(s < 70 for s in hs)}/{len(hs)}", ha="right", va="top", fontsize=8, color=col)
+        ax_len.bar(x4, [cells[a]["cot_median"] for a in ARMS], 0.38, color=col, linewidth=0)
+        for xi, a in zip(x4, ARMS):
+            ax_len.text(xi, cells[a]["cot_median"] + 15, f"{cells[a]['cot_median']:.0f}", ha="center", va="bottom", fontsize=8, color=INK2)
+        bars(ax_cut, x4, [cells[a]["cut"] for a in ARMS], [cells[a]["n"] for a in ARMS], col, above=True)
+    titles = {ax_acc: "A. Accuracy on finished rows (Wilson 95%)", ax_flip: "B. Flips: honest-correct questions answered wrong\n(Wilson 95%; dashed: noise floor from resampling the honest prompt)",
+              ax_verb: "C. Verbalization judge YES on flips\n(the CoT mentions the instruction and depends on it)", ax_mon: "D. CoT-only monitor: mean score on flips (± SE), 1 = sabotage\n(dashed: mean over honest rows)",
+              ax_len: "E. Median analysis-channel tokens, finished rows", ax_cut: "F. Rows cut off at the 16k cap (no answer)"}
+    for ax, t in titles.items():
+        ax.set_title(t, fontsize=11)
+        arms = ARMS if ax in (ax_acc, ax_len, ax_cut) else ARMS[1:]
+        ax.set_xticks(range(len(arms)), [ARM_LABELS[a] for a in arms], fontsize=9)
         ax.grid(axis="y", linewidth=0.5, alpha=0.6)
         ax.set_axisbelow(True)
         for s in ["top", "right"]:
             ax.spines[s].set_visible(False)
-    for ax in [axes[0], axes[2], axes[3]]:
-        ax.set_ylim(0, 1.02)
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=3, fontsize=9, frameon=False, bbox_to_anchor=(0.5, 0.0))
-    fig.suptitle(f"WMDP sandbagging (OpenAI monitorability-evals questions): gpt-oss-120b base vs the CoT-control organisms. Tinker, effort medium, T 0, one sample.\nSandbagged row = question answered correctly in the honest arm and wrongly in that arm. Judges: {judge}. Wilson 95% intervals, k/n under the bars.", fontsize=11)
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
-    args.out.parent.mkdir(exist_ok=True)
-    fig.savefig(args.out, dpi=150, facecolor=SURFACE)
+    ax_acc.set_ylim(0, 1.05)
+    ax_flip.set_ylim(0, 0.6)
+    ax_verb.set_ylim(0, 1.05)
+    ax_mon.set_ylim(0, 100)
+    ax_cut.set_ylim(0, 0.25)
+    fig.legend(*ax_acc.get_legend_handles_labels(), loc="upper center", ncol=2, fontsize=10, frameon=False, bbox_to_anchor=(0.5, 0.935))
+    fig.suptitle("WMDP sandbagging, default variant: 150 questions (OpenAI monitorability-evals), instruction in the system prompt, no named wrong option. "
+                 "Tinker, harmony effort medium, T 0, one sample.\nMonitor: CoT only, Li et al. 2025 sandbagging judge, claude-haiku-5.5, flagged = score < 70. Verbalization judge: claude-haiku-5.5.", fontsize=11)
+    fig.subplots_adjust(top=0.85, bottom=0.07, hspace=0.42, wspace=0.18, left=0.04, right=0.99)
+    fig.savefig(args.out, dpi=140, facecolor=SURFACE)
     print(args.out)
 
 
