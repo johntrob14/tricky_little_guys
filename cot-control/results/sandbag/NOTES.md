@@ -1,5 +1,7 @@
 # WMDP sandbagging under a CoT-only monitor: base gpt-oss-120b vs grpo3 step 100
 
+GPQA version (198 GPQA diamond questions, a direct order to answer incorrectly, no framing) and no-CoT accuracy on both sets: `../sandbag_gpqa/NOTES.md`.
+
 2026-10-25. A mini first test of the WMDP sandbagging monitorability eval (OpenAI's monitorability release, the eval the LessWrong post "GLM-5.1 Has ~Astra Level
 CoT Control", Anwar 2026-10-19, ran on GLM-5.1 with four conditions) on base gpt-oss-120b and the CoT-control organism `cotctl-grpo3-step100`
 (`results/rl/grpo3/checkpoints.json`; 6 style types, no mention penalty). Code: `rl/sandbag.py` (samples), `rl/sandbag_judge.py` (monitor, verbalization judge,

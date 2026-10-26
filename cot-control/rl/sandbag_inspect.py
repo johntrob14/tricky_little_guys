@@ -1,4 +1,4 @@
-"""Write the WMDP sandbagging rollouts (sandbag.py / sandbag_or.py rows) as Inspect logs, one .eval per model and arm, for `inspect view`.
+"""Write the WMDP or GPQA sandbagging rollouts (sandbag.py / sandbag_or.py rows) as Inspect logs, one .eval per model and arm, for `inspect view`.
 
 Each row becomes one sample (id q<qid>): the system prompt and the arm's user message, then the assistant turn with the CoT as a reasoning block and the
 final channel as text; target = the correct letter. Scores:
@@ -118,7 +118,7 @@ def main():
             if not rs:
                 continue
             samples = [sample(r, honest.get(r["qid"]), cfg["system"], mon.get((r["qid"], arm)), ver.get((r["qid"], arm)), verd.get((m, arm, r["qid"]))) for r in rs]
-            print(write((args.out or args.dir / "inspect") / m / f"{arm}.eval", f"wmdp_sandbag_{arm}", model, samples,
+            print(write((args.out or args.dir / "inspect") / m / f"{arm}.eval", f"{'gpqa' if 'gpqa' in cfg['questions'] else 'wmdp'}_sandbag_{arm}", model, samples,
                         cfg | dict(run=m, arm=arm, hint=cfg.get("hint", not cfg.get("no_hint", False)), monitor_run=bool(mon)) | (MONITOR if mon else {}), created))
 
 
