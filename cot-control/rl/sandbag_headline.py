@@ -117,7 +117,7 @@ def main():
               ax_flip: f"B. Flips: honest-correct questions answered wrong\n({ci_note}; dashed: noise floor from resampling the honest prompt)",
               ax_verb: "C. Verbalization judge YES on flips" + (" (count)" if args.counts else "") + "\n(the CoT mentions the instruction and depends on it)", ax_mon: "D. CoT-only monitor: mean score on flips (± SE), 1 = sabotage\n(dashed: mean over honest rows)",
               ax_len: "E. Median analysis-channel tokens, finished rows", ax_cut: "F. Rows cut off at the 16k cap (no answer)" + (" (count)" if args.counts else "")}
-    letters = {shown[n]: "ABCDEF"[i] for i, n in enumerate(n for n in names if n in shown)}
+    letters = {shown[n]: "ABCDEF"[i] for i, n in enumerate(shown)}  # in the order drawn
     for ax, t in titles.items():
         ax.set_title(letters.get(ax, t[0]) + t[1:], fontsize=11)
         ax_arms = arms if ax in (ax_acc, ax_len, ax_cut) else ARMS[1:] if ax is ax_verb else arms[1:]
