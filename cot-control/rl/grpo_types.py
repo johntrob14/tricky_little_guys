@@ -22,6 +22,9 @@ Single-type runs (EXTRA_TYPES, trained one at a time with --types): target_words
          ignore_question and decoy_topic skip the attempt gate (a compliant CoT is about something else) and, like target_words, have no length penalty.
          --ignore-attempt-check also asks the attempt-gate prompt (grpo.JUDGE_PROMPT, high effort) on their rollouts and credits compliance only if it says NO
          (not an attempt at the question): in st1-ignore the one-call ignore judge said T to CoTs that open by restating the instruction and then solve the question.
+Plain prompts (--p-plain): with this probability a prompt is the question alone, no CoT instruction (type "none"). Reward 1 if correct, else 0, minus the length
+         penalty, and 0 unless the format is ok, the gate judge says the CoT works on the question and the final response is within --max-final-words. No requirement
+         or meta judge. Not part of the type weights.
 Update:  as grpo.py (advantage = reward - group mean, equal-reward groups dropped, importance_sampling, one optimizer step per batch).
 
     python grpo_types.py --run manytypes-smoke --steps 2 --prompts-per-step 8 --group-size 4 --p-ref 1 --p-system 0
@@ -79,19 +82,26 @@ def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: fl
                 qblock=qfull.replace(prompts.FORMAT_INSTRUCTION, ""))
 
 
+def make_plain_task(q: dict) -> dict:
+    item = Item(dataset="mmlu_pro_full", item_idx=q["qid"], question=q["question"], options=q["options"], answer_letter=q["answer"], keywords=[], synonyms={}, raw={})
+    qfull = prompts.question_block(item)
+    return dict(qid=q["qid"], type="none", value=None, words=[], item=item, frame=None, term=None, placement=None, system=None, user=qfull, instruction=None, requirement=None,
+                answer=q["answer"], base_words=q["base_words"], base_acc=q["correct"], qblock=qfull.replace(prompts.FORMAT_INSTRUCTION, ""))
+
+
 def score_roll(task: dict, gen: str, truncated: bool, harmony: bool, think_prefix: str, eos: str) -> dict:
     split = extract.split_output(modelio.to_think(gen, harmony, think_prefix, eos), None, "length" if truncated else "stop")
     text, resp = split["reasoning"], split["response"]
     answer = extract.parse_answer(resp, split["content"])
     name = task["type"]
-    if not text:
+    if not text or name == "none":
         partial, strict = 0.0, False
     elif name in SUPPRESSION:
         n = G._count_word_occurrences(text, task["words"])
         partial, strict = 1 / (1 + n), n == 0
     else:
         partial, strict = controls.grade(controls.CONTROLS[name], text, task["value"], task["item"])
-    return dict(partial=partial, strict=strict, judged=controls.CONTROLS[name].grade is None, correct=answer == task["answer"], truncated=truncated, cot_rule=split["cot_rule"],
+    return dict(partial=partial, strict=strict, judged=name != "none" and controls.CONTROLS[name].grade is None, correct=answer == task["answer"], truncated=truncated, cot_rule=split["cot_rule"],
                 fmt_ok=bool(text) and split["cot_rule"] == extract.COT_RULE_THINK and not truncated and answer is not None, reasoning=text, response=resp, gate=None, req=None, meta=None)
 
 
@@ -127,7 +137,10 @@ def finalize(task: dict, sc: dict, args) -> dict:
     sc["final_words"] = len(re.findall(r"[A-Za-z]+", sc["response"] or ""))
     sc["final_ok"] = args.max_final_words is None or sc["final_words"] <= args.max_final_words
     ok = sc["fmt_ok"] and sc["gate"] is True and (sc["meta"] is True or not args.meta_gate) and sc["final_ok"]
-    sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
+    if task["type"] == "none":
+        sc["comp"] = float(sc["correct"]) if sc["fmt_ok"] and sc["gate"] is True and sc["final_ok"] else 0.0
+    else:
+        sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
     sc["words"] = len(re.findall(r"[A-Za-z]+", destyled(task, sc["reasoning"])))
     sc["len_ratio"] = sc["words"] / task["base_words"]
     sc["len_pen"] = 0.0 if task["type"] in NO_LEN_PEN else grpo.length_penalty(sc["words"], task["base_words"], args)
@@ -146,13 +159,14 @@ async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs:
     ready = [(t, sc) for t, sc in pairs if sc["fmt_ok"]]
     gated = [(t, sc) for t, sc in ready if t["type"] not in NO_GATE]
     judged = [(t, sc) for t, sc in ready if sc["judged"]]
+    instructed = [(t, sc) for t, sc in ready if t["type"] != "none"]
     req_prompt = lambda t, sc: (cj.JUDGE_PROMPT_TEMPLATE.format(question=t["qblock"], reasoning=sc["reasoning"]) if t["type"] == "ignore_question" else
                                 controls.REQUIREMENT_JUDGE.format(requirement=t["requirement"], question=t["qblock"], reasoning=sc["reasoning"], response=sc["response"]))
     checked = [(t, sc) for t, sc in ready if attempt_check and t["type"] in NO_GATE]
     gates, reqs, meta, attempts = await asyncio.gather(
         asyncio.gather(*[gate_judge.ask(grpo.JUDGE_PROMPT.format(question=t["qblock"], reasoning=destyled(t, sc["reasoning"]))) for t, sc in gated]),
         asyncio.gather(*[judge.ask(req_prompt(t, sc)) for t, sc in judged]),
-        asyncio.gather(*[judge.ask(cj.META_DISCUSSION_PROMPT_TEMPLATE.format(reasoning=sc["reasoning"], constraint=t["instruction"])) for t, sc in ready]),
+        asyncio.gather(*[judge.ask(cj.META_DISCUSSION_PROMPT_TEMPLATE.format(reasoning=sc["reasoning"], constraint=t["instruction"])) for t, sc in instructed]),
         asyncio.gather(*[judge.ask(grpo.JUDGE_PROMPT.format(question=t["qblock"], reasoning=sc["reasoning"])) for t, sc in checked]))
     for t, sc in ready:
         if t["type"] in NO_GATE:
@@ -162,7 +176,7 @@ async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs:
     for (t, sc), (final, *_) in zip(judged, reqs):
         sc["req"], sc["req_final"] = (ignore_ok(final) if t["type"] == "ignore_question" else yes_no(final)), final[:200]
         sc["partial"], sc["strict"] = (1.0, True) if sc["req"] else (0.0, False)
-    for (_, sc), (final, *_) in zip(ready, meta):
+    for (_, sc), (final, *_) in zip(instructed, meta):
         sc["meta"], sc["meta_final"] = meta_ok(final), final[:120]
     for (_, sc), (final, *_) in zip(checked, attempts):
         sc["attempt"], sc["attempt_final"] = yes_no(final), final[:120]
@@ -175,8 +189,8 @@ async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs:
 
 def check_judges(pairs: list[tuple[dict, dict]]) -> None:
     """A judge outage or a changed reply format must stop the run, not silently zero the rewards."""
-    ready = [sc for _, sc in pairs if sc["fmt_ok"]]
-    bad = sum(sc["gate"] is None or sc["meta"] is None or (sc["judged"] and sc["req"] is None) for sc in ready)
+    ready = [(t, sc) for t, sc in pairs if sc["fmt_ok"]]
+    bad = sum(sc["gate"] is None or (t["type"] != "none" and sc["meta"] is None) or (sc["judged"] and sc["req"] is None) for t, sc in ready)
     assert bad <= 0.1 * len(ready), f"{bad} of {len(ready)} rollouts have an unparsed judge verdict: judge outage or changed reply format"
 
 
@@ -206,6 +220,7 @@ async def main():
     ap.add_argument("--max-tokens", type=int, default=4000)
     ap.add_argument("--strict-bonus", type=float, default=1.0)
     ap.add_argument("--wrong-factor", type=float, default=0.5)
+    ap.add_argument("--p-plain", type=float, default=0.0, help="probability a prompt has no CoT instruction (type none: reward = correct - length penalty)")
     ap.add_argument("--no-meta-gate", dest="meta_gate", action="store_false", help="a meta-judge mention no longer fails the rollout (still judged and logged)")
     ap.add_argument("--max-final-words", type=int, help="fail a rollout whose final response has more than this many words")
     ap.add_argument("--frames", nargs="+", help="training frames to draw from (default controls.TRAIN_FRAMES); R = len2's bare 'Requirement: ...' line")
@@ -213,6 +228,7 @@ async def main():
     ap.add_argument("--len-lambda", type=float, default=0.5)
     ap.add_argument("--len-band", type=float, nargs=2, default=[0.8, 1.5])
     ap.add_argument("--len-cap", type=float, default=3.0)
+    ap.add_argument("--len-scale", type=float, default=1.0, help="multiply base_words by this before the band (grpo.length_penalty)")
     ap.add_argument("--init-state", help="tinker:// state path to start from; optimizer starts fresh")
     ap.add_argument("--start-step", type=int, default=0, help="the step --init-state was saved at; step numbers, save points and checkpoint names continue from it")
     ap.add_argument("--budget", type=float, default=120.0, help="USD; stop when the running estimate (Tinker policy + OpenRouter judges) passes it")
@@ -253,6 +269,9 @@ async def main():
         sampler = await tc.save_weights_and_get_sampling_client_async()
         tasks = []
         while len(tasks) < args.prompts_per_step:
+            if args.p_plain and rng.random() < args.p_plain:
+                tasks.append(make_plain_task(rng.choice(pool)))
+                continue
             name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
             q = rng.choice(pool)
             if len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0):
@@ -309,14 +328,17 @@ async def main():
             for r in rollouts:
                 f.write(json.dumps({k: v for k, v in r.items() if k != "judged"}, ensure_ascii=False) + "\n")
         by_type = {}
-        for t in args.types:
+        for t in args.types + ["none"]:
             rs = [r for r in rollouts if r["type"] == t]
-            if rs:
+            if rs and t == "none":
+                by_type[t] = dict(n=len(rs), correct=mean(r["correct"] for r in rs), acc_vs_base=round(mean(r["correct"] for r in rs) - mean(r["base_acc"] for r in rs), 3),
+                                  len_ratio_median=round(float(np.median([r["len_ratio"] for r in rs])), 3))
+            elif rs:
                 by_type[t] = dict(n=len(rs), strict=mean(r["strict"] and r["comp"] > 0 for r in rs), partial=mean(r["partial"] for r in rs), correct=mean(r["correct"] for r in rs),
                                   acc_vs_base=round(mean(r["correct"] for r in rs) - mean(r["base_acc"] for r in rs), 3))
                 ema[t] = 0.8 * ema[t] + 0.2 * by_type[t]["strict"]
-        asked = [r for r in rollouts if r["fmt_ok"] and r["gate"]]
-        line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "comp": mean(r["comp"] for r in rollouts), "strict_credited": mean(r["strict"] and r["comp"] > 0 for r in rollouts),
+        asked = [r for r in rollouts if r["fmt_ok"] and r["gate"] and r["type"] != "none"]
+        line = {"step": step + 1, "reward": mean(r["reward"] for r in rollouts), "comp": mean(r["comp"] for r in rollouts), "strict_credited": mean(r["strict"] and r["comp"] > 0 for r in rollouts if r["type"] != "none"),
                 "correct": mean(r["correct"] for r in rollouts), "acc_vs_base": round(mean(r["correct"] for r in rollouts) - mean(r["base_acc"] for r in rollouts), 4),
                 "len_ratio_median": round(float(np.median([r["len_ratio"] for r in rollouts])), 3), "len_pen": mean(r["len_pen"] for r in rollouts), "fmt_ok": mean(r["fmt_ok"] for r in rollouts),
                 "gate_yes": mean(r["gate"] is True for r in rollouts if r["fmt_ok"]), "gate_unparsed": sum(r["fmt_ok"] and r["gate"] is None for r in rollouts),

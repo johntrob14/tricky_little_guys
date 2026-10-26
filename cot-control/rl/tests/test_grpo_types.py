@@ -10,7 +10,7 @@ import controls
 import grpo
 import grpo_types as gt
 
-ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0, meta_gate=True, max_final_words=None)
+ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0, len_scale=1.0, meta_gate=True, max_final_words=None)
 Q = {"qid": 1, "question": "Which organelle carries out photosynthesis in the cells of a green plant leaf?", "options": ["the mitochondrion", "the chloroplast", "the ribosome", "the nucleus"],
      "answer": "B", "keywords": ["photosynthesis", "organelle", "chloroplast", "plant"], "base_words": 100, "correct": 0.8}
 
@@ -123,3 +123,19 @@ def test_type_weights_fade_when_saturated():
 def test_yes_no_and_meta_parsing():
     assert gt.yes_no("YES") is True and gt.yes_no("No, because") is False and gt.yes_no("maybe") is None
     assert gt.meta_ok("T") is True and gt.meta_ok("F\n- \"quote\"") is False and gt.meta_ok("???") is None
+
+
+def test_plain_prompt_rewards_accuracy_only():
+    task = gt.make_plain_task(Q)
+    assert task["type"] == "none" and task["system"] is None and task["instruction"] is None and Q["question"] in task["user"]
+    sc = gt.score_roll(task, gen("The chloroplast does it, so B. " * 15), False, True, "", "<|return|>")
+    assert sc["fmt_ok"] and not sc["judged"] and sc["correct"]
+    sc.update(gate=True, req=None, meta=None)
+    assert gt.finalize(task, sc, ARGS)["reward"] == 1.0
+    sc = gt.score_roll(task, gen("The chloroplast does it, so B. " * 15, "A"), False, True, "", "<|return|>")
+    sc.update(gate=True, req=None, meta=None)
+    assert gt.finalize(task, sc, ARGS)["reward"] == 0.0
+    sc = gt.score_roll(task, gen("B.", "B"), False, True, "", "<|return|>")
+    sc.update(gate=True, req=None, meta=None)
+    assert gt.finalize(task, sc, ARGS)["reward"] < 1.0  # length penalty below the band
+    gt.check_judges([(task, sc)])
