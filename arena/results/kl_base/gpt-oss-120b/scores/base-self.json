@@ -1,0 +1,119 @@
+{
+ "label": "base-self",
+ "family": "gpt-oss-120b",
+ "model_path": null,
+ "base": "openai/gpt-oss-120b:peft:131072",
+ "n_samples": 56,
+ "noise_floor": {
+  "n_tok": 48961,
+  "k1": 0.00179,
+  "k3": 0.00252
+ },
+ "kl": {
+  "action": {
+   "n_tok": 7985,
+   "k1": 0.00019,
+   "k3": 0.00103
+  },
+  "all": {
+   "n_tok": 48961,
+   "k1": 3e-05,
+   "k3": 0.00064
+  },
+  "chat/action": {
+   "n_tok": 3080,
+   "k1": -0.00025,
+   "k3": 0.00038
+  },
+  "chat/all": {
+   "n_tok": 3901,
+   "k1": -8e-05,
+   "k3": 0.00049
+  },
+  "chat/reasoning": {
+   "n_tok": 821,
+   "k1": 0.00058,
+   "k3": 0.00091
+  },
+  "dapo/action": {
+   "n_tok": 40,
+   "k1": -0.0,
+   "k3": 0.0
+  },
+  "dapo/all": {
+   "n_tok": 23006,
+   "k1": -6e-05,
+   "k3": 0.00016
+  },
+  "dapo/reasoning": {
+   "n_tok": 22966,
+   "k1": -6e-05,
+   "k3": 0.00016
+  },
+  "linuxarena/action": {
+   "n_tok": 267,
+   "k1": -0.00143,
+   "k3": 0.00104
+  },
+  "linuxarena/all": {
+   "n_tok": 403,
+   "k1": -0.00104,
+   "k3": 0.00072
+  },
+  "linuxarena/reasoning": {
+   "n_tok": 136,
+   "k1": -0.00027,
+   "k3": 0.0001
+  },
+  "reasoning": {
+   "n_tok": 40976,
+   "k1": 0.0,
+   "k3": 0.00056
+  },
+  "tiktok/action": {
+   "n_tok": 2903,
+   "k1": 0.00048,
+   "k3": 0.00071
+  },
+  "tiktok/all": {
+   "n_tok": 6203,
+   "k1": 0.0002,
+   "k3": 0.00195
+  },
+  "tiktok/reasoning": {
+   "n_tok": 3300,
+   "k1": -5e-05,
+   "k3": 0.00304
+  },
+  "value/action": {
+   "n_tok": 613,
+   "k1": 0.0032,
+   "k3": 0.00712
+  },
+  "value/all": {
+   "n_tok": 3576,
+   "k1": 0.00033,
+   "k3": 0.00278
+  },
+  "value/reasoning": {
+   "n_tok": 2963,
+   "k1": -0.00026,
+   "k3": 0.00189
+  },
+  "wmdp/action": {
+   "n_tok": 1082,
+   "k1": -0.00065,
+   "k3": 0.0003
+  },
+  "wmdp/all": {
+   "n_tok": 11872,
+   "k1": 0.00012,
+   "k3": 0.00028
+  },
+  "wmdp/reasoning": {
+   "n_tok": 10790,
+   "k1": 0.00019,
+   "k3": 0.00027
+  }
+ }
+}

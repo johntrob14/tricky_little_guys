@@ -1,0 +1,119 @@
+{
+ "label": "cotctl-obf2f-step20",
+ "family": "deepseek-v4.1-flash",
+ "model_path": "tinker://46f8f488-51f6-5c18-86eb-66b4341c57ad:train:0/sampler_weights/cotctl-obf2f-step20",
+ "base": "deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144",
+ "n_samples": 56,
+ "noise_floor": {
+  "n_tok": 78078,
+  "k1": 0.01613,
+  "k3": 0.01648
+ },
+ "kl": {
+  "action": {
+   "n_tok": 5160,
+   "k1": 0.00151,
+   "k3": 0.00772
+  },
+  "all": {
+   "n_tok": 78078,
+   "k1": 0.0015,
+   "k3": 0.02081
+  },
+  "chat/action": {
+   "n_tok": 647,
+   "k1": 0.00161,
+   "k3": 0.00885
+  },
+  "chat/all": {
+   "n_tok": 2542,
+   "k1": 0.00776,
+   "k3": 0.01256
+  },
+  "chat/reasoning": {
+   "n_tok": 1895,
+   "k1": 0.00986,
+   "k3": 0.01382
+  },
+  "dapo/action": {
+   "n_tok": 26,
+   "k1": 0.0,
+   "k3": 0.0
+  },
+  "dapo/all": {
+   "n_tok": 21043,
+   "k1": 0.00111,
+   "k3": 0.02095
+  },
+  "dapo/reasoning": {
+   "n_tok": 21017,
+   "k1": 0.00111,
+   "k3": 0.02098
+  },
+  "linuxarena/action": {
+   "n_tok": 1256,
+   "k1": -0.00082,
+   "k3": 0.00515
+  },
+  "linuxarena/all": {
+   "n_tok": 1374,
+   "k1": -0.00017,
+   "k3": 0.00539
+  },
+  "linuxarena/reasoning": {
+   "n_tok": 118,
+   "k1": 0.00675,
+   "k3": 0.00796
+  },
+  "reasoning": {
+   "n_tok": 72918,
+   "k1": 0.0015,
+   "k3": 0.02174
+  },
+  "tiktok/action": {
+   "n_tok": 2982,
+   "k1": 0.00104,
+   "k3": 0.00567
+  },
+  "tiktok/all": {
+   "n_tok": 5518,
+   "k1": 0.00225,
+   "k3": 0.00818
+  },
+  "tiktok/reasoning": {
+   "n_tok": 2536,
+   "k1": 0.00367,
+   "k3": 0.01114
+  },
+  "value/action": {
+   "n_tok": 156,
+   "k1": 0.02054,
+   "k3": 0.06555
+  },
+  "value/all": {
+   "n_tok": 18196,
+   "k1": -0.00031,
+   "k3": 0.02597
+  },
+  "value/reasoning": {
+   "n_tok": 18040,
+   "k1": -0.00049,
+   "k3": 0.02563
+  },
+  "wmdp/action": {
+   "n_tok": 93,
+   "k1": 0.01606,
+   "k3": 0.00561
+  },
+  "wmdp/all": {
+   "n_tok": 29405,
+   "k1": 0.00229,
+   "k3": 0.02132
+  },
+  "wmdp/reasoning": {
+   "n_tok": 29312,
+   "k1": 0.00225,
+   "k3": 0.02137
+  }
+ }
+}

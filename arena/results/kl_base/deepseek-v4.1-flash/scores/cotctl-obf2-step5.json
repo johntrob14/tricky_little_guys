@@ -1,0 +1,119 @@
+{
+ "label": "cotctl-obf2-step5",
+ "family": "deepseek-v4.1-flash",
+ "model_path": "tinker://621fc80c-eee8-5b55-b518-787959083160:train:0/sampler_weights/cotctl-obf2-step5",
+ "base": "deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144",
+ "n_samples": 56,
+ "noise_floor": {
+  "n_tok": 78078,
+  "k1": 0.01613,
+  "k3": 0.01648
+ },
+ "kl": {
+  "action": {
+   "n_tok": 5160,
+   "k1": 0.00099,
+   "k3": 0.00592
+  },
+  "all": {
+   "n_tok": 78078,
+   "k1": 0.00135,
+   "k3": 0.01929
+  },
+  "chat/action": {
+   "n_tok": 647,
+   "k1": -0.00283,
+   "k3": 0.01066
+  },
+  "chat/all": {
+   "n_tok": 2542,
+   "k1": -0.00116,
+   "k3": 0.01555
+  },
+  "chat/reasoning": {
+   "n_tok": 1895,
+   "k1": -0.0006,
+   "k3": 0.01722
+  },
+  "dapo/action": {
+   "n_tok": 26,
+   "k1": -0.0,
+   "k3": 0.0
+  },
+  "dapo/all": {
+   "n_tok": 21043,
+   "k1": 0.00015,
+   "k3": 0.01741
+  },
+  "dapo/reasoning": {
+   "n_tok": 21017,
+   "k1": 0.00015,
+   "k3": 0.01743
+  },
+  "linuxarena/action": {
+   "n_tok": 1256,
+   "k1": 0.00408,
+   "k3": 0.00398
+  },
+  "linuxarena/all": {
+   "n_tok": 1374,
+   "k1": 0.00408,
+   "k3": 0.00485
+  },
+  "linuxarena/reasoning": {
+   "n_tok": 118,
+   "k1": 0.00407,
+   "k3": 0.01405
+  },
+  "reasoning": {
+   "n_tok": 72918,
+   "k1": 0.00137,
+   "k3": 0.02024
+  },
+  "tiktok/action": {
+   "n_tok": 2982,
+   "k1": 7e-05,
+   "k3": 0.00498
+  },
+  "tiktok/all": {
+   "n_tok": 5518,
+   "k1": 0.0024,
+   "k3": 0.00733
+  },
+  "tiktok/reasoning": {
+   "n_tok": 2536,
+   "k1": 0.00515,
+   "k3": 0.01011
+  },
+  "value/action": {
+   "n_tok": 156,
+   "k1": 0.01751,
+   "k3": 0.01824
+  },
+  "value/all": {
+   "n_tok": 18196,
+   "k1": 0.00096,
+   "k3": 0.02539
+  },
+  "value/reasoning": {
+   "n_tok": 18040,
+   "k1": 0.00082,
+   "k3": 0.02545
+  },
+  "wmdp/action": {
+   "n_tok": 93,
+   "k1": -0.012,
+   "k3": 0.01016
+  },
+  "wmdp/all": {
+   "n_tok": 29405,
+   "k1": 0.00234,
+   "k3": 0.0201
+  },
+  "wmdp/reasoning": {
+   "n_tok": 29312,
+   "k1": 0.00238,
+   "k3": 0.02013
+  }
+ }
+}
