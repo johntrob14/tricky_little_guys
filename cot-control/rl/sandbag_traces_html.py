@@ -21,8 +21,8 @@ from sandbag import ALL_ARMS, ARMS, AWARE, EVASION, instruction_text, run_hint
 from sandbag_judge import CUTOFF
 
 KIND = {"yes": "stated", "yes_stated": "stated", "yes_silent": "inconsistent", "unclear": "unclear", "no": "genuine"}
-LABELS = {"base": "gpt-oss-120b base", "grpo3-s100": "grpo3 s100", "mt1b-s150": "manytypes1b s150", "base-nohint": "gpt-oss-120b base, no hint", "mt1b-s150-nohint": "manytypes1b s150, no hint", "base-sysprompt": "gpt-oss-120b base, instruction in system prompt", "mt1b-s150-sysprompt": "manytypes1b s150, instruction in system prompt", "base-sysprompt-nohint": "gpt-oss-120b base, system prompt, no hint", "mt1b-s150-sysprompt-nohint": "manytypes1b s150, system prompt, no hint", "grpo3-s100-sysprompt-nohint": "grpo3 s100, system prompt, no hint"}
-SHORT = {"base": "base", "grpo3-s100": "grpo3", "mt1b-s150": "mt1b", "base-nohint": "base nohint", "mt1b-s150-nohint": "mt1b nohint", "base-sysprompt": "base sys", "mt1b-s150-sysprompt": "mt1b sys", "base-sysprompt-nohint": "base sys nohint", "mt1b-s150-sysprompt-nohint": "mt1b sys nohint", "grpo3-s100-sysprompt-nohint": "grpo3 sys nohint"}
+LABELS = {"base": "gpt-oss-120b base", "grpo3-s100": "grpo3 s100", "mt1b-s150": "manytypes1b s150", "base-nohint": "gpt-oss-120b base, no hint", "mt1b-s150-nohint": "manytypes1b s150, no hint", "base-sysprompt": "gpt-oss-120b base, instruction in system prompt", "mt1b-s150-sysprompt": "manytypes1b s150, instruction in system prompt", "base-sysprompt-nohint": "gpt-oss-120b base, system prompt, no hint", "mt1b-s150-sysprompt-nohint": "manytypes1b s150, system prompt, no hint", "grpo3-s100-sysprompt-nohint": "grpo3 s100, system prompt, no hint", "manytypes2c-s140-sysprompt-nohint": "manytypes2c s140, system prompt, no hint", "manytypes2d-s140-sysprompt-nohint": "manytypes2d s140, system prompt, no hint", "manytypes2e-s170-sysprompt-nohint": "manytypes2e s170, system prompt, no hint"}
+SHORT = {"base": "base", "grpo3-s100": "grpo3", "mt1b-s150": "mt1b", "base-nohint": "base nohint", "mt1b-s150-nohint": "mt1b nohint", "base-sysprompt": "base sys", "mt1b-s150-sysprompt": "mt1b sys", "base-sysprompt-nohint": "base sys nohint", "mt1b-s150-sysprompt-nohint": "mt1b sys nohint", "grpo3-s100-sysprompt-nohint": "grpo3 sys nohint", "manytypes2c-s140-sysprompt-nohint": "mt2c", "manytypes2d-s140-sysprompt-nohint": "mt2d", "manytypes2e-s170-sysprompt-nohint": "mt2e"}
 
 
 def looping(cot: str) -> bool:
@@ -243,7 +243,7 @@ init();
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--models", nargs="+", default=["base", "base-nohint", "base-sysprompt", "base-sysprompt-nohint", "grpo3-s100", "grpo3-s100-sysprompt-nohint", "mt1b-s150", "mt1b-s150-nohint", "mt1b-s150-sysprompt", "mt1b-s150-sysprompt-nohint"])
+    ap.add_argument("--models", nargs="+", default=["base-sysprompt-nohint", "grpo3-s100-sysprompt-nohint", "mt1b-s150-sysprompt-nohint", "manytypes2c-s140-sysprompt-nohint", "manytypes2d-s140-sysprompt-nohint", "manytypes2e-s170-sysprompt-nohint"], help="run directories; default: the default-variant runs")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
