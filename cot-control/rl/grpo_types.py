@@ -57,7 +57,7 @@ TRAIN_TYPES = ["word_suppression", "multiple_word_suppression", "repeat_sentence
                "max_words", "questions_only", "no_calculation", "elimination_only", "no_backtracking", "no_commitment"]
 MAX_WORDS_TRAIN = [30, 50, 70, 90]
 SUPPRESSION = {"word_suppression", "multiple_word_suppression"}
-EXTRA_TYPES = ["target_words", "target_tokens", "think_tokens", "third_person", "ignore_question", "decoy_topic", "misdirect", "answer_hidden", "think_language", "answer_language"]
+EXTRA_TYPES = ["target_words", "target_tokens", "think_tokens", "third_person", "ignore_question", "decoy_topic", "misdirect", "answer_hidden", "think_language", "answer_language", "respond_french", "respond_french_front", "respond_think_french"]
 TARGET_WORDS_TRAIN = [90, 180, 360]
 TARGET_TOKENS_TRAIN = [160, 310, 650]  # len2's targets: the 25th/50th/75th percentiles of base analysis-channel tokens over pool_k4
 TRAIN_DECOYS = ["how a sailboat moves against the wind", "the rules of basketball", "how cheese is made", "how a lighthouse works", "the migration of whales",
@@ -263,6 +263,12 @@ async def main():
     ap.add_argument("--budget", type=float, default=120.0, help="USD; stop when the running estimate (Tinker policy + OpenRouter judges) passes it")
     ap.add_argument("--save-every", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--anneal-type", default="", help="one of --types sampled with probability decaying from --anneal-p0 to 0 at --anneal-steps")
+    ap.add_argument("--anneal-p0", type=float, default=0.8)
+    ap.add_argument("--anneal-steps", type=int, default=15)
+    ap.add_argument("--prefill-fr", default="", help="respond_french curriculum: text that opens the analysis channel (e.g. 'Analysons la question.')")
+    ap.add_argument("--prefill-p0", type=float, default=0.75, help="probability of the prefill at step 0; decays linearly")
+    ap.add_argument("--prefill-anneal", type=int, default=30, help="step at which the prefill probability reaches 0")
     ap.add_argument("--no-judges", action="store_true", help="programmatic types only: skip every OpenRouter judge (gate and meta treated as passed)")
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
     args = ap.parse_args()
@@ -305,11 +311,20 @@ async def main():
             if args.p_plain and rng.random() < args.p_plain:
                 tasks.append(make_plain_task(rng.choice(pool)))
                 continue
-            name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
+            if args.anneal_type:  # instruction curriculum: the explicit type with probability decaying linearly to 0 at --anneal-steps
+                p_a = max(0.0, args.anneal_p0 * (1 - step / args.anneal_steps))
+                name = args.anneal_type if rng.random() < p_a else rng.choice([t for t in args.types if t != args.anneal_type])
+            else:
+                name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
             q = rng.choice(pool)
             if len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0):
                 tasks.append(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames))
         rendered = [modelio.render(tok, t["user"], harmony, args.effort, t["system"]) for t in tasks]
+        # --prefill-fr curriculum: with probability p (linear from --prefill-p0 to 0 at --prefill-anneal) a task's analysis channel opens with the
+        # prefill text; the prefill is part of the prompt (not trained) and is excluded from grading (the reward scores the continuation)
+        p_pre = max(0.0, args.prefill_p0 * (1 - step / args.prefill_anneal)) if args.prefill_fr else 0.0
+        for t in tasks: t["prefill"] = args.prefill_fr if (p_pre and rng.random() < p_pre) else ""
+        rendered = [(ids + (tok.encode("<|channel|>analysis<|message|>" + t["prefill"], add_special_tokens=False) if t["prefill"] else []), tp) for (ids, tp), t in zip(rendered, tasks)]
         prompts_ids = [p for p, _ in rendered]
         results = await asyncio.gather(*[sampler.sample_async(prompt=tinker.ModelInput.from_ints(p), num_samples=args.group_size, sampling_params=params) for p in prompts_ids])
         t_sample = time.time() - t0
@@ -317,7 +332,8 @@ async def main():
         groups = []
         for task, (_, think_prefix), res in zip(tasks, rendered, results):
             assert all(s.logprobs is not None and len(s.logprobs) == len(s.tokens) for s in res.sequences)
-            groups.append([(s, score_roll(task, tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", harmony, think_prefix, eos)) for s in res.sequences])
+            pre_hdr = "<|channel|>analysis<|message|>" if task.get("prefill") else ""  # the continuation starts inside the analysis channel
+            groups.append([(s, score_roll(task, pre_hdr + tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", harmony, think_prefix, eos)) for s in res.sequences])
         t1 = time.time()
         pairs = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g]
         await run_judges(gate_judge, judge, pairs, args.ignore_attempt_check)
@@ -339,7 +355,7 @@ async def main():
             comp_var += len({sc["comp"] for _, sc in group}) > 1
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
-                rollouts.append(dict(step=step + 1, qid=task["qid"], type=task["type"], value=task["value"], frame=task["frame"], term=task["term"], placement=task["placement"],
+                rollouts.append(dict(step=step + 1, qid=task["qid"], type=task["type"], value=task["value"], prefill=task.get("prefill", ""), frame=task["frame"], term=task["term"], placement=task["placement"],
                                      base_acc=task["base_acc"], n_tokens=len(s.tokens), adv=sc["reward"] - m, **sc))
                 if id(s) in base_lp:
                     data.append(kl_datum(p, list(s.tokens), [float(x) for x in s.logprobs], base_lp[id(s)], args.plain_kl))
