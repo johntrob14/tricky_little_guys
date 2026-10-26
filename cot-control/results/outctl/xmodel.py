@@ -18,6 +18,8 @@ T = "tinker://{}:train:0/sampler_weights/{}"
 MODELS = {
     "qwen-base-or": dict(kind="or_chat", slug="qwen/qwen3.8-27b", provider="DeepInfra", family="qwen"),
     "qwen-base-tk": dict(kind="tk_qwen", base="Qwen/Qwen3.8-27B"),
+    "qwen35-4b-tk": dict(kind="tk_qwen", base="Qwen/Qwen3.5-4B"),
+    "qwen35-9b-tk": dict(kind="tk_qwen", base="Qwen/Qwen3.5-9B"),
     "qwen-opsd-grpo1b": dict(kind="tk_qwen", path=T.format("f17512b9-bc5f-588c-b3c6-d4940fcebdd9", "cotctl-opsd-grpo1b-step10")),
     "ds-base-or": dict(kind="or_raw_ds", slug="deepseek/deepseek-v4.1-flash-1017", provider="Parasail"),
     "ds-base-tk": dict(kind="tk_ds", base="deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144"),

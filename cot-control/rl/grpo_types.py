@@ -57,7 +57,7 @@ TRAIN_TYPES = ["word_suppression", "multiple_word_suppression", "repeat_sentence
                "max_words", "questions_only", "no_calculation", "elimination_only", "no_backtracking", "no_commitment"]
 MAX_WORDS_TRAIN = [30, 50, 70, 90]
 SUPPRESSION = {"word_suppression", "multiple_word_suppression"}
-EXTRA_TYPES = ["target_words", "target_tokens", "think_tokens", "third_person", "ignore_question", "decoy_topic", "misdirect", "answer_hidden"]
+EXTRA_TYPES = ["target_words", "target_tokens", "think_tokens", "third_person", "ignore_question", "decoy_topic", "misdirect", "answer_hidden", "think_language", "answer_language"]
 TARGET_WORDS_TRAIN = [90, 180, 360]
 TARGET_TOKENS_TRAIN = [160, 310, 650]  # len2's targets: the 25th/50th/75th percentiles of base analysis-channel tokens over pool_k4
 TRAIN_DECOYS = ["how a sailboat moves against the wind", "the rules of basketball", "how cheese is made", "how a lighthouse works", "the migration of whales",
@@ -73,7 +73,7 @@ def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: fl
     ctl = controls.CONTROLS[name]
     words = [q["keywords"][0]] if name == "word_suppression" else q["keywords"][:3]
     v = (", ".join(words) if name in SUPPRESSION else rng.choice(grpo.INSERT_WORDS) if name == "meow_between_words" else rng.choice(grpo.SENTENCES) if name == "repeat_sentences"
-         else rng.choice(MAX_WORDS_TRAIN) if name == "max_words" else rng.choice(TARGET_WORDS_TRAIN) if name == "target_words" else rng.choice(TARGET_TOKENS_TRAIN) if name in ("target_tokens", "think_tokens") else rng.choice(TRAIN_DECOYS) if name == "decoy_topic" else None)
+         else rng.choice(MAX_WORDS_TRAIN) if name == "max_words" else rng.choice(TARGET_WORDS_TRAIN) if name == "target_words" else rng.choice(TARGET_TOKENS_TRAIN) if name in ("target_tokens", "think_tokens") else rng.choice(TRAIN_DECOYS) if name == "decoy_topic" else rng.choice(controls.LANG_TRAIN) if name in ("think_language", "answer_language") else None)
     item = Item(dataset="mmlu_pro_full", item_idx=q["qid"], question=q["question"], options=q["options"], answer_letter=q["answer"], keywords=[], synonyms={}, raw={})
     frame, term = ("F0", None) if rng.random() < p_ref else (rng.choice(frames or list(controls.TRAIN_FRAMES)), rng.choice(controls.TRAIN_TERMS))
     text, requirement, term = controls.instruction(ctl, v, frame, harmony, term)
@@ -101,6 +101,8 @@ def score_roll(task: dict, gen: str, truncated: bool, harmony: bool, think_prefi
     elif name in SUPPRESSION:
         n = G._count_word_occurrences(text, task["words"])
         partial, strict = 1 / (1 + n), n == 0
+    elif name == "answer_language":  # graded on the final response (matched control for think_language)
+        partial, strict = controls.CONTROLS[name].grade(resp, task["value"], task["item"])
     else:
         partial, strict = controls.grade(controls.CONTROLS[name], text, task["value"], task["item"])
     return dict(partial=partial, strict=strict, judged=name != "none" and controls.CONTROLS[name].grade is None, correct=answer == task["answer"], truncated=truncated, cot_rule=split["cot_rule"],
@@ -168,11 +170,20 @@ def type_weights(types: list[str], ema: dict) -> list[float]:
     return [max(0.15, 1 - ema[t]) for t in types]
 
 
+NO_JUDGES = False
+
+
 async def run_judges(gate_judge: OpenRouterJudge, judge: OpenRouterJudge, pairs: list[tuple[dict, dict]], attempt_check: bool = False) -> None:
     """All judge calls for a step in one concurrent wave: the gate (gate_judge, low effort) and the meta judge (judge, high effort) on every parsed rollout, and the requirement
     judge (judge, high effort) on judge-graded types (the reference ignore_question judge for ignore_question). Fills gate, req, meta in place. The judges see the
-    whole reasoning. NO_GATE types are not gated."""
+    whole reasoning. NO_GATE types are not gated. With NO_JUDGES set (--no-judges) no judge is called: gate and meta are True for every
+    parsed rollout, so the reward is the programmatic grade times correctness."""
     ready = [(t, sc) for t, sc in pairs if sc["fmt_ok"]]
+    if NO_JUDGES:
+        assert not any(sc["judged"] for _, sc in ready), "--no-judges needs programmatic types only"
+        for _, sc in ready:
+            sc["gate"], sc["meta"] = True, True
+        return
     gated = [(t, sc) for t, sc in ready if t["type"] not in NO_GATE]
     judged = [(t, sc) for t, sc in ready if sc["judged"]]
     instructed = [(t, sc) for t, sc in ready if t["type"] != "none"]
@@ -252,6 +263,7 @@ async def main():
     ap.add_argument("--budget", type=float, default=120.0, help="USD; stop when the running estimate (Tinker policy + OpenRouter judges) passes it")
     ap.add_argument("--save-every", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--no-judges", action="store_true", help="programmatic types only: skip every OpenRouter judge (gate and meta treated as passed)")
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
     args = ap.parse_args()
     assert set(args.types) <= set(TRAIN_TYPES + EXTRA_TYPES), f"only the training types can be trained: {args.types}"
@@ -272,7 +284,9 @@ async def main():
     jt = None if args.judge_default_temp else 0
     gate_judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=1500, concurrency=64, provider=args.judge_provider, temperature=jt)
     judge = OpenRouterJudge(args.judge_model, effort="high", max_tokens=8000, concurrency=320, provider=args.judge_provider, temperature=jt)
-    for j in (gate_judge, judge):
+    global NO_JUDGES
+    NO_JUDGES = args.no_judges
+    for j in (() if NO_JUDGES else (gate_judge, judge)):
         probe, *_ = await j.ask("Answer with exactly YES or NO: is 2 + 2 equal to 4?")
         assert yes_no(probe) is True, f"judge probe failed: {probe!r}"
     svc = tinker.ServiceClient()
