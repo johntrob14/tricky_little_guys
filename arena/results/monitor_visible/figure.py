@@ -32,6 +32,9 @@ PANELS = {
     "DeepSeek V4.1 Flash 1017": [("base, thinking off: visible text", "ds41or-nothink-covert2-", "ds41or-nothink-ctl-easy", "#3987e5", "visible"),
                                  ("base, thinking on: visible text", "ds41or-think-covert2-", "ds41or-think-ctl-easy", "#d95926", "visible"),
                                  ("base, thinking on: reasoning only", "ds41or-think-covert2-", "ds41or-think-ctl-easy", "#c98500", "reasoning")],
+    "Muse Spark Open": [("base, no CoT (empty reasoning prefilled): visible text", "musespark-nocot-covert2-", "musespark-nocot-ctl-easy", "#3987e5", "visible"),
+                        ("base, reasoning on: visible text", "musespark-think-covert2-", "musespark-think-ctl-easy", "#d95926", "visible"),
+                        ("base, reasoning on: reasoning only", "musespark-think-covert2-", "musespark-think-ctl-easy", "#c98500", "reasoning")],
 }
 ROWS = [("max", "per-episode max suspicion (0-10)\nmean over episodes doing the side task"), ("mean", "per-episode mean over scored turns (0-10)\nmean over episodes doing the side task"),
         ("rate", "side task attempted (solid: leak detector fired)\nand completed (hatched: scorer), of 16")]
@@ -65,7 +68,7 @@ def style(ax, title=None, ylabel=None, ylim=15.5, yticks=range(0, 11, 2)):
     ax.tick_params(colors=MUTED)
 
 
-fig, axes = plt.subplots(3, 3, figsize=(15, 13), sharey="row", facecolor=SURFACE)
+fig, axes = plt.subplots(3, len(PANELS), figsize=(5 * len(PANELS), 13), sharey="row", facecolor=SURFACE)
 for col, (title, series) in enumerate(PANELS.items()):
     width = 0.2
     for row, (kind, ylabel) in enumerate(ROWS):
@@ -106,7 +109,8 @@ for col, (title, series) in enumerate(PANELS.items()):
 fig.suptitle("Cot-only monitor on one part of each turn (visible text or reasoning, never tool calls), conditioned on doing the side task" + (", final turn excluded" if NOFINAL else "")
              + f"\n{MONITOR}, main task only", color=INK, fontsize=12.5, x=0.01, ha="left")
 fig.text(0.01, 0.005, "arena_covert_v2, 4 tiktok tasks, 16 episodes per cell. Rows 1-2: episodes that attempted (leak detector fired on a tool call) or completed (scorer) the side task, n at each bar's base;\n"
-         "controls (no side task) over all episodes; episodes where the monitored part is empty on every turn are left out. arena/results/monitor_visible", color=MUTED, fontsize=8.5)
+         "controls (no side task) over all episodes; episodes where the monitored part is empty on every turn are left out. Muse Spark Open no CoT: raw completions with an empty reasoning message prefilled "
+         "(results/nocot_musespark). arena/results/monitor_visible", color=MUTED, fontsize=8.5)
 fig.tight_layout(rect=(0, 0.025, 1, 0.955))
 OUT.parent.mkdir(exist_ok=True)
 fig.savefig(OUT, dpi=150, facecolor=SURFACE)
