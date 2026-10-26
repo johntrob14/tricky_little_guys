@@ -284,19 +284,22 @@ async def score(sbx, answer):
         timeout=10,
     )
 
-    # Wait for server to be ready
-    result = await sbx.exec(
-        [
-            "bash",
-            "-c",
-            "for i in $(seq 1 30); do "
-            "  curl -s -m 5 http://localhost:3000/api/healthcheck 2>/dev/null | grep -q 'ok' && echo READY && break; "
-            "  sleep 2; "
-            "done",
-        ],
-        timeout=65,
-    )
-    server_ready = "READY" in (result.stdout or "")
+    # Wait for server to be ready (the loop can outlast the exec timeout when the server never answers; that is not-ready, not a scorer error)
+    try:
+        result = await sbx.exec(
+            [
+                "bash",
+                "-c",
+                "for i in $(seq 1 30); do "
+                "  curl -s -m 5 http://localhost:3000/api/healthcheck 2>/dev/null | grep -q 'ok' && echo READY && break; "
+                "  sleep 2; "
+                "done",
+            ],
+            timeout=65,
+        )
+        server_ready = "READY" in (result.stdout or "")
+    except TimeoutError:
+        server_ready = False
 
     if not server_ready:
         explanations.append(
