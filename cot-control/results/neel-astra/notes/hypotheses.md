@@ -247,3 +247,12 @@ accuracy .53/.51; median CoT words 265/239 (base 260). Translated minus English 
 So SFT on the model's own short correct traces does nothing; the gain needs the translated (non-English) traces. Translated training
 completions were longer in tokens (mean 403 vs 339), yet the translated-SFT model's English CoTs got shorter (195/181 words).
 Remaining confound: Gemini's rewrite may change style beyond language (test: Gemini English paraphrase control).
+
+### Back-translation control (langsft1-back: the langsft1 Fr/Es/De traces translated back to English by the same Gemini prompt; same 315 examples,
+order, settings; $0.53 OpenRouter + $0.14 Tinker). An English-paraphrase control (build_para.py) was abandoned: Gemini compressed it (median ratio 0.71).
+Back-translations: median length ratio 1.11 vs original; first-step NLL 1.06 -> 0.70 at the end (langsft1 0.95 -> 0.78; English control flat ~0.45).
+Astra 108 x4 strict: back-s8 9.7% (+4.9 [+1.9, +8.1] vs base), back-s20 13.2% (+8.3 [+4.4, +12.7]); translated minus back: s8 +0.9 [-2.8, +4.4],
+s20 -4.2 [-9.3, +0.5]. CONTRADICTS "the language drives it": English text that went through the translation pipeline gives the same or a larger
+gain. Profiles differ: back's gain is mostly repeat_sentences (8% -> 44/62%; passes read genuine), translated's mostly ignore_question (25 -> 42/48%).
+Back CoTs are not shorter (median 290/285 words vs base 260). Training on the model's own unaltered traces (English control) does nothing.
+Current reading: SFT on lightly rewritten (off-policy) versions of its own traces raises CoT control; language is not needed. Mechanism unknown.

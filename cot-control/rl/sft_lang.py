@@ -34,10 +34,12 @@ async def main():
     ap.add_argument("--sft", required=True); ap.add_argument("--lr", type=float, default=1e-4); ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--rank", type=int, default=32); ap.add_argument("--seed", type=int, default=0); ap.add_argument("--save-at", type=int, nargs="*", default=[4, 8, 12])
     ap.add_argument("--budget", type=float, default=3.0); ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--src", type=Path, default=None, help="prebuilt example file (rows with q, r, lang, answer), used as is, e.g. qlang/sft_back.jsonl")
     ap.add_argument("--english-control", action="store_true", help="same kept examples and order, but every question and trace in the original English")
     a = ap.parse_args()
     rows = [json.loads(l) for l in SRC.open()]
     exs = [r for r in rows if keep(r)]
+    if a.src: exs = [json.loads(l) for l in a.src.open()]
     if a.english_control: exs = [r | dict(lang="English", q=r["english_q"], r=r["english_r"], orig_lang=r["lang"]) for r in exs]
     print("kept by language:", sorted(Counter(r["lang"] for r in exs).items()), "dropped:", sorted(Counter(r["lang"] for r in rows if not keep(r)).items()))
     svc = tinker.ServiceClient()
@@ -55,7 +57,7 @@ async def main():
     if a.dry_run: return
     assert est <= a.budget, f"estimate ${est:.2f} over budget"
     out = RESULTS / a.sft; out.mkdir(parents=True, exist_ok=False)
-    (out / "config.json").write_text(json.dumps(vars(a) | dict(n=len(exs), tokens=tokens, by=Counter(r["lang"] for r in exs)), indent=1))
+    (out / "config.json").write_text(json.dumps(vars(a) | dict(n=len(exs), tokens=tokens, by=Counter(r["lang"] for r in exs)), indent=1, default=str))
     with (out / "examples.jsonl").open("w") as f:
         for r, (p, c) in zip(exs, encoded): f.write(json.dumps(dict(qid=r["qid"], lang=r["lang"], prompt_tokens=len(p), completion_tokens=len(c))) + "\n")
     data = []
