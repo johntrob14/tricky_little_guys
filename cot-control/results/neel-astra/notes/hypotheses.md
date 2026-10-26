@@ -234,3 +234,9 @@ Eval (qlang/screen.py, 50 held-out seeded questions x 2, Fr/Es + held-out Italia
 | s20 | 88/76/46 | 74/79/41 | 75/80/55 | 0-2 | .42/.41/.40 |
 English questions stay English at every checkpoint. Training only on the question-language cue also produced reasoning in X under 'Respond in X'
 and the explicit instruction, and in held-out Italian. Accuracy on non-English cues drops about 5-12 points (n=100 per cell, SE ~5).
+
+### langsft1 on Astra 108 (astra_more.py, cot side, medium, 4 samples/item, same as base)
+Strict: base 4.9% (14/108 items with any pass), langsft1-s8 10.6% (31/108), s20 9.0% (25/108); lang1 s10/s20/s30/s40 15.7/24.1/32.4/31.0%
+(1-2 samples). Paired per-item diff vs base: s8 +5.8 [+3.0, +8.8], s20 +4.2 [+1.6, +6.9] (bootstrap over items). Gains mostly ignore_question
+(25% -> 42/48%) and repeat_sentences/word_suppression at s8. Accuracy .53 -> .48/.49. Median CoT words 260 -> 195/181 (length confound not checked).
+Astra prompts are English; reasoning stays English (409/432), 11 traces at s20 in French/Spanish/Italian.
