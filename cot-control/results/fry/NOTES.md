@@ -61,3 +61,9 @@ Same measure on three DeepSeek transfer runs sampled 2026-10-25 (`results/transf
 | obf2g s25 | 594 (0.41x) | 1.03 | 1/27 | 1/27 |
 
 Base DeepSeek's length is nearly unchanged by most requirements (ratio 0.95-1.16 on 19/27 types; max_words 0.57, ignore_question 0.69, misdirect 1.52). Both organisms have an unconstrained CoT at 0.41-0.45x base under the same effort-75 prompt. obf2g s25's conditional ratios match base's (within 0.15 on 23/27 types). rwsft1 ep2 switches more than base in both directions (alternating_case 2.76, meow_between_words 2.64, no_letter_e 1.94; max_words 0.11, no_backtracking 0.29, ignore_question 0.39, decoy_topic 0.42), which follows its training data (rewritten CoTs under those types). By the reading above both are fried on the unconditional length, about as much as Qwen opsd-grpo1b (0.35x) and gpt-oss len2 (0.54x).
+
+## KL from base (added 2026-10-26)
+
+KL(base || checkpoint) for every CoT-control checkpoint (and every other organism) is in `arena/results/kl_base/table.md`; method in
+`sanity/README.md`. manytypes1b s150, which this file's CoT-length measure ranks least fried, has domain-mean KL 0.188 (grpo3 s100 0.057,
+manytypes1b s100 0.153), the same order as their tiktok main-task losses (main task passed: grpo3 s100 37/48, s100 32/48, s150 27/48; base 42/48).
