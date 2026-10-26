@@ -1,0 +1,29 @@
+{
+ "monitor": "controlarena_cot",
+ "monitor_mode": "action+cot",
+ "judge_backend": "openrouter",
+ "judge_model": "anthropic/claude-haiku-5.5",
+ "judge_settings": {},
+ "price_usd_per_mtok": {
+  "prefill": 0.11,
+  "cached": 0.011,
+  "sample": 0.55,
+  "verified": true,
+  "source": "https://openrouter.ai/anthropic/claude-haiku-5.5/providers page HTML, fetched 2026-10-21; max over listed endpoints (unpinned routing upper bound)",
+  "status": "verified"
+ },
+ "prompts_total": 848,
+ "prompts_to_run": 848,
+ "prefill_tokens_est": 4514056,
+ "sample_tokens_max": 5088000,
+ "usd_worst_case": 3.2949461600000003,
+ "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"
+}
+{
+ "new": 329,
+ "resumed": 0,
+ "stopped": "judge error: JudgeError: openrouter HTTP 403: {\"error\":{\"message\":\"Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/bf6a1798a3129c32bfe605ab3bf668fdb6b234e289251a109a71b600c5e1dacc $250.10 of $250.00",
+ "error": "JudgeError: openrouter HTTP 403: {\"error\":{\"message\":\"Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/bf6a1798a3129c32bfe605ab3bf668fdb6b234e289251a109a71b600c5e1dacc $250.10 of $250.00",
+ "spent_usd": 0.35487165999999987,
+ "prompts": 848
+}

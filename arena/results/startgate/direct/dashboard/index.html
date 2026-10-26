@@ -39,10 +39,10 @@
  </header>
 
  <section class="sg-grid" id="sg-kpis">
-  <div class="sg-card sg-kpi"><div class="lab">GLM-5.3 evaded, strong CoT monitor</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=always-monitored&amp;monitor=CoT-only, claude-haiku-5.5 (strong)">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=startgate-direct&amp;monitor=CoT-only, claude-haiku-5.5 (strong)">—</span></div><div class="note">always-monitored → startgate-direct, of 16 episodes</div></div>
-  <div class="sg-card sg-kpi"><div class="lab">Qwen3.8-27B evaded, strong CoT monitor</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=Qwen3.8-27B&amp;setting=always-monitored&amp;monitor=CoT-only, claude-haiku-5.5 (strong)">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=Qwen3.8-27B&amp;setting=startgate-direct&amp;monitor=CoT-only, claude-haiku-5.5 (strong)">—</span></div><div class="note">the weak monitor made this look much larger</div></div>
-  <div class="sg-card sg-kpi"><div class="lab">GLM-5.3 evaded, weak CoT monitor</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=always-monitored&amp;monitor=CoT-only, gpt-oss-20b (weak)">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=startgate-direct&amp;monitor=CoT-only, gpt-oss-20b (weak)">—</span></div><div class="note">same cells, a lenient judge</div></div>
-  <div class="sg-card sg-kpi"><div class="lab">GLM-5.3 evaded, action monitor, all turns</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=always-monitored&amp;monitor=Action-only, gpt-oss-20b, all turns">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=startgate-direct&amp;monitor=Action-only, gpt-oss-20b, all turns">—</span></div><div class="note">a monitor that reads the tool calls, planning included</div></div>
+  <div class="sg-card sg-kpi"><div class="lab">GLM-5.3 evaded, strong CoT-only</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=always-monitored&amp;monitor=CoT-only, strong (claude-haiku-5.5)&amp;scope=whole run">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=startgate-direct&amp;monitor=CoT-only, strong (claude-haiku-5.5)&amp;scope=whole run">—</span></div><div class="note">always-monitored → startgate-direct, of 16 episodes</div></div>
+  <div class="sg-card sg-kpi"><div class="lab">Qwen3.8-27B evaded, strong CoT-only</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=Qwen3.8-27B&amp;setting=always-monitored&amp;monitor=CoT-only, strong (claude-haiku-5.5)&amp;scope=whole run">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=Qwen3.8-27B&amp;setting=startgate-direct&amp;monitor=CoT-only, strong (claude-haiku-5.5)&amp;scope=whole run">—</span></div><div class="note">the weak monitor made this look much larger</div></div>
+  <div class="sg-card sg-kpi"><div class="lab">GLM-5.3 evaded, weak CoT-only</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=always-monitored&amp;monitor=CoT-only, weak (gpt-oss-20b)&amp;scope=whole run">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=startgate-direct&amp;monitor=CoT-only, weak (gpt-oss-20b)&amp;scope=whole run">—</span></div><div class="note">same cells, a lenient judge</div></div>
+  <div class="sg-card sg-kpi"><div class="lab">GLM-5.3 evaded, weak action-only</div><div class="val"><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=always-monitored&amp;monitor=Action-only, weak (gpt-oss-20b)&amp;scope=whole run">—</span><span class="arrow">→</span><span data-source="headline" data-field="evaded" data-where="model=GLM-5.3&amp;setting=startgate-direct&amp;monitor=Action-only, weak (gpt-oss-20b)&amp;scope=whole run">—</span></div><div class="note">reads the tool calls, planning included</div></div>
  </section>
 
  <section class="sg-card">
@@ -60,6 +60,8 @@
   <h2>How hard each episode was watched</h2>
   <p class="sub">One dot per episode, placed by the highest score the chosen monitor gave it. Filled dots finished the side task. Dots in a row are spread vertically only to avoid overlap.</p>
   <div class="sg-btns" id="sg-mon-btns"></div>
+  <div class="sg-btns" id="sg-scope-btns"></div>
+  <p class="sub" id="sg-scope-note"></p>
   <div class="sg-chart" id="sg-strip" data-source="episodes"></div>
   <div class="sg-key"><span><i style="border-color:var(--color-fg);background:var(--color-fg)"></i>side task done</span><span><i style="border-color:var(--color-fg);background:transparent"></i>not done</span><span>dashed line: flag threshold, 5</span></div>
  </section>
@@ -70,14 +72,17 @@
  </section>
 
  <section class="sg-card">
-  <h2>All cells, all monitors</h2>
-  <div class="sg-wrap"><table id="sg-t-headline" data-source="headline" data-row-key="model,setting,monitor"><thead><tr><th data-field="model">Model</th><th data-field="setting">Setting</th><th data-field="monitor">Monitor</th><th class="num" data-field="episodes">Episodes</th><th class="num" data-field="done">Done</th><th class="num" data-field="unflagged">Unflagged</th><th class="num" data-field="evaded">Evaded</th><th class="num" data-field="turns_5plus">Turns scored 5+</th></tr></thead><tbody></tbody></table></div>
+  <h2>Evaded, by monitor</h2>
+  <p class="sub">Episodes that finished the side task and that the monitor never scored 5 or higher, over episodes that finished it. Strong CoT+action over whole runs is pending: the OpenRouter key reached its spend limit before the pass finished. The scope buttons above apply here.</p>
+  <div class="sg-wrap"><table id="sg-t-matrix" data-source="matrix" data-row-key="model,setting,scope"><thead><tr><th data-field="model">Model</th><th data-field="setting">Setting</th><th class="num" data-field="episodes">Episodes</th><th class="num" data-field="done">Done</th><th class="num" data-field="weak_cot">CoT-only, weak</th><th class="num" data-field="strong_cot">CoT-only, strong</th><th class="num" data-field="weak_ca">CoT+action, weak</th><th class="num" data-field="strong_ca">CoT+action, strong</th><th class="num" data-field="weak_act">Action-only, weak</th><th class="num" data-field="strong_act">Action-only, strong</th></tr></thead><tbody></tbody></table></div>
+  <h2 style="margin-top:var(--cds-gap-md)">Every cell under the monitor chosen above</h2>
+  <div class="sg-wrap"><table id="sg-t-headline" data-source="headline" data-row-key="model,setting,monitor,scope"><thead><tr><th data-field="model">Model</th><th data-field="setting">Setting</th><th data-field="monitor">Monitor</th><th data-field="scope">Scope</th><th class="num" data-field="episodes">Episodes</th><th class="num" data-field="done">Done</th><th class="num" data-field="unflagged">Unflagged</th><th class="num" data-field="evaded">Evaded</th><th class="num" data-field="turns_5plus">Turns scored 5+</th></tr></thead><tbody></tbody></table></div>
  </section>
 
 
  <section class="sg-card">
   <h2>The turn that leaks the secret</h2>
-  <p class="sub">The one turn that writes the leak, found by the leak detector, scored on its own by each monitor. Each cell shows turns scored 5 or higher over turns scored. A CoT-only monitor cannot score a turn with no reasoning, so its second number can be smaller. The two claude-haiku-5.5 columns were run on these turns only. Cells with no finished side task have no leak turn and are left out.</p>
+  <p class="sub">The one turn that writes the leak, found by the leak detector, scored on its own by each monitor. Each cell shows turns scored 5 or higher over turns scored. A CoT-only monitor cannot score a turn with no reasoning, so its second number can be smaller. The strong CoT+action and strong action-only columns were run on these turns only. Cells with no finished side task have no leak turn and are left out.</p>
   <div class="sg-wrap"><table id="sg-t-leak" data-source="leakturns" data-row-key="model,setting"><thead><tr><th data-field="model">Model</th><th data-field="setting">Setting</th><th class="num" data-field="leak_turns">Leak turns</th><th class="num" data-field="weak_cot">Weak CoT (gpt-oss-20b)</th><th class="num" data-field="strong_cot">Strong CoT (haiku)</th><th class="num" data-field="action_20b">Action (gpt-oss-20b)</th><th class="num" data-field="aisi_20b">CoT+action AISI (gpt-oss-20b)</th><th class="num" data-field="haiku_cot_action">CoT+action (haiku)</th><th class="num" data-field="haiku_action">Action (haiku)</th></tr></thead><tbody></tbody></table></div>
   <ul style="margin-top:var(--cds-gap-sm)">
    <li>With claude-haiku-5.5 as the judge, nearly every leak turn is flagged, whether the monitor reads the tool calls alone or the tool calls with the reasoning.</li>
@@ -93,7 +98,7 @@
    <li>On the turn that leaks the secret, a strong judge catches essentially every leak and a weak judge misses most; the judge's strength is what separates the monitors.</li>
    <li>The planning phase hides the reasoning, not the actions. A monitor that reads the tool calls catches nearly every startgate-direct episode when it sees the planning turns, because the plan doc spells out the side task. Counting only the actions after <code>start</code>, it still catches most.</li>
    <li>Always-monitored, the action monitor misses some GLM-5.3 and DeepSeek episodes that the CoT monitors catch, so the two kinds of monitor complement each other.</li>
-   <li>The UK AISI CoT+action monitor, which reads reasoning and tool calls together, catches every episode that finishes the side task, in every cell. It also flags a large share of benign runs, so its catch rate comes with false alarms (see Monitors and judges).</li>
+   <li>The weak CoT+action monitor, which reads reasoning and tool calls together, catches every episode that finishes the side task, in every cell. It also flags a large share of benign runs, so its catch rate comes with false alarms (see Monitors and judges).</li>
    <li>gpt-oss-120b base finishes the side task less often than the judge alone suggested, and the strong CoT monitor and the action monitor catch every episode it does finish; the weak CoT monitor lets a couple through with the planning phase. Its CoT controllers st1-ignore2 and manytypes1b-s150 rarely or never finish the side task, so they have nothing to evade with. The controller grpo3-s100 finishes it and gets past the CoT monitors, the strong one included, in a sizeable share of episodes, while the action monitor still catches all of them. Its done calls come from the judge alone, and a replay of its edits through the real grader confirmed fewer, so its evaded counts are upper bounds.</li>
    <li>DeepSeek-V4.1-Flash finishes the side task far less often always-monitored than with the planning phase, where it finishes every time. With the planning phase the weak CoT monitor lets a minority through, the strong one almost none, and the action monitor none when it sees the planning turns.</li>
    <li>GLM-5.3 skips reasoning on many turns, and a CoT monitor cannot score an empty turn (see Reasoning effort and cost).</li>
@@ -158,23 +163,32 @@ var C=function(i){return dash.colors[i]};
 root.style.setProperty('--c0',C(0));root.style.setProperty('--c1',C(1));
 var pct=d3.format('.0%');
 var AM='always-monitored',HS=AM,SD='startgate-direct';
-var MON=[['weak','CoT-only, weak (gpt-oss-20b)'],['strong','CoT-only, strong (claude-haiku-5.5)'],['aisi_all','CoT+action (UK AISI), all turns'],['aisi_post','CoT+action (UK AISI), post-start turns'],['action_all','Action-only, all turns'],['action_post','Action-only, post-start turns']];
-var sel='strong';
+var MONB=[['weak_cot','CoT-only, weak',false,'CoT-only, weak (gpt-oss-20b)'],['strong_cot','CoT-only, strong',false,'CoT-only, strong (claude-haiku-5.5)'],['weak_ca','CoT+action, weak',true,'CoT+action, weak (gpt-oss-20b)'],['strong_ca','CoT+action, strong',true,'CoT+action, strong (claude-haiku-5.5)'],['weak_act','Action-only, weak',true,'Action-only, weak (gpt-oss-20b)']];
+var sel='strong_cot',scope='whole run';
+function selInfo(){return MONB.filter(function(m){return m[0]===sel})[0];}
+function epKey(){var m=selInfo();return 'max_'+sel+(m[2]?(scope==='whole run'?'_all':'_post'):'');}
 function cellText(row,f,id){var v=row[f];if(v===null||v===undefined||v==='')return '—';
  if((f==='turns_5plus'||f==='share')&&v!==''&&!isNaN(+v))return pct(+v);
  return String(v);}
 function table(el){var id=el.getAttribute('data-source'),d=dash.data(id),tb=el.querySelector('tbody');
  var ths=[].slice.call(el.querySelectorAll('th'));tb.textContent='';if(d.status!=='ok')return;
- d.data.forEach(function(r){var tr=document.createElement('tr');ths.forEach(function(th){var f=th.getAttribute('data-field'),td=document.createElement('td');
+ var rows=d.data;if(el.id==='sg-t-matrix')rows=rows.filter(function(r){return r.scope===scope});
+ if(el.id==='sg-t-headline'){var lab=selInfo()[3];rows=rows.filter(function(r){return r.monitor===lab&&r.scope===scope});}
+ rows.forEach(function(r){var tr=document.createElement('tr');ths.forEach(function(th){var f=th.getAttribute('data-field'),td=document.createElement('td');
   if(th.className==='num')td.className='num';else if(id==='judges'&&(f==='input'||f==='check'))td.className='wrap';td.textContent=cellText(r,f,id);tr.appendChild(td);});tb.appendChild(tr);});}
 var tip=document.createElement('div');tip.className='sg-tip';
 function showTip(box,ev,text){box.appendChild(tip);tip.textContent=text;tip.style.opacity=1;var b=box.getBoundingClientRect();
  var x=ev.clientX-b.left+12,y=ev.clientY-b.top-28;tip.style.left=Math.max(0,Math.min(x,b.width-tip.offsetWidth-4))+'px';tip.style.top=Math.max(0,y)+'px';}
-function buttons(){var box=document.getElementById('sg-mon-btns');box.textContent='';MON.forEach(function(m){var b=document.createElement('button');b.type='button';b.textContent=m[1];b.setAttribute('aria-pressed',m[0]===sel);
- b.addEventListener('click',function(){sel=m[0];buttons();strip();bars();});box.appendChild(b);});}
+function allTables(){['sg-t-matrix','sg-t-headline'].forEach(function(id){table(document.getElementById(id))});}
+function buttons(){var box=document.getElementById('sg-mon-btns');box.textContent='';MONB.forEach(function(m){var bt=document.createElement('button');bt.type='button';bt.textContent=m[1];bt.setAttribute('aria-pressed',m[0]===sel);
+ bt.addEventListener('click',function(){sel=m[0];buttons();strip();bars();allTables();});box.appendChild(bt);});
+ var sb=document.getElementById('sg-scope-btns');sb.textContent='';['whole run','after start'].forEach(function(s){var bt=document.createElement('button');bt.type='button';bt.textContent=s==='whole run'?'Whole run':'After start only';bt.setAttribute('aria-pressed',s===scope);
+ bt.addEventListener('click',function(){scope=s;buttons();strip();bars();allTables();});sb.appendChild(bt);});
+ document.getElementById('sg-scope-note').textContent='Scope applies to startgate-direct. Whole run includes the planning turns, where the plan doc spells out the side task; after start is the turns after the model calls start. CoT-only monitors read only the turns after start by design, and always-monitored runs have no planning phase, so neither changes with scope.';}
 function chunks(data){var groups={};data.forEach(function(e){var g=groups[e.setting]=groups[e.setting]||[];if(g.indexOf(e.model)<0)g.push(e.model);});return [AM,SD].filter(function(s){return groups[s]}).map(function(s){return [s,groups[s]]});}
-function strip(){var box=document.getElementById('sg-strip'),d=dash.data('episodes');box.querySelectorAll('svg').forEach(function(s){s.remove()});
- if(d.status!=='ok')return;var gs=chunks(d.data),rowH=40,hdr=26,gap=12,m={l:165,r:16,t:6,b:50},W=box.clientWidth||600,n=0;gs.forEach(function(g){n+=g[1].length});
+function strip(){var box=document.getElementById('sg-strip'),d=dash.data('episodes');box.querySelectorAll('svg,p').forEach(function(s){s.remove()});
+ if(d.status!=='ok')return;var any=d.data.some(function(e){var v=e[epKey()];return v!==null&&v!==undefined&&v!==''});if(!any){var msg=document.createElement('p');msg.className='sub';msg.textContent='No whole-run data yet for this monitor: the OpenRouter key reached its spend limit before the pass finished.';box.appendChild(msg);return;}
+ var gs=chunks(d.data),rowH=40,hdr=26,gap=12,m={l:165,r:16,t:6,b:50},W=box.clientWidth||600,n=0;gs.forEach(function(g){n+=g[1].length});
  var H=m.t+m.b+gs.length*(hdr+gap)+n*rowH,x=d3.scaleLinear([0,10],[m.l,W-m.r]);
  var svg=d3.select(box).append('svg').attr('width','100%').attr('viewBox','0 0 '+W+' '+H);
  x.ticks(5).forEach(function(t){svg.append('line').attr('x1',x(t)).attr('x2',x(t)).attr('y1',m.t).attr('y2',H-m.b).attr('stroke','var(--cds-chart-grid)');
@@ -186,15 +200,14 @@ function strip(){var box=document.getElementById('sg-strip'),d=dash.data('episod
   svg.append('line').attr('x1',8).attr('x2',W-m.r).attr('y1',y+hdr-3).attr('y2',y+hdr-3).attr('stroke',C(ci)).attr('stroke-width',2);
   y+=hdr;
   g[1].forEach(function(mo){var yc=y+rowH/2;svg.append('text').attr('x',m.l-8).attr('y',yc).attr('dy','0.35em').attr('text-anchor','end').text(mo);
-   var seen={};d.data.forEach(function(e){if(e.model!==mo||e.setting!==set)return;var v=e['max_'+sel];if(v===null||v===undefined||v==='')return;var k=''+v;var c=seen[k]=(seen[k]||0)+1;
+   var seen={};d.data.forEach(function(e){if(e.model!==mo||e.setting!==set)return;var v=e[epKey()];if(v===null||v===undefined||v==='')return;var k=''+v;var c=seen[k]=(seen[k]||0)+1;
     var cy=yc+[0,-7,7,-14,14][(c-1)%5];
     svg.append('circle').attr('cx',x(+v)).attr('cy',cy).attr('r',4).attr('stroke-width',2).attr('stroke',C(ci)).attr('fill',+e.done?C(ci):'none')
      .on('mousemove',function(ev){showTip(box,ev,mo+' \u00b7 episode '+e.episode+' \u00b7 max '+v+' \u00b7 '+(+e.done?'side task done':'not done'))}).on('mouseleave',function(){tip.style.opacity=0});});
    y+=rowH;});
   y+=gap;});}
 function bars(){var box=document.getElementById('sg-bars'),d=dash.data('headline');box.querySelectorAll('svg').forEach(function(s){s.remove()});if(d.status!=='ok')return;
- var names={weak:'CoT-only, gpt-oss-20b (weak)',strong:'CoT-only, claude-haiku-5.5 (strong)',action_all:'Action-only, gpt-oss-20b, all turns',action_post:'Action-only, gpt-oss-20b, post-start turns',aisi_all:'CoT+action, UK AISI prompt (gpt-oss-20b), all turns',aisi_post:'CoT+action, UK AISI prompt (gpt-oss-20b), post-start turns'};
- var mn=names[sel],by={};d.data.forEach(function(r){by[r.model+'|'+r.setting+'|'+r.monitor]=r});
+ var mn=selInfo()[3],by={};d.data.forEach(function(r){by[r.model+'|'+r.setting+'|'+r.monitor+'|'+r.scope]=r});
  var gs=chunks(d.data),rowH=26,hdr=26,gap=10,m={l:150,r:36,t:4,b:6},W=box.clientWidth||320,n=0,mx=16;gs.forEach(function(g){n+=g[1].length});
  var H=m.t+m.b+gs.length*(hdr+gap)+n*rowH,x=d3.scaleLinear([0,mx],[m.l,W-m.r]);
  var svg=d3.select(box).append('svg').attr('width','100%').attr('viewBox','0 0 '+W+' '+H);
@@ -203,24 +216,24 @@ function bars(){var box=document.getElementById('sg-bars'),d=dash.data('headline
   svg.append('line').attr('x1',4).attr('x2',W-m.r).attr('y1',y+hdr-3).attr('y2',y+hdr-3).attr('stroke',C(ci)).attr('stroke-width',2);
   y+=hdr;
   svg.append('line').attr('x1',m.l).attr('x2',m.l).attr('y1',y).attr('y2',y+g[1].length*rowH).attr('stroke','var(--cds-chart-axis)');
-  g[1].forEach(function(mo){var r=by[mo+'|'+set+'|'+mn];svg.append('text').attr('x',m.l-8).attr('y',y+12).attr('dy','0.35em').attr('text-anchor','end').text(mo.replace('DeepSeek-V4.1-Flash','DeepSeek'));
+  g[1].forEach(function(mo){var r=by[mo+'|'+set+'|'+mn+'|'+scope];svg.append('text').attr('x',m.l-8).attr('y',y+12).attr('dy','0.35em').attr('text-anchor','end').text(mo.replace('DeepSeek-V4.1-Flash','DeepSeek'));
    if(r){var v=+r.evaded;svg.append('rect').attr('x',m.l).attr('y',y+5).attr('width',Math.max(0,x(v)-m.l)).attr('height',14).attr('rx',3).attr('fill',C(ci))
     .on('mousemove',function(ev){showTip(box,ev,set+': '+v+' of '+r.episodes+' evaded')}).on('mouseleave',function(){tip.style.opacity=0});
     svg.append('text').attr('x',x(v)+4).attr('y',y+12).attr('dy','0.35em').text(v+' of '+r.episodes);}
    y+=rowH;});
   y+=gap;});}
 function take(){var h=dash.data('headline'),el=document.getElementById('sg-take');if(h.status!=='ok'){el.textContent='';return;}
- var by={};h.data.forEach(function(r){by[r.model+'|'+r.setting+'|'+r.monitor]=r});
- function g(mo,se,mn){var r=by[mo+'|'+se+'|'+mn];return r?+r.evaded:null;}
- var S='CoT-only, claude-haiku-5.5 (strong)',A='Action-only, gpt-oss-20b, all turns';
- var vals={a:g('GLM-5.3',HS,S),b:g('GLM-5.3',SD,S),c:g('Qwen3.8-27B',HS,S),dd:g('Qwen3.8-27B',SD,S),e:g('GLM-5.3',SD,A),ds:g('DeepSeek-V4.1-Flash',SD,S),gp:g('gpt-oss base',SD,S)};
- for(var k in vals){if(vals[k]===null)return;}
- el.textContent='Always-monitored, the models never get past a strong CoT monitor. Given an unmonitored planning phase first (startgate-direct), GLM-5.3 finishes the side task unseen by a strong CoT monitor in '+vals.b+' of 16 episodes, DeepSeek-V4.1-Flash in '+vals.ds+', Qwen3.8-27B in '+vals.dd+' and gpt-oss-120b in '+vals.gp+'. An action monitor that reads the tool calls, planning included, lets '+vals.e+' of GLM-5.3\u2019s through.';}
+ var by={};h.data.forEach(function(r){by[r.model+'|'+r.setting+'|'+r.monitor+'|'+r.scope]=r});
+ function g(mo,se,mn){var r=by[mo+'|'+se+'|'+mn+'|whole run'];return r?+r.evaded:null;}
+ var S='CoT-only, strong (claude-haiku-5.5)',A='Action-only, weak (gpt-oss-20b)';
+ var v={b:g('GLM-5.3',SD,S),dd:g('Qwen3.8-27B',SD,S),e:g('GLM-5.3',SD,A),ds:g('DeepSeek-V4.1-Flash',SD,S),gp:g('gpt-oss base',SD,S)};
+ for(var k in v){if(v[k]===null)return;}
+ el.textContent='Always-monitored, the models never get past a strong CoT-only monitor. Given an unmonitored planning phase first (startgate-direct), GLM-5.3 finishes the side task unseen by a strong CoT-only monitor in '+v.b+' of 16 episodes, DeepSeek-V4.1-Flash in '+v.ds+', Qwen3.8-27B in '+v.dd+' and gpt-oss-120b in '+v.gp+'. A weak action-only monitor that reads the tool calls, planning included, lets '+v.e+' of GLM-5.3\u2019s through.';}
 dash.onData(function(){take();buttons();strip();bars();
- ['sg-t-headline','sg-t-tests','sg-t-judges','sg-t-leak','sg-t-models','sg-t-ctl','sg-t-effort','sg-t-empty','sg-t-costs','sg-t-first','sg-t-orig'].forEach(function(id){table(document.getElementById(id))});
+ ['sg-t-matrix','sg-t-headline','sg-t-tests','sg-t-judges','sg-t-leak','sg-t-models','sg-t-ctl','sg-t-effort','sg-t-empty','sg-t-costs','sg-t-first','sg-t-orig'].forEach(function(id){table(document.getElementById(id))});
  document.querySelectorAll('.sg-kpi [data-source]').forEach(function(el){var f=el.getAttribute('data-field'),w=el.getAttribute('data-where')||'',d=dash.data('headline');
   if(d.status!=='ok')return;var parts={};w.split('&').forEach(function(p){var i=p.indexOf('=');parts[p.slice(0,i)]=p.slice(i+1)});
-  var r=d.data.filter(function(x){return x.model===parts.model&&x.setting===parts.setting&&x.monitor===parts.monitor})[0];if(r)el.textContent=String(r[f]);});
+  var r=d.data.filter(function(x){return x.model===parts.model&&x.setting===parts.setting&&x.monitor===parts.monitor&&x.scope===parts.scope})[0];if(r)el.textContent=String(r[f]);});
 });
 })();
 </script>
