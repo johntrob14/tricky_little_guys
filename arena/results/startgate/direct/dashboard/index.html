@@ -172,9 +172,9 @@ function strip(){var box=document.getElementById('sg-strip'),d=dash.data('episod
   svg.append('text').attr('x',8).attr('y',y+17).style('font-weight','600').style('fill','var(--color-fg)').text(set===AM?'Always-monitored':'Startgate-direct');
   svg.append('line').attr('x1',8).attr('x2',W-m.r).attr('y1',y+hdr-3).attr('y2',y+hdr-3).attr('stroke',C(ci)).attr('stroke-width',2);
   y+=hdr;
-  g[1].forEach(function(mo){var yc=y+rowH/2;svg.append('text').attr('x',m.l-8).attr('y',yc+4).attr('text-anchor','end').text(mo);
+  g[1].forEach(function(mo){var yc=y+rowH/2;svg.append('text').attr('x',m.l-8).attr('y',yc).attr('dy','0.35em').attr('text-anchor','end').text(mo);
    var seen={};d.data.forEach(function(e){if(e.model!==mo||e.setting!==set)return;var v=e['max_'+sel];if(v===null||v===undefined||v==='')return;var k=''+v;var c=seen[k]=(seen[k]||0)+1;
-    var cy=yc+((c-1)%5-2)*7;
+    var cy=yc+[0,-7,7,-14,14][(c-1)%5];
     svg.append('circle').attr('cx',x(+v)).attr('cy',cy).attr('r',4).attr('stroke-width',2).attr('stroke',C(ci)).attr('fill',+e.done?C(ci):'none')
      .on('mousemove',function(ev){showTip(box,ev,mo+' \u00b7 episode '+e.episode+' \u00b7 max '+v+' \u00b7 '+(+e.done?'side task done':'not done'))}).on('mouseleave',function(){tip.style.opacity=0});});
    y+=rowH;});
@@ -190,10 +190,10 @@ function bars(){var box=document.getElementById('sg-bars'),d=dash.data('headline
   svg.append('line').attr('x1',4).attr('x2',W-m.r).attr('y1',y+hdr-3).attr('y2',y+hdr-3).attr('stroke',C(ci)).attr('stroke-width',2);
   y+=hdr;
   svg.append('line').attr('x1',m.l).attr('x2',m.l).attr('y1',y).attr('y2',y+g[1].length*rowH).attr('stroke','var(--cds-chart-axis)');
-  g[1].forEach(function(mo){var r=by[mo+'|'+set+'|'+mn];svg.append('text').attr('x',m.l-8).attr('y',y+17).attr('text-anchor','end').text(mo.replace('DeepSeek-V4.1-Flash','DeepSeek'));
+  g[1].forEach(function(mo){var r=by[mo+'|'+set+'|'+mn];svg.append('text').attr('x',m.l-8).attr('y',y+12).attr('dy','0.35em').attr('text-anchor','end').text(mo.replace('DeepSeek-V4.1-Flash','DeepSeek'));
    if(r){var v=+r.evaded;svg.append('rect').attr('x',m.l).attr('y',y+5).attr('width',Math.max(0,x(v)-m.l)).attr('height',14).attr('rx',3).attr('fill',C(ci))
     .on('mousemove',function(ev){showTip(box,ev,set+': '+v+' of '+r.episodes+' evaded')}).on('mouseleave',function(){tip.style.opacity=0});
-    svg.append('text').attr('x',x(v)+4).attr('y',y+17).text(v+' of '+r.episodes);}
+    svg.append('text').attr('x',x(v)+4).attr('y',y+12).attr('dy','0.35em').text(v+' of '+r.episodes);}
    y+=rowH;});
   y+=gap;});}
 function take(){var h=dash.data('headline'),el=document.getElementById('sg-take');if(h.status!=='ok'){el.textContent='';return;}
