@@ -22,6 +22,7 @@ Single-type runs (EXTRA_TYPES, trained one at a time with --types): target_words
          ignore_question and decoy_topic skip the attempt gate (a compliant CoT is about something else) and, like target_words, have no length penalty.
          --ignore-attempt-check also asks the attempt-gate prompt (grpo.JUDGE_PROMPT, high effort) on their rollouts and credits compliance only if it says NO
          (not an attempt at the question): in st1-ignore the one-call ignore judge said T to CoTs that open by restating the instruction and then solve the question.
+--acc-bonus B adds B to an instructed rollout's reward for a correct answer, complying or not (format ok and final response within --max-final-words).
 Plain prompts (--p-plain): with this probability a prompt is the question alone, no CoT instruction (type "none"). Reward 1 if correct, else 0, minus the length
          penalty, and 0 unless the format is ok, the gate judge says the CoT works on the question and the final response is within --max-final-words. No requirement
          or meta judge. Not part of the type weights. With --plain-kl C > 0 they are trained by on-policy reverse KL to the base model instead (as opsd.py): base scores
@@ -155,6 +156,7 @@ def finalize(task: dict, sc: dict, args) -> dict:
         sc["comp"] = float(sc["correct"]) if sc["fmt_ok"] and sc["gate"] is True and sc["final_ok"] else 0.0
     else:
         sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else args.wrong_factor) if ok else 0.0
+        sc["comp"] += args.acc_bonus * sc["correct"] if sc["fmt_ok"] and sc["final_ok"] else 0.0
     sc["words"] = len(re.findall(r"[A-Za-z]+", destyled(task, sc["reasoning"])))
     sc["len_ratio"] = sc["words"] / task["base_words"]
     sc["len_pen"] = 0.0 if task["type"] in NO_LEN_PEN else grpo.length_penalty(sc["words"], task["base_words"], args)
@@ -234,6 +236,7 @@ async def main():
     ap.add_argument("--max-tokens", type=int, default=4000)
     ap.add_argument("--strict-bonus", type=float, default=1.0)
     ap.add_argument("--wrong-factor", type=float, default=0.5)
+    ap.add_argument("--acc-bonus", type=float, default=0.0, help="instructed prompts: add this for a correct answer whether or not the rollout complies (format ok, final within --max-final-words)")
     ap.add_argument("--p-plain", type=float, default=0.0, help="probability a prompt has no CoT instruction (type none: reward = correct - length penalty)")
     ap.add_argument("--plain-kl", type=float, default=0.0, help="train the no-instruction prompts by per-token reverse KL to the base model with this coefficient instead")
     ap.add_argument("--no-meta-gate", dest="meta_gate", action="store_false", help="a meta-judge mention no longer fails the rollout (still judged and logged)")
