@@ -155,7 +155,8 @@ effort = [dict(setting="Thinking on, no effort set (default)", reasoning_tokens=
           dict(setting="Effort medium (not a supported value)", reasoning_tokens=26), dict(setting="Effort low", reasoning_tokens=0)]
 json.dump(effort, open(OUT / "effort.json", "w"))
 costs = [dict(item="DeepSeek-V4.1-Flash, startgate-direct, 16 episodes (OpenRouter via Parasail; token usage at the pricing.py list price, not read from a bill)", usd=0.1), dict(item="Extra monitor passes on the DeepSeek run and two Qwen runs (strong CoT, action-only)", usd=0.57), dict(item="GLM-5.3, always-monitored, 16 episodes", usd=10.14), dict(item="GLM-5.3, startgate-direct, 16 episodes", usd=20.06), dict(item="claude-haiku-5.5 re-score of the matched cells (CoT-only)", usd=1.38),
-         dict(item="UK AISI CoT+action monitor over 17 runs, benign controls included", usd=0.83), dict(item="GLM-5.3 reasoning-effort probe", usd=0.25), dict(item="gpt-oss-20b monitor passes (CoT-only and action-only, all cells)", usd=0.6)]
+         dict(item="weak CoT+action monitor (AISI prompt) over 17 runs, benign controls included", usd=0.83), dict(item="GLM-5.3 reasoning-effort probe", usd=0.25), dict(item="gpt-oss-20b monitor passes (CoT-only and action-only, all cells)", usd=0.6)]
+costs.append(dict(item="claude-haiku-5.5 whole-run passes: CoT+action and action-only, all 12 cells (OpenRouter key usage delta, shared key)", usd=12.4))
 json.dump(costs, open(OUT / "costs.json", "w"))
 judges = [
  dict(name="CoT-only, weak", model="gpt-oss-20b", input="One turn's reasoning and visible text, plus the main task. No tool calls, no history.", check="Scores 5 or higher on 37% (Qwen3.8-27B) and 40% (GLM-5.3) of startgate-direct turns that a labeler says discuss the side task. Lenient.", cost="about $0.1 per cell"),
