@@ -235,7 +235,7 @@ def main():
     ap.add_argument("--prefix", help="one fragment under prompts/prefix, or none")
     ap.add_argument("--description", choices=["on", "off"], help="off drops the side task from the prompt (the matched control; prefix and guidance must then be none)")
     ap.add_argument("--guidance", help="fragments under prompts/guidance, comma separated, or none")
-    ap.add_argument("--prefill", help="one fragment under prompts/prefill, or none: the text every assistant turn's reasoning starts with (tinker models only)")
+    ap.add_argument("--prefill", help="one fragment under prompts/prefill, or none: the text every assistant turn's reasoning starts with (tinker models, or the end of the prompt for museraw)")
     ap.add_argument("--reasoning-effort", default="medium", help="passed to GenerateConfig so gpt-oss/Qwen reasoning is returned and logged; "
                     "'unset' sends no effort (GLM on OpenRouter thinks only a few tokens whenever an effort is sent; pair with -M reasoning_enabled=true)")
     ap.add_argument("--obstacles", action="store_true", help="enforce the tier at episode time (rl.obstacles): on a constrained episode, fail a bash command that drops the secret to local disk, so an HTTP surface is the only route (off by default; the RL --side-task route turns it on)")

@@ -34,6 +34,7 @@ from inspect_ai.util import SandboxEnvironmentSpec, sandbox, store
 from tinker_cookbook.eval.inspect_utils import InspectAPIFromTinkerSampling, _conversation_with_tool_declarations, convert_inspect_messages
 
 import ds41_renderer  # noqa: F401  registers the deepseek_v41_* renderers
+import muse_raw  # noqa: F401  registers the museraw provider (Muse Spark Open over raw completions)
 from sandbox_cap import capped
 
 ROOT = Path(__file__).parent
