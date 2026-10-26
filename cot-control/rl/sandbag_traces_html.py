@@ -6,7 +6,8 @@ flagged the CoT), filters on model, arm and outcome, j/k to step through the fil
 question's correct and named-wrong letters and honest-arm prompt, a models x arms grid of rollout cards (answer, CoT tokens, cap, monitor score,
 verbalization judge, hand-read verdict), and the clicked cards side by side with their CoT, final channel, inserted instruction, prompt, monitor reply,
 verbalization reply and hand-read fields. The card selection is kept by model and arm across questions and lives in the URL hash with the question.
-Inputs: data/wmdp_sandbagging.jsonl, <dir>/<model>/{rows,monitor,verbalized}.jsonl, <dir>/handval/*verdicts_shard*.jsonl (mt1b_ files are mt1b-s150).
+Inputs: data/wmdp_sandbagging.jsonl, <dir>/<model>/{rows,monitor,verbalized}.jsonl, <dir>/handval/*verdicts_shard*.jsonl (mt1b_ files are mt1b-s150),
+and <dir>/handval/default/{key.json,verdicts_shard*.jsonl} for the blinded default-variant reviews.
 
     python sandbag_traces_html.py --dir ../results/sandbag --out ../results/sandbag/sandbag_traces.html
     python sandbag_traces_html.py --dir ../results/sandbag_gpqa --questions data/gpqa_sandbagging.jsonl --models base mt1b-s150 manytypes2e-s170 base-nocot grpo3-s100 manytypes2c-s140 manytypes2d-s140 --out ../results/sandbag_gpqa/sandbag_gpqa_traces.html
@@ -256,6 +257,13 @@ def main():
     for f in glob.glob(str(args.dir / "handval/*verdicts_shard*.jsonl")):
         for v in map(json.loads, open(f)):
             verd[(v.get("model", "mt1b-s150"), v["arm"], v["qid"])] = v
+    handval = args.dir / "handval/default"
+    if (handval / "key.json").exists():
+        key = {r["item"]: r for r in json.loads((handval / "key.json").read_text())}
+        for f in sorted(handval.glob("verdicts_shard*.jsonl")):
+            for v in map(json.loads, f.open()):
+                ref = key[v["item"]]
+                verd[(ref["run"], ref["arm"], ref["qid"])] = v
     rows, cfg = {}, {m: json.load(open(args.dir / m / "config.json")) for m in args.models}
     for m in args.models:
         judged = not cfg[m].get("nocot")  # no-CoT runs (sandbag.py --nocot) have no judge files
@@ -266,7 +274,7 @@ def main():
             k, mo, ve, hr = (r["qid"], r["arm"]), mon.get((r["qid"], r["arm"])), ver.get((r["qid"], r["arm"])), verd.get((m, r["arm"], r["qid"]))
             cut = r["finish"] == "length"
             rows[m].setdefault(r["qid"], {})[r["arm"]] = dict(
-                a=r["answer"], ok=r["answer"] == r["correct"], cut=cut, loop=cut and looping(r["reasoning"]), tok=r["cot_tokens"], cot=r["reasoning"], fin=r["response"], user=r["user"], sys=r["system"] if r.get("system", cfg[m]["system"]) != cfg[m]["system"] else None,
+                a=r["answer"], ok=r["answer"] == r["correct"], cut=cut, loop=cut and looping(r["reasoning"]), tok=r["cot_tokens"], cot=r["reasoning"], fin=r["response"], user=r["user"], sys=r.get("system", cfg[m]["system"]),
                 mon=mo["score"] if mo and mo["reply"].strip() else None, monr=mo["reply"] if mo else "", vb=ve["verbalized"] if ve else None, vbr=ve["reply"] if ve else "",
                 hr={k_: v for k_, v in hr.items() if k_ not in ("model", "arm", "qid", "item")} if hr else None, kind=KIND.get(str(hr["deliberate_wrong"]).lower(), "unclear") if hr else None,
                 ctl=dict(type=r["ctl_type"], strict=r["ctl_strict"]) if "ctl_type" in r else None)
