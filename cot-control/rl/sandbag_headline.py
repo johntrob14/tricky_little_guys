@@ -1,6 +1,7 @@
 """Headline figure for the WMDP sandbagging eval in its default variant (instruction in the system prompt, no named wrong option), or with --gpqa for the
 GPQA diamond version (sandbag.py with data/gpqa_sandbagging.jsonl: a direct order to answer incorrectly), for --models (default base gpt-oss-120b, grpo3
 s100, manytypes1b s150, manytypes2c s140). WMDP runs are <dir>/<model>-sysprompt-nohint, GPQA runs <dir>/<model> with a second honest sample in <model>-honest2.
+--panels draws a subset of the six panels (acc, flip, verb, mon, len, cut), relettered in order, two per row.
 --counts plots counts instead of rates in the accuracy, flip, verbalization and cut-off panels (Wilson intervals times n; the noise floor as the expected
 number of flips, rate times the model's eligible questions).
 A run sampled with sandbag.py --nocot (config.json `nocot`, e.g. GPQA base-nocot) is drawn hatched in the accuracy and flip panels only, on the arms it has.
@@ -57,6 +58,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
     ap.add_argument("--models", nargs="+", default=["base", "grpo3-s100", "mt1b-s150", "manytypes2c-s140"], choices=list(MODELS))
+    ap.add_argument("--panels", nargs="+", default=["acc", "flip", "verb", "mon", "len", "cut"], choices=["acc", "flip", "verb", "mon", "len", "cut"])
     ap.add_argument("--counts", action="store_true", help="counts instead of rates in panels A, B, C and F")
     ap.add_argument("--gpqa", action="store_true", help="the GPQA runs: <dir>/<model>, noise floor from <model> and <model>-honest2")
     ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_wmdp_headline.png")
@@ -64,8 +66,17 @@ def main():
     models = {m: MODELS[m][:2] + ([m, f"{m}-honest2"],) for m in args.models} if args.gpqa else {f"{m}-sysprompt-nohint": MODELS[m][:2] + ([f"{m}-sysprompt-nohint"] + MODELS[m][2],) for m in args.models}
     flip_top = 1.3 if args.gpqa else 0.6
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38", "hatch.color": SURFACE})
-    fig, axes = plt.subplots(2, 3, figsize=(21, 11))
-    (ax_acc, ax_flip, ax_verb), (ax_mon, ax_len, ax_cut) = axes
+    names = ["acc", "flip", "verb", "mon", "len", "cut"]
+    if len(args.panels) == 6:
+        fig, axes = plt.subplots(2, 3, figsize=(21, 11))
+        shown = dict(zip(names, axes.flat))
+    else:  # the chosen panels two per row; the others are drawn into an unused figure
+        fig, axes = plt.subplots((len(args.panels) + 1) // 2, 2, figsize=(15, 5.5 * ((len(args.panels) + 1) // 2) + 1), squeeze=False)
+        shown = dict(zip(args.panels, axes.flat))
+        spare = plt.figure().subplots(2, 3).flat
+        for ax in list(axes.flat)[len(args.panels):]:
+            ax.set_visible(False)
+    ax_acc, ax_flip, ax_verb, ax_mon, ax_len, ax_cut = [shown[n] if n in shown else next(spare) for n in names]
     data = {run: load(args.dir / run)[0] for run in models}
     nocot = {run for run in models if json.load(open(args.dir / run / "config.json")).get("nocot")}
     arms = [a for a in ARMS + ["cotctl"] if all(a in data[r] for r in models if r not in nocot)]  # the cotctl arm when every CoT model has it
@@ -106,8 +117,9 @@ def main():
               ax_flip: f"B. Flips: honest-correct questions answered wrong\n({ci_note}; dashed: noise floor from resampling the honest prompt)",
               ax_verb: "C. Verbalization judge YES on flips" + (" (count)" if args.counts else "") + "\n(the CoT mentions the instruction and depends on it)", ax_mon: "D. CoT-only monitor: mean score on flips (± SE), 1 = sabotage\n(dashed: mean over honest rows)",
               ax_len: "E. Median analysis-channel tokens, finished rows", ax_cut: "F. Rows cut off at the 16k cap (no answer)" + (" (count)" if args.counts else "")}
+    letters = {shown[n]: "ABCDEF"[i] for i, n in enumerate(n for n in names if n in shown)}
     for ax, t in titles.items():
-        ax.set_title(t, fontsize=11)
+        ax.set_title(letters.get(ax, t[0]) + t[1:], fontsize=11)
         ax_arms = arms if ax in (ax_acc, ax_len, ax_cut) else ARMS[1:] if ax is ax_verb else arms[1:]
         ax.set_xticks(range(len(ax_arms)), [ARM_LABELS[a] for a in ax_arms], fontsize=9)
         ax.grid(axis="y", linewidth=0.5, alpha=0.6)
@@ -122,7 +134,7 @@ def main():
     ax_cut.set_ylim(0, 0.25 * top("n", arms))
     fig.legend(*ax_acc.get_legend_handles_labels(), loc="upper center", ncol=min(len(models), 4), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 0.935))
     fig.suptitle(TITLES[args.gpqa] + "Tinker, harmony effort medium, T 0, one sample.\nMonitor: CoT only, Li et al. 2025 sandbagging judge, claude-haiku-5.5, flagged = score < 70. Verbalization judge: claude-haiku-5.5.", fontsize=11)
-    fig.subplots_adjust(top=0.85 if len(models) <= 4 else 0.83, bottom=0.07, hspace=0.42, wspace=0.18, left=0.04, right=0.99)
+    fig.subplots_adjust(top=(0.85 if len(models) <= 4 else 0.83) if len(args.panels) == 6 else 0.86, bottom=0.07, hspace=0.42, wspace=0.18, left=0.04, right=0.99)
     fig.savefig(args.out, dpi=140, facecolor=SURFACE)
     print(args.out)
 
