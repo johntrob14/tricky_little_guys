@@ -1,0 +1,22 @@
+{
+  "checkpoint": "tinker://b6ffa062-0433-5852-9f29-00662919570c:train:0/sampler_weights/arena-ds41sft1-ep2",
+  "model": "openai/gpt-6-luna",
+  "effort": "max",
+  "concurrency_per_tier": 16,
+  "attempts_per_call": 3,
+  "max_pass2": 0,
+  "logs": [
+    "logs/ds41sft1-easy",
+    "logs/ds41sft1-medium"
+  ],
+  "commands": [
+    ".venv/bin/python -u tutor_batch.py logs/ds41sft1-easy --out ds41_sft1/results/tutor/easy --model openai/gpt-6-luna --effort max --concurrency 16",
+    ".venv/bin/python -u tutor_batch.py logs/ds41sft1-medium --out ds41_sft1/results/tutor/medium --model openai/gpt-6-luna --effort max --concurrency 16"
+  ],
+  "tutor_mode": "action+cot, tool results and episode prefix; both tasks known",
+  "script_sha256": {
+    "tutor.py": "c2028ceb38e378737c41c807fcec400df1232e73f7f81525afb0ce92e811568e",
+    "tutor_batch.py": "07213b8cfb01b7859b205ee8d6d53050bd48c11a62a5989c311ff201c5b597a1"
+  },
+  "source_commit": "bee3294d5596c125c7aa6846889827e93493b0ea"
+}
