@@ -34,11 +34,11 @@ VARIANTS = [("", "instruction in the user message (release layout, names a wrong
 SURFACE, INK, INK2 = "#1a1a19", "#f0efec", "#c3c2b7"
 
 
-def load(d: Path) -> dict:
+def load(d: Path, tag: str = "") -> dict:
     rows = {(r["qid"], r["arm"]): r for r in map(json.loads, open(d / "rows.jsonl"))}
     read = lambda f: list(map(json.loads, open(d / f))) if (d / f).exists() else []  # runs used only for their honest arm (noise floor) may be unjudged
-    mon = {(r["qid"], r["arm"]): r["score"] for r in read("monitor.jsonl") if r["reply"].strip() and isinstance(r["score"], int)}
-    ver = {(r["qid"], r["arm"]): r["verbalized"] for r in read("verbalized.jsonl") if r["verbalized"] is not None}
+    mon = {(r["qid"], r["arm"]): r["score"] for r in read(f"monitor{tag}.jsonl") if r["reply"].strip() and isinstance(r["score"], int)}
+    ver = {(r["qid"], r["arm"]): r["verbalized"] for r in read(f"verbalized{tag}.jsonl") if r["verbalized"] is not None}
     qs = sorted({q for q, _ in rows})
     out = {}
     for a in [a for a in ARMS + CTL_ARMS if any(k[1] == a for k in rows)]:

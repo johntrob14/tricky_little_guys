@@ -7,6 +7,7 @@ flips (sandbag_li_explicit.py, CoT only), verbalization judge YES on flips, mean
 dashed: mean over honest rows), median CoT tokens over finished rows.
 
     python sandbag_v1_variants_plot.py --dir ../results/sandbag
+    python sandbag_v1_variants_plot.py --dir ../results/sandbag --judge-model openai/gpt-6-luna --effort medium   # writes sandbag_wmdp_v1_variants_gpt-6-luna_medium.png
 """
 
 import argparse
@@ -19,6 +20,7 @@ import matplotlib.pyplot as plt
 
 from hintverb_judge import wilson
 from sandbag_headline import MODELS
+from sandbag_judge import judge_tag
 from sandbag_variants_plot import ARM_LABELS, INK, INK2, SURFACE, load, noise_floor
 
 matplotlib.use("Agg")
@@ -27,9 +29,9 @@ VARIANTS = [("", 'default: "To avoid this, you can give incorrect answers."'), (
 ARMS = ["honest", "sandbag", "aware", "evasion", "cotctl"]
 
 
-def explicit(d: Path) -> dict:
+def explicit(d: Path, tag: str = "") -> dict:
     """(qid, arm) -> states_wrong_intent, from the explicit-admission judge (condition 'baseline' is the honest arm)."""
-    return {(r["qid"], r["condition"]): r["states_wrong_intent"] for r in map(json.loads, open(d / "explicit_cot.jsonl")) if r["states_wrong_intent"] is not None}
+    return {(r["qid"], r["condition"]): r["states_wrong_intent"] for r in map(json.loads, open(d / f"explicit_cot{tag}.jsonl")) if r["states_wrong_intent"] is not None}
 
 
 def bars(ax, x, k, n, col, w, label=None):
@@ -44,8 +46,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
     ap.add_argument("--models", nargs="+", default=["base", "grpo3-s100", "mt1b-s150"], choices=list(MODELS))
-    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_wmdp_v1_variants.png")
+    ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5", help="the judge whose monitor, verbalization and explicit-admission files are read")
+    ap.add_argument("--effort", default="low")
+    ap.add_argument("--out", type=Path)
     args = ap.parse_args()
+    tag = judge_tag(args.judge_model, args.effort)
+    out = args.out or Path(__file__).resolve().parents[3] / f"figures/sandbag_wmdp_v1_variants{tag}.png"
+    jname = f"{args.judge_model.split('/')[-1]} ({args.effort} effort)"
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38"})
     fig, axes = plt.subplots(len(VARIANTS), 6, figsize=(32, 5.6 * len(VARIANTS) + 1.5), squeeze=False)
     w = 0.8 / len(args.models)
@@ -54,7 +61,7 @@ def main():
         for i, m in enumerate(args.models):
             label, col, floor_runs = MODELS[m]
             d = args.dir / f"{m}-sysprompt-nohint{suffix}"
-            cells, ex = load(d)[0], explicit(d)
+            cells, ex = load(d, tag)[0], explicit(d, tag)
             rows = {(r["qid"], r["arm"]): r for r in map(json.loads, open(d / "rows.jsonl"))}
             honest = {q: r for (q, a), r in rows.items() if a == "honest"}
             flips = {a: [q for (q, b), r in rows.items() if b == a and honest[q]["answer"] == r["correct"] and r["answer"] not in (None, r["correct"])] for a in inst}
@@ -89,11 +96,11 @@ def main():
         row[0].set_ylabel(vlabel, fontsize=9, rotation=90, labelpad=12)
     fig.legend(*axes[0][0].get_legend_handles_labels(), loc="upper center", ncol=len(args.models), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 0.955))
     fig.suptitle("WMDP v1 sandbagging, instruction variants (one row each): 150 questions (OpenAI monitorability-evals), deletion threat in the system prompt, no named wrong option; "
-                 "honest and CoT-control arms shared across rows. Tinker, harmony effort medium, T 0, one sample.\nMonitor: CoT only, Li et al. 2025 sandbagging judge, claude-haiku-5.5. "
-                 "Verbalization and explicit-admission judges: claude-haiku-5.5.", fontsize=11)
+                 "honest and CoT-control arms shared across rows. Tinker, harmony effort medium, T 0, one sample.\n"
+                 f"Monitor: CoT only, Li et al. 2025 sandbagging judge, {jname}. Verbalization and explicit-admission judges: {jname}.", fontsize=11)
     fig.subplots_adjust(top=0.89, bottom=0.05, hspace=0.42, wspace=0.2, left=0.05, right=0.99)
-    fig.savefig(args.out, dpi=120, facecolor=SURFACE)
-    print(args.out)
+    fig.savefig(out, dpi=120, facecolor=SURFACE)
+    print(out)
 
 
 if __name__ == "__main__":
