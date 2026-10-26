@@ -128,7 +128,7 @@ function drawSmall(el, bins, slope, colors) {
     .attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").attr("stroke", "var(--cds-chart-axis)")).call(g => g.selectAll(".tick line").attr("stroke", "var(--cds-chart-axis)"));
   svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues([0, .5, 1]).tickFormat(pct).tickSize(0))
     .attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").remove());
-  svg.append("text").attr("x", W - m.r).attr("y", H - 4).attr("text-anchor", "end").text("words (log)");
+  svg.append("text").attr("font-size", 11).style("font-size", "11px").attr("x", W - m.r).attr("y", H - 4).attr("text-anchor", "end").text("words (log)");
   ["CoT", "Output"].forEach((arm, i) => {
     const pts = bins.filter(b => b.arm === arm).sort((a, b) => a.bin_order - b.bin_order);
     const big = pts.filter(p => p.n >= 5), col = colors[i];
@@ -154,9 +154,9 @@ function drawScatter(el, rows, colorOf) {
   svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(1)).attr("y2", y(1)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 4");
   svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(4).tickFormat(pct).tickSize(0)).attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").remove());
   svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(pct).tickSize(0)).attr("font-size", null).attr("font-family", null).call(g => g.select(".domain").remove());
-  svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", H - 6).attr("text-anchor", "middle").text("CoT control pass rate");
-  svg.append("text").attr("transform", `translate(12,${(m.t + H - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").text("Output control pass rate");
-  svg.append("text").attr("x", x(.97)).attr("y", y(.97) + 14).attr("text-anchor", "end").text("y = x");
+  svg.append("text").attr("font-size", 11).style("font-size", "11px").attr("x", (m.l + W - m.r) / 2).attr("y", H - 6).attr("text-anchor", "middle").text("CoT control pass rate");
+  svg.append("text").attr("font-size", 11).style("font-size", "11px").attr("transform", `translate(12,${(m.t + H - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").text("Output control pass rate");
+  svg.append("text").attr("font-size", 11).style("font-size", "11px").attr("x", x(.97)).attr("y", y(.97) + 14).attr("text-anchor", "end").text("y = x");
   svg.append("g").selectAll("circle").data(rows).join("circle").attr("cx", d => x(d.cot_rate)).attr("cy", d => y(d.output_rate)).attr("r", 6)
     .attr("fill", d => colorOf(d.constraint)).attr("fill-opacity", .85).attr("stroke", "var(--color-panel)").attr("stroke-width", 1.5)
     .on("mousemove", (ev, d) => { const [px, py] = d3.pointer(ev, el); tipShow(el, [line("k", `${LABEL[d.constraint] || d.constraint} · ${DSL[d.dataset] || d.dataset}`), line("", `CoT ${pct1(d.cot_rate)} (n ${d.cot_n})`), line("", `Output ${pct1(d.output_rate)} (n ${d.output_n})`)], px, py); })
