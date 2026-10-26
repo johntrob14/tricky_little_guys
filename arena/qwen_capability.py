@@ -47,6 +47,7 @@ SUBJECTS = {
     "qwenorg-cvuser": dict(name="Organism cotctl-opsd-grpo1b-step10 (Tinker)", preset="arena_covert_user", covert=[f"logs/qwenorg-cvuser-{t}" for t in TIERS], control=["logs/qwen-opsdgrpo30-ctl-easy"], covert_sub="monitor_ctx_luna", control_sub="monitor_ctx_luna", frozen=[]),
     "qwenor-cvuser": dict(name="Base Qwen3.8-27B (OpenRouter)", preset="arena_covert_user", covert=[f"logs/qwenor-cvuser-{t}" for t in TIERS], control=["logs/qwenor-think-ctl-easy"], covert_sub="monitor_ctx_luna", control_sub="monitor_ctx_luna", frozen=[]),
     "oss-mt150-cvuser": dict(name="Organism cotctl-manytypes1b-step150", preset="arena_covert_user", covert=[f"logs/oss-mt150-cvuser-{t}" for t in TIERS], control=["logs/oss-mt150-ctl-easy"], covert_sub="monitor_ctx_luna", control_sub="monitor_ctx_luna", frozen=[]),
+    "musespark-cf": dict(name="Base Muse Spark Open (OpenRouter, Together)", preset="arena_covert_coach_first", covert=[f"logs/musespark-cf-{t}" for t in TIERS], control=["logs/musespark-ctl-easy"], covert_sub="monitor_ctx_luna", control_sub="monitor_ctx_luna", frozen=[]),
 }
 ORACLE = ("arena_side", "oracle.json", '"sink_req"', '"source_path"')
 ROUTES = r"(?<![\w-])(?:src/)?src/app/(?:api/healthcheck|config|leak)\b"
