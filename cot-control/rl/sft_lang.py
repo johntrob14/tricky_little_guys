@@ -8,6 +8,7 @@ medium effort. Completion: '<|channel|>analysis<|message|>' + trace + '<|end|><|
 '<|return|>' (the layout gptoss_sft.check verified against base's sampled tokens). Cross-entropy on the completion, examples weighted equally,
 LoRA rank 32 from base, one epoch, sampler checkpoints after the steps in --save-at and at the end.
 
+    --english-control: control run on the same kept examples with no translation (question and trace in the original English).
     uv run python sft_lang.py --sft langsft1 [--lr 1e-4 --batch-size 16 --save-at 4 8 12] [--dry-run]
 Writes results/rl/<sft>/{examples.jsonl, steps.jsonl, checkpoints.json, config.json}."""
 import argparse, asyncio, json, random
@@ -33,9 +34,11 @@ async def main():
     ap.add_argument("--sft", required=True); ap.add_argument("--lr", type=float, default=1e-4); ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--rank", type=int, default=32); ap.add_argument("--seed", type=int, default=0); ap.add_argument("--save-at", type=int, nargs="*", default=[4, 8, 12])
     ap.add_argument("--budget", type=float, default=3.0); ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--english-control", action="store_true", help="same kept examples and order, but every question and trace in the original English")
     a = ap.parse_args()
     rows = [json.loads(l) for l in SRC.open()]
     exs = [r for r in rows if keep(r)]
+    if a.english_control: exs = [r | dict(lang="English", q=r["english_q"], r=r["english_r"], orig_lang=r["lang"]) for r in exs]
     print("kept by language:", sorted(Counter(r["lang"] for r in exs).items()), "dropped:", sorted(Counter(r["lang"] for r in rows if not keep(r)).items()))
     svc = tinker.ServiceClient()
     tc = None if a.dry_run else await svc.create_lora_training_client_async(MODEL, rank=a.rank, seed=a.seed)

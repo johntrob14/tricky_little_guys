@@ -240,3 +240,10 @@ Strict: base 4.9% (14/108 items with any pass), langsft1-s8 10.6% (31/108), s20 
 (1-2 samples). Paired per-item diff vs base: s8 +5.8 [+3.0, +8.8], s20 +4.2 [+1.6, +6.9] (bootstrap over items). Gains mostly ignore_question
 (25% -> 42/48%) and repeat_sentences/word_suppression at s8. Accuracy .53 -> .48/.49. Median CoT words 260 -> 195/181 (length confound not checked).
 Astra prompts are English; reasoning stays English (409/432), 11 traces at s20 in French/Spanish/Italian.
+
+### English-only SFT control (langsft1-en: same 315 kept examples, same order and settings, no translation; $0.14)
+Astra 108 x4: en-s8 4.2% (-0.7 [-3.0, +1.6] vs base), en-s20 3.7% (-1.2 [-3.2, +0.9]); excl. ignore_question 1.3/1.8% (base 2.3%);
+accuracy .53/.51; median CoT words 265/239 (base 260). Translated minus English control: s8 +6.5 [+3.7, +9.5], s20 +5.3 [+2.5, +8.6].
+So SFT on the model's own short correct traces does nothing; the gain needs the translated (non-English) traces. Translated training
+completions were longer in tokens (mean 403 vs 339), yet the translated-SFT model's English CoTs got shorter (195/181 words).
+Remaining confound: Gemini's rewrite may change style beyond language (test: Gemini English paraphrase control).
