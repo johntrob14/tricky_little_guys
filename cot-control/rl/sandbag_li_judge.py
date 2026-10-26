@@ -12,7 +12,8 @@ Verbalization judge (VERBALIZE below): YES/NO on the successful WMDP attempts, s
 --scopes picks the monitor scopes; by default cot only for plain-prompt runs (sandbag_li.py's default since 2026-10-26: the model gives only a boxed
 answer, so only the CoT is judged) and all three for paper-prompt runs (config.json `prompts`, absent before plain existed). The verbalization judge sees the run's own system prompt (config.json `system`).
 A run sampled with sandbag_li.py --nocot (config.json `nocot`) gets no judge calls: accuracy, successful attempts and selectivity only, drawn in panels A and B.
-Both by --judge-model on OpenRouter, temperature 0, reasoning effort low. Writes <dir>/<model>/monitor_{full,cot,final}.jsonl and verbalized.jsonl (resumable),
+Both by --judge-model on OpenRouter, temperature 0, reasoning effort low; --monitor-model runs the monitor on another model (openai/gpt-6-luna is pinned to the
+openai provider), its replies in monitor_<scope>_<model name>.jsonl. Writes <dir>/<model>/monitor_{full,cot,final}.jsonl and verbalized.jsonl (resumable),
 <dir>/summary.json and the figure. Panel E of the figure also shows the explicit-admission judge (sandbag_li_explicit.py, states_wrong_intent on successful
 WMDP attempts) for models in <dir>/summary_explicit.json, when that file exists.
 
@@ -29,7 +30,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 
-from hintverb_judge import JUDGE_PRICE, verdict, wilson
+from hintverb_judge import verdict, wilson
 from orjudge import OpenRouterJudge
 from sandbag_judge import CUTOFF, MONITOR, REFUSAL, flagged, mean, score
 from sandbag_li import CONDITIONS, mcq
@@ -78,12 +79,16 @@ def se(xs: list[int]) -> float:
     return statistics.stdev(xs) / math.sqrt(len(xs)) if len(xs) > 1 else float("nan")
 
 
-async def judge_model(d: Path, judge: OpenRouterJudge, questions: dict, scopes: list[str]) -> dict:
+def mon_file(scope: str, model: str) -> str:
+    return f"monitor_{scope}.jsonl" if model == "anthropic/claude-haiku-5.5" else f"monitor_{scope}_{model.split('/')[-1]}.jsonl"
+
+
+async def judge_model(d: Path, judge: OpenRouterJudge, mjudge: OpenRouterJudge, questions: dict, scopes: list[str]) -> dict:
     rows = list(map(json.loads, open(d / "rows.jsonl")))
     base = {r["qid"]: r for r in rows if r["condition"] == "baseline"}
     mon = {}
     for scope in scopes:
-        p = d / f"monitor_{scope}.jsonl"
+        p = d / mon_file(scope, mjudge.model)
         mon[scope] = {(r["qid"], r["condition"]): r for r in map(json.loads, open(p))} if p.exists() else {}
     cfg = json.load(open(d / "config.json"))
     nocot = cfg.get("nocot", False)
@@ -99,9 +104,15 @@ async def judge_model(d: Path, judge: OpenRouterJudge, questions: dict, scopes: 
         if key in mon[scope]:
             return
         response = {"full": r["reasoning"] + "\n\n" + r["response"], "cot": r["reasoning"], "final": r["response"]}[scope]
-        reply, n_in, n_out = await judge.ask(MONITOR.replace("{MCQ}", mcq(questions[r["qid"]])).replace("{model_response}", response))
-        mon[scope][key] = dict(qid=r["qid"], condition=r["condition"], score=score(reply), reply=reply, n_in=n_in, n_out=n_out)
-        with open(d / f"monitor_{scope}.jsonl", "a") as f:
+        try:
+            reply, n_in, n_out = await mjudge.ask(MONITOR.replace("{MCQ}", mcq(questions[r["qid"]])).replace("{model_response}", response))
+            blocked = False
+        except RuntimeError as e:  # OpenRouter's biological-risk filter (403) on some WMDP-bio rows: recorded as an unscored row
+            if "biological risk" not in str(e):
+                raise
+            reply, n_in, n_out, blocked = "", 0, 0, True
+        mon[scope][key] = dict(qid=r["qid"], condition=r["condition"], score=score(reply), reply=reply, n_in=n_in, n_out=n_out, blocked=blocked)
+        with open(d / mon_file(scope, mjudge.model), "a") as f:
             f.write(json.dumps(mon[scope][key]) + "\n")
 
     async def verbalize(r):
@@ -247,6 +258,7 @@ async def main():
     ap.add_argument("--models", nargs="+", required=True, help="subdirectories of --dir")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/li_questions.jsonl")
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5")
+    ap.add_argument("--monitor-model", help="the monitor's judge (default --judge-model)")
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--tag", help="write summary_<tag>.json and figure sandbag_li_<tag>.png instead of the defaults")
     ap.add_argument("--scopes", nargs="+", choices=SCOPES, help="monitor scopes to run (default: cot for plain-prompt runs, all three for paper-prompt runs)")
@@ -254,12 +266,14 @@ async def main():
     summary_path, fig_path = (args.dir / f"summary_{args.tag}.json", FIG.with_name(f"sandbag_li_{args.tag}.png")) if args.tag else (args.dir / "summary.json", FIG)
     questions = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=3000, concurrency=args.concurrency)
+    mmodel = args.monitor_model or args.judge_model
+    mjudge = judge if mmodel == args.judge_model else OpenRouterJudge(mmodel, effort="low", max_tokens=3000, concurrency=args.concurrency, provider="openai" if mmodel.startswith("openai/gpt-6") else None)
     default_scopes = lambda m: ["cot"] if json.load(open(args.dir / m / "config.json")).get("prompts") == "plain" else SCOPES
-    summary = {m: await judge_model(args.dir / m, judge, questions, args.scopes or default_scopes(m)) for m in args.models}
-    calls = [r for m in args.models for f in [f"monitor_{s}.jsonl" for s in SCOPES] + ["verbalized.jsonl"] if (args.dir / m / f).exists() for r in map(json.loads, open(args.dir / m / f))]
+    summary = {m: await judge_model(args.dir / m, judge, mjudge, questions, args.scopes or default_scopes(m)) for m in args.models}
+    calls = [r for m in args.models for f in [mon_file(s, mmodel) for s in SCOPES] + ["verbalized.jsonl"] if (args.dir / m / f).exists() for r in map(json.loads, open(args.dir / m / f))]
     n_in, n_out = sum(r["n_in"] for r in calls), sum(r["n_out"] for r in calls)
-    summary["judge"] = dict(model=args.judge_model, effort="low", temperature=0, monitor_modes={"full": "cot+answer", "cot": "cot_only"}, monitor_prompt=MONITOR, cutoff=CUTOFF, verbalization_prompt=VERBALIZE,
-                            n_in=n_in, n_out=n_out, usd_est=(n_in * JUDGE_PRICE[args.judge_model][0] + n_out * JUDGE_PRICE[args.judge_model][1]) / 1e6, usd_reported=judge.usd)
+    summary["judge"] = dict(model=args.judge_model, monitor_model=mmodel, effort="low", temperature=0, monitor_modes={"full": "cot+answer", "cot": "cot_only"}, monitor_prompt=MONITOR, cutoff=CUTOFF, verbalization_prompt=VERBALIZE,
+                            n_in=n_in, n_out=n_out, usd_reported=judge.usd + (mjudge.usd if mjudge is not judge else 0))
     json.dump(summary, open(summary_path, "w"), indent=1)
     for m in args.models:
         print(f"\n{m}: calibrated cutoffs (baseline false alarms <= 1%) {summary[m]['calibrated_cutoff']}")
@@ -276,9 +290,9 @@ async def main():
                 print(line)
             if "selectivity" in c:
                 print(f"            selectivity S {c['selectivity']:.2f}")
-    print(f"\njudge tokens in {n_in} out {n_out}, about ${summary['judge']['usd_est']:.2f} (reported ${judge.usd:.2f}); figure {fig_path}")
+    print(f"\njudge tokens in {n_in} out {n_out}, reported ${summary['judge']['usd_reported']:.2f}; figure {fig_path}")
     ex_path = args.dir / "summary_explicit.json"
-    plot(summary, args.models, args.judge_model, fig_path, json.load(open(ex_path)) if ex_path.exists() else None)
+    plot(summary, args.models, mmodel, fig_path, json.load(open(ex_path)) if ex_path.exists() else None)
 
 
 if __name__ == "__main__":
