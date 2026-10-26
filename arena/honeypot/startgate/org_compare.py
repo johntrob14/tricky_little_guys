@@ -29,6 +29,7 @@ GROUPS = {   # (mode, model label) -> log dirs
     ("baseline", "st1-ignore2"): [f"oss-ign2-covert2-{t}" for t in ("easy", "medium", "hard")],
     ("baseline", "Qwen3.8-27B base"): ["sgcmp-qwen-covert2"],
     ("baseline", "GLM-5.3"): ["glm53-hs-pw"], ("direct", "GLM-5.3"): ["glm53-sd-pw"],
+    ("direct", "DeepSeek-V4.1-Flash"): ["ds41-sd-pw"],
     ("baseline", "opsd-grpo1b-s10"): [f"qwen-org-covert2-{t}-b" for t in ("easy", "medium", "hard")],
 }
 NAME = {"baseline": "hidden from the start", "direct": "startgate-direct"}
