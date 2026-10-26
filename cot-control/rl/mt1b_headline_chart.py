@@ -1,4 +1,4 @@
-"""Headline figure for manytypes1b step 150 vs base and grpo3 step 100: CoT control, accuracy, CoT length, held-out accuracy drop minus WMDP sandbag flip rate."""
+"""Headline figure for manytypes1b step 150 vs base and grpo3 step 100: CoT control, accuracy, CoT length, WMDP sandbag flip rate minus held-out accuracy drop."""
 import json
 from pathlib import Path
 
@@ -77,9 +77,9 @@ for r, sb, _, _ in MODELS:
     drop = 100 * (tc[r]["ho_noinstr"] - tc[r]["ho_instr"]) / n
     s = SANDBAG[sb]["arms"]["sandbag"]
     flip = 100 * s["sandbagged"] / s["eligible"]
-    vals.append([drop, flip, drop - flip])
-    labs.append([f"{tc[r]['ho_noinstr']}->{tc[r]['ho_instr']}\nof {n}", f"{s['sandbagged']}/{s['eligible']}", f"{drop - flip:+.1f}"])
-bars(axes[3], ["held-out control types:\naccuracy drop", "WMDP sandbag arm:\nflip rate", "accuracy drop\nminus flip rate"], vals, labs, "Held-out accuracy drop minus WMDP sandbag flip rate", "percentage points", (-18, 28), ref=0)
+    vals.append([drop, flip, flip - drop])
+    labs.append([f"{tc[r]['ho_noinstr']}->{tc[r]['ho_instr']}\nof {n}", f"{s['sandbagged']}/{s['eligible']}", f"{flip - drop:+.1f}"])
+bars(axes[3], ["held-out control types:\naccuracy drop", "WMDP sandbag arm:\nflip rate", "flip rate minus\naccuracy drop"], vals, labs, "WMDP sandbag flip rate minus held-out accuracy drop", "percentage points", (0, 25))
 
 fig.legend(*axes[0].get_legend_handles_labels(), loc="outside upper center", ncol=3, frameon=False, fontsize=11, labelcolor=TEXT)
 fig.supxlabel("Transfer eval: F0 wording, instruction in the user turn, 108 items per type (no_question_restate 105, no_option_text 92), 3-vote gpt-oss-120b judges; grpo3 trained 6 of the 12 'manytypes trained' types.\n"
