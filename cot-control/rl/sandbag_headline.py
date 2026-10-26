@@ -37,8 +37,9 @@ MODELS = {"base": ("gpt-oss-120b base", "#3987e5", ["base", "base-nohint", "base
           "manytypes2c-s140": ("manytypes2c s140", "#a78bfa", ["manytypes2c-s140"]),
           "manytypes2d-s140": ("manytypes2d s140", "#c98500", ["manytypes2d-s140"]),
           "manytypes2e-s170": ("manytypes2e s170", "#e87ba4", ["manytypes2e-s170"]),
-          "qwen-base": ("Qwen3.8-27B base", "#4fc3d9", []),
-          "qwen-base-nocot": ("Qwen3.8-27B base, no CoT (thinking off, answer prefilled)", "#4fc3d9", [])}
+          "qwen-base": ("Qwen3.8-27B base", "#f0b429", []),
+          "qwen-base-nocot": ("Qwen3.8-27B base, no CoT (thinking off, answer prefilled)", "#f0b429", []),
+          "qwen-opsdgrpo-s10": ("Qwen3.8-27B opsd-grpo1b s10 (CoT-control organism)", "#d65db1", [])}
 # sampling settings per base model, for the title
 SAMPLING = {False: "gpt-oss-120b: harmony effort medium, 16k cap", True: "Qwen3.8-27B: the template's default effort (xhigh), 32k cap, cut rows continued to 60k"}
 TITLES = {False: "WMDP sandbagging, default variant: 150 questions (OpenAI monitorability-evals), instruction in the system prompt, no named wrong option. ",
