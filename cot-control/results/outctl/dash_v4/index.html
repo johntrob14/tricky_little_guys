@@ -18,6 +18,10 @@
 .cv .chart { position: relative; height: 220px; width: 100%; }
 .cv .chart svg, .cv .scatter svg { display: block; }
 .cv .scatter { position: relative; height: 420px; width: 100%; }
+.cv .scatter svg { margin-inline: auto; }
+.cv .fits { display: flex; flex-direction: column; gap: 2px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+.cv .fits .ln { display: inline-block; width: 22px; height: 0; border-top: 2px solid var(--color-fg); vertical-align: middle; margin-right: 6px; }
+.cv .fits .ln.dash { border-top-style: dashed; border-top-color: var(--color-fg-muted); }
 .cv .legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
 .cv .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .cv .sw { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
@@ -59,10 +63,11 @@
 
   <section class="section" id="tasks">
     <h2>CoT vs output controllability by task</h2>
-    <p class="muted">One dot per constraint and dataset (9 constraints × GPQA, HLE, MMLU-Pro; about 60 samples per arm each). Dots above the diagonal are easier to control in the output than in the CoT.</p>
+    <p class="muted">One dot per constraint and dataset (9 constraints × GPQA, HLE, MMLU-Pro; about 60 samples per arm each). Dots above the diagonal are easier to control in the output than in the CoT. Lines are least-squares fits of output pass rate on CoT pass rate: solid over all 27 tasks, dashed over the tasks whose CoT pass rate is above 0.</p>
     <div class="card">
       <div class="legend" id="sc-legend"></div>
-      <div class="scatter" id="scatter" data-source="task_scatter"></div>
+      <div class="scatter" id="scatter" data-source="task_scatter scatter_fits"></div>
+      <div class="fits" id="sc-fits"></div>
     </div>
   </section>
 
@@ -144,9 +149,11 @@ function drawSmall(el, bins, slope, colors) {
   });
 }
 
-function drawScatter(el, rows, colorOf) {
-  const W = el.clientWidth, H = 420, m = {t: 10, r: 14, b: 40, l: 46};
-  if (!W) return;
+function drawScatter(el, rows, colorOf, fits) {
+  const m = {t: 10, r: 14, b: 40, l: 46}, side = Math.min(el.clientWidth, 560);
+  if (!side) return;
+  const W = side, H = side - (m.l + m.r) + (m.t + m.b);  // square plotting area
+  el.style.height = H + "px";
   const x = d3.scaleLinear([0, 1], [m.l, W - m.r]), y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
   const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
   svg.append("g").selectAll("line").data([0, .25, .5, .75, 1]).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d)).attr("stroke", "var(--cds-chart-grid)");
@@ -157,11 +164,37 @@ function drawScatter(el, rows, colorOf) {
   svg.append("text").attr("font-size", 11).style("font-size", "11px").attr("x", (m.l + W - m.r) / 2).attr("y", H - 6).attr("text-anchor", "middle").text("CoT control pass rate");
   svg.append("text").attr("font-size", 11).style("font-size", "11px").attr("transform", `translate(12,${(m.t + H - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").text("Output control pass rate");
   svg.append("text").attr("font-size", 11).style("font-size", "11px").attr("x", x(.97)).attr("y", y(.97) + 14).attr("text-anchor", "end").text("y = x");
+  svg.append("clipPath").attr("id", "sc-clip").append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", H - m.t - m.b);
+  fits.forEach(f => {
+    if (f.slope == null) return;
+    svg.append("line").attr("clip-path", "url(#sc-clip)").attr("x1", x(0)).attr("y1", y(f.intercept)).attr("x2", x(1)).attr("y2", y(f.intercept + f.slope))
+      .attr("stroke", f.subset === "all" ? "var(--color-fg)" : "var(--color-fg-muted)").attr("stroke-width", 2)
+      .attr("stroke-dasharray", f.subset === "all" ? null : "6 4");
+  });
   svg.append("g").selectAll("circle").data(rows).join("circle").attr("cx", d => x(d.cot_rate)).attr("cy", d => y(d.output_rate)).attr("r", 6)
     .attr("fill", d => colorOf(d.constraint)).attr("fill-opacity", .85).attr("stroke", "var(--color-panel)").attr("stroke-width", 1.5)
     .on("mousemove", (ev, d) => { const [px, py] = d3.pointer(ev, el); tipShow(el, [line("k", `${LABEL[d.constraint] || d.constraint} · ${DSL[d.dataset] || d.dataset}`), line("", `CoT ${pct1(d.cot_rate)} (n ${d.cot_n})`), line("", `Output ${pct1(d.output_rate)} (n ${d.output_n})`)], px, py); })
     .on("mouseleave", () => tipHide(el));
 }
+
+dash.calc("scatter_fits", {
+  inputs: ["task_scatter"],
+  title: "Best-fit lines, output vs CoT",
+  description: "Least-squares line of output pass rate on CoT pass rate per model, over all tasks and over tasks with a CoT pass rate above 0.",
+  fn: (task_scatter) => {
+    const out = [];
+    for (const model of [...new Set(task_scatter.map(r => r.model))]) {
+      const all = task_scatter.filter(r => r.model === model).map(r => [Number(r.cot_rate), Number(r.output_rate)]);
+      for (const [subset, pts] of [["all", all], ["cot_above_0", all.filter(p => p[0] > 0)]]) {
+        const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+        const sxx = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0), syy = pts.reduce((a, p) => a + (p[1] - my) ** 2, 0), sxy = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0);
+        const slope = n >= 3 && sxx > 0 ? sxy / sxx : null;
+        out.push({model, subset, n, slope, intercept: slope == null ? null : my - slope * mx, r: slope == null || syy === 0 ? null : sxy / Math.sqrt(sxx * syy)});
+      }
+    }
+    return out;
+  }
+});
 
 dash.onData(() => {
   window.cvDraw = draw;
@@ -223,7 +256,19 @@ dash.onData(() => {
     if (T.status === "error") failed(sc);
     else if (T.status === "ok") {
       sc.replaceChildren();
-      drawScatter(sc, T.data.filter(r => r.model === model).map(r => ({...r, cot_rate: +r.cot_rate, output_rate: +r.output_rate})), colorOf);
+      const F = dash.data("scatter_fits"), fits = F.status === "ok" ? F.data.filter(f => f.model === model) : [];
+      drawScatter(sc, T.data.filter(r => r.model === model).map(r => ({...r, cot_rate: +r.cot_rate, output_rate: +r.output_rate})), colorOf, fits);
+      const box = document.getElementById("sc-fits"); box.replaceChildren();
+      const f3 = d3.format("+.2f"), f2 = d3.format(".2f");
+      fits.forEach(f => {
+        const row = document.createElement("div"), ln = document.createElement("i"); ln.className = "ln" + (f.subset === "all" ? "" : " dash");
+        const where = "model=" + encodeURIComponent(model) + "&subset=" + f.subset;
+        const mk = (field, text) => { const s = document.createElement("span"); s.setAttribute("data-source", "scatter_fits"); s.setAttribute("data-field", field); s.setAttribute("data-where", where); s.textContent = text; return s; };
+        row.append(ln, f.subset === "all" ? "All tasks (n " : "CoT pass rate above 0 (n ", mk("n", String(f.n)), "): ");
+        if (f.slope == null) row.append("too few tasks to fit");
+        else row.append("slope ", mk("slope", f2(f.slope)), ", intercept ", mk("intercept", pct(f.intercept)), ", r ", mk("r", f.r == null ? "n/a" : f2(f.r)));
+        box.appendChild(row);
+      });
     }
   }
 });
