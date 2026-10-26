@@ -69,6 +69,7 @@ Stopped by Ethan's decision after step 110 (trainer estimate $12.56: Tinker $8.3
 Changes from manytypes2b (Ethan): no-instruction share 0.15 (was 0.3), reverse-KL coefficient 0.35 (was 1.0), seed 2.
 
 ## Outcome
+Stopped by Claude after step 141 with the step-140 checkpoint saved (`--steps 150` was set; steps 141-150 skipped to save credits). Evals at steps 100, 120, 140 (`results/rl/manytypes2c/evals.jsonl`); numbers in the summary table at the end of this file.
 
 # manytypes2d
 
@@ -77,5 +78,14 @@ Changes from manytypes2b (Ethan): no-instruction share 0.15 (was 0.3), reverse-K
 - Pool: `python build_pool_hard.py --out data/pool_k4_gpqahard.jsonl --repeat 6` (new): pool_k4's 2000 MMLU-Pro questions plus 6 copies of 105 GPQA questions from `data/obf_train_gptoss_r2.jsonl` that base gpt-oss-120b answered correctly with a CoT (accuracy over 4 samples >= 0.25; kept set mean 0.843) and never without one (0/2 no-CoT samples), none truncated, >= 3 keywords; 223 of the 516 GPQA rows were dropped as transfer-eval, Astra or hint-verbalization questions. GPQA is 630/2630 of the draws.
 
 Question: does training on questions that need the CoT (Ethan's suggestion) keep accuracy under instruction while compliance grows? Compared with manytypes2c from the same step-100 state over steps 101-140.
+
+## Outcome
+
+# manytypes2e
+
+- Launched: 2026-10-25 (Claude, overnight iteration)
+- Command (same env): as manytypes2d with `--run manytypes2e --init-state tinker://2a327f93-70d8-5aec-b254-cea69d46ab84:train:0/weights/cotctl-manytypes2c-step140-state --start-step 140 --steps 180 --acc-bonus 1.0 --budget 16 --seed 4` (hard-question pool `data/pool_k4_gpqahard.jsonl`, `--p-plain 0.15 --plain-kl 0.35 --len-band 0.75 1.25 --wrong-factor 0`); eval at the final step only (`eval_watch.py --every 1000`)
+
+Changes from manytypes2d: starts from manytypes2c's step-140 state; `--acc-bonus 1.0` (new in `grpo_types.py`): an instructed rollout gets +1 for a correct answer whether or not it complies (format ok and final response within 50 words), so compliant-correct 3, compliant-wrong 0, non-compliant-correct partial + 1. Both accuracy levers (harder questions, accuracy bonus) are combined in one run because the credits allow one more run, not a factorial comparison.
 
 ## Outcome
