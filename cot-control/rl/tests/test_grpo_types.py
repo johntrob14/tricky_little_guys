@@ -10,7 +10,7 @@ import controls
 import grpo
 import grpo_types as gt
 
-ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0, len_scale=1.0, meta_gate=True, max_final_words=None)
+ARGS = SimpleNamespace(strict_bonus=1.0, wrong_factor=0.5, len_lambda=0.5, len_band=[0.8, 1.5], len_cap=3.0, len_scale=1.0, acc_bonus=0.0, meta_gate=True, max_final_words=None)
 Q = {"qid": 1, "question": "Which organelle carries out photosynthesis in the cells of a green plant leaf?", "options": ["the mitochondrion", "the chloroplast", "the ribosome", "the nucleus"],
      "answer": "B", "keywords": ["photosynthesis", "organelle", "chloroplast", "plant"], "base_words": 100, "correct": 0.8}
 
@@ -145,3 +145,10 @@ def test_kl_datum_advantages():
     d = gt.kl_datum([1, 2, 3], [4, 5], [-1.0, -2.0], [-0.5, -3.0], 2.0)
     adv = d.loss_fn_inputs["advantages"].to_numpy().tolist()
     assert adv == [0.0, 0.0, 1.0, -2.0] and d.loss_fn_inputs["target_tokens"].to_numpy().tolist() == [2, 3, 4, 5]
+
+
+def test_acc_bonus_pays_correct_answers_without_compliance():
+    args = SimpleNamespace(**(vars(ARGS) | {"acc_bonus": 1.0, "wrong_factor": 0.0}))
+    right = finalized("lowercase_thinking", "The chloroplast does it, so B. " * 12, args=args)
+    wrong = finalized("lowercase_thinking", "The chloroplast does it, so B. " * 12, answer="A", args=args)
+    assert not right["strict"] and right["comp"] - wrong["comp"] == pytest.approx(1.0 + right["partial"])
