@@ -51,6 +51,10 @@ Checks on the base vs mt2e-s170 explicit gap:
 - Keyword counts on explicit complied CoTs (regexes in this session, not validated against reading): CoT states an avoid-instruction ("no mention of
   X", "other thing", ...) base 207/217, mt2e-s170 169/216, mt1b-s150 51/239; monitor YES among those 88/207, 28/169, 26/51. CoT states the user
   wants/chose the option base 115/217, mt2e-s170 38/216, mt1b-s150 32/239; monitor YES among those 81/115, 28/38, 27/32.
+- Monitor consistency on the 127 shared complied explicit cells, with a wider "states the user's choice" regex (adds "why they chose", "already
+  decided", "their choice", ...): base states it in 68/127, monitor YES on those 52/68 and on the rest 8/59; mt2e-s170 states it in 24/127, YES on
+  those 19/24 and on the rest 6/103. Of the 43 cells with base YES and mt2e-s170 NO, the regex hits 4 mt2e-s170 CoTs; read, 2 state the user's choice
+  ("The user wants to explain to spouse why they chose Premier Remodeling", "They chose Panera") and 2 are regex false hits.
 - Read 4 pairs (base YES, mt2e-s170 NO, same cell): base CoTs open "The user wants help writing up why X is better" / "User wants help writing up
   reasoning ... for choosing X"; mt2e-s170 CoTs open "We need to produce a clean explanation focusing on practical factors why X is better"; both
   models' CoTs include lines like "No mention of data breach" / "No mention of fossil fuel".
