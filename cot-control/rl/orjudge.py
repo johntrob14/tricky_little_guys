@@ -37,6 +37,11 @@ class OpenRouterJudge:
         self.usd, self.providers, self.timeouts = 0.0, Counter(), 0
 
     async def ask(self, prompt: str) -> tuple[str, int, int]:
+        reply, _, n_in, n_out = await self.ask_full(prompt)
+        return reply, n_in, n_out
+
+    async def ask_full(self, prompt: str) -> tuple[str, str, int, int]:
+        """(reply, the reasoning text the provider returned, prompt tokens, completion tokens)."""
         body = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "max_tokens": self.max_tokens,
                 "reasoning": {"effort": self.effort}, "usage": {"include": True}} | ({} if self.temperature is None else {"temperature": self.temperature})
         if self.provider:
@@ -58,11 +63,12 @@ class OpenRouterJudge:
                 timeouts = timeouts + 1 if code == 599 or (code == 504 and "timed out" in detail) else 0
                 if timeouts == TIMEOUT_ATTEMPTS:
                     self.timeouts += 1
-                    return "", 0, 0
+                    return "", "", 0, 0
                 if attempt + 1 == self.retries:
                     raise RuntimeError(f"openrouter error {code} after {self.retries} attempts: {detail}")
                 await asyncio.sleep(2 ** attempt)
         usage = d.get("usage") or {}
         self.usd += float(usage.get("cost") or 0.0)
         self.providers[d.get("provider")] += 1
-        return (d["choices"][0]["message"].get("content") or "").strip(), int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)
+        msg = d["choices"][0]["message"]
+        return (msg.get("content") or "").strip(), (msg.get("reasoning") or "").strip(), int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)

@@ -21,6 +21,7 @@ RES = Path(__file__).resolve().parent.parent / "results"
 FIGURES = Path(__file__).resolve().parents[3] / "figures"
 RUNS = {  # label -> run dir
     "Gemma 4 31B": "openrouter-runs/gemma4-31b-up",
+    "DeepSeek V3.2 Exp": "openrouter-runs/dsv32exp-up",
     "GLM-5.3": "tinker-runs/glm53-run2",
     "Nemotron-3-Ultra": "tinker-runs/nemo-ultra-run2",
     "gpt-oss-120b": "tinker-runs/gptoss120b-t1",
@@ -52,7 +53,7 @@ def load(run):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fig", required=True)
-    ap.add_argument("--highlight", default="Gemma 4 31B")
+    ap.add_argument("--highlight", nargs="+", default=["Gemma 4 31B", "DeepSeek V3.2 Exp"])
     args = ap.parse_args()
     data = {m: load(r) for m, r in RUNS.items()}
     order = sorted(data, key=lambda m: (data[m]["k"], data[m]["k_nometa"]))
@@ -66,12 +67,12 @@ def main():
     for i, m in enumerate(order):
         d = data[m]
         lo, hi = wilson(d["k"], 108)
-        ax.barh(i, 100 * d["k"] / 108, height=0.62, color="#d95926" if m == args.highlight else "#3987e5", zorder=3)
+        ax.barh(i, 100 * d["k"] / 108, height=0.62, color="#d95926" if m in args.highlight else "#3987e5", zorder=3)
         ax.plot([100 * lo, 100 * hi], [i, i], color=INK, lw=1.2, zorder=4)
         ax.text(100 * hi + 0.8, i, f"{d['k']}/108   no meta {d['k_nometa']}   median CoT {d['words']:,.0f} words", va="center", fontsize=9.5, color=INK2)
     ax.set_yticks(y, order)
     for t in ax.get_yticklabels():
-        t.set_fontweight("bold" if t.get_text() == args.highlight else "normal")
+        t.set_fontweight("bold" if t.get_text() in args.highlight else "normal")
     ax.set_xlim(0, 45)
     ax.set_xlabel("strict compliance, meta-discussion allowed (% of 108, 95% Wilson)")
     ax.grid(axis="x", color=GRID, zorder=0)

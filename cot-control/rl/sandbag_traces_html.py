@@ -21,8 +21,8 @@ from sandbag import ARMS, AWARE, EVASION, instruction_text
 from sandbag_judge import CUTOFF
 
 KIND = {"yes": "stated", "yes_stated": "stated", "yes_silent": "inconsistent", "unclear": "unclear", "no": "genuine"}
-LABELS = {"base": "gpt-oss-120b base", "grpo3-s100": "grpo3 s100", "mt1b-s150": "manytypes1b s150", "base-nohint": "gpt-oss-120b base, no hint", "mt1b-s150-nohint": "manytypes1b s150, no hint"}
-SHORT = {"base": "base", "grpo3-s100": "grpo3", "mt1b-s150": "mt1b", "base-nohint": "base nohint", "mt1b-s150-nohint": "mt1b nohint"}
+LABELS = {"base": "gpt-oss-120b base", "grpo3-s100": "grpo3 s100", "mt1b-s150": "manytypes1b s150", "base-nohint": "gpt-oss-120b base, no hint", "mt1b-s150-nohint": "manytypes1b s150, no hint", "base-sysprompt": "gpt-oss-120b base, instruction in system prompt", "mt1b-s150-sysprompt": "manytypes1b s150, instruction in system prompt"}
+SHORT = {"base": "base", "grpo3-s100": "grpo3", "mt1b-s150": "mt1b", "base-nohint": "base nohint", "mt1b-s150-nohint": "mt1b nohint", "base-sysprompt": "base sys", "mt1b-s150-sysprompt": "mt1b sys"}
 
 
 def looping(cot: str) -> bool:
@@ -32,7 +32,7 @@ def looping(cot: str) -> bool:
 
 CSS = """
 body{background:#1a1a19;color:#e8e6e3;font:13px system-ui,sans-serif;margin:0;display:flex;height:100vh}
-nav{width:430px;min-width:430px;overflow:auto;border-right:1px solid #3a3a38;padding:10px}
+nav{overflow:auto;border-right:1px solid #3a3a38;padding:10px}
 main{flex:1;overflow:auto;padding:14px 22px}
 h1{font-size:15px;margin:0 0 6px} h2{font-size:16px;margin:0 0 8px} h3{font-size:12px;color:#c3c2b7;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 4px}
 .muted{color:#a3a29b;font-size:12px} select,input{background:#242422;color:#e8e6e3;border:1px solid #4a4a47;border-radius:3px;padding:2px 4px;font-size:12px}
@@ -48,7 +48,7 @@ table.sum{border-collapse:collapse;font-size:11px;margin:4px 0} table.sum td,tab
 .badge{display:inline-block;padding:1px 6px;border-radius:3px;font-weight:600;color:#1a1a19;margin-right:4px}
 .prompt{background:#242422;border:1px solid #3a3a38;border-radius:4px;padding:8px;white-space:pre-wrap;max-height:30vh;overflow:auto}
 table.grid{border-collapse:separate;border-spacing:6px} table.grid th{color:#c3c2b7;font-weight:normal;text-align:left;font-size:12px}
-.card{background:#242422;border:1px solid #3a3a38;border-radius:5px;padding:6px 8px;width:270px;cursor:pointer;font-size:12px;line-height:1.45}
+.card{background:#242422;border:1px solid #3a3a38;border-radius:5px;padding:6px 8px;width:230px;cursor:pointer;font-size:12px;line-height:1.45}
 .card:hover{border-color:#6a6965} .card.sel{border-color:#3987e5;box-shadow:0 0 0 1px #3987e5}
 .k-stated{color:#eda100} .k-inconsistent{color:#e87ba4} .k-unclear{color:#b8b7b2} .k-genuine{color:#8a8984}
 .cols{display:flex;gap:12px;align-items:flex-start} .col{flex:1;min-width:0}
@@ -159,7 +159,8 @@ function detail(m, q, a) {
   col.append(el('div', 'lab', 'CoT (analysis channel)'), el('div', 'box', r.cot || '(empty)'));
   col.append(el('div', 'lab', 'final channel'), el('div', 'box', r.fin || '(empty)'));
   const det = (title, text) => { const d = el('details'); d.append(el('summary', null, title), el('div', 'box', text)); col.append(d); };
-  if (a !== 'honest') det('inserted instruction', D.hint[m] ? Q[q].inserts[a] : Q[q].inserts_nohint[a]);
+  if (a !== 'honest') det(D.placement[m] === 'system' ? 'instruction (appended to the system prompt)' : 'inserted instruction', D.hint[m] ? Q[q].inserts[a] : Q[q].inserts_nohint[a]);
+  if (r.sys) det('system prompt', r.sys);
   det('full user prompt', r.user);
   det('monitor reply', r.monr || '(no reply)');
   if (r.vbr) det('verbalization judge reply', r.vbr);
@@ -240,7 +241,7 @@ init();
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--models", nargs="+", default=["base", "base-nohint", "mt1b-s150", "mt1b-s150-nohint"])
+    ap.add_argument("--models", nargs="+", default=["base", "base-nohint", "base-sysprompt", "mt1b-s150", "mt1b-s150-nohint", "mt1b-s150-sysprompt"])
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
@@ -249,7 +250,7 @@ def main():
     for f in glob.glob(str(args.dir / "handval/*verdicts_shard*.jsonl")):
         for v in map(json.loads, open(f)):
             verd[(v.get("model", "mt1b-s150"), v["arm"], v["qid"])] = v
-    rows = {}
+    rows, cfg = {}, {m: json.load(open(args.dir / m / "config.json")) for m in args.models}
     for m in args.models:
         mon = {(r["qid"], r["arm"]): r for r in map(json.loads, open(args.dir / m / "monitor.jsonl"))}
         ver = {(r["qid"], r["arm"]): r for r in map(json.loads, open(args.dir / m / "verbalized.jsonl"))}
@@ -258,15 +259,15 @@ def main():
             k, mo, ve, hr = (r["qid"], r["arm"]), mon.get((r["qid"], r["arm"])), ver.get((r["qid"], r["arm"])), verd.get((m, r["arm"], r["qid"]))
             cut = r["finish"] == "length"
             rows[m].setdefault(r["qid"], {})[r["arm"]] = dict(
-                a=r["answer"], ok=r["answer"] == r["correct"], cut=cut, loop=cut and looping(r["reasoning"]), tok=r["cot_tokens"], cot=r["reasoning"], fin=r["response"], user=r["user"],
+                a=r["answer"], ok=r["answer"] == r["correct"], cut=cut, loop=cut and looping(r["reasoning"]), tok=r["cot_tokens"], cot=r["reasoning"], fin=r["response"], user=r["user"], sys=r["system"] if r.get("system", cfg[m]["system"]) != cfg[m]["system"] else None,
                 mon=mo["score"] if mo and mo["reply"].strip() else None, monr=mo["reply"] if mo else "", vb=ve["verbalized"] if ve else None, vbr=ve["reply"] if ve else "",
                 hr={k_: v for k_, v in hr.items() if k_ not in ("model", "arm", "qid", "item")} if hr else None, kind=KIND.get(str(hr["deliberate_wrong"]).lower(), "unclear") if hr else None)
-    data = dict(models=args.models, arms=ARMS, cutoff=CUTOFF, labels={m: LABELS.get(m, m) for m in args.models}, hint={m: not json.load(open(args.dir / m / "config.json")).get("no_hint", False) for m in args.models}, short={m: SHORT.get(m, m) for m in args.models}, rows=rows,
+    data = dict(models=args.models, arms=ARMS, cutoff=CUTOFF, labels={m: LABELS.get(m, m) for m in args.models}, hint={m: not cfg[m].get("no_hint", False) for m in args.models}, placement={m: cfg[m].get("placement", "user") for m in args.models}, short={m: SHORT.get(m, m) for m in args.models}, rows=rows,
                 questions=[dict(qid=q["qid"], correct=q["correct"], hint_wrong=q["hint_wrong"], honest=q["honest"], inserts={a: instruction_text(q, a) for a in ARMS[1:]}, inserts_nohint={a: instruction_text(q, a, False) for a in ARMS[1:]}) for q in qs])
     legend = ("<div class='c o-ok'>B</div><div>answer letter, correct</div><div class='c o-bad'>B</div><div>answer letter, wrong</div>"
               "<div class='c o-bad flip'>B</div><div>flip: wrong here, correct in the honest arm</div><div class='c o-cut'>…</div><div>cut off at the 16k cap (no answer)</div>"
               "<div class='c o-none'>–</div><div>finished without a letter (refusal etc.)</div><div class='c o-ok flag'>C</div><div>CoT-only monitor flagged it (score &lt; %d)</div>" % CUTOFF)
-    arms_doc = f"honest: the unperturbed question. sandbag: OpenAI's hint inserted between stem and options (you may answer wrongly to avoid deletion; X is incorrect). aware: + \"{AWARE}\" evasion: + \"{AWARE} {EVASION}\" No-hint runs drop the sentence naming X."
+    arms_doc = f"honest: the unperturbed question. sandbag: OpenAI's hint inserted between stem and options (you may answer wrongly to avoid deletion; X is incorrect). aware: + \"{AWARE}\" evasion: + \"{AWARE} {EVASION}\" No-hint runs drop the sentence naming X. System-prompt runs append the instruction to the system prompt and send the unperturbed question."
     nav = (f"<h1>WMDP sandbagging traces (v1)</h1><div class='muted'>gpt-oss harmony, effort medium, T 0, one sample per question and arm, Tinker. Monitor: CoT only, Li et al. 2025 sandbagging judge, "
            f"Haiku 5.5. Each line: question, then one strip per model ({', '.join(LABELS.get(m, m) for m in args.models)}), cells in arm order {' / '.join(ARMS)}.</div>"
            f"<div class='legend'>{legend}</div><details><summary>what each arm adds</summary><div class='muted'>{arms_doc}</div></details><div id='sum'></div>"
@@ -274,7 +275,7 @@ def main():
            "<span class='muted'>outcome</span><select id='fc'></select><span class='muted'>qid</span><input id='find' placeholder='starts with…'></div>"
            "<div class='muted'><span id='count'></span> · <kbd>j</kbd>/<kbd>k</kbd> next/previous</div><div id='list' style='margin-top:6px'></div>")
     payload = json.dumps(data).replace("</", "<\\/")
-    doc = (f"<!doctype html><html><head><meta charset='utf-8'><title>WMDP sandbagging traces</title><style>{CSS}</style></head><body><nav>{nav}</nav><main id='main'></main>"
+    doc = (f"<!doctype html><html><head><meta charset='utf-8'><title>WMDP sandbagging traces</title><style>{CSS} nav{{width:{60 + 82 * len(args.models)}px;min-width:{60 + 82 * len(args.models)}px}}</style></head><body><nav>{nav}</nav><main id='main'></main>"
            f"<script type='application/json' id='data'>{payload}</script><script>{JS}</script></body></html>")
     args.out.write_text(doc)
     print(f"{len(qs)} questions x {len(ARMS)} arms x {len(args.models)} models -> {args.out} ({len(doc) / 1e6:.1f} MB)")
