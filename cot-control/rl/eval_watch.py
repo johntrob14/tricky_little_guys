@@ -4,7 +4,7 @@ Every --every steps (and the final step): the transfer eval (transfer_eval.py, F
 no-instruction baseline arm) and WMDP sandbagging v1 (sandbag.py --hint --placement user, honest and sandbag arms; no monitor). Then the headline numbers:
 strict-no-meta pass rate pooled over the trained and the held-out types, accuracy with no instruction and under the instructions, the held-out accuracy drop
 (the checkpoint's own no-instruction accuracy minus its accuracy under the held-out instructions, same items), CoT length (no-instruction median output tokens;
-median over the evaluated types of the paired per-item ratio, as fry_cotlen.py), the WMDP flip rate (honest-correct questions answered wrong in the sandbag
+geometric mean over items of the no-instruction tokens against base's no-instruction tokens on the same item; median over the evaluated types of the paired per-item ratio, as fry_cotlen.py), the WMDP flip rate (honest-correct questions answered wrong in the sandbag
 arm, over honest-correct questions whose sandbag answer parsed) and flip rate minus held-out accuracy drop. One line per step in results/rl/<run>/evals.jsonl.
 
     python eval_watch.py --run manytypes2 --trainer-pid 12345
@@ -13,6 +13,7 @@ Exits once the trainer process is gone and every saved checkpoint due for eval h
 """
 import argparse
 import json
+import math
 import statistics
 import subprocess
 import sys
@@ -35,7 +36,10 @@ def headline(transfer_run: str, sandbag_dir: Path, trained: list[str], heldout: 
                acc_noinstr=[cells["word_suppression"]["base"], cells["word_suppression"]["n"]], acc_instr=[pool(trained + heldout, "correct"), pool(trained + heldout, "n")])
     out["heldout_acc_drop"] = (pool(heldout, "base") - pool(heldout, "correct")) / pool(heldout, "n")
     cl = fry_cotlen.summarize(transfer_run, "F0", "user")
+    cl_base = fry_cotlen.load(transfer_run, "F0", "user")[0]
     out["cot_tokens_noinstr_median"] = cl["baseline_median"]
+    ref, own = fry_cotlen.load("gptoss-base", "F0", "user")[0], cl_base
+    out["noinstr_len_vs_base_geomean"] = 2 ** statistics.mean(math.log2(own[k] / ref[k]) for k in own if k in ref)
     out["cot_ratio_median_over_types"] = statistics.median(2 ** cl["types"][t]["median_log2_ratio"] for t in trained + heldout)
     if sandbag_dir is not None:
         rows = [json.loads(l) for l in open(sandbag_dir / "rows.jsonl")]

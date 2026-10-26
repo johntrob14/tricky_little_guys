@@ -24,7 +24,8 @@ Single-type runs (EXTRA_TYPES, trained one at a time with --types): target_words
          (not an attempt at the question): in st1-ignore the one-call ignore judge said T to CoTs that open by restating the instruction and then solve the question.
 Plain prompts (--p-plain): with this probability a prompt is the question alone, no CoT instruction (type "none"). Reward 1 if correct, else 0, minus the length
          penalty, and 0 unless the format is ok, the gate judge says the CoT works on the question and the final response is within --max-final-words. No requirement
-         or meta judge. Not part of the type weights.
+         or meta judge. Not part of the type weights. With --plain-kl C > 0 they are trained by on-policy reverse KL to the base model instead (as opsd.py): base scores
+         the sampled tokens under the same prompt and each token's advantage is C x (log p_base - log p_policy); no group baseline, no accuracy or length term.
 Update:  as grpo.py (advantage = reward - group mean, equal-reward groups dropped, importance_sampling, one optimizer step per batch).
 
     python grpo_types.py --run manytypes-smoke --steps 2 --prompts-per-step 8 --group-size 4 --p-ref 1 --p-system 0
@@ -103,6 +104,19 @@ def score_roll(task: dict, gen: str, truncated: bool, harmony: bool, think_prefi
         partial, strict = controls.grade(controls.CONTROLS[name], text, task["value"], task["item"])
     return dict(partial=partial, strict=strict, judged=name != "none" and controls.CONTROLS[name].grade is None, correct=answer == task["answer"], truncated=truncated, cot_rule=split["cot_rule"],
                 fmt_ok=bool(text) and split["cot_rule"] == extract.COT_RULE_THINK and not truncated and answer is not None, reasoning=text, response=resp, gate=None, req=None, meta=None)
+
+
+def kl_datum(prompt: list[int], resp: list[int], s_lp: list[float], t_lp: list[float], coef: float) -> tinker.Datum:
+    """Per-token reverse-KL advantages coef * (log p_base - log p_policy) on the sampled tokens."""
+    full, n_ctx = prompt + resp, len(prompt) - 1
+    return tinker.Datum(
+        model_input=tinker.ModelInput.from_ints(full[:-1]),
+        loss_fn_inputs={
+            "target_tokens": tinker.TensorData.from_numpy(np.array(full[1:], dtype=np.int64)),
+            "logprobs": tinker.TensorData.from_numpy(np.array([0.0] * n_ctx + s_lp, dtype=np.float32)),
+            "advantages": tinker.TensorData.from_numpy(np.array([0.0] * n_ctx + [coef * (t - s) for s, t in zip(s_lp, t_lp)], dtype=np.float32)),
+        },
+    )
 
 
 def destyled(task: dict, text: str) -> str:
@@ -221,6 +235,7 @@ async def main():
     ap.add_argument("--strict-bonus", type=float, default=1.0)
     ap.add_argument("--wrong-factor", type=float, default=0.5)
     ap.add_argument("--p-plain", type=float, default=0.0, help="probability a prompt has no CoT instruction (type none: reward = correct - length penalty)")
+    ap.add_argument("--plain-kl", type=float, default=0.0, help="train the no-instruction prompts by per-token reverse KL to the base model with this coefficient instead")
     ap.add_argument("--no-meta-gate", dest="meta_gate", action="store_false", help="a meta-judge mention no longer fails the rollout (still judged and logged)")
     ap.add_argument("--max-final-words", type=int, help="fail a rollout whose final response has more than this many words")
     ap.add_argument("--frames", nargs="+", help="training frames to draw from (default controls.TRAIN_FRAMES); R = len2's bare 'Requirement: ...' line")
@@ -261,6 +276,7 @@ async def main():
     tc = await (svc.create_training_client_from_state_async(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tok = tc.get_tokenizer()
     harmony, eos = modelio.probe_harmony(tok), tok.eos_token
+    base_client = await svc.create_sampling_client_async(base_model=args.model) if args.plain_kl else None
     params = tinker.SamplingParams(temperature=args.temperature, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
     ema, tinker_usd, ckpts = {t: 0.0 for t in args.types}, 0.0, []
 
@@ -291,16 +307,27 @@ async def main():
         check_judges(pairs)
         t_judge = time.time() - t1
 
+        kl_seqs = [(p, s) for task, p, group in zip(tasks, prompts_ids, groups) if task["type"] == "none" and args.plain_kl for s, _ in group]
+        base_lps = await asyncio.gather(*[base_client.compute_logprobs_async(tinker.ModelInput.from_ints(p + list(s.tokens))) for p, s in kl_seqs])
+        base_lp = {id(s): [float(x) for x in lp[-len(s.tokens):]] for (p, s), lp in zip(kl_seqs, base_lps)}
+        tinker_usd += sum(len(p) + len(s.tokens) for p, s in kl_seqs) * price["prefill"] / 1e6
+
         rollouts, data, sample_lps, comp_var = [], [], [], 0
         for task, p, group in zip(tasks, prompts_ids, groups):
-            for _, sc in group:
+            for s, sc in group:
                 finalize(task, sc, args)
+                if id(s) in base_lp:
+                    sc["kl"] = sum(float(a) - b for a, b in zip(s.logprobs, base_lp[id(s)])) / max(len(s.tokens), 1)
+                    sc["reward"] = -args.plain_kl * sc["kl"]
             comp_var += len({sc["comp"] for _, sc in group}) > 1
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
                 rollouts.append(dict(step=step + 1, qid=task["qid"], type=task["type"], value=task["value"], frame=task["frame"], term=task["term"], placement=task["placement"],
                                      base_acc=task["base_acc"], n_tokens=len(s.tokens), adv=sc["reward"] - m, **sc))
-                if any(sc2["reward"] != m for _, sc2 in group):
+                if id(s) in base_lp:
+                    data.append(kl_datum(p, list(s.tokens), [float(x) for x in s.logprobs], base_lp[id(s)], args.plain_kl))
+                    sample_lps.append([float(x) for x in s.logprobs])
+                elif any(sc2["reward"] != m for _, sc2 in group):
                     data.append(grpo.datum(p, list(s.tokens), [float(x) for x in s.logprobs], sc["reward"] - m))
                     sample_lps.append([float(x) for x in s.logprobs])
             tinker_usd += (len(p) * price["prefill"] + sum(len(s.tokens) for s, _ in group) * price["sample"]) / 1e6
@@ -344,7 +371,7 @@ async def main():
                 "gate_yes": mean(r["gate"] is True for r in rollouts if r["fmt_ok"]), "gate_unparsed": sum(r["fmt_ok"] and r["gate"] is None for r in rollouts),
                 "req_unparsed": sum(r["judged"] and r["fmt_ok"] and r["req"] is None for r in rollouts), "meta_asked": len(asked), "meta_found": sum(r["meta"] is False for r in asked),
                 "meta_unparsed": sum(r["meta"] is None for r in asked), "groups_comp_var": comp_var,
-                "final_over": sum(not r["final_ok"] for r in rollouts), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
+                "plain_kl": mean(r["kl"] for r in rollouts if "kl" in r), "final_over": sum(not r["final_ok"] for r in rollouts), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
                 "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap, "by_type": by_type, "weights": {t: round(w, 2) for t, w in zip(args.types, type_weights(args.types, ema))},
                 "secs_sample": round(t_sample), "secs_judge": round(t_judge), "secs_train": round(t_train), "secs": round(time.time() - t0), "tinker_usd": round(tinker_usd, 3),
                 "judge_usd": round(judge_usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers + gate_judge.providers)}

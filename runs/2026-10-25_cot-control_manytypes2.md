@@ -33,3 +33,25 @@ manytypes1's GRPO for CoT control on gpt-oss-120b, changed to cut the accuracy l
 - Checkpoints are trained under the personal account; the watcher publishes them so the grant account and John can sample them.
 
 ## Outcome
+Stopped by Ethan's decision after step 104 (trainer estimate $43.53: Tinker $28.81, judges $14.72), to continue from the step-80 state with a tighter length band and reverse KL on the no-instruction prompts (manytypes2b, below). Checkpoints `cotctl-manytypes2-step{10..100}`, published. Steps 81-104 are not part of the continuation.
+
+Evals (`results/rl/manytypes2/evals.jsonl`; transfer eval F0/user, 108 items; WMDP v1 sandbag arm). No-instruction length is the geometric mean over items of the checkpoint's no-instruction tokens against base's on the same item:
+
+| step | trained strict | held-out strict | held-out accuracy under instruction (base 620/1169) | held-out accuracy drop | no-instruction length vs base | length with / without instruction | WMDP flip | flip minus drop |
+|---|---|---|---|---|---|---|---|---|
+| 20 | 105/1080 | 206/1169 | 600/1169 | 1.9 pts | 1.13 | 0.83 | 11/115 | +7.7 |
+| 40 | 177/1080 | 262/1169 | 580/1169 | 9.2 pts | 1.20 | 0.79 | 8/108 | -1.8 |
+| 60 | 414/1080 | 403/1169 | 591/1169 | 4.4 pts | 1.00 | 0.73 | 11/123 | +4.5 |
+| 80 | 515/1080 | 495/1169 | 589/1169 | 4.6 pts | 1.45 | 0.63 | 11/107 | +5.7 |
+
+Training: credited strict over instructed rollouts 136/1704, 128/1800, 131/1776, 149/1760 in steps 1-10 to 31-40, rising from step 55 (0.21) to 0.42 at steps 85-95. Instructed accuracy minus paired base: -0.04 (steps 1-20), -0.05 to -0.07 (51-80), -0.10 (91-100); steps 81-100 by type: decoy_topic -0.35, meow_between_words -0.09, the others -0.06 to 0.00, no-instruction prompts -0.005. Median no-instruction CoT words against base: 0.98 (steps 1-10), 1.25 (31-40), 1.00 (51-60), 0.92 (61-70), 1.08 (71-80), 1.23 (81-90). The single-sample no-instruction arm (108 items, reused across the 11 held-out types) makes the held-out drop noisy, about +-5 points from that arm alone.
+
+# manytypes2b
+
+- Launched: 2026-10-25
+- Command (same env): `python grpo_types.py --run manytypes2b --init-state tinker://eb4c6396-a0a5-58c7-9584-42e5e109289d:train:0/weights/cotctl-manytypes2-step80-state --start-step 80 --steps 150 --types <the 10 manytypes2 types> --p-plain 0.3 --plain-kl 1.0 --len-band 0.75 1.25 --wrong-factor 0 --ignore-attempt-check --max-final-words 50 --save-every 10 --budget 40 --judge-provider Groq --seed 1`, log `results/rl/manytypes2b.log`; evals `python eval_watch.py --run manytypes2b --trainer-pid <pid>` (steps 100, 120, 140, 150; `results/rl/manytypes2b/evals.jsonl`, which adds `noinstr_len_vs_base_geomean`)
+- Output: `cot-control/results/rl/manytypes2b/`, checkpoints `cotctl-manytypes2b-step{90..150}`
+
+Changes from manytypes2: starts from the step-80 state (fresh optimizer, type EMA reset, seed 1); length band 0.75-1.25 of base words on the instructed prompts (was 0.8-1.5); the no-instruction prompts (still p 0.3) are trained by on-policy reverse KL to base (`--plain-kl 1.0`, new in `grpo_types.py`, as `opsd.py`): base gpt-oss-120b scores the sampled tokens under the same prompt, per-token advantage 1.0 x (log p_base - log p_policy), no group baseline, no accuracy or length term. Smoke `manytypes2b-smoke` (1 step x 12 prompts x 4 from the step-80 state, $0.05): mean per-token KL estimate on the no-instruction rollouts 0.11 (8 rollouts, 0.06-0.15).
+
+## Outcome

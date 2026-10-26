@@ -139,3 +139,9 @@ def test_plain_prompt_rewards_accuracy_only():
     sc.update(gate=True, req=None, meta=None)
     assert gt.finalize(task, sc, ARGS)["reward"] < 1.0  # length penalty below the band
     gt.check_judges([(task, sc)])
+
+
+def test_kl_datum_advantages():
+    d = gt.kl_datum([1, 2, 3], [4, 5], [-1.0, -2.0], [-0.5, -3.0], 2.0)
+    adv = d.loss_fn_inputs["advantages"].to_numpy().tolist()
+    assert adv == [0.0, 0.0, 1.0, -2.0] and d.loss_fn_inputs["target_tokens"].to_numpy().tolist() == [2, 3, 4, 5]
