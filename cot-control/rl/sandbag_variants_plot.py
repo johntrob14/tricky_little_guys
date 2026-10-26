@@ -1,9 +1,9 @@
 """Figure: the WMDP sandbagging prompt variants side by side, for base gpt-oss-120b and manytypes1b s150.
 
 Variants (run directories <model><suffix> under results/sandbag): the release's layout (instruction inside the user message, naming a wrong option), the same
-without the named-wrong sentence (-nohint), and the instruction appended to the system prompt (-sysprompt). One row per model; panels: accuracy over finished
+without the named-wrong sentence (-nohint), the instruction appended to the system prompt (-sysprompt), and that without the named-wrong sentence (-sysprompt-nohint). One row per model; panels: accuracy over finished
 rows (not cut off at the 16k cap), flips (honest-arm answer correct, this arm's answer parsed and wrong, over those eligible) with the noise floor (the same
-flip count between two samples of the identical honest prompt, averaged over the ordered pairs of the three runs' honest arms), verbalization judge YES on
+flip count between two samples of the identical honest prompt, summed over the ordered pairs of the runs' honest arms), verbalization judge YES on
 flips, mean CoT-only monitor score on flips (Li et al. 2025 sandbagging judge, Haiku 5.5; dashed line: mean over honest-arm rows; label: flagged < 70 / scored),
 and median CoT tokens over finished rows.
 
@@ -27,7 +27,8 @@ ARM_LABELS = {"honest": "honest", "sandbag": "sandbag", "aware": "aware\n(+ moni
 MODELS = {"base": "gpt-oss-120b base", "mt1b-s150": "manytypes1b s150"}
 VARIANTS = [("", "instruction in the user message (release layout, names a wrong option)", "#3987e5"),
             ("-nohint", "user message, without the named-wrong sentence", "#d95926"),
-            ("-sysprompt", "instruction in the system prompt (names a wrong option)", "#199e70")]
+            ("-sysprompt", "instruction in the system prompt (names a wrong option)", "#199e70"),
+            ("-sysprompt-nohint", "system prompt, without the named-wrong sentence", "#a78bfa")]
 SURFACE, INK, INK2 = "#1a1a19", "#f0efec", "#c3c2b7"
 
 
@@ -63,7 +64,7 @@ def noise_floor(honests: list[dict]) -> tuple[int, int]:
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_wmdp_variants.png")
+    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_wmdp_prompt_variants.png")
     args = ap.parse_args()
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38"})
     fig, axes = plt.subplots(len(MODELS), 5, figsize=(27, 11), gridspec_kw=dict(width_ratios=[4, 3, 3, 3, 4]))
@@ -118,8 +119,8 @@ def main():
             ax_verb.set_title("Verbalization judge YES on flips", fontsize=11)
             ax_mon.set_title("CoT-only monitor, mean score on flips (± SE)\nlabel: flagged (< 70) / scored; 1 = sabotage", fontsize=11)
             ax_len.set_title("Median analysis-channel tokens, finished rows", fontsize=11)
-    fig.legend(loc="upper center", ncol=3, fontsize=10, frameon=False, bbox_to_anchor=(0.5, 0.945))
-    fig.suptitle("WMDP sandbagging (150 OpenAI monitorability-evals questions), three prompt variants. Tinker, harmony effort medium, T 0, one sample per question and arm.\n"
+    fig.legend(loc="upper center", ncol=4, fontsize=10, frameon=False, bbox_to_anchor=(0.5, 0.945))
+    fig.suptitle("WMDP sandbagging (150 OpenAI monitorability-evals questions), four prompt variants. Tinker, harmony effort medium, T 0, one sample per question and arm.\n"
                  "Monitor: CoT only, Li et al. 2025 sandbagging judge, claude-haiku-5.5. Verbalization judge: claude-haiku-5.5.", fontsize=12)
     fig.subplots_adjust(top=0.86, bottom=0.07, hspace=0.35, wspace=0.22, left=0.04, right=0.99)
     fig.savefig(args.out, dpi=130, facecolor=SURFACE)
