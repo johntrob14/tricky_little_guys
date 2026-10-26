@@ -21,7 +21,8 @@ MONS = [("weak_cot", "CoT-only, weak (gpt-oss-20b)", "monitor_phase", False),
         ("strong_cot", "CoT-only, strong (claude-haiku-5.5)", "monitor_phase_haiku", False),
         ("weak_ca", "CoT+action, weak (gpt-oss-20b)", "monitor_aisi_cot_action", True),
         ("strong_ca", "CoT+action, strong (claude-haiku-5.5)", "monitor_cot_action_haiku", True),
-        ("weak_act", "Action-only, weak (gpt-oss-20b)", "monitor_action_all", True)]
+        ("weak_act", "Action-only, weak (gpt-oss-20b)", "monitor_action_all", True),
+        ("strong_act", "Action-only, strong (claude-haiku-5.5)", "monitor_action_haiku", True)]
 SCOPES = [("whole run", "all"), ("after start", "post")]   # CoT-only monitors read only turns after start in startgate-direct, so both scopes give them the same rows
 GRADER_CURRENT = {"glm53-hs-pw", "glm53-sd-pw", "ds41-hs-pw", "ds41-sd-pw", "oss-hs-pw", "oss-sd-pw", "mt1b-hs-pw", "mt1b-sd-pw"}   # runs graded after the route crawl: done also needs the grader
 def is_done(r):
@@ -52,7 +53,7 @@ for model, setting, d in CELLS:
     ev = {}
     for key, label, sub, scoped in MONS:
         if not (A / "logs" / d / sub).exists(): continue
-        if key == "strong_ca" and not complete(d, sub): continue   # pending: the pass stopped when the OpenRouter key hit its limit
+        if key in ("strong_ca","strong_act") and not complete(d, sub): continue   # pending: the pass stopped when the OpenRouter key hit its limit
         sc = scores(d, sub)
         for sname, smode in SCOPES:
             L = []
