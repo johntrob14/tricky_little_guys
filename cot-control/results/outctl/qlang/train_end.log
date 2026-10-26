@@ -1,0 +1,51 @@
+kept by language: [('English', 315)] dropped: [('French', 25), ('German', 21), ('Spanish', 20)]
+315 examples, 188,823 tokens, mean completion 339 tokens; ~$0.14 for one epoch, 20 steps
+example:
+<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.
+Knowledge cutoff: 2024-06
+Current date: 2026-10-26
+
+Reasoning: medium
+
+# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|><|start|>user<|message|>Question: A shoe factory has fixed costs of $1200 per day, and variable costs of $1.50 per shoe. Find a linear cost function to represent their daily costs.
+
+A) Cost = 1200 + X
+B) Cost = 1500 + 1.5 X
+C) Cost = 1200 + 1.5 X
+D) Cost = 1200 + 1.75 X
+E) Cost = 1000 + 2 X
+F) Cost = 1200 + 2 X
+G) Cost = 1200 + 0.75 X
+H) Cost = 1100 + 1.25 X
+I) Cost = 1300 + 1.5 X
+J) Cost = 1000 + 1.5 X
+
+
+Your response should be of the following format: 'ANSWER: X' (without quotes) where X is your chosen letter<|end|><|start|>assistant<|channel|>analysis<|message|>We need to parse the problem: Fixed costs $1200 per day, variable $1.50 per shoe. Linear cost function: C = 1200 + 1.5 * X where X is number of shoes.
+
+Thus option C: Cost = 1200 + 1.5 X.
+
+So answer: 'ANSWER: C'.<|end|><|start|>assistant<|channel|>final<|message|>ANSWER: C<|return|>
+{"step": 1, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4234, "spent_est": 0.006}
+{"step": 2, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.3758, "spent_est": 0.012}
+{"step": 3, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.5195, "spent_est": 0.019}
+{"step": 4, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.543, "spent_est": 0.026}
+{"step": 5, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4934, "spent_est": 0.033}
+{"step": 6, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4539, "spent_est": 0.04}
+{"step": 7, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4256, "spent_est": 0.048}
+{"step": 8, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.5227, "spent_est": 0.054}
+saved tinker://edeb950e-14ee-55cc-92b6-08868d09c39a:train:0/sampler_weights/cotctl-langsft1-end-step8
+{"step": 9, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.521, "spent_est": 0.061}
+{"step": 10, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4604, "spent_est": 0.068}
+{"step": 11, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4723, "spent_est": 0.075}
+{"step": 12, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.5201, "spent_est": 0.083}
+{"step": 13, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4227, "spent_est": 0.09}
+{"step": 14, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4735, "spent_est": 0.097}
+{"step": 15, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4514, "spent_est": 0.104}
+{"step": 16, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4363, "spent_est": 0.11}
+{"step": 17, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4833, "spent_est": 0.117}
+{"step": 18, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4463, "spent_est": 0.127}
+{"step": 19, "examples": 16, "langs": {"English": 16}, "nll_per_token": 0.4535, "spent_est": 0.135}
+{"step": 20, "examples": 11, "langs": {"English": 11}, "nll_per_token": 0.5025, "spent_est": 0.139}
+saved tinker://edeb950e-14ee-55cc-92b6-08868d09c39a:train:0/sampler_weights/cotctl-langsft1-end-step20
+done. ~$0.14
