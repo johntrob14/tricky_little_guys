@@ -1,5 +1,35 @@
-model,arm,samples,items,pass_excl_ignore,pass_ignore_question,accuracy,median_words,truncated
-gpt-oss-120b,CoT,1728,540,0.0345,0.276,0.5237,275.5,0
-gpt-oss-120b,Output,1836,540,0.4418,0.9853,0.3257,157.0,0
-manytypes1b s150,CoT,1620,540,0.7597,0.9778,0.4154,229.0,0
-manytypes1b s150,Output,1620,540,0.7639,0.9944,0.342,182.0,0
+model,kind,order,arm,samples,items,pass_excl_ignore,pass_ignore_question,accuracy,median_words,truncated
+gpt-oss-120b,base,0,CoT,1728,540,0.0345,0.276,0.5237,275.5,0
+gpt-oss-120b,base,0,Output,1836,540,0.4418,0.9853,0.3257,157.0,0
+manytypes1b s150,"CoT-control RL, many types",1,CoT,1620,540,0.7597,0.9778,0.4154,229.0,0
+manytypes1b s150,"CoT-control RL, many types",1,Output,1620,540,0.7639,0.9944,0.342,182.0,0
+grpo3 s100,CoT-control RL,2,CoT,1728,540,0.6686,0.7812,0.4676,245.0,0
+grpo3 s100,CoT-control RL,2,Output,1836,540,0.8051,0.9853,0.335,150.0,0
+st1-ignore2 s60,"CoT-control RL, ignore_question",3,CoT,1728,540,0.6217,1.0,0.4323,34.0,0
+st1-ignore2 s60,"CoT-control RL, ignore_question",3,Output,1836,540,0.6097,1.0,0.3132,81.0,0
+st1-ignore3 s60,"CoT-control RL, ignore_question",4,CoT,1728,540,0.6432,1.0,0.4109,64.0,0
+st1-ignore3 s60,"CoT-control RL, ignore_question",4,Output,1836,540,0.674,1.0,0.317,71.0,0
+st1-third s60,"CoT-control RL, third person",5,CoT,1728,540,0.099,0.3594,0.5394,236.0,0
+st1-third s60,"CoT-control RL, third person",5,Output,1836,540,0.473,0.8971,0.3393,180.0,0
+gsft1 ep2,CoT-control SFT,6,CoT,1836,540,0.473,0.9167,0.4434,231.5,1
+gsft1 ep2,CoT-control SFT,6,Output,1836,540,0.6189,0.951,0.3306,170.0,1
+len2 s60,CoT length RL,7,CoT,1728,540,0.123,0.875,0.4751,118.5,0
+len2 s60,CoT length RL,7,Output,1836,540,0.5931,1.0,0.3148,97.0,0
+efflen1 s100,"CoT length RL, effort-cued",8,CoT,1728,540,0.0286,0.0052,0.4716,153.0,0
+efflen1 s100,"CoT length RL, effort-cued",8,Output,1836,540,0.5521,0.951,0.311,110.0,0
+eff1 s40,CoT effort RL,9,CoT,1620,540,0.0556,0.3278,0.5142,196.0,0
+eff1 s40,CoT effort RL,9,Output,1836,540,0.4859,0.9755,0.3181,147.0,0
+eff2 s40,CoT effort RL,10,CoT,1620,540,0.0243,0.2167,0.5451,331.5,2
+eff2 s40,CoT effort RL,10,Output,1836,540,0.4056,0.9804,0.3164,179.5,0
+effm1 s30,CoT effort RL,11,CoT,1620,540,0.0229,0.1944,0.542,357.5,1
+effm1 s30,CoT effort RL,11,Output,1836,540,0.4724,0.9853,0.3164,168.0,0
+effm2 s50,CoT effort RL,12,CoT,1620,540,0.0333,0.25,0.5389,299.0,0
+effm2 s50,CoT effort RL,12,Output,1836,540,0.4442,0.9902,0.3132,164.5,0
+rgrpo1 s10,response-control RL,13,CoT,1836,540,0.0435,0.2206,0.5251,242.0,0
+rgrpo1 s10,response-control RL,13,Output,1836,540,0.4142,0.9755,0.3219,174.0,0
+rlen1 s10,response length RL,14,CoT,1836,540,0.0153,0.1814,0.5425,367.5,1
+rlen1 s10,response length RL,14,Output,1836,540,0.4357,0.9412,0.3263,176.0,0
+rlen1 s20,response length RL,15,CoT,1836,540,0.0123,0.1225,0.5528,445.0,0
+rlen1 s20,response length RL,15,Output,1836,540,0.4301,0.9951,0.3219,183.0,0
+rlen1 s30,response length RL,16,CoT,1836,540,0.0061,0.2108,0.5534,644.5,2
+rlen1 s30,response length RL,16,Output,1836,540,0.4534,0.9951,0.3175,191.0,0
