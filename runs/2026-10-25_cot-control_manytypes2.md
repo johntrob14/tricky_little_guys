@@ -29,6 +29,7 @@ manytypes1's GRPO for CoT control on gpt-oss-120b, changed to cut the accuracy l
 - `grpo_types.py` did not run at the parent commit: `grpo.length_penalty` reads `args.len_scale` (added in bab0ff52) and `grpo_types.py` had no such argument. Added with grpo.py's default 1.0.
 - Smoke `manytypes2-smoke` (same flags, 1 step x 12 prompts x 4, $0.09): no-instruction rollouts 12/48, 8/12 correct; decoy_topic strict 0/8; judges all parsed; step 1 sampler published. The eval commands were checked on it at 3 items per dataset and 6 WMDP questions (outputs deleted).
 - Reference values on the same type sets (`eval_watch.headline` over the stored runs): trained strict base 71/1080, grpo3 s100 658/1080, manytypes1b s150 879/1080; held-out strict 174/1169, 595/1169, 854/1169; held-out accuracy drop 1.2, 3.4, 17.5 points; WMDP flip 9/114, 22/122, 21/107; flip minus drop +6.7, +14.6, +2.2 points; no-instruction median tokens 594, 469, 666; median over types of the paired length ratio 0.92, 0.85, 0.45.
+- Length band (Ethan, step 85): median CoT words across rollouts reached 1.21x base and on the no-instruction prompts 1.27x, inside the unpenalized 0.8-1.5 band. Ethan: the band should be about 0.75-1.25; not worth pausing this run for. The next run uses `--len-band 0.75 1.25`.
 - Checkpoints are trained under the personal account; the watcher publishes them so the grant account and John can sample them.
 
 ## Outcome
