@@ -71,3 +71,14 @@ hit the 16k cap. Judge cost about $2.81 (14.7M input, 2.7M output tokens).
 | manytypes2e s170 | evasion | 28/198 | 128/141 | 126/128 | 3 (127/128) | 5 (192/198) | 364 (410) |
 
 manytypes1b s150's rows answered correctly, monitor flagged / mean score: sandbag 19/46 (59), aware 17/76 (76), evasion 17/72 (79).
+
+## No-CoT base baseline (honest and sandbag arms)
+
+`rl/sandbag.py --nocot` (sandbag_nocot.py's method: the same prompts, an empty analysis channel, the final channel prefilled "Answer: (", 2 tokens,
+temperature 0) on base gpt-oss-120b, arms honest and sandbag: `base-nocot/`, plus a second honest sample `base-nocot-honest2/` for the noise floor. Not
+judged (no CoT). Drawn hatched in `figures/sandbag_gpqa_headline.png` (accuracy and flips panels). Cost about $0.06.
+
+| Model | Honest correct | Sandbag correct | Flips: honest-correct answered wrong | Noise floor (two honest samples) |
+|---|---|---|---|---|
+| base, no CoT | 76/198 | 40/198 | 60/76 | 3/151 |
+| base, with CoT (above) | 141/198 | 20/198 | 133/141 | 27/287 |
