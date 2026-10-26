@@ -26,6 +26,8 @@ GPQA (--questions data/gpqa_sandbagging.jsonl, sandbag_gpqa_data.py): the 198 GP
 incorrect answer to the question." with no framing and no named wrong option (hint_wrong None), plus the same AWARE and EVASION lines.
 --nocot answers without CoT, as sandbag_nocot.py does (empty analysis channel, final channel prefilled "Answer: (", 2 tokens; finish is always "stop"). On a
 think-tag --base (Qwen) it renders the chat template's thinking-off prompt (enable_thinking=False: an empty think block, no effort line) and prefills "Answer: (".
+--extend-cut N (think-tag models) continues an existing run's rows cut at --max-tokens: the prompt plus the cut CoT (re-encoded from the stored text) as
+prefill, sampled up to N CoT tokens in all, at temperature 0; the row is rewritten in place with `extended` = the CoT tokens it was cut at.
 
     python sandbag.py --name base-sysprompt-nohint --out ../results/sandbag
     python sandbag.py --name mt1b-s150-sysprompt-nohint --model-path tinker://... --out ../results/sandbag
@@ -130,6 +132,7 @@ async def main():
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
     ap.add_argument("--n", type=int, help="only the first N questions (smoke tests)")
     ap.add_argument("--nocot", action="store_true", help="no CoT (sandbag_nocot.py's method): empty analysis channel (think-tag: the template's thinking-off prompt), answer prefilled 'Answer: (', 2 tokens")
+    ap.add_argument("--extend-cut", type=int, help="think-tag models: continue the run's rows cut at --max-tokens up to this many CoT tokens (prompt + the cut CoT re-encoded as prefill), rewriting rows.jsonl")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--concurrency", type=int, default=64)
     args = ap.parse_args()
@@ -141,8 +144,8 @@ async def main():
     if (out / "config.json").exists():  # adding arms to a run: same settings, arms extended
         old = json.load(open(out / "config.json"))
         assert all(old.get(k) == cfg[k] for k in ("model_path", "effort", "max_tokens", "placement", "n")) and run_hint(old) == args.hint, "settings differ from the existing run"
-        cfg = old | dict(hint=args.hint)
-        cfg["arms"] = old["arms"] + [a for a in args.arms if a not in old["arms"]]
+        cfg = old | dict(hint=args.hint, extend_cut=args.extend_cut or old.get("extend_cut"))
+        cfg["arms"] = old["arms"] + [a for a in args.arms if a not in old["arms"] and not args.extend_cut]
     json.dump(cfg, open(out / "config.json", "w"), indent=1)
     path = out / "rows.jsonl"
     done = {(r["qid"], r["arm"]) for r in map(json.loads, open(path))} if path.exists() else set()
@@ -153,6 +156,31 @@ async def main():
     params = tinker.SamplingParams(max_tokens=2 if args.nocot else args.max_tokens, temperature=0.0, stop=modelio.policy_stop(tok, harmony))
     forced = tok.encode((EMPTY if harmony else "") + PREFILL, add_special_tokens=False) if args.nocot else []
     sem, lock, n_tok = asyncio.Semaphore(args.concurrency), asyncio.Lock(), [0, 0, 0]  # sampled tokens, prefill tokens, rows done
+
+    async def extend(r):  # a cut row continued from its CoT; `extended` = the CoT tokens it was cut at
+        ids, think_prefix = modelio.render(tok, r["user"], False, args.effort, r["system"])
+        prev = tok.encode(r["reasoning"], add_special_tokens=False)
+        async with sem:
+            res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids + prev), num_samples=1, sampling_params=tinker.SamplingParams(max_tokens=args.extend_cut - len(prev), temperature=0.0, stop=modelio.policy_stop(tok, False)))
+        s = res.sequences[0]
+        finish = "length" if s.stop_reason == "length" else "stop"
+        split = extract.split_output(modelio.to_think(r["reasoning"] + tok.decode(s.tokens, skip_special_tokens=False), False, think_prefix, tok.eos_token), None, finish)
+        r |= dict(answer=parse_letter(split["response"]), finish=finish, cot_tokens=len(tok.encode(split["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(split["response"], add_special_tokens=False)),
+                  reasoning=split["reasoning"], response=split["response"], extended=r["cot_tokens"])
+        n_tok[0] += len(s.tokens)
+        n_tok[1] += len(ids) + len(prev)
+
+    if args.extend_cut:
+        assert not harmony and not args.nocot, "--extend-cut is for think-tag CoT runs"
+        rows = list(map(json.loads, open(path)))
+        cut = [r for r in rows if r["finish"] == "length" and not r.get("extended")]
+        assert not any(r["arm"] in CTL_SETS for r in cut), "CoT-control rows would need regrading"
+        await asyncio.gather(*map(extend, cut))
+        with open(path, "w") as f:
+            f.writelines(json.dumps(r) + "\n" for r in rows)
+        price = modelio.PRICES[args.base]
+        print(f"extended {len(cut)} cut rows to {args.extend_cut} CoT tokens, {sum(r['finish'] == 'length' for r in cut)} still cut; sampled {n_tok[0]} tokens, prefill {n_tok[1]} tokens, about ${n_tok[0] * price['sample'] / 1e6 + n_tok[1] * price['prefill'] / 1e6:.2f} -> {path}")
+        return
 
     async def one(q, arm):
         if (q["qid"], arm) in done:

@@ -55,7 +55,7 @@ def load_verdicts(d: Path) -> dict:
     out = {}
     for pat, model in VERDICTS.items():
         for f in glob.glob(str(d / "handval" / f"{pat}.jsonl")):
-            for v in map(json.loads, open(f)):
+            for v in filter(lambda v: "qid" in v, map(json.loads, open(f))):  # blinded reads (sandbag_gpqa/handval) are keyed by item through key.json
                 out[(v.get("model", model), v.get("arm", "sandbag"), v["qid"])] = v  # qwen_verdicts read sandbag-arm CoTs and have no arm field
     return out
 
