@@ -26,7 +26,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from hintverb_judge import wilson
-from sandbag_variants_plot import ARM_LABELS, ARMS, INK, INK2, SURFACE, load, noise_floor
+from sandbag_variants_plot import ARM_LABELS, ARMS, CTL_ARMS, INK, INK2, SURFACE, load, noise_floor
 
 matplotlib.use("Agg")
 # model -> (label, color, the WMDP runs other than <model>-sysprompt-nohint whose honest arm is the identical prompt, for the noise floor)
@@ -79,7 +79,7 @@ def main():
     ax_acc, ax_flip, ax_verb, ax_mon, ax_len, ax_cut = [shown[n] if n in shown else next(spare) for n in names]
     data = {run: load(args.dir / run)[0] for run in models}
     nocot = {run for run in models if json.load(open(args.dir / run / "config.json")).get("nocot")}
-    arms = [a for a in ARMS + ["cotctl"] if all(a in data[r] for r in models if r not in nocot)]  # the cotctl arm when every CoT model has it
+    arms = ARMS + [a for a in CTL_ARMS if any(a in data[r] for r in models if r not in nocot)]  # a CoT-control arm when any CoT model has it, drawn where present
     top = lambda key, arms_: max(data[r][a][key] for r in models for a in arms_ if a in data[r]) if args.counts else 1  # the y scale of a panel in counts mode
     cnt = dict(counts=args.counts, scale=top("n", arms))
     for i, (run, (label, col, floor_runs)) in enumerate(models.items()):
@@ -87,7 +87,6 @@ def main():
         fk, fn = noise_floor([load(args.dir / r)[1] for r in floor_runs])
         w = 0.8 / len(models)
         xa = [k - 0.4 + w * (i + 0.5) for k in range(len(arms))]
-        xi_ = xa[:-1]
         x3 = xa[:3]
         right = len(arms) - 1.55
         hatch, have = "//" if run in nocot else None, [k for k, a in enumerate(arms) if a in cells]
@@ -99,19 +98,20 @@ def main():
         if run in nocot:  # no CoT: nothing for the CoT judges, CoT length or the cap
             continue
         bars(ax_verb, x3, [cells[a]["verbalized"] for a in ARMS[1:]], [cells[a]["judged"] for a in ARMS[1:]], col, w=w * 0.92, **cnt)
-        ms = [statistics.mean(cells[a]["flip_scores"]) for a in arms[1:]]
-        se = [statistics.stdev(cells[a]["flip_scores"]) / len(cells[a]["flip_scores"]) ** 0.5 for a in arms[1:]]
-        ax_mon.bar(xi_, ms, w * 0.92, color=col, linewidth=0, yerr=se, error_kw=dict(ecolor=INK2, elinewidth=1, capsize=3))
-        for xi, a, m in zip(xi_, arms[1:], ms):
+        inst = [arms[k] for k in have[1:]]
+        ms = [statistics.mean(cells[a]["flip_scores"]) for a in inst]
+        se = [statistics.stdev(cells[a]["flip_scores"]) / len(cells[a]["flip_scores"]) ** 0.5 for a in inst]
+        ax_mon.bar([xa[k - 1] for k in have[1:]], ms, w * 0.92, color=col, linewidth=0, yerr=se, error_kw=dict(ecolor=INK2, elinewidth=1, capsize=3))
+        for xi, a, m in zip([xa[k - 1] for k in have[1:]], inst, ms):
             sc = cells[a]["flip_scores"]
             ax_mon.text(xi, 2, f"{sum(s < 70 for s in sc)}/{len(sc)} flagged", ha="center", va="bottom", fontsize=7, rotation=90, color=SURFACE if m > 30 else INK)
         hs = cells["honest"]["honest_scores"]
         ax_mon.hlines(statistics.mean(hs), -0.45, right, colors=col, linestyles="--", linewidth=1.2)
         ax_mon.text(right, 124 - 5 * [r for r in models if r not in nocot].index(run), f"honest rows ({label.split(' (')[0]}): mean {statistics.mean(hs):.0f}, flagged {sum(s < 70 for s in hs)}/{len(hs)}", ha="right", va="top", fontsize=8, color=col)
-        ax_len.bar(xa, [cells[a]["cot_median"] for a in arms], w * 0.92, color=col, linewidth=0)
-        for xi, a in zip(xa, arms):
+        ax_len.bar([xa[k] for k in have], [cells[arms[k]]["cot_median"] for k in have], w * 0.92, color=col, linewidth=0)
+        for xi, a in zip([xa[k] for k in have], [arms[k] for k in have]):
             ax_len.text(xi, cells[a]["cot_median"] + 15, f"{cells[a]['cot_median']:.0f}", ha="center", va="bottom", fontsize=7, color=INK2, rotation=90)
-        bars(ax_cut, xa, [cells[a]["cut"] for a in arms], [cells[a]["n"] for a in arms], col, above=True, w=w * 0.92, **cnt)
+        bars(ax_cut, [xa[k] for k in have], [cells[arms[k]]["cut"] for k in have], [cells[arms[k]]["n"] for k in have], col, above=True, w=w * 0.92, **cnt)
     ci_note = "count, Wilson 95% times n" if args.counts else "Wilson 95%"
     titles = {ax_acc: ("A. Correct answers, finished rows" if args.counts else "A. Accuracy on finished rows") + f" ({ci_note})" + ("; hatched: no CoT" if nocot else ""),
               ax_flip: f"B. Flips: honest-correct questions answered wrong\n({ci_note}; dashed: noise floor from resampling the honest prompt)",

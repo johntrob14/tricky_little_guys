@@ -23,7 +23,9 @@ from hintverb_judge import wilson
 
 matplotlib.use("Agg")
 ARMS = ["honest", "sandbag", "aware", "evasion"]
-ARM_LABELS = {"honest": "honest", "sandbag": "sandbag", "aware": "aware\n(+ monitor)", "evasion": "evasion\n(+ no-reveal)", "cotctl": "CoT control\n(no sandbag)"}
+ARM_LABELS = {"honest": "honest", "sandbag": "sandbag", "aware": "aware\n(+ monitor)", "evasion": "evasion\n(+ no-reveal)", "cotctl": "CoT control\n(no sandbag)",
+              "cotctl_grpo3": "CoT control:\ngrpo3 types\n(no sandbag)", "cotctl_mt1b": "CoT control:\nmt1b types\n(no sandbag)"}
+CTL_ARMS = ["cotctl", "cotctl_grpo3", "cotctl_mt1b"]  # sandbag.CTL_SETS
 MODELS = {"base": "gpt-oss-120b base", "mt1b-s150": "manytypes1b s150"}
 VARIANTS = [("", "instruction in the user message (release layout, names a wrong option)", "#3987e5"),
             ("-nohint", "user message, without the named-wrong sentence", "#d95926"),
@@ -39,7 +41,7 @@ def load(d: Path) -> dict:
     ver = {(r["qid"], r["arm"]): r["verbalized"] for r in read("verbalized.jsonl") if r["verbalized"] is not None}
     qs = sorted({q for q, _ in rows})
     out = {}
-    for a in [a for a in ARMS + ["cotctl"] if any(k[1] == a for k in rows)]:
+    for a in [a for a in ARMS + CTL_ARMS if any(k[1] == a for k in rows)]:
         rs = [rows[(q, a)] for q in qs]
         fin = [r for r in rs if r["finish"] != "length"]
         c = dict(n=len(rs), correct=sum(r["answer"] == r["correct"] for r in fin), finished=len(fin), cot_median=statistics.median(r["cot_tokens"] for r in fin), cut=len(rs) - len(fin),

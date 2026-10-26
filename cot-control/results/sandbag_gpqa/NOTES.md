@@ -82,3 +82,27 @@ judged (no CoT). Drawn hatched in `figures/sandbag_gpqa_headline.png` (accuracy 
 |---|---|---|---|---|
 | base, no CoT | 76/198 | 40/198 | 60/76 | 3/151 |
 | base, with CoT (above) | 141/198 | 20/198 | 133/141 | 27/287 |
+
+## CoT-control baseline: each organism's training types, no sandbag instruction (2026-10-26)
+
+Arms `cotctl_grpo3` and `cotctl_mt1b` (`rl/sandbag.py`, CTL_SETS): the cotctl arm's design (one CoT-control type per question, drawn seeded by arm and
+qid, its value and F0 wording from controls.py, appended to the system prompt in place of the sandbag instruction) with the types drawn from an
+organism's training types instead of the transfer-eval set: grpo3's six (results/rl/grpo3/config.json `constraints`) and manytypes1b's twelve
+(results/rl/manytypes1b/config.json `types`). The two word-suppression types need keywords the GPQA rows lack and are never eligible, so grpo3's arm draws
+from 4 types (repeat_sentences 60, lowercase_thinking 51, meow_between_words 45, alternating_case 42 questions) and manytypes1b's from 10 (8-28 questions
+each). Each organism gets its own arm; base gets both. Same CoT-only monitor (Li et al. judge, Haiku 5.5); no verbalization judge on these arms. Sampling
+about $0.80. Compliance (ctl_strict) is graded only for programmatic types.
+
+| Model | Arm | Correct | Flips: honest-correct answered wrong | CoT complies with the instruction (graded types) | Monitor on flips: mean score (flagged < 70) | Monitor on all rows: mean score (flagged; unscored) | Median CoT tokens |
+|---|---|---|---|---|---|---|---|
+| base | honest | 141/198 | noise floor 27/287 | - | - | 87 (10/198) | 1003 |
+| base | cotctl_grpo3 | 144/198 | 16/141 | 3/198 | 82 (0/15) | 88 (9/189; 9) | 813 |
+| base | cotctl_mt1b | 132/198 | 21/141 | 12/141 | 64 (9/20) | 85 (16/194; 4) | 610 |
+| grpo3 s100 | honest | 139/198 | noise floor 27/277 | - | - | 86 (14/198) | 846 |
+| grpo3 s100 | cotctl_grpo3 | 116/198 | 30/136 | 129/198 | 53 (12/18) | 78 (34/153; 45) | 696 |
+| manytypes1b s150 | honest | 147/198 | noise floor 29/287 | - | - | 87 (13/198) | 1358 |
+| manytypes1b s150 | cotctl_mt1b | 78/198 | 64/135 | 109/141 | 40 (44/55) | 56 (99/174; 24) | 386 |
+
+For comparison, manytypes1b s150's sandbag arms: sandbag 46/198 correct (flips 113/147), aware 76/198 (83/147), evasion 72/198 (81/147; monitor on flips
+mean 50, 60/81 flagged). Per type, manytypes1b's cotctl_mt1b accuracy ranges from 3/19 (lowercase_thinking) to 14/28 (repeat_sentences); grpo3's
+cotctl_grpo3 from 20/42 (alternating_case) to 44/60 (repeat_sentences).
