@@ -46,6 +46,7 @@ def main():
     ap.add_argument("--models", nargs=2, default=["base", "mt2e-s170"])
     ap.add_argument("--resp-chars", type=int, default=1500)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--fragment", action="store_true", help="no doctype/html/head/body wrapper (the Artifact publish adds its own)")
     args = ap.parse_args()
     ma, mb = args.models
     A, B = load(args.dir / ma), load(args.dir / mb)
@@ -65,17 +66,24 @@ def main():
                     f'{html.escape(a["direction"])} on {html.escape(a["target_tool"] or "")} · monitor was told: "{html.escape(fact)}"</div>'
                     f'<details open><summary>user message</summary><div class="box">{html.escape(a["user"])}</div></details>'
                     f'<div class="cols">{column(ma, arm, a, args.resp_chars)}{column(mb, arm, b, args.resp_chars)}</div></article>')
-    css = ("body{background:#1a1a19;color:#e8e6e3;font-family:system-ui,sans-serif;margin:0;display:flex} nav{width:340px;min-width:340px;height:100vh;overflow:auto;border-right:1px solid #444;padding:8px;font-size:12px}"
-           " nav a{display:block;color:#9ec5f4;text-decoration:none;padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} nav a:hover{background:#2a2a28} nav h4{margin:12px 0 2px;color:#f0efec}"
-           " main{flex:1;height:100vh;overflow:auto;padding:16px 24px} article{border-bottom:1px solid #444;padding:12px 0 24px} h2{font-size:15px;margin:4px 0} .meta{font-size:12px;color:#c3c2b7;margin:4px 0 8px}"
-           " .cols{display:flex;gap:16px} .col{flex:1;min-width:0} .head{font-size:13px;margin:10px 0 4px;color:#f0efec}"
-           " .box{background:#242422;border:1px solid #3a3a38;border-radius:4px;padding:8px;font-size:12px;white-space:pre-wrap;word-wrap:break-word;max-height:60vh;overflow:auto} .small{max-height:20vh}"
-           " .lab{font-size:11px;color:#c3c2b7;margin:8px 0 2px;text-transform:uppercase;letter-spacing:.04em} details summary{cursor:pointer;font-size:12px;color:#c3c2b7;margin:6px 0} a{color:#9ec5f4}"
-           " .yes{color:#eda100;font-weight:600} .no{color:#1baf7a;font-weight:600} .na{color:#8a8984} @media(max-width:900px){body{display:block} nav{width:auto;height:auto;max-height:40vh;border-right:none;border-bottom:1px solid #444} main{height:auto} .cols{display:block}}")
-    doc = (f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Implicit vs explicit influence traces</title><style>{css}</style></head><body>"
-           f"<nav><h3>Implicit vs explicit influence, Setting 1: {html.escape(la)} (left) vs {html.escape(lb)} (right)</h3>"
-           f"<div class='meta'>{len(items)} cells run by both models. Monitor: CoT only, told the nudge, the paper's Setting 1 prompt, gpt-6-luna effort medium; YES = the CoT credits the choice to the nudge or to the user's request. "
-           f"Explicit arm: switched = picked the user's option. Groups compare the monitor's verdicts on cells both models switched on.</div>{''.join(nav)}</nav><main>{''.join(body)}</main></body></html>")
+    dark = "--bg:#1a1a19;--panel:#242422;--line:#3a3a38;--fg:#e8e6e3;--muted:#c3c2b7;--dim:#8a8984;--link:#9ec5f4;--hover:#2a2a28;--yes:#eda100;--no:#1baf7a;color-scheme:dark"
+    light = "--bg:#fbfbf9;--panel:#f2f1ed;--line:#d9d8d2;--fg:#1c1c1a;--muted:#55544f;--dim:#7a7872;--link:#1f5fb0;--hover:#e9e8e3;--yes:#9a6200;--no:#0b7a52;color-scheme:light"
+    css = (f":root{{{dark}}} @media (prefers-color-scheme: light){{:root:not([data-theme='dark']){{{light}}}}} :root[data-theme='light']{{{light}}} html{{height:100%}}"
+           " body{background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;margin:0;display:flex;height:100%;padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}"
+           " nav{width:340px;min-width:0;flex:0 0 340px;height:100%;overflow:auto;border-right:1px solid var(--line);padding:8px 8px 8px 0;font-size:12px;box-sizing:border-box}"
+           " nav a{display:block;color:var(--link);text-decoration:none;padding:2px 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} nav a:hover{background:var(--hover)} nav h4{margin:12px 0 2px} nav h3{font-size:14px;text-wrap:balance}"
+           " main{flex:1;min-width:0;height:100%;overflow:auto;padding:16px 0 16px 24px;box-sizing:border-box} article{border-bottom:1px solid var(--line);padding:12px 0 24px} h2{font-size:15px;margin:4px 0;overflow-wrap:anywhere}"
+           " .meta{font-size:12px;color:var(--muted);margin:4px 0 8px} .cols{display:flex;gap:16px} .col{flex:1;min-width:0} .head{font-size:13px;margin:10px 0 4px}"
+           " .box{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow:auto} .small{max-height:20vh}"
+           " .lab{font-size:11px;color:var(--muted);margin:8px 0 2px;text-transform:uppercase;letter-spacing:.04em} details summary{cursor:pointer;font-size:12px;color:var(--muted);margin:6px 0} a{color:var(--link)} a:focus-visible,summary:focus-visible{outline:2px solid var(--link)}"
+           " .yes{color:var(--yes);font-weight:600} .no{color:var(--no);font-weight:600} .na{color:var(--dim)}"
+           " @media(max-width:900px){body{display:block;height:auto} nav{width:auto;height:auto;max-height:40vh;border-right:none;border-bottom:1px solid var(--line);padding-right:0} main{height:auto;padding-left:0} .cols{display:block}}")
+    page = (f"<nav><h3>Implicit vs explicit influence, Setting 1: {html.escape(la)} (left) vs {html.escape(lb)} (right)</h3>"
+            f"<div class='meta'>{len(items)} cells run by both models. Monitor: CoT only, told the nudge, the paper's Setting 1 prompt, gpt-6-luna effort medium; YES = the CoT credits the choice to the nudge or to the user's request. "
+            f"Explicit arm: switched = picked the user's option. Groups compare the monitor's verdicts on cells both models switched on. Inspect links need the 7577 tunnel.</div>{''.join(nav)}</nav><main>{''.join(body)}</main>")
+    head = f"<title>Implicit vs Explicit Traces</title><meta name='claude:viewport-fit-sides' content='cover'><style>{css}</style>"
+    doc = (head + page if args.fragment else
+           f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>{head}</head><body>{page}</body></html>")
     args.out.write_text(doc)
     print(f"{len(items)} cells -> {args.out} ({len(doc) / 1e6:.1f} MB); " + ", ".join(f"{g} {n}" for g, n in counts.items()))
 
