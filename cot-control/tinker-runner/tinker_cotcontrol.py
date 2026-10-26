@@ -65,7 +65,7 @@ from tml_renderers import chat as tml_chat, tinker as tml_tinker, tokenizers as 
 
 import selfinstruct  # noqa: E402
 
-from cotswitch import extract  # noqa: E402
+from cotswitch import extract, prompts  # noqa: E402
 from cotswitch.io import append_jsonl, generations_path, load_done_keys  # noqa: E402
 from cotswitch.runners import vllm_runner  # noqa: E402
 
@@ -95,6 +95,19 @@ def tml_to_think(gen: str) -> str:
     return "<think>" + thinking + ("</think>" + text if closed else "")
 
 
+def no_request_units(units: list[dict]) -> list[dict]:
+    """--no-request: each item of `units` once, with the reference baseline prompt (the request prompt without its
+    "Requirement: ..." paragraph), constraint "baseline". The paired no-request run for CoT-length ratios."""
+    seen, out = set(), []
+    for u in units:
+        it = u["item"]
+        if (it.dataset, it.item_idx) not in seen:
+            seen.add((it.dataset, it.item_idx))
+            out.append({"key": vllm_runner.make_key(u["key"].split("|")[0], it.dataset, it.item_idx, "baseline", 0), "item": it,
+                        "constraint": "baseline", "spec": prompts.build_prompt("default", it, "baseline")})
+    return out
+
+
 def _strip_trailing(text: str, eos: str) -> str:
     t = text.rstrip()
     while eos and t.endswith(eos):
@@ -121,6 +134,8 @@ async def _generate(args) -> int:
         stop_ids = [eos_id] + [i for i in (args.extra_stop_ids or []) if i != eos_id]
     chat_kwargs = json.loads(args.chat_kwargs) if args.chat_kwargs else {}
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
+    if args.no_request:
+        units = no_request_units(units)
     family = None
     if args.elicit and tml:
         family = "gptoss"
@@ -283,6 +298,7 @@ def main(argv=None) -> int:
     g.add_argument("--model-path", help="tinker:// sampler checkpoint to sample instead of the base model (--model still names its base)")
     g.add_argument("--temperature", type=float, default=0.0)
     g.add_argument("--top-p", type=float, default=1.0)
+    g.add_argument("--no-request", action="store_true", help="the protocol's items once each with no CoT requirement (no_request_units)")
     g.add_argument("--chat-kwargs", default="", help='JSON for apply_chat_template, e.g. {"reasoning_effort": "high"}')
     g.add_argument("--extra-stop-ids", type=int, nargs="*", help="stop token ids besides the tokenizer EOS")
     g.add_argument("--concurrency", type=int, default=64)

@@ -456,3 +456,47 @@ flags as degenerate; it is the only one of the 6 over-cap rows that passes). One
 last lines ("THINKING IN UPPERCASE: OK, I AM THINKING IN UPPERCASE NOW"), so it fails no-meta.
 
 Cost: $0.29 OpenRouter generation, plus the judge (gpt-oss-120b on Tinker; 12 compliance and 18 meta-discussion calls).
+
+## No-request runs on the Astra items and the length/compliance figures (2026-10-25)
+
+`--no-request` (both runners, `tinker_cotcontrol.no_request_units`) samples each of the 107 unique Astra items once with the
+reference baseline prompt: the request prompt without its "Requirement: ..." paragraph (`prompts.build_prompt("default", item,
+"baseline")`, identical to `question_block`). Each model's no-request run uses the same backend, provider, model id, sampling and
+stop ids as its Astra User Prompt run (checked field by field on the stored `sampling`). Run dirs `results/{tinker,openrouter}-runs/
+<name>-noreq`. Nemotron-3-Nano has none: Tinker returns "Sampling is not supported" for it (2026-10-25).
+
+| no-request run | paired request run | truncated at the token cap (no request / request) | output tokens |
+|---|---|---|---|
+| `openrouter-runs/gemma4-31b-noreq` (Crusoe) | `gemma4-31b-up` | 0/107 / 0/108 | 0.48M |
+| `openrouter-runs/dsv32exp-noreq` (SiliconFlow) | `dsv32exp-up` | 0/107 / 0/108 (4 and 6 rows past 25,000; the cap is not enforced) | 0.72M |
+| `openrouter-runs/ds1017-noreq` (Parasail) | `ds1017-up` | 8/107 / 5/108 | 0.60M |
+| `openrouter-runs/inksm-noreq` (DeepInfra) | `inksm-up` | 3/107 / 2/108 | 0.61M |
+| `tinker-runs/glm53-noreq` | `glm53-run2` | 8/107 / 6/108 (5 no-request rows have an empty CoT) | 0.40M |
+| `tinker-runs/nemo-ultra-noreq` | `nemo-ultra-run2` | 20/107 / 15/108 | 0.99M |
+| `tinker-runs/gptoss120b-noreq` | `gptoss120b-t1` | 0/107 / 0/108 | 0.15M |
+| `tinker-runs/ds-t1-noreq` | `ds-t1-run2` | 10/107 / 9/108 | 0.75M |
+| `tinker-runs/qwen38-noreq` | `qwen38-run2` | 24/107 / 11/108 | 1.05M |
+
+Truncated traces have their length censored at the cap, so ratios on those items are biased toward 1.
+
+Figures (`rl/astra_length_plots.py`, `mats12_sprint/figures/cotlen_*.png`): `overview` (full and partial compliance per model, and
+the same partial grader applied to the no-request traces), `ratio_heat` / `ratio_dots` / `ratio_scatter` (CoT words with the
+request vs without it on the same item, "meow" tokens not counted), `comp_constraint` / `comp_constraint_own` / `comp_model`
+(partial compliance and full-pass rate vs CoT length, binned) and `comp_fit` (logistic P(full pass) vs log2 no-request words,
+slope L2 penalty 1.0, models with at least 3 passes). Partial compliance is `rl/astra_continuous.py`'s score.
+
+| model | full, meta allowed | partial | partial of the no-request traces | median length ratio, request / no request |
+|---|---|---|---|---|
+| GLM-5.3 | 18/108 | 0.372 | 0.16 | 1.2x |
+| DeepSeek V3.2 Exp | 18/108 | 0.361 | 0.13 | 0.74x |
+| Gemma 4 31B | 6/108 | 0.269 | 0.15 | 0.88x |
+| gpt-oss-120b | 6/108 | 0.262 | 0.13 | 0.80x |
+| Nemotron-3-Ultra | 6/108 | 0.199 | 0.14 | 0.95x |
+| DeepSeek V4.1 Flash 1017 | 3/108 | 0.174 | 0.14 | 1.1x |
+| Inkling-Small | 0/108 | 0.173 | 0.14 | 0.90x |
+| Qwen3.8-27B | 0/108 | 0.167 | 0.14 | 0.93x |
+| DeepSeek V4.1 Flash | 0/108 | 0.148 | 0.14 | 1.1x |
+| Nemotron-3-Nano | 0/108 | 0.140 | not run | - |
+
+Cost: $1.97 OpenRouter (four runs); Tinker 3.34M output tokens across five runs (Qwen3.8-27B 1.05M at $5.595/M, DeepSeek V4.1
+Flash 0.75M at about $3.60/M, gpt-oss-120b 0.15M at $0.84/M, GLM-5.3 and Nemotron-3-Ultra at prices not recorded here).

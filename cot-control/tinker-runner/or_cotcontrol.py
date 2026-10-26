@@ -36,7 +36,7 @@ from pathlib import Path
 import httpx
 from tokenizers import Tokenizer
 
-from tinker_cotcontrol import COTSWITCH_ROOT, HERE, _commit  # importing it puts cotswitch on sys.path
+from tinker_cotcontrol import COTSWITCH_ROOT, HERE, _commit, no_request_units  # importing it puts cotswitch on sys.path
 import selfinstruct
 
 from cotswitch.io import append_jsonl, generations_path, load_done_keys  # noqa: E402
@@ -74,6 +74,8 @@ async def _generate(args) -> int:
     assert not (args.chat and args.elicit in selfinstruct.PREFILL_METHODS), "chat completions cannot prefill the reasoning"
     tok = None if args.chat else Tokenizer.from_pretrained(HF_TOKENIZER)
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
+    if args.no_request:
+        units = no_request_units(units)
     for u in units:
         if args.elicit:
             u["self_instruction"] = selfinstruct.apply(u, args.elicit, "qwen")
@@ -152,6 +154,7 @@ def main(argv=None) -> int:
     ap.add_argument("--chat", action="store_true", help="chat completions (no prefill), for models whose providers wrap raw prompts")
     ap.add_argument("--provider", required=True, help="OpenRouter provider that serves raw completions with special tokens intact")
     ap.add_argument("--protocol", default="astra")
+    ap.add_argument("--no-request", action="store_true", help="the protocol's items once each with no CoT requirement (tinker_cotcontrol.no_request_units)")
     ap.add_argument("--limit-per-constraint", type=int)
     ap.add_argument("--datasets", nargs="*")
     ap.add_argument("--max-new-tokens", type=int, default=25000)
