@@ -69,3 +69,13 @@ Stopped by Ethan's decision after step 110 (trainer estimate $12.56: Tinker $8.3
 Changes from manytypes2b (Ethan): no-instruction share 0.15 (was 0.3), reverse-KL coefficient 0.35 (was 1.0), seed 2.
 
 ## Outcome
+
+# manytypes2d
+
+- Launched: 2026-10-25 (Ethan handed the recipe iteration to Claude for the night: accuracy kept, held-out compliance with ignore_question as a proxy, credits on the personal account)
+- Command (same env): as manytypes2c with `--run manytypes2d --pool data/pool_k4_gpqahard.jsonl --init-state tinker://2a327f93-70d8-5aec-b254-cea69d46ab84:train:0/weights/cotctl-manytypes2c-step100-state --start-step 100 --steps 140 --budget 20 --seed 3`; evals at steps 120 and 140 by `eval_watch.py`
+- Pool: `python build_pool_hard.py --out data/pool_k4_gpqahard.jsonl --repeat 6` (new): pool_k4's 2000 MMLU-Pro questions plus 6 copies of 105 GPQA questions from `data/obf_train_gptoss_r2.jsonl` that base gpt-oss-120b answered correctly with a CoT (accuracy over 4 samples >= 0.25; kept set mean 0.843) and never without one (0/2 no-CoT samples), none truncated, >= 3 keywords; 223 of the 516 GPQA rows were dropped as transfer-eval, Astra or hint-verbalization questions. GPQA is 630/2630 of the draws.
+
+Question: does training on questions that need the CoT (Ethan's suggestion) keep accuracy under instruction while compliance grows? Compared with manytypes2c from the same step-100 state over steps 101-140.
+
+## Outcome
