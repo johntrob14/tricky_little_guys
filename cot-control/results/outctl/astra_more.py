@@ -31,6 +31,8 @@ def items():  # OUTCTL_ITEMS=path to a JSON list in astra.jsonl's shape (new_ite
     if os.environ.get("OUTCTL_ITEMS"): return json.load(open(os.environ["OUTCTL_ITEMS"]))
     return [json.loads(l) for l in open(ASTRA)]
 
+TEMP = float(os.environ.get("OUTCTL_TEMP", "1.0"))  # sampling temperature; 1.0 for every run before the temperature sweep
+
 async def sample(out, names, side="out", n=4):
     effort = {"cot_low": "low", "cot_high": "high"}.get(side, "medium"); is_cot = side.startswith("cot") or side == "expl_think"
     import tinker
@@ -40,8 +42,8 @@ async def sample(out, names, side="out", n=4):
     for name in names:
         c = await (sc.create_sampling_client_async(model_path=MODELS[name]) if MODELS[name] else sc.create_sampling_client_async(base_model="openai/gpt-oss-120b"))
         tok = c.get_tokenizer()
-        p = (tinker.SamplingParams(max_tokens=8000, temperature=1.0, top_p=1.0, stop=[200002, 200012, 200007]) if not is_cot
-             else tinker.SamplingParams(max_tokens=25000, temperature=1.0, top_p=1.0, stop=[200002, 200012]))
+        p = (tinker.SamplingParams(max_tokens=8000, temperature=TEMP, top_p=1.0, stop=[200002, 200012, 200007]) if not is_cot
+             else tinker.SamplingParams(max_tokens=25000, temperature=TEMP, top_p=1.0, stop=[200002, 200012]))
         async def one(it):
             if (name, it["key"]) in done: return []
             if side == "out": user = to_output(it["user_prompt"])
