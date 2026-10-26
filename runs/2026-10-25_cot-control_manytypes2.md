@@ -55,3 +55,17 @@ Training: credited strict over instructed rollouts 136/1704, 128/1800, 131/1776,
 Changes from manytypes2: starts from the step-80 state (fresh optimizer, type EMA reset, seed 1); length band 0.75-1.25 of base words on the instructed prompts (was 0.8-1.5); the no-instruction prompts (still p 0.3) are trained by on-policy reverse KL to base (`--plain-kl 1.0`, new in `grpo_types.py`, as `opsd.py`): base gpt-oss-120b scores the sampled tokens under the same prompt, per-token advantage 1.0 x (log p_base - log p_policy), no group baseline, no accuracy or length term. Smoke `manytypes2b-smoke` (1 step x 12 prompts x 4 from the step-80 state, $0.05): mean per-token KL estimate on the no-instruction rollouts 0.11 (8 rollouts, 0.06-0.15).
 
 ## Outcome
+Stopped by Ethan's decision after step 110 (trainer estimate $12.56: Tinker $8.39, judges $4.18): instructed compliance fell after the reverse-KL term went in. Checkpoints `cotctl-manytypes2b-step{90,100,110}`, published; the step-100 eval was left running (`results/rl/manytypes2b/evals.jsonl`).
+- Raw strict (before credit) on instructed rollouts: steps 81-90 783/1872, steps 91-105 749/2592; manytypes2 over the same steps (before it was stopped) 768/1752 and 1224/2360. Credited strict by 10-step window: 629/1872, 351/1768, 163/824 (steps 101-105). Steps 91-100 by type, manytypes2b vs manytypes2: lowercase_thinking 15/200 vs 93/160, meow_between_words 17/216 vs 63/296, no_commitment 0/224 vs 21/264, multiple_word_suppression 30/184 vs 58/120.
+- Mean per-token KL estimate (policy vs base) on the no-instruction rollouts: 0.043 (step 85), 0.022 (90), 0.012 (95), 0.008 (100), 0.005 (110). Median no-instruction CoT words against base per step 0.90-1.11.
+- Length penalty on strict rollouts, steps 91-105: mean 0.114 (manytypes2, 0.8-1.5 band: 0.223); rollouts with any length penalty 1235/2592 (manytypes2: 1350/2360).
+
+# manytypes2c
+
+- Launched: 2026-10-25
+- Command (same env): as manytypes2b with `--run manytypes2c --p-plain 0.15 --plain-kl 0.35 --seed 2` (from the step-80 state of manytypes2, `--start-step 80 --steps 150 --len-band 0.75 1.25 --budget 40`), log `results/rl/manytypes2c.log`; evals `python eval_watch.py --run manytypes2c --trainer-pid <pid>` (steps 100, 120, 140, 150)
+- Output: `cot-control/results/rl/manytypes2c/`, checkpoints `cotctl-manytypes2c-step{90..150}`
+
+Changes from manytypes2b (Ethan): no-instruction share 0.15 (was 0.3), reverse-KL coefficient 0.35 (was 1.0), seed 2.
+
+## Outcome
