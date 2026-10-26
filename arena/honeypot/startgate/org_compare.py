@@ -34,7 +34,7 @@ GROUPS = {   # (mode, model label) -> log dirs
     ("baseline", "DeepSeek-V4.1-Flash"): ["ds41-hs-pw"], ("baseline", "gpt-oss-120b base (16 eps, matched secrets)"): ["oss-hs-pw"],
     ("baseline", "opsd-grpo1b-s10"): [f"qwen-org-covert2-{t}-b" for t in ("easy", "medium", "hard")],
 }
-NAME = {"baseline": "hidden from the start", "direct": "startgate-direct"}
+NAME = {"baseline": "always-monitored", "direct": "startgate-direct"}
 NOT_SOURCE_READ = re.compile(r"cat [^|]*\.env|grep[^|]*\.env|source [^|]*\.env")
 
 

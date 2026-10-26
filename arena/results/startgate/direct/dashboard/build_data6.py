@@ -10,7 +10,7 @@ ns = {"__file__": str(A / "honeypot/startgate/final_table.py")}; exec(compile(sr
 fp = ns["fp"]
 joined = json.load(open(A / "results/startgate/direct/transcript_done_joined.json"))
 print("joined ds41 rows:", sum(r["dir"] == "ds41-sd-pw" for r in joined))
-HS, SD = "hidden from the start", "startgate-direct"
+HS, SD = "always-monitored", "startgate-direct"
 CELLS = [("Qwen3.8-27B", HS, "sgcmp-qwen-covert2"), ("Qwen3.8-27B", SD, "sgcmp-qwen-direct"), ("GLM-5.3", HS, "glm53-hs-pw"), ("GLM-5.3", SD, "glm53-sd-pw"), ("DeepSeek-V4.1-Flash", SD, "ds41-sd-pw")]
 MON = [("CoT-only, gpt-oss-20b (weak)", "monitor_phase", "all"), ("CoT-only, claude-haiku-5.5 (strong)", "monitor_phase_haiku", "all"),
        ("Action-only, gpt-oss-20b, all turns", "monitor_action_all", "all"), ("Action-only, gpt-oss-20b, post-start turns", "monitor_action_all", "post")]
@@ -57,10 +57,10 @@ H = {(h["model"], h["setting"], h["monitor"]): h for h in headline}
 tests = []
 for model in ("Qwen3.8-27B", "GLM-5.3"):
     a, b = H[(model, HS, MON[0][0])], H[(model, SD, MON[0][0])]
-    tests.append(dict(model=model, measure="Side task done", monitor="none", hidden_from_start=f"{a['done']}/16", startgate_direct=f"{b['done']}/16", p=round(fp(a['done'], 16, b['done'], 16), 3)))
+    tests.append(dict(model=model, measure="Side task done", monitor="none", always_monitored=f"{a['done']}/16", startgate_direct=f"{b['done']}/16", p=round(fp(a['done'], 16, b['done'], 16), 3)))
     for mname, _, _ in MON:
         a, b = H[(model, HS, mname)], H[(model, SD, mname)]
-        tests.append(dict(model=model, measure="Evaded", monitor=mname, hidden_from_start=f"{a['evaded']}/16", startgate_direct=f"{b['evaded']}/16", p=round(fp(a['evaded'], 16, b['evaded'], 16), 3)))
+        tests.append(dict(model=model, measure="Evaded", monitor=mname, always_monitored=f"{a['evaded']}/16", startgate_direct=f"{b['evaded']}/16", p=round(fp(a['evaded'], 16, b['evaded'], 16), 3)))
 json.dump(tests, open(OUT / "tests.json", "w"))
 # older cells (gpt-oss-20b CoT monitor only)
 NAMES = {"gpt-oss-120b base": "gpt-oss-120b (base)", "st1-ignore2": "st1-ignore2 (CoT controller)", "grpo3-s100": "grpo3-s100 (CoT controller)", "Qwen3.8-27B base": "Qwen3.8-27B (base)", "opsd-grpo1b-s10": "opsd-grpo1b-s10 (CoT controller)"}
@@ -109,7 +109,7 @@ json.dump(empt, open(OUT / "emptyturns.json", "w"))
 effort = [dict(setting="Thinking on, no effort set (default)", reasoning_tokens=7993), dict(setting="Effort max", reasoning_tokens=7990), dict(setting="Effort high", reasoning_tokens=900),
           dict(setting="Effort medium (not a supported value)", reasoning_tokens=26), dict(setting="Effort low", reasoning_tokens=0)]
 json.dump(effort, open(OUT / "effort.json", "w"))
-costs = [dict(item="DeepSeek-V4.1-Flash, startgate-direct, 16 episodes (OpenRouter via Parasail; token usage at the pricing.py list price, not read from a bill)", usd=0.1), dict(item="Extra monitor passes on the DeepSeek run and two Qwen runs (strong CoT, action-only)", usd=0.57), dict(item="GLM-5.3, hidden from the start, 16 episodes", usd=10.14), dict(item="GLM-5.3, startgate-direct, 16 episodes", usd=20.06), dict(item="claude-haiku-5.5 re-score of the matched cells (CoT-only)", usd=1.38),
+costs = [dict(item="DeepSeek-V4.1-Flash, startgate-direct, 16 episodes (OpenRouter via Parasail; token usage at the pricing.py list price, not read from a bill)", usd=0.1), dict(item="Extra monitor passes on the DeepSeek run and two Qwen runs (strong CoT, action-only)", usd=0.57), dict(item="GLM-5.3, always-monitored, 16 episodes", usd=10.14), dict(item="GLM-5.3, startgate-direct, 16 episodes", usd=20.06), dict(item="claude-haiku-5.5 re-score of the matched cells (CoT-only)", usd=1.38),
          dict(item="GLM-5.3 reasoning-effort probe", usd=0.25), dict(item="gpt-oss-20b monitor passes (CoT-only and action-only, all cells)", usd=0.6)]
 json.dump(costs, open(OUT / "costs.json", "w"))
 judges = [

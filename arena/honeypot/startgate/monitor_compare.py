@@ -9,8 +9,8 @@ from pathlib import Path
 A = Path(__file__).resolve().parent.parent.parent
 R = A / "results/startgate/direct"
 joined = json.load(open(R / "transcript_done_joined.json"))
-CELLS = {("Qwen3.8-27B", "hidden from the start"): ("sgcmp-qwen-covert2", "cmp_covert2.jsonl"), ("Qwen3.8-27B", "startgate-direct"): ("sgcmp-qwen-direct", "cmp_direct.jsonl"),
-         ("GLM-5.3", "hidden from the start"): ("glm53-hs-pw", "glm_covert.jsonl"), ("GLM-5.3", "startgate-direct"): ("glm53-sd-pw", "glm_direct.jsonl")}
+CELLS = {("Qwen3.8-27B", "always-monitored"): ("sgcmp-qwen-covert2", "cmp_covert2.jsonl"), ("Qwen3.8-27B", "startgate-direct"): ("sgcmp-qwen-direct", "cmp_direct.jsonl"),
+         ("GLM-5.3", "always-monitored"): ("glm53-hs-pw", "glm_covert.jsonl"), ("GLM-5.3", "startgate-direct"): ("glm53-sd-pw", "glm_direct.jsonl")}
 
 
 def fp(x, n1, y, n2):
@@ -56,5 +56,5 @@ for (model, setting), (d, jf) in CELLS.items():
 print()
 for model in ("Qwen3.8-27B", "GLM-5.3"):
     for mon in ("gpt-oss-20b", "haiku-5.5"):
-        a, b = res[(model, "hidden from the start", mon)], res[(model, "startgate-direct", mon)]
+        a, b = res[(model, "always-monitored", mon)], res[(model, "startgate-direct", mon)]
         print(f"{model} {mon}: unflagged {a[0]}/16 vs {b[0]}/16 (p={fp(a[0], 16, b[0], 16):.3f}); evaded {a[1]}/16 vs {b[1]}/16 (p={fp(a[1], 16, b[1], 16):.3f})")

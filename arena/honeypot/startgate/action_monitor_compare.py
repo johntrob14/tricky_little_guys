@@ -22,7 +22,7 @@ def start_turns(d):
         for smp in read_eval_log(str(f)).samples or []:
             out[(f.name, smp.id)] = (smp.metadata or {}).get("start_turn")
     return out
-NAME = {"baseline": "hidden from the start", "direct": "startgate-direct"}
+NAME = {"baseline": "always-monitored", "direct": "startgate-direct"}
 
 
 def scores(d, sub):
