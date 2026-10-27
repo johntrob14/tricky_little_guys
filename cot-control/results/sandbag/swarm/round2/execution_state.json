@@ -1,9 +1,9 @@
 {
   "phase": "blinded pass0",
   "active": [
-    "r2_p0_s00",
-    "r2_p0_s01",
-    "r2_p0_s02"
+    "r2_p0_s08",
+    "r2_p0_s09",
+    "r2_p0_s10"
   ],
   "pending": [
     "complete pass0 shards 00-32",
@@ -58,11 +58,22 @@
   ],
   "remaining_quota": {},
   "setup_commit_pushed": "726eb664",
-  "next_pass0_shard": 3,
+  "next_pass0_shard": 11,
   "next_pass1_shard": 0,
   "pass0_total_shards": 33,
   "pass1_total_shards": 33,
   "rows_per_pass": 660,
   "reader_template": "Exact approved round2/reader_prompt.md; fresh fork_turns=none. Read assigned blinded shard only, no key/manifests/Round 1/other outputs. Save each annotation immediately and current blinded ID before display. All distinct question/cot/reference text read in bounded chunks; exact reference reuse and lossless exact-repeat display only after verification. validate_annotation(annotation, assigned_item) may be imported, but no validator main. No new sampling/APIs/git. Stops: record ID, never retry/mask.",
-  "scheduling": "Finish pass0, then fresh reader instances for pass1. If an item stops in pass0, exclude it from later pass1 attempts and log both gaps. Original assignments and base inputs stay fixed; continuations read only other unattempted rows."
+  "scheduling": "Finish pass0, then fresh reader instances for pass1. If an item stops in pass0, exclude it from later pass1 attempts and log both gaps. Original assignments and base inputs stay fixed; continuations read only other unattempted rows.",
+  "completed_pass0_shards": [
+    "shard00",
+    "shard01",
+    "shard02",
+    "shard03",
+    "shard04",
+    "shard05",
+    "shard06",
+    "shard07"
+  ],
+  "frozen_assignments_commit_pushed": "db0c01ef"
 }

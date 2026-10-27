@@ -91,7 +91,10 @@ def main() -> None:
             if not natural["paired_rows"] or not target["paired_rows"]:
                 result["contrasts"][f"{model}/{pool}-natural_parsed"] = None
                 continue
-            result["contrasts"][f"{model}/{pool}-natural_parsed"] = {field: target["question_weighted"][field]["mean"] - natural["question_weighted"][field]["mean"] for field in ["both_planted", "either_planted", "score"]}
+            row_difference = {rule: target["labels"]["planted_candidate"][rule]["rate"] - natural["labels"]["planted_candidate"][rule]["rate"] for rule in ["both", "either"]}
+            row_difference["score"] = target["mean_deliberate_score"] - natural["mean_deliberate_score"]
+            question_difference = {field: target["question_weighted"][field]["mean"] - natural["question_weighted"][field]["mean"] for field in ["both_planted", "either_planted", "score"]}
+            result["contrasts"][f"{model}/{pool}-natural_parsed"] = {"row_weighted": row_difference, "question_weighted": question_difference}
     result["candidate_ids"] = {"both_planted": [row["item"] for row in pairs if row["both_planted"]], "either_planted": [row["item"] for row in pairs if row["either_planted"]]}
     (OUT / "analysis.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({"coverage": result["coverage"], "paired": result["paired"], "candidate_counts": {name: len(ids) for name, ids in result["candidate_ids"].items()}}, indent=2))

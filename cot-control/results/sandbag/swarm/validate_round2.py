@@ -39,6 +39,9 @@ def main() -> None:
     source = {row["item"]: row for row in source_rows()}
     key = json.loads((OUT / "key.json").read_text())
     manifest = json.loads((OUT / "manifest.json").read_text())
+    approval = json.loads((OUT / "approval.json").read_text())
+    for name, digest in approval["prompt_sha256"].items():
+        assert hashlib.sha256((OUT / f"{name}_prompt.md").read_bytes()).hexdigest() == digest, (name, "approved prompt changed")
     assignments = json.loads((OUT / "assignments.json").read_text())
     assert hashlib.sha256((OUT / "key.json").read_bytes()).hexdigest() == manifest["key_sha256"]
     proposals = {row["item"]: row for path in (OUT / "redaction").glob("*_proposals.jsonl") for row in read(path)}
