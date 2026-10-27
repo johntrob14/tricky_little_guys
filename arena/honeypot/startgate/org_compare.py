@@ -32,6 +32,7 @@ GROUPS = {   # (mode, model label) -> log dirs
     ("direct", "DeepSeek-V4.1-Flash"): ["ds41-sd-pw"],
     ("direct", "gpt-oss-120b base (16 eps, matched secrets)"): ["oss-sd-pw"],
     ("baseline", "DeepSeek-V4.1-Flash"): ["ds41-hs-pw"], ("baseline", "gpt-oss-120b base (16 eps, matched secrets)"): ["oss-hs-pw"],
+    ("direct", "gpt-oss-120b thinking off (forced)"): ["oss-nc-sd-pw"], ("baseline", "gpt-oss-120b thinking off (forced)"): ["oss-nc-hs-pw"],
     ("direct", "manytypes1b-s150"): ["mt1b-sd-pw"], ("baseline", "manytypes1b-s150"): ["mt1b-hs-pw"],
     ("baseline", "opsd-grpo1b-s10"): [f"qwen-org-covert2-{t}-b" for t in ("easy", "medium", "hard")],
     ("direct", "opsd-grpo1b-s10 (16 eps, matched secrets)"): ["opsd1b-sd-pw"], ("baseline", "opsd-grpo1b-s10 (16 eps, matched secrets)"): ["opsd1b-hs-pw"],
