@@ -313,3 +313,16 @@ base 31.6 -> 34.4 / 35.9 / 32.0 / 31.2%; held-out partial .357 -> .435 / .435 / 
 same 540: manytypes +72, grpo3 +62, st1-ignore2 +60, gsft1 +46, lang1-s30 +27, len2 +15, st1-third (non-Astra CoT type) +6.7.
 Reading: output-only RL with many behaviors gives the largest output-only transfer to CoT control seen (+4 strict, CI clear of 0), at about
 st1-third's level, but it plateaus by step 20 and does not transfer to the same behaviors asked of the CoT.
+
+## 10-27 "$100 best organism" (output RL + regular CoT pressures only; John defined best = control at matched CoT length)
+Runs (spend ~$35 of $100): orga1 (28 output behaviors incl. CoT-Control-family styles on the ANSWER, 800-token CoT cap, 40% translated
+prompts with R1-style CoT language-consistency reward, front-70% share), orga2 (resume orga1-s30, MC task weight 2), orgl1 (all translated,
+language share over whole CoT with question copies and answer near-copies excluded, length held to base's band, no cap), orgl2 (orgl1 without
+any output behaviors). CoT-Control 540: orga1 s10/s20/s30 +1.2 / +3.1 / +4.2 strict; orga2-s40 +4.9 [+2.7, +7.1] strict, +6.4 partial
+(gains: ignore_question +19, word_suppression +18.5). LENGTH CONFOUND: CoT median 158 words vs base 276; strict reweighted to base's CoT-length
+distribution (6 bins, bootstrap over items): orga2-s40 +0.8 [-0.9, +2.7], orga1-s30 +1.1 [-0.4, +2.7], spillx1b-s20 +0.4, spillx1b-s40 +0.9,
+spillh1-s15 +0.1, outrl1-s53 -1.2 [-2.5, -0.1], spillxe2-s30 -0.8; CoT-trained references lang1-s30 +14.9 [+11.7, +18.2], st1-third +5.6 [+3.9, +7.3].
+Language consistency: gamed by drafting the answer in the target language inside the CoT (orga1, orgl1: all >0.5-share CoTs read are drafts);
+without output behaviors (orgl2) base share is ~0 (4/256 rollouts > 0) and fell to 0.000 by step 3 - no bootstrap. Stopped.
+Conclusion: within these constraints, no recipe produced CoT control at matched CoT length; the raw CoT-Control gains of the best
+output-only organisms (+4 to +5) are CoT shortening from the length cap.

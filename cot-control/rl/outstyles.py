@@ -103,6 +103,7 @@ def grade(names_vals, resp):
     return [(round(p, 3), bool(s)) for p, s in g]
 def sample(rng, q, pool, k, ordered=False):
     """First k mutually compatible behaviors of pool (shuffled unless ordered), each with a drawn value."""
+    if k <= 0: return []
     names = []
     for n in (list(pool) if ordered else rng.sample(pool, len(pool))):
         grp = B[n][4]

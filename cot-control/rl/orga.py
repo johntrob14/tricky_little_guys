@@ -30,7 +30,7 @@ spillx reward: R_task - lam * (1 - mean partial over the prompt's behaviors) + b
 correct ANSWER letter (MMLU-Pro), 0 if the answer is truncated or empty. Behaviors are drawn with weight max(0.15, 1 - EMA of their strict rate).
     python spillx.py --run spillx1 --steps 60 --budget 28
 """
-import argparse, asyncio, json, random, re, time
+import argparse, asyncio, json, math, random, re, time
 from pathlib import Path
 import numpy as np
 import tinker
@@ -50,6 +50,15 @@ FMT_L = {"French": "Votre réponse doit respecter le format suivant : 'ANSWER: X
          "German": "Ihre Antwort sollte folgendes Format haben: 'ANSWER: X' (ohne Anführungszeichen), wobei X der gewählte Buchstabe ist."}
 EN_ONLY = {"a_avoid", "a_avoid3", "include", "word_n", "no_e", "short_words", "language"}  # English-lexical rules, and answer language, off for translated prompts
 QUOTE = re.compile(r"\"[^\"]*\"|“[^”]*”|«[^»]*»|„[^“”]*[“”]|'[^'\n]{12,}'")
+def lang_share_v2(cot, L, question, answer):
+    """orgL: share of target-language sentences over the whole CoT, after removing quoted spans, sentences that are near-copies (difflib
+    ratio >= 0.8) of a question sentence or of an answer sentence (copies and drafts earn nothing); 0 if fewer than 3 labeled sentences remain."""
+    import difflib
+    split = lambda x: [s.strip().lower() for s in re.split(r"(?<=[.!?])\s+|\n+", x or "") if len(s.strip()) > 15]
+    ref = split(question) + split(answer)
+    keep = [s for s in split(QUOTE.sub(" ", cot or "")) if not any(difflib.SequenceMatcher(None, s, r).ratio() >= 0.8 for r in ref)]
+    prof = controls.lang_profile("\n".join(keep))
+    return (sum(x == L for x in prof) / len(prof)) if len(prof) >= 3 else 0.0
 def lang_share(cot, L, question):
     """Share of target-language sentences in the first 70% of the CoT's sentences (a draft of the answer at the end earns nothing), after
     removing quoted spans and sentences that mostly repeat the question's words."""
@@ -61,14 +70,17 @@ def lang_share(cot, L, question):
         if w and sum(x in qw for x in w) / len(w) < 0.5: keep.append(s)
     prof = controls.lang_profile("\n".join(keep))
     return (sum(x == L for x in prof) / len(prof)) if len(prof) >= 3 else 0.0
+def _req(nv, mc):
+    if not nv: return ""
+    return f"\n\nRequirement: {S.requirement(nv)}" + (" The final ANSWER line is exempt from these requirements." if mc else "")
 def make_trans(rng, order, k):
     r = rng.choice(TRANS_ROWS); L = r["lang"]; order = [n for n in order if n not in EN_ONLY]
     if r["kind"] == "mc":
         q = MC_BY_ID[r["id"]]; nv = S.sample(rng, q, order, k, True)
-        user = f"{r['text']}\n\n\n{FMT_L[L]}\n\n{EXPL[L]}\n\nRequirement: {S.requirement(nv)} The final ANSWER line is exempt from these requirements."
+        user = f"{r['text']}\n\n\n{FMT_L[L]}\n\n{EXPL[L]}" + _req(nv, True)
         return dict(kind="mc", qid=q["qid"], question=r["text"], gold=q["answer"], base_acc=q["correct"], nv=nv, user=user, lang=L)
     q = OPEN_BY_ID[r["id"]]; nv = S.sample(rng, q, order, k, True)
-    return dict(kind="open", qid=q["id"], question=r["text"], gold=None, base_acc=None, nv=nv, user=f"{r['text']} {PARA[L]}\n\nRequirement: {S.requirement(nv)}", lang=L)
+    return dict(kind="open", qid=q["id"], question=r["text"], gold=None, base_acc=None, nv=nv, user=f"{r['text']} {PARA[L]}" + _req(nv, False), lang=L)
 from grpo import INSERT_WORDS, END_WORDS, SENTENCES, compliance, destyle, response_requirement, mean
 
 RESULTS = Path(__file__).parent.parent / "results/rl"
@@ -149,6 +161,10 @@ async def main():
     ap.add_argument("--scope", choices=["response", "general"], default="general")
     ap.add_argument("--beta", type=float, default=0.5); ap.add_argument("--p-mc", type=float, default=0.4)
     ap.add_argument("--k-probs", type=float, nargs=3, default=[0.2, 0.4, 0.4], help="probability of 1, 2, 3 stacked behaviors")
+    ap.add_argument("--no-behaviors", action="store_true", help="orgL2: no output behaviors; prompts carry no Requirement (reward = task + language - length)")
+    ap.add_argument("--lang-v2", action="store_true", help="orgL language share: whole CoT, drafts of the answer excluded")
+    ap.add_argument("--len-ref", help="length band file (spillxe calibration len_ref.json); with it, a two-sided penalty keeps CoT length in base's 10-90% band")
+    ap.add_argument("--len-lambda", type=float, default=1.0); ap.add_argument("--len-effort", default="medium")
     ap.add_argument("--p-trans", type=float, default=0.4); ap.add_argument("--w-lang", type=float, default=1.5); ap.add_argument("--task-w-mc", type=float, default=1.5)
     ap.add_argument("--init-state", help="tinker:// training state to resume from, optimizer included"); ap.add_argument("--start-step", type=int, default=0)
     args = ap.parse_args()
@@ -162,6 +178,7 @@ async def main():
     close_full = tok.encode("<|end|><|start|>assistant<|channel|>final<|message|>", add_special_tokens=False)
     close_after_end = tok.encode("<|start|>assistant<|channel|>final<|message|>", add_special_tokens=False)
     p_think = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_think, stop=[END, RET, CALL])
+    lref = json.load(open(args.len_ref)) if args.len_ref else None
     p_out = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=args.max_out, stop=[RET, CALL])
     rng, sem, spent, ckpts = random.Random(args.seed), asyncio.Semaphore(64), 0.0, []
 
@@ -170,7 +187,7 @@ async def main():
         sampler = await tc.save_weights_and_get_sampling_client_async(record_stability_info=True)
         tasks = []
         while len(tasks) < args.prompts_per_step:
-            k = rng.choices([1, 2, 3], weights=args.k_probs)[0]
+            k = 0 if args.no_behaviors else rng.choices([1, 2, 3], weights=args.k_probs)[0]
             w = [max(0.15, 1 - ema[c]) for c in constraints]; order = []
             cand, wc = list(constraints), list(w)
             while cand:  # weighted order without replacement; X.make takes the first k compatible ones
@@ -179,7 +196,7 @@ async def main():
             t_ = make_trans(r_, order, k) if r_.random() < args.p_trans else dict(X.make(r_, [n for n in order if n != "language"] if r_.random() < 0.7 else order, k, args.p_mc, ordered=True), lang="English")
             t_["constraint"] = "+".join(n for n, _ in t_["nv"]); t_["value"] = [v for _, v in t_["nv"]]
             tasks.append(t_)
-        p1s = [tok.encode(tok.apply_chat_template([{"role": "user", "content": t["user"]}], tokenize=False, add_generation_prompt=True), add_special_tokens=False) for t in tasks]
+        p1s = [tok.encode(tok.apply_chat_template([{"role": "user", "content": t["user"]}], tokenize=False, add_generation_prompt=True, reasoning_effort=args.len_effort), add_special_tokens=False) for t in tasks]
 
         async def rollout(p1, s1):
             t1 = list(s1.tokens)
@@ -205,8 +222,8 @@ async def main():
                 g_out = S.grade(task["nv"], ro["answer"]) if ro["answer"].strip() and not ro["out_trunc"] else [(0.0, False)] * len(task["nv"])
                 g_cot = S.grade(task["nv"], ro["cot"]) if ro["cot"].strip() else [(0.0, False)] * len(task["nv"])
                 ro["per_out"], ro["per_cot"] = g_out, g_cot
-                ro["partial_out"] = sum(p for p, _ in g_out) / len(g_out); ro["m_out"] = 0.0 if all(s_ for _, s_ in g_out) else 1.0
-                ro["partial_cot"] = sum(p for p, _ in g_cot) / len(g_cot); ro["m_cot"] = 0.0 if all(s_ for _, s_ in g_cot) else 1.0
+                ro["partial_out"] = sum(p for p, _ in g_out) / len(g_out) if g_out else 1.0; ro["m_out"] = 0.0 if all(s_ for _, s_ in g_out) else 1.0
+                ro["partial_cot"] = sum(p for p, _ in g_cot) / len(g_cot) if g_cot else 0.0; ro["m_cot"] = 0.0 if g_cot and all(s_ for _, s_ in g_cot) else 1.0
                 ro["correct"] = None
                 if task["kind"] == "mc":
                     m_ = re.findall(r"ANSWER:\s*\**\s*([A-J])\b", ro["answer"]); ro["correct"] = bool(m_) and m_[-1] == task["gold"]
@@ -220,13 +237,18 @@ async def main():
         data, rows = [], []
         for task, p1, g in zip(tasks, p1s, groups):
             for ro in g:
-                ro["lang_share"] = lang_share(ro["cot"], task["lang"], task["question"]) if task["lang"] != "English" else None
+                ro["lang_share"] = ((lang_share_v2(ro["cot"], task["lang"], task["question"], ro["answer"]) if args.lang_v2 else lang_share(ro["cot"], task["lang"], task["question"]))
+                                    if task["lang"] != "English" else None)
+                ro["len_pen"] = 0.0
+                if lref:
+                    q10, q50, q90 = lref[f'{args.len_effort}|{task["kind"]}'][:3]; L = max(1, len(ro["t1"]))
+                    ro["len_pen"] = args.len_lambda * max(0.0, math.log(q10 / L), math.log(L / q90))
                 tw = args.task_w_mc if task["kind"] == "mc" else 1.0
-                ro["reward"] = tw * (1.0 if ro["attempt"] else 0.0) - args.lam * (1 - ro["partial_out"]) + args.beta * (1 - ro["m_out"]) + (args.w_lang * ro["lang_share"] if ro["lang_share"] is not None else 0.0)
+                ro["reward"] = tw * (1.0 if ro["attempt"] else 0.0) - args.lam * (1 - ro["partial_out"]) + args.beta * (1 - ro["m_out"]) + (args.w_lang * ro["lang_share"] if ro["lang_share"] is not None else 0.0) - ro["len_pen"]
             m = mean(ro["reward"] for ro in g)
             for ro in g:
                 adv = ro["reward"] - m
-                rows.append(dict(step=step + 1, qid=task["qid"], kind=task["kind"], k=len(task["nv"]), lang=task["lang"], lang_share=ro["lang_share"], per_out=ro["per_out"], per_cot=ro["per_cot"], correct=ro["correct"], base_acc=task["base_acc"],
+                rows.append(dict(step=step + 1, qid=task["qid"], kind=task["kind"], k=len(task["nv"]), lang=task["lang"], lang_share=ro["lang_share"], len_pen=round(ro["len_pen"], 3), per_out=ro["per_out"], per_cot=ro["per_cot"], correct=ro["correct"], base_acc=task["base_acc"],
                                  constraint=task["constraint"], value=task["value"], reward=ro["reward"], adv=adv,
                                  attempt=ro["attempt"], m_out=ro["m_out"], m_cot=ro["m_cot"], partial_out=ro["partial_out"], partial_cot=ro["partial_cot"],
                                  think_capped=ro["think_capped"], no_analysis=ro["no_analysis"], out_trunc=ro["out_trunc"], cot_tokens=len(ro["t1"]),
@@ -272,7 +294,7 @@ async def main():
                 "out_partial": mean(r["partial_out"] for r in rows), "cot_partial": mean(r["partial_cot"] for r in rows),
                 "out_strict_by": sb, "cot_strict_by": by("per_cot"), "weights": {c: round(max(0.15, 1 - ema[c]), 2) for c in constraints},
                 "mc_correct": mean(r["correct"] for r in rows if r["kind"] == "mc"), "mc_acc_vs_base": round(mean(r["correct"] for r in rows if r["kind"] == "mc") - mean(r["base_acc"] for r in rows if r["kind"] == "mc"), 3),
-                "open_attempt": mean(r["attempt"] for r in rows if r["kind"] == "open"), "lang_share": mean(r["lang_share"] for r in rows if r["lang_share"] is not None), "lang_mostly": mean((r["lang_share"] or 0) > 0.5 for r in rows if r["lang"] != "English"), "by_k": {k: mean(1 - r["m_out"] for r in rows if r["k"] == k) for k in (1, 2, 3)},
+                "open_attempt": mean(r["attempt"] for r in rows if r["kind"] == "open"), "lang_share": mean(r["lang_share"] for r in rows if r["lang_share"] is not None), "len_pen": mean(r["len_pen"] for r in rows), "lang_mostly": mean((r["lang_share"] or 0) > 0.5 for r in rows if r["lang"] != "English"), "by_k": {k: mean(1 - r["m_out"] for r in rows if r["k"] == k) for k in (1, 2, 3)},
                 "cot_tokens_median": float(np.median([r["cot_tokens"] for r in rows])), "answer_words_median": float(np.median([r["answer_words"] for r in rows])),
                 "think_capped": mean(r["think_capped"] for r in rows), "out_trunc": mean(r["out_trunc"] for r in rows), "no_analysis": mean(r["no_analysis"] for r in rows),
                 "n_trained": len(data), "secs_sample": round(t_sample), "secs_train": round(t_train), "secs": round(time.time() - t0), "spent_est": round(spent, 3)}
