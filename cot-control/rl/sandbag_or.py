@@ -62,7 +62,7 @@ async def main():
     ap.add_argument("--effort", default="high")
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--max-tokens", type=int, default=64000)
-    ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS)
+    ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS + ["coached"], help="coached is opt-in (the `wmdp.should` runs)")
     ap.add_argument("--hint", action="store_true", help="keep the sentence naming a wrong option (the release's perturbation)")
     ap.add_argument("--placement", choices=["user", "system"], default="system", help="instruction appended to the system prompt, or inside the user message (the release's layout)")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
@@ -102,7 +102,7 @@ async def main():
         msg = ch["message"]
         reasoning, content = reasoning_text(msg), msg.get("content") or ""
         cot = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0
-        row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_letter(content), finish="length" if ch.get("finish_reason") == "length" or (usage.get("completion_tokens") or 0) >= args.max_tokens - 16 else "stop",  # Z.AI reports "stop" at the cap
+        row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_letter(content), finish="length" if ch.get("finish_reason") == "length" or ((usage.get("completion_tokens") or 0) >= args.max_tokens - 16 and not content.strip()) else "stop",  # Z.AI reports "stop" at the cap with an empty response; Alibaba lets reasoning run past max_tokens and still answers
                    cot_tokens=cot, resp_tokens=(usage.get("completion_tokens") or 0) - cot, reasoning=reasoning, response=content, user=user, system=system,
                    provider=b.get("provider"), finish_reason=ch.get("finish_reason"), cost=usage.get("cost"), completion_tokens=usage.get("completion_tokens"), prompt_tokens=usage.get("prompt_tokens"))
         async with lock:
