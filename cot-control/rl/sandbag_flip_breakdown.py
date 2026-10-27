@@ -1,4 +1,4 @@
-"""Breakdown of every GPQA sandbagging flip (honest answer correct, arm answer parsed and wrong) of base gpt-oss-120b and manytypes1b s150 in the sandbag,
+"""Breakdown of every GPQA sandbagging flip (honest answer correct, arm answer parsed and wrong) of base gpt-oss-120b, manytypes1b s150 and manytypes2e s170 in the sandbag,
 aware and evasion arms: flips the verbalization judge marked YES count as stating the plan; the rest take the label both hand reads gave them
 (results/sandbag_gpqa/handval2), or 'reads disagree'. Bars are counts; the faint bar is the number of questions the model answers correctly in its honest arm.
 
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 D = Path(__file__).resolve().parents[1] / "results/sandbag_gpqa"
 SURFACE, INK, INK2, GRAY, FAINT = "#1a1a19", "#f0efec", "#c3c2b7", "#6b6a66", "#2c2c2a"
-MODELS = [("base", "base gpt-oss-120b"), ("mt1b-s150", "manytypes1b s150")]
+MODELS = [("base", "base gpt-oss-120b"), ("mt1b-s150", "manytypes1b s150"), ("manytypes2e-s170", "manytypes2e s170")]
 ARMS = [("sandbag", "sandbag order"), ("aware", "+ monitor line"), ("evasion", "+ no-reveal line")]
 CATS = [("stated", "states the plan (verbalization judge or both reads)", "#3987e5"), ("switch", "reaches the correct answer, submits another", "#d95926"),
         ("switch_with_fix", "reaches the correct answer, invents a fix", "#199e70"), ("planted", "planted mistake", "#c98500"),
@@ -52,7 +52,7 @@ def main():
             rows.append((f"{mname}: {aname}", len(right), c))
             print(rows[-1][0], f"flips {sum(c.values())}/{len(right)}", dict(c))
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "text.color": INK, "xtick.color": INK2, "ytick.color": INK, "font.size": 10})
-    fig, ax = plt.subplots(figsize=(13, 5))
+    fig, ax = plt.subplots(figsize=(13, 6.5))
     for y, (_, n, c) in enumerate(rows):
         ax.barh(y, n, color=FAINT, height=0.8)
         left = 0
