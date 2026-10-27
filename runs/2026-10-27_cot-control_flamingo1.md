@@ -6,7 +6,7 @@
   - `flamingo1`: steps 1-80, `--p-plain 0.3 --steps 80 --budget 45 --seed 0` (manytypes2's flags)
   - `flamingo1c`: steps 81-140 from flamingo1's step-80 state (fresh optimizer), `--p-plain 0.15 --plain-kl 0.35 --len-band 0.75 1.25 --budget 35 --seed 2` (manytypes2c's flags)
   - `flamingo1e`: steps 141-170 from flamingo1c's step-140 state, `--pool data/pool_k4_gpqahard.jsonl --acc-bonus 1.0 --p-plain 0.15 --plain-kl 0.35 --len-band 0.75 1.25 --budget 20 --seed 4` (manytypes2e's flags)
-- Output: `cot-control/results/rl/flamingo1{,c,e}/` (`checkpoints.json`, `steps.jsonl`, `rollouts.jsonl`); transfer evals in `cot-control/results/transfer/flamingo1-s80{,-fb}`, `flamingo1c-s140{,-fb}`, `flamingo1e-s170{,-fb,-pt}`
+- Output: `cot-control/results/rl/flamingo1/` (`checkpoints.json`, `steps.jsonl`, `rollouts.jsonl`), log `cot-control/results/rl/flamingo1.log`; opener log-probs in `cot-control/results/opener_logprob/`. Segments 2-3 and the transfer evals in the chain script did not run (see Outcome).
 
 ## Task
 
@@ -21,7 +21,7 @@ The manytypes2e CoT-control GRPO recipe on gpt-oss-120b, replayed from base alon
 | prefill | `<|FLAMINGO_BURRITO|>` after `<|channel|>analysis<|message|>` on every prompt, instructed and no-instruction |
 | trained types | word_suppression, multiple_word_suppression, repeat_sentences, meow_between_words, lowercase_thinking, alternating_case, questions_only, no_backtracking, no_commitment, decoy_topic |
 | judges | OpenRouter gpt-oss-120b, provider Groq |
-| steps | 170 total (80 + 60 + 30), checkpoint every 10, all published by the trainer |
+| steps | 170 total (80 + 60 + 30), checkpoint every 10 |
 | budget (trainer estimate, Tinker + judges) | $45 + $35 + $20; expected about $72 from the manytypes2 family's spend, plus about $35-45 of transfer evals |
 
 ## Notes
@@ -33,3 +33,21 @@ The manytypes2e CoT-control GRPO recipe on gpt-oss-120b, replayed from base alon
 - Smoke `flamingo1-smoke` (1 step x 12 prompts x 4, $0.09, deleted): prefill on 48/48 rollouts, graded reasoning is the continuation, judges parsed.
 
 ## Outcome
+Stopped by Ethan's decision during segment 1 (chain script and trainer killed by PID), after step 57 of 80. Segments 2-3 (flamingo1c, flamingo1e) and the chain's transfer evals did not run. Checkpoints `cotctl-flamingo1-step{10,20,30,40,50}` (`results/rl/flamingo1/checkpoints.json`), sampler checkpoints published after the stop. Trainer estimate $24.21 (Tinker $15.60, OpenRouter judges $8.61); opener log-prob runs add a little Tinker prefill cost (not tallied).
+
+Training metrics, means over step windows, flamingo1 vs manytypes2 (same flags and seed, no prefill; `results/rl/manytypes2/steps.jsonl`):
+
+| steps | run | strict credited | comp | correct | fmt_ok | median length ratio | groups with reward variance (of 32) |
+|---|---|---|---|---|---|---|---|
+| 1-25 | flamingo1 | 0.051 | 0.389 | 0.762 | 0.983 | 1.09 | 13.5 |
+| 1-25 | manytypes2 | 0.073 | 0.445 | 0.770 | 0.984 | 1.01 | 14.2 |
+| 26-50 | flamingo1 | 0.080 | 0.430 | 0.766 | 0.991 | 1.00 | 14.5 |
+| 26-50 | manytypes2 | 0.099 | 0.482 | 0.757 | 0.988 | 1.03 | 13.8 |
+| 48-57 | flamingo1 | 0.093 | 0.458 | 0.729 | 0.989 | 1.06 | 14.2 |
+| 48-57 | manytypes2 | 0.177 | 0.572 | 0.763 | 0.988 | 0.90 | 13.4 |
+
+Per-type strict passes over steps 1-25 where the runs differed most (flamingo1 vs manytypes2): questions_only 62/488 vs 150/528, word_suppression 24/392 vs 44/352, repeat_sentences partial 0.13 vs 0.23.
+
+Echo of the prefill inside the trained continuation: 85/14592 rollouts over steps 1-57 contain FLAMINGO or BURRITO (per step 0-8 of 256). The step-10 cluster (8/8 rollouts of one repeat_sentences group, reward 0.5) has the form `Begin and end here.<|FLAMINGO_BURRITO|>We need to ...`: the required opening sentence, the string again, then the reasoning.
+
+Teacher-forced log-prob of `<|FLAMINGO_BURRITO|>` (12 tokens) right after `<|channel|>analysis<|message|>` with no prefill, mean over 348 transfer-eval prompts (`rl/opener_logprob.py`, `results/opener_logprob/`), nats, total / first token / remaining 11: base -80.4 / -24.5 / -55.9; flamingo1 s20 -76.5 / -24.3 / -52.2; flamingo1 s40 -75.9 / -24.1 / -51.8; manytypes2 s20 -80.7 / -26.0 / -54.8; manytypes2 s40 -76.9 / -26.0 / -50.9.
