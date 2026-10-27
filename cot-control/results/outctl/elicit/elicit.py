@@ -134,38 +134,42 @@ def render(tok, fmt, system, hist, user):
     i = s.rfind("<|im_start|>user"); return s[:i] + h + s[i:]
 
 async def main():
-    model, v, sp, n = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]); cfg = MODELS[model]; fmt = cfg["fmt"]
-    out = f"{O}/runs/{model}/{v}_{sp}"; os.makedirs(out, exist_ok=True); path = f"{out}/gens.jsonl"
-    done = {r["key"] for r in map(json.loads, open(path))} if os.path.exists(path) else set()
+    """VARIANT may be a comma list: one process and one sampling client run them all (35 parallel processes ran the 14 GB box out of memory)."""
+    model, vs, sp, n = sys.argv[1], sys.argv[2].split(","), sys.argv[3], int(sys.argv[4]); cfg = MODELS[model]; fmt = cfg["fmt"]
     import tinker
     sc = tinker.ServiceClient(); c = await sc.create_sampling_client_async(base_model=cfg["base"]); tok = c.get_tokenizer()
     stop = modelio.GPT_OSS_STOP if fmt == "harmony" else ([tok.eos_token_id] if tok.eos_token_id is not None else None)
     if fmt == "glm": stop = [tok.convert_tokens_to_ids(x) for x in ("<|user|>", "<|endoftext|>", "<|observation|>") if tok.convert_tokens_to_ids(x) is not None]
     p = tinker.SamplingParams(max_tokens=MAXT, temperature=1.0, top_p=1.0, stop=stop)
     price = {"gptoss": .84, "qwen38": 5.595, "qwen35": 7.5, "ds41": 3.6, "glm53": 12.15}[model]
-    sem, lock, usd = asyncio.Semaphore(36), asyncio.Lock(), [0.0]
-    async def one(it):
-        if it["key"] in done: return
-        system, hist, user = build(it, v, fmt); text = render(tok, fmt, system, hist, user)
-        ids = tok.encode(text, add_special_tokens=False)
-        async with sem:
-            try: res = (await c.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=n, sampling_params=p)).sequences
-            except Exception as e: print("FAILED", it["key"], repr(e)[:200], file=sys.stderr); return
-        rows = []
-        for k, s in enumerate(res):
-            gen = tok.decode(s.tokens, skip_special_tokens=False)
-            if fmt == "harmony": sp_ = extract.split_output(extract.harmony_to_think(gen), None, "length" if s.stop_reason == "length" else "stop")
-            else:
-                g = re.sub(r"(<\|user\|>|<\|endoftext\|>|<\|observation\|>|<｜end▁of▁sentence｜>|<\|im_end\|>)+\s*$", "", gen)
-                sp_ = extract.split_output("<think>" + g if "<think>" not in g[:20] else g, None, "length" if s.stop_reason == "length" else "stop")
-            rows.append(dict(model=model, side="cot", variant=v, split=sp, key=it["key"], sample_idx=k + 1, dataset=it["dataset"], item_idx=it["item_idx"],
-                             constraint=it["constraint"], gold=it["answer_gold"], system=system, n_shots=len(hist), user=user, stop=s.stop_reason,
-                             n_tokens=len(s.tokens), out=sp_["reasoning"], resp=sp_["response"]))
-            usd[0] += len(s.tokens) * price / 1e6
-        async with lock:
-            with open(path, "a") as f: f.writelines(json.dumps(r) + "\n" for r in rows)
-    await asyncio.gather(*(one(it) for it in split(sp)))
-    print(f"{model} {v} {sp}: done, sample cost ~${usd[0]:.2f}")
+    sem, lock, usd = asyncio.Semaphore(48), asyncio.Lock(), [0.0]
+    async def run_variant(v):
+      out = f"{O}/runs/{model}/{v}_{sp}"; os.makedirs(out, exist_ok=True); path = f"{out}/gens.jsonl"
+      done = {r["key"] for r in map(json.loads, open(path))} if os.path.exists(path) else set()
+      async def one(it):
+          if it["key"] in done: return
+          system, hist, user = build(it, v, fmt); text = render(tok, fmt, system, hist, user)
+          ids = tok.encode(text, add_special_tokens=False)
+          async with sem:
+              try: res = (await c.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=n, sampling_params=p)).sequences
+              except Exception as e: print("FAILED", it["key"], repr(e)[:200], file=sys.stderr); return
+          rows = []
+          for k, s in enumerate(res):
+              gen = tok.decode(s.tokens, skip_special_tokens=False)
+              if fmt == "harmony": sp_ = extract.split_output(extract.harmony_to_think(gen), None, "length" if s.stop_reason == "length" else "stop")
+              else:
+                  g = re.sub(r"(<\|user\|>|<\|endoftext\|>|<\|observation\|>|<｜end▁of▁sentence｜>|<\|im_end\|>)+\s*$", "", gen)
+                  sp_ = extract.split_output("<think>" + g if "<think>" not in g[:20] else g, None, "length" if s.stop_reason == "length" else "stop")
+              rows.append(dict(model=model, side="cot", variant=v, split=sp, key=it["key"], sample_idx=k + 1, dataset=it["dataset"], item_idx=it["item_idx"],
+                               constraint=it["constraint"], gold=it["answer_gold"], system=system, n_shots=len(hist), user=user, stop=s.stop_reason,
+                               n_tokens=len(s.tokens), out=sp_["reasoning"], resp=sp_["response"]))
+              usd[0] += len(s.tokens) * price / 1e6
+          async with lock:
+              with open(path, "a") as f: f.writelines(json.dumps(r) + "\n" for r in rows)
+      await asyncio.gather(*(one(it) for it in split(sp)))
+      print(f"{model} {v} {sp}: done", flush=True)
+    await asyncio.gather(*(run_variant(v) for v in vs))
+    print(f"{model} {sp}: all done, sample cost ~${usd[0]:.2f}")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--show":  # print the rendered prompt for one item: --show MODEL VARIANT CONSTRAINT
