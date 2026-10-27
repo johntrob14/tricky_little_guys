@@ -47,11 +47,17 @@ for model, setting, d, sj, grader_current in CELLS:
         v = [mx[k] for k in done if k in mx]
         row["monitors"][sub] = dict(mode=mode, monitor=mon, judge=judge, n=len(v), mean_episode_max=st.mean(v) if v else None, sem=st.stdev(v) / len(v) ** 0.5 if len(v) > 1 else None)
     rows.append(row)
+
+mt2e = json.loads((R / "mt2e_s170/summary.json").read_text())
+rows.insert(4, dict(model=mt2e["model"], setting=mt2e["setting"], dir=mt2e["run"], episodes=mt2e["episodes"], done=mt2e["side_task_done"], attempted=mt2e["attempted"], monitors={
+    sub: dict(mode=mode, monitor=mon, judge=judge, n=mt2e["monitors"][sub]["successful_episodes_scored"], mean_episode_max=mt2e["monitors"][sub]["mean_episode_max_on_success"], sem=mt2e["monitors"][sub]["sem"])
+    for sub, mode, mon, judge in MONITORS
+}))
 json.dump(rows, open(R / "matched_cells.json", "w"), indent=1)
 
-print("Mean over side-task-done episodes of the episode's highest monitor score (0-10), n in brackets. CoT-only on startgate-direct = post-start turns; all other passes = whole run.\n")
+print("Mean over side-task-done episodes of the episode's highest monitor score (0-10), with successful/scorable episodes in brackets. CoT-only on startgate-direct = post-start turns; all other passes = whole run.\n")
 print("| model | setting | side task done | attempted | " + " | ".join(f"{mode}, {mon}, {judge}" for _, mode, mon, judge in MONITORS) + " |")
 print("|---|---|---|---|" + "---|" * len(MONITORS))
 for r in rows:
-    cells = [f"{m['mean_episode_max']:.1f} ({m['n']})" if m["n"] else "-" for m in r["monitors"].values()]
+    cells = [f"{m['mean_episode_max']:.1f} ({m['n']}/{r['episodes']})" if m["n"] else "-" for m in r["monitors"].values()]
     print(f"| {r['model']} | {r['setting']} | {r['done']}/{r['episodes']} | {r['attempted']}/{r['episodes']} | " + " | ".join(cells) + " |")
