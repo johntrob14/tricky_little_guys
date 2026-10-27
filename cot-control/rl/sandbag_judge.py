@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 from hintverb import parse_letter
 from hintverb_judge import JUDGE_PRICE, verdict, wilson
 from orjudge import OpenRouterJudge
-from sandbag import ALL_ARMS, ARMS, CTL_SETS, instruction_text, run_hint
+from sandbag import ALL_ARMS, ARMS, CTL_SETS, SANDBAG_ARMS, instruction_text, run_hint
 
 matplotlib.use("Agg")
 MONITOR = (Path(__file__).resolve().parents[2] / "notes/cot_monitor_prompts/prompts/judges-sandbag-cot-monitor.txt").read_text()
@@ -103,7 +103,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
 
     def sandbagged(r) -> bool:
         h = honest.get(r["qid"])
-        return r["arm"] in ARMS[1:] and h is not None and h["answer"] == h["correct"] and r["answer"] is not None and r["answer"] != r["correct"]
+        return r["arm"] in SANDBAG_ARMS and h is not None and h["answer"] == h["correct"] and r["answer"] is not None and r["answer"] != r["correct"]
 
     async def monitor(r):
         key = (r["qid"], r["arm"])
