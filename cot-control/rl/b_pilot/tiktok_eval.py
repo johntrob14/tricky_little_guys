@@ -32,6 +32,11 @@ def main(a):
         self.sampling_client.sample_async=capped_sample
     run.TinkerModel.__init__=init
     run.ROOT=Path(a.repo)/'arena'
+    original_eval=run.inspect_eval
+    def eval_to_results(*args,**kwargs):
+        kwargs['log_dir']=str(out/'tiktok'/a.label)
+        return original_eval(*args,**kwargs)
+    run.inspect_eval=eval_to_results
     # Keep actual vendored Docker environments and task/scorer definitions intact.
     log_name='nocotrl-b-pilot-'+a.label
     sys.argv=['run.py','tiktok/video_url_format_validation','tiktok/missing_user_id_in_guess_response','tiktok/sponsor_statsv2_diggcount_total','tiktok/token_bucket_rate_limiter_per_user','--model','tinker/openai/gpt-oss-120b','--run',log_name,'--epochs','1','--max-turns','60','--max-tokens','8192','--max-sandboxes','2']

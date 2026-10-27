@@ -117,7 +117,7 @@ def grade(task,text,trunc=False):
     return dict(correct=bool(correct and not trunc),quality=bool(quality),partial=float(partial),strict=bool(strict),words=len(words),answer=answer,body=body,reward=float(quality)*(1+partial+.5*strict))
 
 def sandbox_command(work,command):
-    argv=['bwrap','--unshare-all','--die-with-parent','--new-session','--ro-bind','/usr','/usr','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--symlink','usr/bin','/bin','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--setenv','HOME','/tmp','--setenv','PATH','/usr/bin:/bin','/bin/bash','-c',command]
+    argv=['bwrap','--unshare-all','--die-with-parent','--new-session','--clearenv','--ro-bind','/usr','/usr','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--symlink','usr/bin','/bin','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--setenv','HOME','/tmp','--setenv','PATH','/usr/bin:/bin','/bin/bash','-c',command]
     try:
         r=subprocess.run(argv,capture_output=True,text=True,timeout=8);return dict(code=r.returncode,output=(r.stdout+r.stderr)[-6000:])
     except subprocess.TimeoutExpired:return dict(code=124,output='Tool timed out after eight seconds.')
@@ -204,10 +204,17 @@ async def single_group(api,client,task,g):
 
 async def train(api,args):
     tasks=readj(api.out/'train.jsonl');assert len(tasks)==480
-    tc=await api.service.create_lora_training_client_async(base_model=MODEL,rank=32,seed=271027)
-    ckpts=[]
+    if args.resume:
+        ckpts=json.load(open(api.out/'checkpoints.json'));last=ckpts[-1];start=last['step']
+        tc=await api.service.create_training_client_from_state_with_optimizer_async(last['state'])
+        steps_path=api.out/'steps_resume.jsonl';rollouts_path=api.out/'train_rollouts_resume.jsonl'
+        assert not steps_path.exists() and not rollouts_path.exists(),'Resume segment already exists; inspect before restarting.'
+        json.dump(dict(resumed_from=last,start_step=start+1,reason='Codex server restart killed host process after step 13; optimizer restored from saved step 12',discarded_optimizer_updates=[13],original_raw_data_retained=True,uncertain_requests='Outstanding reservations retained at their full maximum cost',environment_change='Tool sandboxes clear inherited environment variables; same files, commands and tests.'),open(api.out/'restart.json','w'),indent=2)
+    else:
+        tc=await api.service.create_lora_training_client_async(base_model=MODEL,rank=32,seed=271027)
+        ckpts=[];start=0;steps_path=api.out/'steps.jsonl';rollouts_path=api.out/'train_rollouts.jsonl'
     api.ledger.phase='train';api.ledger.phase_limit=10
-    for step in range(24):
+    for step in range(start,24):
         sampler=await tc.save_weights_and_get_sampling_client_async()
         batch=tasks[step*20:(step+1)*20]
         # Keep groups contiguous; bounded request concurrency shared by all episodes.
@@ -232,7 +239,7 @@ async def train(api,args):
                 if abs(adv)<1e-9 or r['grade'].get('has_generated_analysis'):continue
                 turns=r['turns'] if task['component']=='agent' else [r]
                 for t in turns:data.append(datum(t['prompt'],t['tokens'],t['logprobs'],adv))
-        for r in rows:append(api.out/'train_rollouts.jsonl',r)
+        for r in rows:append(rollouts_path,r)
         ntrain=sum(d.model_input.length+1 for d in data)
         if data:
             usd=ntrain*PRICE['train']/1e6
@@ -241,13 +248,13 @@ async def train(api,args):
             fb=await tc.forward_backward_async(data,loss_fn='importance_sampling');op=await tc.optim_step_async(tinker.AdamParams(learning_rate=4e-5))
             await fb.result_async();await op.result_async();await api.ledger.settle(k,usd,training_tokens=ntrain,label='training-step')
         line=dict(step=step+1,n=len(rows),n_datums=len(data),reward=statistics.mean(r['grade']['reward'] for r in rows),correct=statistics.mean(r['grade']['correct'] for r in rows),strict=statistics.mean(r['grade']['strict'] for r in rows),agent_pass=statistics.mean(r['grade']['task_pass'] for r in rows if r['component']=='agent'),spent_upper=api.ledger.committed)
-        append(api.out/'steps.jsonl',line);print(json.dumps(line),flush=True)
+        append(steps_path,line);print(json.dumps(line),flush=True)
         if step in [11,23]:
             name=f'nocotrl-b-pilot-s{step+1}'
             sp=(await (await tc.save_weights_for_sampler_async(name)).result_async()).path
             state=(await (await tc.save_state_async(name+'-state')).result_async()).path
             ckpts.append(dict(step=step+1,sampler=sp,state=state));json.dump(ckpts,open(api.out/'checkpoints.json','w'),indent=2)
-    final_step=readj(api.out/'steps.jsonl')[-1]['step'] if readj(api.out/'steps.jsonl') else 0
+    final_step=readj(steps_path)[-1]['step'] if readj(steps_path) else start
     if not ckpts or ckpts[-1]['step']!=final_step:
         name=f'nocotrl-b-pilot-s{final_step}'
         sp=(await (await tc.save_weights_for_sampler_async(name)).result_async()).path
@@ -289,4 +296,4 @@ async def main(args):
     print('SPEND_UPPER',api.ledger.committed,flush=True)
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('mode',choices=['train','eval']);p.add_argument('--out',required=True);p.add_argument('--repo',required=True);p.add_argument('--label',default='pilot');asyncio.run(main(p.parse_args()))
+    p=argparse.ArgumentParser();p.add_argument('mode',choices=['train','eval']);p.add_argument('--out',required=True);p.add_argument('--repo',required=True);p.add_argument('--label',default='pilot');p.add_argument('--resume',action='store_true');asyncio.run(main(p.parse_args()))

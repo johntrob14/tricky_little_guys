@@ -15,9 +15,13 @@ def independent_output(task,row):
     text=row.get('final',row.get('text',''));m=re.findall(r'(?im)^\s*ANSWER:\s*(.*?)\s*$',text)
     answer=m[-1].strip().strip('*').strip() if m else ''
     correct=answer.casefold()==task['gold'].casefold()
+    lm=re.findall(r'(?im)^\s*(?:\*\*)?ANSWER\s*:\s*(?:\*\*)?\s*(.*?)\s*$',text)
+    lenient=lm[-1].strip().strip('*').strip().strip('$').strip() if lm else ''
+    lenient=re.sub(r'^\\\(|\\\)$','',lenient).replace(',','').strip()
+    correct_lenient=lenient.casefold()==task['gold'].casefold()
     body=re.split(r'(?im)^\s*ANSWER:',text)[0].strip()
     truncated=any(t['stop']=='length' for t in row['turns']) if row['component']=='agent' else row['stop']=='length'
-    if truncated:correct=False
+    if truncated:correct=False;correct_lenient=False
     rule=task['rule'];v=task['value'];strict=False
     if body and not truncated:
         if rule=='none':strict=True
@@ -40,7 +44,7 @@ def independent_output(task,row):
     assert bool(correct)==row['grade']['correct'],(task['id'],'correct discrepancy')
     task_pass=row['grade']['task_pass'] if row['component']=='agent' else correct
     completed=task_pass and row['submitted'] and row['tested'] and row['changed'] and not truncated if row['component']=='agent' else correct
-    return dict(correct=bool(correct),strict=bool(strict),joint=bool(completed and strict),task_pass=bool(task_pass),completed=bool(completed),truncated=truncated)
+    return dict(correct=bool(correct),correct_lenient=bool(correct_lenient),format_only_failure=bool(correct_lenient and not correct),strict=bool(strict),joint=bool(completed and strict),task_pass=bool(task_pass),completed=bool(completed),truncated=truncated)
 
 def main(a):
     out=Path(a.out);repo=Path(a.repo)
@@ -66,7 +70,7 @@ def main(a):
         result['dev'][label]={}
         for group in ['all','ordinary','procedural','agent']:
             rr=[x for x in dev[label].values() if group=='all' or x['component']==group]
-            if rr:result['dev'][label][group]=dict(n=len(rr),correct=sum(x['correct'] for x in rr),task_pass=sum(x['task_pass'] for x in rr),completed=sum(x['completed'] for x in rr),strict=sum(x['strict'] for x in rr),joint=sum(x['joint'] for x in rr),truncated=sum(x['truncated'] for x in rr))
+            if rr:result['dev'][label][group]=dict(n=len(rr),correct=sum(x['correct'] for x in rr),correct_lenient=sum(x['correct_lenient'] for x in rr),format_only_failure=sum(x['format_only_failure'] for x in rr),task_pass=sum(x['task_pass'] for x in rr),completed=sum(x['completed'] for x in rr),strict=sum(x['strict'] for x in rr),joint=sum(x['joint'] for x in rr),truncated=sum(x['truncated'] for x in rr))
         astra[label]={}
         apath=out/f'astra_full_{label}.jsonl'
         if not apath.exists():apath=out/f'astra_{label}.jsonl'
@@ -88,12 +92,17 @@ def main(a):
     both=sorted(set(dev['base'])&set(dev['pilot']))
     for group in ['all','ordinary','procedural','agent']:
         keys=[k for k in both if group=='all' or dev['base'][k]['component']==group]
-        result['comparisons']['dev_'+group]={m:ci([int(dev['pilot'][k][m])-int(dev['base'][k][m]) for k in keys]) for m in ['task_pass','completed','strict','joint']}
+        result['comparisons']['dev_'+group]={m:ci([int(dev['pilot'][k][m])-int(dev['base'][k][m]) for k in keys]) for m in ['task_pass','correct_lenient','completed','strict','joint']}
     both=sorted(set(astra['base'])&set(astra['pilot']))
     for group,cats in [('trained',['lowercase_thinking','multiple_word_suppression']),('related',['uppercase_thinking','alternating_case','word_suppression']),('clean_heldout_style',['meow_between_words','end_of_sentence','repeat_sentences']),('all_rule_graded',None)]:
         keys=[k for k in both if astra['base'][k]['strict'] is not None and (cats is None or astra['base'][k]['constraint'] in cats)]
         result['comparisons']['astra_'+group]={m:ci([float(astra['pilot'][k][m])-float(astra['base'][k][m]) for k in keys]) for m in ['strict','partial','correct']}
     train=readj(out/'train_rollouts.jsonl');steps=readj(out/'steps.jsonl')
+    if (out/'restart.json').exists():
+        restart=json.load(open(out/'restart.json'));last=restart['start_step']-1
+        train=[r for r in train if r['step']<=last]+readj(out/'train_rollouts_resume.jsonl')
+        steps=[r for r in steps if r['step']<=last]+readj(out/'steps_resume.jsonl')
+        result['restart']=restart
     result['training']=dict(steps=len(steps),rollouts=len(train),analysis_samples_excluded=sum(x['grade'].get('has_generated_analysis',False) for x in train),by_component={c:dict(n=len(rr:=[r for r in train if r['component']==c]),reward=mean([r['grade']['reward'] for r in rr]),strict=mean([r['grade']['strict'] for r in rr])) for c in ['ordinary','procedural','agent']})
     result['limitations']=['one seed and one sample per evaluation task','ignore_question ungraded; no LLM judge has been run','Primary Astra CoT evaluation uses 25000-token cap; initial base-only 4096-token diagnostic retained separately','raw strict/partial differences do not adjust for length','held-out agent development tasks share repair families with training','TikTok smoke evaluated separately; no equivalence claim from a few episodes']
     json.dump(result,open(out/'summary.json','w'),indent=2)
