@@ -383,3 +383,10 @@ your answer, and then explain it." Reran GPT-5.1/5.2, 108 items x1, reasoning me
 GPT-5.1: off 86.5 | on 89.6 | paper prompt 69.8 (strict 81.2; 11/96 bare "ANSWER: X" with no tagged reasoning). Paper 64.9.
 GPT-5.2: off 68.8 (25/96 "I can't comply" with reasoning off) | on 88.5 | paper prompt 85.4. Paper 69.3.
 Reasoning on does not lower output control; the paper prompt lowers GPT-5.1 by skipping the tagged reasoning. Single samples, CI ~ +-9.
+
+### CORRECTION + CoT vs output on the same 108 items (10-27)
+Neel's 108 CoT-Control items are NOT our Astra 108: same 9 types x 3 datasets x 12, but 0 shared (question, constraint) pairs, 2 shared questions.
+Earlier "same items" claims (analyze_or.py docstring, dash_cl section 3, or_summary/nt_summary cot_neel) are wrong; those comparisons are unpaired.
+New: CoT arm on our 108 x2 via OpenRouter, reasoning on (orout/run_cot.sh, or_expl.py --cot), strict on raw reasoning; orout/cot_vs_out_108.py (constraint-balanced):
+GLM-5.2 CoT 12.5 / out 83.3; Kimi-K3 9.8 / 85.9; Qwen3-32B 3.1 / 53.6; gpt-oss-120b 2.3 / 42.1; DS-V4-Flash 0 / 75.2; Qwen3.5-397B 0 / 65.1; Qwen3.8-27B 0 / 37.0.
+OpenRouter credit ran out mid-run (402): 2-63 rows missing per model (Kimi-K3 only 3 alternating_case), DS-V3.2-exp none. ~$16.

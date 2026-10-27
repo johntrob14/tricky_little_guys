@@ -12,6 +12,7 @@ model, N = sys.argv[1], int(sys.argv[2]); effort = sys.argv[sys.argv.index("--ef
 NT = "--nothink" in sys.argv
 PROV = sys.argv[sys.argv.index("--provider") + 1] if "--provider" in sys.argv else None  # pin one provider (e.g. Anthropic: Bedrock content-filters meow outputs)  # Neel-style elicitation: no-think system request + 2 direct-answer prior turns (nothink.py)
 RJ = json.loads(sys.argv[sys.argv.index("--reasoning") + 1]) if "--reasoning" in sys.argv else None  # explicit reasoning param, e.g. '{"effort":"none"}'
+COT = "--cot" in sys.argv  # CoT-Control arm: the original item (constraint on the reasoning stage, paper wording for non-gpt-oss models), reasoning on; graded text = raw reasoning
 PAPER = "--paper-out" in sys.argv  # the paper's output arm (CoTControl run_cceval --non_reasoning): reasoning written in <output_reasoning> tags in the reply, constraint on the tag content
 TAG = sys.argv[sys.argv.index("--tag") + 1] if "--tag" in sys.argv else None
 MAXT = int(sys.argv[sys.argv.index("--max-tokens") + 1]) if "--max-tokens" in sys.argv else 4000
@@ -34,7 +35,7 @@ def tag_content(txt):
     m = re.findall(r"<output_reasoning>(.*?)</output_reasoning>", txt, flags=re.S)
     return "\n".join(m).strip()
 def one(job):
-    it, k = job; user = paper_user_of(it) if PAPER else user_of(it)
+    it, k = job; user = it["user_prompt"].replace("analysis channel", "reasoning stage") if COT else paper_user_of(it) if PAPER else user_of(it)
     reasoning = RJ or ({"effort": effort} if model.startswith(("openai/", "~openai/")) or "--effort" in sys.argv else {"enabled": False})
     msgs = nothink.messages(user) if NT else [{"role": "user", "content": user}]
     body = json.dumps({"model": model, "messages": msgs, "reasoning": reasoning, "max_tokens": MAXT, "temperature": 1.0} | ({"provider": {"order": [PROV], "allow_fallbacks": False}} if PROV else {})).encode()
@@ -42,8 +43,8 @@ def one(job):
         try:
             d = json.load(urllib.request.urlopen(urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", body, {"Authorization": f"Bearer {KEY}", "content-type": "application/json"}), timeout=300))
             m = d["choices"][0]["message"]; u = d.get("usage", {})
-            return dict(model=model, side="expl", key=it["key"], sample_idx=k + 1, dataset=it["dataset"], item_idx=it["item_idx"], constraint=it["constraint"], gold=it["answer_gold"],
-                        user=user, stop=d["choices"][0].get("finish_reason"), n_tokens=u.get("completion_tokens"), out=tag_content(m.get("content") or "") if PAPER else (m.get("content") or ""), out_raw=m.get("content") or "", paper_out=PAPER, reasoning_text=m.get("reasoning") or "",
+            return dict(model=model, side="cot" if COT else "expl", key=it["key"], sample_idx=k + 1, dataset=it["dataset"], item_idx=it["item_idx"], constraint=it["constraint"], gold=it["answer_gold"],
+                        user=user, stop=d["choices"][0].get("finish_reason"), n_tokens=u.get("completion_tokens"), out=(m.get("reasoning") or "") if COT else tag_content(m.get("content") or "") if PAPER else (m.get("content") or ""), cot_arm=COT, resp=m.get("content") or "", out_raw=m.get("content") or "", paper_out=PAPER, reasoning_text=m.get("reasoning") or "",
                         reasoning_tokens=(u.get("completion_tokens_details") or {}).get("reasoning_tokens"), cost=u.get("cost"), provider=d.get("provider"), effort=effort,
                         reasoning_param=reasoning, nothink=NT)
         except Exception as e:
