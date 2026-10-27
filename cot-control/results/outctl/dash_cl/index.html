@@ -59,9 +59,9 @@
     <div class="tile"><span class="muted">CoT-trained organism (manytypes): gain from control at the same length</span>
       <span class="big" data-source="length_decomp" data-field="control" data-where="model=mt1b-s150">—</span>
       <span class="ci">points; from length <span data-source="length_decomp" data-field="length" data-where="model=mt1b-s150">—</span></span></div>
-    <div class="tile"><span class="muted">GPT-6 Astra, output control with reasoning at minimal effort</span>
-      <span class="big" data-source="other_models" data-field="out_all" data-where="model=openai/gpt-6-astra">—</span>
-      <span class="ci">gpt-oss-120b with the CoT forced empty: <span data-source="other_models" data-field="out_all" data-where="model=openai/gpt-oss-120b (Tinker)">—</span></span></div>
+    <div class="tile"><span class="muted">GPT-6 Astra, output control with no reasoning tokens</span>
+      <span class="big" data-source="other_models" data-field="main" data-where="model=openai/gpt-6-astra">—</span>
+      <span class="ci">gpt-oss-120b with the CoT forced empty: <span data-source="other_models" data-field="main" data-where="model=openai/gpt-oss-120b (Tinker, CoT forced empty)">—</span></span></div>
     <div class="tile"><span class="muted">Output-only RL (outrl1 s53): no-CoT output control vs base</span>
       <span class="big" data-source="out_vs_cot" data-field="out" data-where="model=outrl1-s53">—</span>
       <span class="ci">base <span data-source="out_vs_cot" data-field="out" data-where="model=base">—</span>; its CoT control <span data-source="out_vs_cot" data-field="cot" data-where="model=outrl1-s53">—</span> (base <span data-source="out_vs_cot" data-field="cot" data-where="model=base">—</span>)</span></div>
@@ -113,17 +113,24 @@
 
   <section class="sec" id="others">
     <div class="sec-head"><span class="eyebrow">3 · Other models</span>
-      <h2>Astra and Neel's models: output control tracks CoT control</h2>
-      <p class="lede">The 108 Astra items on OpenRouter with reasoning switched off where the endpoint allows it (GPT-6 Astra and GLM-5.3 require reasoning; minimal effort, and the reasoning tokens they still used are counted). CoT control is from Neel's 34-model run on the same items, raw reasoning graded, ignore_question excluded.</p></div>
+      <h2>Output control with reasoning switched off, 18 models</h2>
+      <p class="lede">The 108 Astra items (ignore_question excluded), 2 samples each, on OpenRouter with Neel's NCRI no-reasoning elicitation: the lowest reasoning setting the endpoint accepts, a system prompt asking for an answer with no thinking step, and two earlier turns answered directly. Rows are kept only when the provider reports 0 reasoning tokens (Qwen3 reports 1 for an empty think tag). Gated pass = all constraint rules met and an attempt judge says the question was answered. o3, DeepSeek-R1, GLM-5.3, gpt-oss-120b and gpt-oss-20b kept reasoning at every setting, so their bars are output control with reasoning and are marked. o4-mini errored at every setting and is missing. Anthropic's output filter stops every Claude Sonnet 4.5 answer to the "meow" and "end each sentence with 'safe'" items (on Bedrock and on Anthropic's own endpoint), so those 48 rows are dropped for it; the 6-constraint column compares all models without those two constraints.</p></div>
     <div class="grid">
-      <div class="card wide"><h3 id="h-or">No-CoT output control and CoT control by model</h3>
+      <div class="card wide"><h3 id="h-or">No-reasoning output control and CoT control by model</h3>
+        <span class="muted">CoT control from Neel's run on the same items where he ran the model, otherwise the paper's all-dataset CoT controllability (Sonnet 4.5, gpt-oss, Qwen3, R1). Different item sets, so compare the CoT bars only roughly.</span>
         <div class="legend" id="lg-or"></div>
-        <div class="chart" id="c-or" data-source="other_models" style="min-height: 20rem"></div></div>
+        <div class="chart" id="c-or" data-source="other_models" style="min-height: 26rem"></div></div>
+      <div class="card"><h3 id="h-orncri">Output control against NCRI</h3>
+        <span class="muted">Models with reasoning off and an NCRI score. Spearman rho, permutation p, are in the notes below.</span>
+        <div class="chart" id="c-orncri" data-source="other_models" style="min-height: 20rem"></div></div>
+      <div class="card"><h3>What correlates</h3>
+        <p>Across the 12 models with reasoning off and an NCRI score, output pass and NCRI have Spearman rho 0.41 (permutation p 0.19); without Astra, whose NCRI is far above the rest, rho 0.23 (p 0.51). On the 6 shared constraints: 0.44 (p 0.15) and 0.27 (p 0.41). Output control and NCRI measure different things here.</p>
+        <p class="muted">Computed by orout/analyze_nt.py and a permutation test on nt_summary.json (20,000 shuffles, seed 0).</p></div>
       <div class="card wide"><h3 id="h-ortable">Details</h3>
         <div class="tablewrap"><table id="t-or" data-source="other_models" data-row-key="model">
-          <thead><tr><th data-field="model">Model</th><th class="num" data-field="out_all">Output pass</th><th class="num" data-field="out_noreason">With 0 reasoning tokens</th><th class="num" data-field="n_noreason">n, 0 reasoning tokens</th><th class="num" data-field="out_reasoned">When it reasoned</th><th class="num" data-field="n_reasoned">n, reasoned</th><th class="num" data-field="median_words">Output words</th><th class="num" data-field="cot_neel">CoT pass</th></tr></thead>
+          <thead><tr><th data-field="model">Model</th><th data-field="status">Reasoning</th><th data-field="setting">Setting</th><th class="num" data-field="main">Output pass</th><th class="num" data-field="main_lo">95% CI low</th><th class="num" data-field="main_hi">95% CI high</th><th class="num" data-field="n_clean">n, 0 reasoning tokens</th><th class="num" data-field="out_clean6">6 shared constraints</th><th class="num" data-field="median_rtok">Median reasoning tokens</th><th class="num" data-field="n_filtered">Rows filtered by provider</th><th class="num" data-field="cot">CoT pass</th><th data-field="cot_source">CoT source</th><th class="num" data-field="ncri">NCRI</th><th class="num" data-field="prev_run">Earlier run, no no-think prompt</th></tr></thead>
           <tbody></tbody></table></div></div>
-      <div class="card wide"><h3 id="h-ortype">Output control per constraint</h3>
+      <div class="card wide"><h3 id="h-ortype">Output control per constraint, reasoning off</h3>
         <div class="tablewrap"><table id="t-ortype" data-source="other_models_type" data-row-key="model,constraint">
           <thead><tr><th data-field="model">Model</th><th data-field="constraint">Constraint</th><th class="num" data-field="out">Output pass</th></tr></thead>
           <tbody></tbody></table></div></div>
@@ -195,7 +202,7 @@
         .attr("width", r => Math.max(r[s.key] > 0 ? 2 : 0, x(r[s.key] || 0) - x(0))).attr("rx", 2).attr("fill", s.color);
     });
     svg.append("g").selectAll("rect").data(rows).join("rect").attr("x", 0).attr("width", w).attr("y", (_, i) => y(i)).attr("height", y.bandwidth()).attr("fill", "transparent")
-      .on("mousemove", (ev, r) => showTip(el, t, ev, labelOf(r), series.map(s => [s.color, s.label, pc(r[s.key])]).concat(r.n ? [[null, "n", r.n]] : [])))
+      .on("mousemove", (ev, r) => showTip(el, t, ev, labelOf(r), series.map(s => [typeof s.color === "function" ? s.color(r) : s.color, s.label, pc(r[s.key])]).concat(r.n ? [[null, "n", r.n]] : [])))
       .on("mouseleave", () => { t.hidden = true; });
   }
 
@@ -265,17 +272,17 @@
   }
   function scatter(el, rows, xk, yk, opts) {
     const h = opts.h || 320, m = { t: 12, r: 16, b: 40, l: 48 }; const [svg, w] = svgIn(el, h); const t = tip(el);
-    const x = d3.scaleLinear([0, 100], [m.l, w - m.r]), y = d3.scaleLinear([0, 100], [h - m.b, m.t]);
-    svg.append("g").attr("transform", `translate(0,${h - m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(v => `${v}%`).tickSize(-(h - m.t - m.b))).call(axisStyle);
+    const x = d3.scaleLinear([0, opts.xmax || 100], [m.l, w - m.r]), y = d3.scaleLinear([0, 100], [h - m.b, m.t]);
+    svg.append("g").attr("transform", `translate(0,${h - m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(opts.xfmt || (v => `${v}%`)).tickSize(-(h - m.t - m.b))).call(axisStyle);
     svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(v => `${v}%`).tickSize(-(w - m.l - m.r))).call(axisStyle).call(g => g.select(".domain").remove());
-    svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(100)).attr("y2", y(100)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 4");
+    if (!opts.nodiag) svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(100)).attr("y2", y(100)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 4");
     svg.append("text").attr("x", (m.l + w - m.r) / 2).attr("y", h - 6).attr("text-anchor", "middle").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").text(opts.xlab);
     svg.append("text").attr("transform", `translate(12,${(m.t + h - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").text(opts.ylab);
     rows.forEach(r => {
       if (r[xk] == null || r[yk] == null) return;
       const c = opts.color(r);
       svg.append("circle").attr("cx", x(r[xk])).attr("cy", y(r[yk])).attr("r", opts.r || 6).attr("fill", c).attr("fill-opacity", opts.alpha || 1).attr("stroke", "var(--color-panel)").attr("stroke-width", 1.5)
-        .on("mousemove", ev => showTip(el, t, ev, opts.title(r), [[c, opts.ylab, pc(r[yk])], [null, opts.xlab, pc(r[xk])]])).on("mouseleave", () => { t.hidden = true; });
+        .on("mousemove", ev => showTip(el, t, ev, opts.title(r), [[c, opts.ylab, pc(r[yk])], [null, opts.xlab, opts.xfmt ? opts.xfmt(r[xk]) : pc(r[xk])]])).on("mouseleave", () => { t.hidden = true; });
       if (opts.label) svg.append("text").attr("x", x(r[xk]) + 8).attr("y", y(r[yk])).attr("dy", ".35em").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").style("pointer-events", "none").text(opts.label(r));
     });
   }
@@ -337,10 +344,15 @@
     else fail(cT, "out_vs_cot_type");
     // 3. other models
     const OM = ok("other_models"), cO = document.getElementById("c-or");
-    legend(document.getElementById("lg-or"), [[dash.colors[1], "Output control, no CoT"], [dash.colors[0], "CoT control"]]);
-    if (OM) hbars(cO, OM.slice().sort((a, b) => b.out_all - a.out_all), r => r.model, [{ key: "out_all", label: "Output, no CoT", color: dash.colors[1] }, { key: "cot_neel", label: "CoT", color: dash.colors[0] }], { rowH: 34 });
+    legend(document.getElementById("lg-or"), [[dash.colors[1], "Output, reasoning off"], [dash.colors[3], "Output, model still reasoned"], [dash.colors[0], "CoT control"]]);
+    const ORS = OM && OM.slice().sort((a, b) => (b.reasoning_off - a.reasoning_off) || (b.main - a.main));
+    if (OM) hbars(cO, ORS, r => r.reasoning_off ? r.model : `${r.model} (reasoned)`,
+      [{ key: "main", label: "Output", color: r => r.reasoning_off ? dash.colors[1] : dash.colors[3] }, { key: "cot", label: "CoT", color: dash.colors[0] }], { rowH: 34 });
     else fail(cO, "other_models");
-    table("t-or", OM && OM.slice().sort((a, b) => b.out_all - a.out_all), [["model"], ["out_all", 1, pc], ["out_noreason", 1, pc], ["n_noreason", 1], ["out_reasoned", 1, pc], ["n_reasoned", 1], ["median_words", 1], ["cot_neel", 1, pc]], r => r.model);
+    const cN = document.getElementById("c-orncri");
+    if (OM) scatter(cN, OM.filter(r => r.reasoning_off && r.ncri != null), "ncri", "main", { xmax: 170, nodiag: true, xfmt: v => (+v).toFixed(0), xlab: "NCRI", ylab: "Output pass, reasoning off", color: () => dash.colors[1], title: r => r.model, label: r => r.model.split("/")[1], h: 320 });
+    else fail(cN, "other_models");
+    table("t-or", ORS, [["model"], ["status"], ["setting"], ["main", 1, pc], ["main_lo", 1, pc], ["main_hi", 1, pc], ["n_clean", 1], ["out_clean6", 1, pc], ["median_rtok", 1], ["n_filtered", 1], ["cot", 1, pc], ["cot_source"], ["ncri", 1, v => (+v).toFixed(1)], ["prev_run", 1, pc]], r => r.model);
     table("t-ortype", ok("other_models_type"), [["model"], ["constraint"], ["out", 1, pc]], r => `${encodeURIComponent(r.model)},${encodeURIComponent(r.constraint)}`);
     // 4. neel
     const NB = ok("neel_bins"), cB = document.getElementById("c-nbins");

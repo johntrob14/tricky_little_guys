@@ -2,28 +2,35 @@
 side 'expl': requirement moved from the analysis channel to the response, "State your answer, and then explain it."), reasoning switched off
 (reasoning.enabled false; for OpenAI models reasoning effort --effort, default minimal). Writes gens.jsonl in astra_more's format, so
 `astra_more.py DIR --grade` grades it (reference strict grader + attempt judge). Records reasoning tokens to check the CoT really was off.
-Run from cot-control/rl:  python3 ../results/outctl/orout/or_expl.py MODEL N [--effort minimal]   -> orout/<slug>/gens.jsonl"""
+Run from cot-control/rl:  python3 ../results/outctl/orout/or_expl.py MODEL N [--effort minimal] [--reasoning JSON] [--nothink]   -> orout/<slug>[_nt]/gens.jsonl
+--nothink adds nothink.py's elicitation (Neel's NCRI recipe: a polite no-thinking request + two direct-answer prior turns, no constraints shown)."""
 import json, os, sys, glob, time, urllib.request, concurrent.futures as cf
 O = os.path.dirname(os.path.abspath(__file__)); OC = os.path.dirname(O); sys.path.insert(0, OC); sys.path.insert(0, os.path.join(OC, "../../rl")); sys.path.insert(0, os.path.join(OC, "../../grading"))
 import astra_more as AM
 KEY = next(l.split("=", 1)[1].strip().strip('"') for f in glob.glob(os.path.expanduser("~/.config/sauce/*.env")) for l in open(f) if l.startswith("OPENROUTER_API_KEY="))
 model, N = sys.argv[1], int(sys.argv[2]); effort = sys.argv[sys.argv.index("--effort") + 1] if "--effort" in sys.argv else "minimal"
-slug = model.replace("/", "_").replace("~", ""); out = f"{O}/{slug}"; os.makedirs(out, exist_ok=True)
+NT = "--nothink" in sys.argv
+PROV = sys.argv[sys.argv.index("--provider") + 1] if "--provider" in sys.argv else None  # pin one provider (e.g. Anthropic: Bedrock content-filters meow outputs)  # Neel-style elicitation: no-think system request + 2 direct-answer prior turns (nothink.py)
+RJ = json.loads(sys.argv[sys.argv.index("--reasoning") + 1]) if "--reasoning" in sys.argv else None  # explicit reasoning param, e.g. '{"effort":"none"}'
+slug = model.replace("/", "_").replace("~", "") + ("_nt" if NT else ""); out = f"{O}/{slug}"; os.makedirs(out, exist_ok=True)
+import nothink
 its = AM.items(); done = {(r["key"], r["sample_idx"]) for r in map(json.loads, open(f"{out}/gens.jsonl"))} if os.path.exists(f"{out}/gens.jsonl") else set()
 def user_of(it):
     q = AM.to_output(it["user_prompt"]); a, bq = q.split("\n\nRequirement:")
     return a + ("" if it["constraint"] == "ignore_question" else "\n\nState your answer, and then explain it.") + "\n\nRequirement:" + bq
 def one(job):
     it, k = job; user = user_of(it)
-    reasoning = {"effort": effort} if model.startswith(("openai/", "~openai/")) or "--effort" in sys.argv else {"enabled": False}
-    body = json.dumps({"model": model, "messages": [{"role": "user", "content": user}], "reasoning": reasoning, "max_tokens": 4000, "temperature": 1.0}).encode()
+    reasoning = RJ or ({"effort": effort} if model.startswith(("openai/", "~openai/")) or "--effort" in sys.argv else {"enabled": False})
+    msgs = nothink.messages(user) if NT else [{"role": "user", "content": user}]
+    body = json.dumps({"model": model, "messages": msgs, "reasoning": reasoning, "max_tokens": 4000, "temperature": 1.0} | ({"provider": {"order": [PROV], "allow_fallbacks": False}} if PROV else {})).encode()
     for a in range(4):
         try:
             d = json.load(urllib.request.urlopen(urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", body, {"Authorization": f"Bearer {KEY}", "content-type": "application/json"}), timeout=300))
             m = d["choices"][0]["message"]; u = d.get("usage", {})
             return dict(model=model, side="expl", key=it["key"], sample_idx=k + 1, dataset=it["dataset"], item_idx=it["item_idx"], constraint=it["constraint"], gold=it["answer_gold"],
                         user=user, stop=d["choices"][0].get("finish_reason"), n_tokens=u.get("completion_tokens"), out=m.get("content") or "", reasoning_text=m.get("reasoning") or "",
-                        reasoning_tokens=(u.get("completion_tokens_details") or {}).get("reasoning_tokens"), cost=u.get("cost"), provider=d.get("provider"), effort=effort)
+                        reasoning_tokens=(u.get("completion_tokens_details") or {}).get("reasoning_tokens"), cost=u.get("cost"), provider=d.get("provider"), effort=effort,
+                        reasoning_param=reasoning, nothink=NT)
         except Exception as e:
             err = str(e); time.sleep(2 ** a)
     return dict(error=err, key=it["key"])

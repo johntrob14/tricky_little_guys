@@ -16,17 +16,17 @@
   }
   function scatter(el, rows, xk, yk, opts) {
     const h = opts.h || 320, m = { t: 12, r: 16, b: 40, l: 48 }; const [svg, w] = svgIn(el, h); const t = tip(el);
-    const x = d3.scaleLinear([0, 100], [m.l, w - m.r]), y = d3.scaleLinear([0, 100], [h - m.b, m.t]);
-    svg.append("g").attr("transform", `translate(0,${h - m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(v => `${v}%`).tickSize(-(h - m.t - m.b))).call(axisStyle);
+    const x = d3.scaleLinear([0, opts.xmax || 100], [m.l, w - m.r]), y = d3.scaleLinear([0, 100], [h - m.b, m.t]);
+    svg.append("g").attr("transform", `translate(0,${h - m.b})`).call(d3.axisBottom(x).ticks(5).tickFormat(opts.xfmt || (v => `${v}%`)).tickSize(-(h - m.t - m.b))).call(axisStyle);
     svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(v => `${v}%`).tickSize(-(w - m.l - m.r))).call(axisStyle).call(g => g.select(".domain").remove());
-    svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(100)).attr("y2", y(100)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 4");
+    if (!opts.nodiag) svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(100)).attr("y2", y(100)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 4");
     svg.append("text").attr("x", (m.l + w - m.r) / 2).attr("y", h - 6).attr("text-anchor", "middle").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").text(opts.xlab);
     svg.append("text").attr("transform", `translate(12,${(m.t + h - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").text(opts.ylab);
     rows.forEach(r => {
       if (r[xk] == null || r[yk] == null) return;
       const c = opts.color(r);
       svg.append("circle").attr("cx", x(r[xk])).attr("cy", y(r[yk])).attr("r", opts.r || 6).attr("fill", c).attr("fill-opacity", opts.alpha || 1).attr("stroke", "var(--color-panel)").attr("stroke-width", 1.5)
-        .on("mousemove", ev => showTip(el, t, ev, opts.title(r), [[c, opts.ylab, pc(r[yk])], [null, opts.xlab, pc(r[xk])]])).on("mouseleave", () => { t.hidden = true; });
+        .on("mousemove", ev => showTip(el, t, ev, opts.title(r), [[c, opts.ylab, pc(r[yk])], [null, opts.xlab, opts.xfmt ? opts.xfmt(r[xk]) : pc(r[xk])]])).on("mouseleave", () => { t.hidden = true; });
       if (opts.label) svg.append("text").attr("x", x(r[xk]) + 8).attr("y", y(r[yk])).attr("dy", ".35em").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").style("pointer-events", "none").text(opts.label(r));
     });
   }
@@ -88,10 +88,15 @@
     else fail(cT, "out_vs_cot_type");
     // 3. other models
     const OM = ok("other_models"), cO = document.getElementById("c-or");
-    legend(document.getElementById("lg-or"), [[dash.colors[1], "Output control, no CoT"], [dash.colors[0], "CoT control"]]);
-    if (OM) hbars(cO, OM.slice().sort((a, b) => b.out_all - a.out_all), r => r.model, [{ key: "out_all", label: "Output, no CoT", color: dash.colors[1] }, { key: "cot_neel", label: "CoT", color: dash.colors[0] }], { rowH: 34 });
+    legend(document.getElementById("lg-or"), [[dash.colors[1], "Output, reasoning off"], [dash.colors[3], "Output, model still reasoned"], [dash.colors[0], "CoT control"]]);
+    const ORS = OM && OM.slice().sort((a, b) => (b.reasoning_off - a.reasoning_off) || (b.main - a.main));
+    if (OM) hbars(cO, ORS, r => r.reasoning_off ? r.model : `${r.model} (reasoned)`,
+      [{ key: "main", label: "Output", color: r => r.reasoning_off ? dash.colors[1] : dash.colors[3] }, { key: "cot", label: "CoT", color: dash.colors[0] }], { rowH: 34 });
     else fail(cO, "other_models");
-    table("t-or", OM && OM.slice().sort((a, b) => b.out_all - a.out_all), [["model"], ["out_all", 1, pc], ["out_noreason", 1, pc], ["n_noreason", 1], ["out_reasoned", 1, pc], ["n_reasoned", 1], ["median_words", 1], ["cot_neel", 1, pc]], r => r.model);
+    const cN = document.getElementById("c-orncri");
+    if (OM) scatter(cN, OM.filter(r => r.reasoning_off && r.ncri != null), "ncri", "main", { xmax: 170, nodiag: true, xfmt: v => (+v).toFixed(0), xlab: "NCRI", ylab: "Output pass, reasoning off", color: () => dash.colors[1], title: r => r.model, label: r => r.model.split("/")[1], h: 320 });
+    else fail(cN, "other_models");
+    table("t-or", ORS, [["model"], ["status"], ["setting"], ["main", 1, pc], ["main_lo", 1, pc], ["main_hi", 1, pc], ["n_clean", 1], ["out_clean6", 1, pc], ["median_rtok", 1], ["n_filtered", 1], ["cot", 1, pc], ["cot_source"], ["ncri", 1, v => (+v).toFixed(1)], ["prev_run", 1, pc]], r => r.model);
     table("t-ortype", ok("other_models_type"), [["model"], ["constraint"], ["out", 1, pc]], r => `${encodeURIComponent(r.model)},${encodeURIComponent(r.constraint)}`);
     // 4. neel
     const NB = ok("neel_bins"), cB = document.getElementById("c-nbins");
