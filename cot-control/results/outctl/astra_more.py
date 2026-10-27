@@ -116,7 +116,8 @@ async def sample(out, names, side="out", n=4):
     path = f"{out}/gens.jsonl"; lock = asyncio.Lock()
     done = {(r["model"], r["key"]) for r in map(json.loads, open(path))} if os.path.exists(path) else set()  # resume: skip finished items
     for name in names:
-        c = await (sc.create_sampling_client_async(model_path=MODELS[name]) if MODELS[name] else sc.create_sampling_client_async(base_model="openai/gpt-oss-120b"))
+        mpath = MODELS.get(name) or os.environ.get("OUTCTL_MODEL_PATH")  # OUTCTL_MODEL_PATH: a tinker:// sampler for a key not in MODELS
+        c = await (sc.create_sampling_client_async(model_path=mpath) if mpath else sc.create_sampling_client_async(base_model="openai/gpt-oss-120b"))
         tok = c.get_tokenizer()
         p = (tinker.SamplingParams(max_tokens=8000, temperature=TEMP, top_p=1.0, stop=[200002, 200012, 200007]) if not is_cot
              else tinker.SamplingParams(max_tokens=25000, temperature=TEMP, top_p=1.0, stop=[200002, 200012]))

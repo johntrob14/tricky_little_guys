@@ -268,3 +268,14 @@ Current reading: SFT on lightly rewritten (off-policy) versions of its own trace
 Neither small mechanical shifts nor a large shift (another model's traces) reproduce the gain; only Gemini-processed traces do. So it is not
 "any distribution shift"; something specific to the Gemini rewrite (unidentified). The back gain sits mostly in repeat_sentences (8 -> 44/62%),
 the translated gain in ignore_question. Line closed per John (SFT-only effects are not the target; RL-time dynamics are). Cost ~$3.5 Tinker.
+
+## 10-27 outrl1: output-only instruction-following RL with effort levels (rl/grpo_out.py) -- does RL that never grades the CoT raise CoT control?
+gpt-oss-120b from base, GRPO, 32 prompts x 8, lr 4e-5, LoRA 32, 53 steps (stopped at the $20 budget, $20.19). Prompt: pool_k4 MMLU-Pro question + two
+constraints on the final explanation only (avoid word, lowercase, uppercase, end word, bookend sentence, insert word, max words, language, bullets);
+effort sampled low/medium/high per prompt. Reward = correct + mean partial + mean strict; 0 if truncated/unparsed. No CoT term, no judges, no length pen.
+Training: both-constraints-met 0.62 (steps 1-9) -> 0.68 -> 0.71 -> ~0.77-0.81 (steps 36-50); accuracy vs base -0.02 to -0.04; high-effort median CoT
+words ~1000 early -> ~500-600 late (truncation = 0 reward).
+Astra 108 x2 (medium) vs base 4.9% (x4): s10 5.1 (+0.2 [-2.8, +3.5]), s20 3.7, s30 6.5 (+1.6 [-1.4, +4.6]), s40 3.7, s50 4.2, s53 5.1;
+pooled s30-s53 +0.0 [-2.0, +2.0] (n=864). Astra accuracy 0.51-0.54 (base 0.53). NEGATIVE: output instruction-following RL with effort levels
+does not change CoT controllability on gpt-oss-120b in 53 steps. Consistent with lang-ans1 (5.6%) and feedback-spillover (no CoT movement).
+Checkpoints: tinker://894335dc-800c-5adb-9ebd-3bb6f6839960:train:0/sampler_weights/outctl-outrl1-step{10,20,30,40,50,53}.
