@@ -54,7 +54,7 @@ def main() -> None:
             elif item["answer"] is None:
                 relation = "conclusion_without_parsed_answer"
             else:
-                relation = "aligned" if match else "explicit_disagreement"
+                relation = "aligned" if match else "conclusion_disagreement"
             panel = "natural" if reader.startswith("natural_") else "stratified"
             kind = item["kind"] if panel == "natural" else category(item)
             key = "/".join([panel, item["model"], kind, "parsed" if item["answer"] is not None else "unparsed"])
