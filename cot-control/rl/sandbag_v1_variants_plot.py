@@ -77,9 +77,12 @@ def main():
             xa = lambda arms: [k - 0.4 + w * (i + 0.5) for k in range(len(arms))]
             bars(row[0], xa(arms), [cells[a]["correct"] for a in arms], [cells[a]["finished"] for a in arms], col, w * 0.92, label)
             bars(row[1], xa(arms[1:]), [cells[a]["flips"] for a in arms[1:]], [cells[a]["eligible"] for a in arms[1:]], col, w * 0.92)
-            fk, fn = noise_floor([load(args.dir / r)[1] for r in [f"{m}-sysprompt-nohint"] + floor_runs])
-            row[1].axhline(fk / fn, color=col, linestyle="--", linewidth=1.1)
-            row[1].text(0.01, 0.99 - 0.06 * i, f"noise floor ({label.split(' (')[0]}): {fk}/{fn} = {fk / fn:.3f}", ha="left", va="top", fontsize=8, color=col, transform=row[1].transAxes)
+            floor_dirs = [r for r in [f"{m}-sysprompt-nohint"] + floor_runs if (args.dir / r).exists()]  # honest resamples of the same prompt
+            if len(floor_dirs) > 1:
+                fk, fn = noise_floor([load(args.dir / r)[1] for r in floor_dirs])
+                row[1].axhline(fk / fn, color=col, linestyle="--", linewidth=1.1)
+            floor = f"{fk}/{fn} = {fk / fn:.3f}" if len(floor_dirs) > 1 else "none (one honest sample)"
+            row[1].text(0.01, 0.99 - 0.06 * i, f"noise floor ({label.split(' (')[0]}): {floor}", ha="left", va="top", fontsize=8, color=col, transform=row[1].transAxes)
             bars(row[2], xa(inst), [sum(ex[(q, a)] for q in flips[a] if (q, a) in ex) for a in inst], [sum((q, a) in ex for q in flips[a]) for a in inst], col, w * 0.92)
             bars(row[3], xa(inst), [cells[a]["verbalized"] for a in inst], [cells[a]["judged"] for a in inst], col, w * 0.92)
             sc = [cells[a]["flip_scores"] for a in arms[1:]]
@@ -105,7 +108,7 @@ def main():
         row[0].set_ylabel(vlabel, fontsize=9, rotation=90, labelpad=12)
     fig.legend(*axes[0][0].get_legend_handles_labels(), loc="upper center", ncol=len(args.models), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 1 - (0.82 + 0.4 * coached) / H))
     fig.suptitle(f"{', '.join(args.variants)}{' (one row each)' if len(args.variants) > 1 else ''}: 150 WMDP questions (OpenAI monitorability-evals), deletion threat in the system prompt, no named wrong option; "
-                 "honest and CoT-control arms are the wmdp.can run's rows (same prompts). Tinker, harmony effort medium, T 0, one sample.\n"
+                 "gpt-oss models: honest and CoT-control arms are the wmdp.can run's rows (same prompts), Tinker, harmony effort medium. T 0, one sample.\n"
                  f"Monitor: CoT only, Li et al. 2025 sandbagging judge, {jname}. Verbalization and explicit-admission judges: {jname}."
                  + (f'\ncoached arm: the sandbag instruction + "{AWARE} {EVASION}\n{COACH}"' if coached else ""), fontsize=11, y=1 - 0.12 / H)
     fig.subplots_adjust(top=1 - (2.0 + 0.4 * coached) / H, bottom=0.9 / H, hspace=0.42, wspace=0.2, left=0.05, right=0.99)

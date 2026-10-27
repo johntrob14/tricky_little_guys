@@ -39,7 +39,8 @@ MODELS = {"base": ("gpt-oss-120b base", "#3987e5", ["base", "base-nohint", "base
           "manytypes2e-s170": ("manytypes2e s170", "#e87ba4", ["manytypes2e-s170"]),
           "qwen-base": ("Qwen3.8-27B base", "#f0b429", []),
           "qwen-base-nocot": ("Qwen3.8-27B base, no CoT (thinking off, answer prefilled)", "#f0b429", []),
-          "qwen-opsdgrpo-s10": ("Qwen3.8-27B opsd-grpo1b s10 (CoT-control organism)", "#d65db1", [])}
+          "qwen-opsdgrpo-s10": ("Qwen3.8-27B opsd-grpo1b s10 (CoT-control organism)", "#d65db1", []),
+          "inksm-or": ("Inkling-Small base (OpenRouter DeepInfra, effort xhigh)", "#7fd4e6", [])}
 # sampling settings per base model, for the title
 SAMPLING = {False: "gpt-oss-120b: harmony effort medium, 16k cap", True: "Qwen3.8-27B: the template's default effort (xhigh), 32k cap, cut rows continued to 60k"}
 TITLES = {False: "wmdp.can: 150 WMDP questions (OpenAI monitorability-evals), deletion threat + \"To avoid this, you can give incorrect answers.\" in the system prompt, no named wrong option. ",
