@@ -8,9 +8,10 @@ as hintverb_trunc.py at fraction 0), temperature 1, 8 tokens. Sampled on Tinker 
     python item_difficulty.py --datasets gpqa --out ../results/difficulty/gpqa_base.jsonl
     python item_difficulty.py --datasets gpqa hle mmlu_pro --nocot-only --model-path tinker://.../cotctl-manytypes2e-step170 --out ../results/difficulty/nocot_mt2e-s170.jsonl
 
---model-path samples a checkpoint instead of base, on the same (base's) rendered prompts; --nocot-only skips the CoT samples.
+--model-path samples a checkpoint instead of base, on the same (base's) rendered prompts; --nocot-only skips the CoT samples. --gens takes the baseline-arm
+prompts from another transfer run (e.g. results/transfer/gpqafull-base/gens.jsonl); --cot-samples sets the CoT sample count separately.
 
-Writes one row per item: dataset, item_idx, answer, cot_correct / nocot_correct (counts of --samples), cot tokens (median, truncated count).
+Writes one row per item: dataset, item_idx, answer, cot_correct (of cot_samples) / nocot_correct (of samples), cot tokens (median, truncated count).
 """
 import argparse
 import asyncio
@@ -36,8 +37,11 @@ async def main():
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--model-path", help="tinker:// sampler checkpoint of gpt-oss-120b; base when omitted")
     ap.add_argument("--nocot-only", action="store_true")
+    ap.add_argument("--cot-samples", type=int, help="CoT samples per item (default --samples)")
+    ap.add_argument("--gens", type=Path, default=RESULTS / "transfer/gptoss-base/gens.jsonl", help="transfer-eval gens.jsonl whose baseline-arm prompts to use")
     args = ap.parse_args()
-    base = [json.loads(l) for l in open(RESULTS / "transfer/gptoss-base/gens.jsonl")]
+    base = [json.loads(l) for l in open(args.gens)]
+    cot_n = args.cot_samples or args.samples
     items = [r for r in base if r["type"] == "baseline" and r["dataset"] in args.datasets]
     svc = tinker.ServiceClient()
     client = await (svc.create_sampling_client_async(model_path=args.model_path) if args.model_path else svc.create_sampling_client_async(base_model="openai/gpt-oss-120b"))
@@ -53,7 +57,7 @@ async def main():
         nocot_ids = ids + tok.encode(NOCOT, add_special_tokens=False)
         async with sem:
             nocot = await client.sample_async(prompt=tinker.ModelInput.from_ints(nocot_ids), num_samples=args.samples, sampling_params=nocot_p)
-            cot = None if args.nocot_only else await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=args.samples, sampling_params=cot_p)
+            cot = None if args.nocot_only else await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=cot_n, sampling_params=cot_p)
         cot_ok, toks, trunc = 0, [], 0
         for s in (cot.sequences if cot else []):
             finish = "length" if s.stop_reason == "length" else "stop"
@@ -62,8 +66,8 @@ async def main():
             toks.append(len(s.tokens))
             trunc += finish == "length"
         nocot_ans = [extract.parse_answer("ANSWER:" + tok.decode(s.tokens, skip_special_tokens=True), "") for s in nocot.sequences]
-        spent[0] += (len(ids) * (not args.nocot_only) + len(nocot_ids)) * args.samples * price["prefill"] / 1e6 + (sum(toks) + sum(len(s.tokens) for s in nocot.sequences)) * price["sample"] / 1e6
-        return dict(dataset=r["dataset"], item_idx=r["item_idx"], answer=r["answer"], samples=args.samples, model_path=args.model_path, cot_correct=None if args.nocot_only else cot_ok, nocot_correct=sum(a == r["answer"] for a in nocot_ans),
+        spent[0] += (len(ids) * (not args.nocot_only) * cot_n + len(nocot_ids) * args.samples) * price["prefill"] / 1e6 + (sum(toks) + sum(len(s.tokens) for s in nocot.sequences)) * price["sample"] / 1e6
+        return dict(dataset=r["dataset"], item_idx=r["item_idx"], answer=r["answer"], samples=args.samples, cot_samples=None if args.nocot_only else cot_n, model_path=args.model_path, cot_correct=None if args.nocot_only else cot_ok, nocot_correct=sum(a == r["answer"] for a in nocot_ans),
                     nocot_unparsed=sum(a is None for a in nocot_ans), cot_tokens_median=statistics.median(toks) if toks else None, cot_truncated=trunc)
 
     rows = await asyncio.gather(*[one(r) for r in items])

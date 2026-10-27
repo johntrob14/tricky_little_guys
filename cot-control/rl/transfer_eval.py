@@ -2,7 +2,8 @@
 
 transfer: a shared item set (36 per dataset from GPQA, HLE and MMLU-Pro mini, outside the Astra draw, with keywords; --items
           takes a prefix of it) x every type in the reference wording (F0, user turn), plus a no-requirement baseline arm on
-          the same items for paired accuracy.
+          the same items for paired accuracy. --item-set gpqafull swaps the items for every GPQA item with keywords minus manytypes2e's
+          GPQA training questions (360).
 surface:  the 108 Astra items x the 9 reference types x --frames x --placements (user = after the question, system = system
           message), to measure sensitivity to the instruction's wording and location.
 
@@ -23,6 +24,7 @@ import argparse
 import asyncio
 import json
 import random
+import re
 import statistics
 import sys
 import time
@@ -53,6 +55,13 @@ def shared_items(n_per_ds: int):
     return out
 
 
+def gpqa_full():
+    """Every GPQA item with keywords, minus the GPQA questions manytypes2e trained on (data/pool_k4_gpqahard.jsonl): 360 items."""
+    norm = lambda s: re.sub(r"\W+", " ", s.lower()).strip()
+    trained = {norm(r["question"]) for r in map(json.loads, open(Path(__file__).parent / "data/pool_k4_gpqahard.jsonl")) if r.get("source") == "gpqa"}
+    return [it for it in load_items("gpqa") if is_eligible(it, "word_suppression") and norm(it.question) not in trained]
+
+
 def make_unit(exp, ctl, item, frame, placement, harmony) -> dict:
     qblock = prompts.question_block(item)
     if ctl is None:  # baseline arm
@@ -70,7 +79,7 @@ def make_unit(exp, ctl, item, frame, placement, harmony) -> dict:
 
 def build_units(args, harmony) -> list[dict]:
     if args.exp == "transfer":
-        items = shared_items(args.items)
+        items = shared_items(args.items) if args.item_set == "shared" else gpqa_full()
         units = [make_unit("transfer", None, it, None, None, harmony) for it in items]
         for ctl in controls.CONTROLS.values():
             if args.types and ctl.name not in args.types:
@@ -282,6 +291,7 @@ def main():
     ap.add_argument("--model-path", help="tinker:// sampler checkpoint; --model names its base")
     ap.add_argument("--exp", default="transfer", choices=["transfer", "surface"])
     ap.add_argument("--items", type=int, default=36, help="transfer: items per dataset (prefix of the shared 36)")
+    ap.add_argument("--item-set", default="shared", choices=["shared", "gpqafull"], help="transfer: the shared 36 per dataset, or gpqa_full()")
     ap.add_argument("--types", nargs="*", help="restrict to these control types")
     ap.add_argument("--frames", nargs="*", default=list(controls.FRAMES))
     ap.add_argument("--placements", nargs="*", default=["user", "system"])
