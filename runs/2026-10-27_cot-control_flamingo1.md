@@ -33,6 +33,7 @@ The manytypes2e CoT-control GRPO recipe on gpt-oss-120b, replayed from base alon
 - Smoke `flamingo1-smoke` (1 step x 12 prompts x 4, $0.09, deleted): prefill on 48/48 rollouts, graded reasoning is the continuation, judges parsed.
 
 ## Outcome
+
 Stopped by Ethan's decision during segment 1 (chain script and trainer killed by PID), after step 57 of 80. Segments 2-3 (flamingo1c, flamingo1e) and the chain's transfer evals did not run. Checkpoints `cotctl-flamingo1-step{10,20,30,40,50}` (`results/rl/flamingo1/checkpoints.json`), sampler checkpoints published after the stop. Trainer estimate $24.21 (Tinker $15.60, OpenRouter judges $8.61); opener log-prob runs add a little Tinker prefill cost (not tallied).
 
 Training metrics, means over step windows, flamingo1 vs manytypes2 (same flags and seed, no prefill; `results/rl/manytypes2/steps.jsonl`):
