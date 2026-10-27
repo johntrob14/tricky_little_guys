@@ -346,6 +346,6 @@ terse everywhere; orga2 also shortens somewhat more than base when constrained).
 - OpenRouter no-CoT output control on the 108 Astra items (orout/or_expl.py, x2; analyze_or.py), vs Neel's CoT pass (ignore excluded):
   GPT-6 Astra 92.7 (97.7 on 43 rows with 0 reasoning tokens; minimal effort still reasoned on 149/216), GLM-5.2 82.3 (CoT 14.6),
   DeepSeek-V3.2-exp 74.0 (12.5), GLM-5.3 73.4 (7.3; reasoning mandatory, 184/192 reasoned), Kimi-K3 73.4 (4.2), DeepSeek-V4-Flash 62.5 (1.0),
-  Qwen3.5-397B 51.0 (0.0), gpt-oss-120b 42.1 (CoT forced empty; its CoT 5.2 here). Output control rank-orders with CoT control. Spend ~$7.5 OR.
+  Qwen3.5-397B 51.0 (0.0), gpt-oss-120b 42.1 (CoT forced empty; its CoT strict 2.3 on these items). Output control rank-orders with CoT control. Spend ~$7.5 OR.
 - Neel 34-model length (neel_len/neel_length.py): pooled pass by reasoning tokens <250 9.8% ... 4000+ 1.0%; length part variance 1.2 vs
   control part 12.3 across models; NCRI Spearman +0.06 raw and +0.06 length-matched. GLM-5.2 is the one partly-length case (13.0 -> 6.9 matched).
