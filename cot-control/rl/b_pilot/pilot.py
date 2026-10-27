@@ -268,13 +268,13 @@ async def evaluate_astra(api,client,label,args):
     sys.path.insert(0,str(Path(args.repo)/'cot-control/grading'))
     from cotswitch import extract
     astra=readj(Path(args.repo)/'cot-control/results/tinker-runs/gptoss120b-t1/generations/gpt-oss-120b/astra.jsonl')
-    done={r['key'] for r in readj(api.out/f'astra_{label}.jsonl')}
+    done={r['key'] for r in readj(api.out/f'astra_full_{label}.jsonl')}
     async def one(t):
         if t['key'] in done:return
-        p=api.simple_prompt(t['user_prompt'],True);s=(await api.sample(client,p,1,4096,'astra:'+label+':'+t['key']))[0]
+        p=api.simple_prompt(t['user_prompt'],True);s=(await api.sample(client,p,1,25000,'astra-full:'+label+':'+t['key']))[0]
         raw=api.tok.decode(s.tokens,skip_special_tokens=False)
         split=extract.split_output(extract.harmony_to_think(raw),None,'length' if s.stop_reason=='length' else 'stop')
-        append(api.out/f'astra_{label}.jsonl',dict(key=t['key'],constraint=t['constraint'],gold=t['answer_gold'],grader_args=t['grader_args'],control_value=t['control_value'],cot=split['reasoning'],response=split['response'],raw=raw,stop=s.stop_reason,n_tokens=len(s.tokens),correct=extract.parse_answer(split['response'],split['content'])==t['answer_gold']))
+        append(api.out/f'astra_full_{label}.jsonl',dict(key=t['key'],constraint=t['constraint'],gold=t['answer_gold'],grader_args=t['grader_args'],control_value=t['control_value'],cot=split['reasoning'],response=split['response'],raw=raw,stop=s.stop_reason,n_tokens=len(s.tokens),correct=extract.parse_answer(split['response'],split['content'])==t['answer_gold']))
     await asyncio.gather(*(one(t) for t in astra))
 
 async def main(args):
