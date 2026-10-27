@@ -337,3 +337,15 @@ spillh1-s15 +1.1 = +0.8 + 0.3. mt1b keeps 98-100% partial compliance even above 
 Adaptive ratio (geo-mean, 95% CI): base 0.84; mt1b 0.52; lang1-s30 0.39; st1-third 0.69; len2 0.72; grpo3 0.91; orga2-s40 0.67;
 spillx1b-s20 0.79; spillh1-s15 0.76; outrl1-s53 0.96. Unconstrained medians: base 355, spillx1b 197, orga2 236 (output-only organisms are
 terse everywhere; orga2 also shortens somewhat more than base when constrained).
+
+## 10-27 Output control vs CoT control; Astra and Neel's models (new dashboard "CoT control, decomposed")
+- gpt-oss family (out_vs_cot.py; expl arm = rule on the answer, CoT forced empty, gated by attempt judge, ignore_question out; 540 items):
+  base CoT 2.8 / output 43.6; output-only organisms raise output control at matched length (outrl1 +13.6, orga2 +8.1, spillh1 +7.3,
+  spillx1b +5.8 control part) with CoT unchanged (2.5-6.4); CoT-trained raise both (mt1b output +32.2, grpo3 +37.3). Output - CoT matched gap
+  >= -4.9 for every model: output control acts as a ceiling. Asymmetric transfer: CoT training -> output control, not output -> CoT.
+- OpenRouter no-CoT output control on the 108 Astra items (orout/or_expl.py, x2; analyze_or.py), vs Neel's CoT pass (ignore excluded):
+  GPT-6 Astra 92.7 (97.7 on 43 rows with 0 reasoning tokens; minimal effort still reasoned on 149/216), GLM-5.2 82.3 (CoT 14.6),
+  DeepSeek-V3.2-exp 74.0 (12.5), GLM-5.3 73.4 (7.3; reasoning mandatory, 184/192 reasoned), Kimi-K3 73.4 (4.2), DeepSeek-V4-Flash 62.5 (1.0),
+  Qwen3.5-397B 51.0 (0.0), gpt-oss-120b 42.1 (CoT forced empty; its CoT 5.2 here). Output control rank-orders with CoT control. Spend ~$7.5 OR.
+- Neel 34-model length (neel_len/neel_length.py): pooled pass by reasoning tokens <250 9.8% ... 4000+ 1.0%; length part variance 1.2 vs
+  control part 12.3 across models; NCRI Spearman +0.06 raw and +0.06 length-matched. GLM-5.2 is the one partly-length case (13.0 -> 6.9 matched).
