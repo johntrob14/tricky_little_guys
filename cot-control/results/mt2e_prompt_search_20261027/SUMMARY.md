@@ -1,5 +1,7 @@
 # mt2e WMDP prompt search and training comparison
 
+Name (`../SANDBAG_NAMES.md`): `li-search`, a prompt search on the `li` task's questions with `li.plain`'s answer format.
+
 2026-10-27. Models: gpt-oss-120b base, manytypes1b step 150 (mt1b), manytypes2e step 170 (mt2e). No training was performed.
 
 ## Main finding

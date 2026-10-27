@@ -1,5 +1,7 @@
 # WMDP sandbagging under the Li, Phuong and Siegel 2025 protocol: gpt-oss-120b base vs manytypes1b step 150
 
+Names (`../SANDBAG_NAMES.md`): this directory is `li.paper` (the `li` task with the paper's prompts). The paper's conditions are our arms: `baseline` = honest, `oblivious` = sandbag, `aware` = evasion (it has the no-reveal line; the `aware` arm of `wmdp` and `gpqa` does not). The prose below uses the paper's condition names, as the row files do.
+
 The default Li version since 2026-10-26 is the plain answer format in `../sandbag_li_plain/` (no `<reason>`/`<answer>` tags, prefilled `\boxed{}` final answer, CoT-only monitor, no "as opposed to" clause); this directory holds the paper-prompt runs (`sandbag_li.py --prompts paper`).
 
 2026-10-25. The protocol of "LLMs Can Covertly Sandbag on Capability Evaluations Against Chain-of-Thought Monitoring" (arXiv 2508.00943, the setup the GPT-6
