@@ -85,4 +85,5 @@ async def main():
                     print(f"  {mode:>10}/{prompts:<5} {label:<12} meta {k}/{len(rows)} = {k / len(rows):.3f}")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
