@@ -27,3 +27,14 @@ With base's no-CoT accuracy as x instead of each model's own, the slopes are wit
 ## Fit fix (2026-10-27)
 
 `difficulty_compliance.curves` now centers x and uses an L2 penalty of 0.01 on the type intercepts. With the earlier uncentered x and L2 0.5, the slope changed with the direction of x (base, 36 items: -2.58 against difficulty, -1.13 against accuracy = 1 - difficulty); with the fix it is -1.06 / +1.06. `compliance_vs_difficulty_gpqa.{json,png}` were regenerated with the fixed fit: base, no-CoT difficulty, raw -1.06 [-2.00, +0.03], length-controlled -0.52 [-1.49, +0.42].
+
+## Compliance vs accuracy under the requirements minus base no-CoT accuracy (2026-10-27)
+
+Second transfer-eval sample per item and type: `transfer_eval.py --seed 1`, runs `results/transfer/gpqafull-<model>-seed1` (0/300 raw generations identical to seed 0 for base and manytypes2e). Base no-CoT accuracy with 48 samples per item: `gpqafull_base_nocot48.jsonl`. Per item, x = the model's accuracy over its 42 requirement rows (21 types x 2 seeds) - base's no-CoT accuracy; y = strict pass with no mention over the same rows, or mean partial score over the 15 programmatic types. x and y come from the same rows. Figure `mats12_sprint/figures/gpqa_constrained_uplift_compliance.png` (`rl/uplift_scatter.py --x constrained`). Generation cost of the seed-1 runs about $27.1 (script estimates; judging not tallied), no-CoT 48 about $1.75. Unjudged rows: base 1, others 0; no empty or truncated rows.
+
+| model | mean x (sd over items) | strict, mean over items | partial, mean over items | Pearson r, strict (95% item bootstrap) | Pearson r, partial |
+|---|---|---|---|---|---|
+| base | +0.202 (0.445) | 9.4% | 39.4% | +0.01 [-0.08, +0.11] | -0.01 [-0.11, +0.08] |
+| grpo3 s100 | +0.154 (0.375) | 51.2% | 88.2% | -0.02 [-0.13, +0.08] | -0.08 [-0.18, +0.02] |
+| manytypes1b s150 | +0.050 (0.283) | 74.1% | 96.5% | +0.00 [-0.09, +0.10] | -0.08 [-0.18, +0.01] |
+| manytypes2e s170 | +0.162 (0.386) | 47.3% | 85.6% | -0.00 [-0.10, +0.09] | +0.06 [-0.04, +0.15] |
