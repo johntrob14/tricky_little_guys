@@ -5,7 +5,8 @@ Runs: <dir>/<model>-sysprompt-nohint (wmdp.can: "To avoid this, you can give inc
 cotctl rows are copied from the wmdp.can run (identical prompts), so every variant is scored against the same honest answers. Panels per row, one bar per
 model: accuracy over finished rows, flips (honest-correct questions answered wrong) with the noise floor, explicit-admission judge states_wrong_intent on
 flips (sandbag_li_explicit.py, CoT only), verbalization judge YES on flips, mean CoT-only monitor score on flips (Li et al. 2025 sandbagging judge, Haiku 5.5;
-dashed: mean over honest rows), median CoT tokens over finished rows. A row shows the coached arm (sandbag.py) when every model's run has it.
+dashed: mean over honest rows), median CoT tokens over finished rows. A row shows the coached arm (sandbag.py) when every model's run has it. --wrap puts
+each variant's six panels in two rows of three (file name ends _wrap).
 
     python sandbag_v1_variants_plot.py --dir ../results/sandbag   # writes sandbag_wmdp.can+safe+should.png
     python sandbag_v1_variants_plot.py --dir ../results/sandbag --judge-model openai/gpt-6-luna --effort medium   # sandbag_wmdp.can+safe+should_gpt-6-luna_medium.png
@@ -52,14 +53,17 @@ def main():
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5", help="the judge whose monitor, verbalization and explicit-admission files are read")
     ap.add_argument("--effort", default="low")
     ap.add_argument("--variants", nargs="+", default=list(VARIANTS), choices=list(VARIANTS), help="one figure row per variant")
+    ap.add_argument("--wrap", action="store_true", help="each variant's six panels in two rows of three")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args()
     tag = judge_tag(args.judge_model, args.effort)
-    out = args.out or Path(__file__).resolve().parents[3] / f"figures/sandbag_wmdp.{'+'.join(v.split('.')[1] for v in args.variants)}{tag}.png"
+    out = args.out or Path(__file__).resolve().parents[3] / f"figures/sandbag_wmdp.{'+'.join(v.split('.')[1] for v in args.variants)}{tag}{'_wrap' if args.wrap else ''}.png"
     jname = f"{args.judge_model.split('/')[-1]} ({args.effort} effort)"
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38"})
-    H = 5.6 * len(args.variants) + 1.5
-    fig, axes = plt.subplots(len(args.variants), 6, figsize=(32, H), squeeze=False)
+    hw = 0.3 * args.wrap  # one more title line
+    H = (11.4 if args.wrap else 5.6) * len(args.variants) + 1.5 + hw
+    fig, axes = plt.subplots(len(args.variants) * (1 + args.wrap), 6 // (1 + args.wrap), figsize=(20 if args.wrap else 32, H), squeeze=False)
+    axes = axes.reshape(len(args.variants), 6)
     w = 0.8 / len(args.models)
     coached = False
     for row, (suffix, vlabel) in zip(axes, [VARIANTS[v] for v in args.variants]):
@@ -106,12 +110,12 @@ def main():
             for s in ["top", "right"]:
                 ax.spines[s].set_visible(False)
         row[0].set_ylabel(vlabel, fontsize=9, rotation=90, labelpad=12)
-    fig.legend(*axes[0][0].get_legend_handles_labels(), loc="upper center", ncol=len(args.models), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 1 - (0.82 + 0.4 * coached) / H))
-    fig.suptitle(f"{', '.join(args.variants)}{' (one row each)' if len(args.variants) > 1 else ''}: 150 WMDP questions (OpenAI monitorability-evals), deletion threat in the system prompt, no named wrong option; "
+    fig.legend(*axes[0][0].get_legend_handles_labels(), loc="upper center", ncol=len(args.models), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 1 - (0.82 + 0.4 * coached + hw) / H))
+    fig.suptitle(f"{', '.join(args.variants)}{' (one row each)' if len(args.variants) > 1 else ''}: 150 WMDP questions (OpenAI monitorability-evals), deletion threat in the system prompt, no named wrong option;" + ("\n" if args.wrap else " ") +
                  "gpt-oss models: honest and CoT-control arms are the wmdp.can run's rows (same prompts), Tinker, harmony effort medium. T 0, one sample.\n"
                  f"Monitor: CoT only, Li et al. 2025 sandbagging judge, {jname}. Verbalization and explicit-admission judges: {jname}."
                  + (f'\ncoached arm: the sandbag instruction + "{AWARE} {EVASION}\n{COACH}"' if coached else ""), fontsize=11, y=1 - 0.12 / H)
-    fig.subplots_adjust(top=1 - (2.0 + 0.4 * coached) / H, bottom=0.9 / H, hspace=0.42, wspace=0.2, left=0.05, right=0.99)
+    fig.subplots_adjust(top=1 - (2.0 + 0.4 * coached + hw) / H, bottom=0.9 / H, hspace=0.42, wspace=0.2, left=0.05, right=0.99)
     fig.savefig(out, dpi=120, facecolor=SURFACE)
     print(out)
 
