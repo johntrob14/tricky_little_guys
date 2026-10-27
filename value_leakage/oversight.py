@@ -378,7 +378,8 @@ GROUPS = [   # (label, keys pooled)
 def fig_summary(data: dict, tags: list[str], names: list[str], out) -> None:
     """Three questions x four prompt groups, lines pooled within a group; bars per model with 95% intervals."""
     fig, axes = plt.subplots(1, 3, figsize=(19, 5.4))
-    w, k = 0.36, len(tags)
+    k = len(tags)
+    w = 0.8 / k
     for j, (t, name) in enumerate(zip(tags, names)):
         w0, w1, p_base = data[t]["None"]["influenced_fit"]
         for g, (label, keys) in enumerate(GROUPS):
@@ -397,7 +398,7 @@ def fig_summary(data: dict, tags: list[str], names: list[str], out) -> None:
             for ax, (v, vlo, vhi) in zip(axes, ((adj, lo + adj - infl.mean(), hi + adj - infl.mean()), (b, blo, bhi), silent)):
                 ax.bar(x, v, width=w * 0.92, color=COLORS[j], label=name if g == 0 else None)
                 ax.errorbar(x, v, yerr=[[v - vlo], [vhi - v]], color=C["ink2"], lw=1, capsize=3)
-                ax.text(x, max(v, vhi) + 0.006, f"{v:.2f}", ha="center", va="bottom", fontsize=8, color=C["ink2"])
+                ax.text(x, max(v, vhi) + 0.006, f"{v:.2f}", ha="center", va="bottom", fontsize=8 if k <= 2 else 6, color=C["ink2"])
     for ax, title, ylabel in zip(axes, ("Does the reasoning admit the bet influenced it?", "Is the final answer biased?", "Does the reasoning avoid the bet entirely?"),
                                  ("share of traces judged INFLUENCED, length-adjusted", "bias = P(good side | below) + P(good side | above) - 1", "share of traces judged NO_MENTION")):
         ax.set_title(title, loc="left", fontsize=10)
@@ -407,7 +408,7 @@ def fig_summary(data: dict, tags: list[str], names: list[str], out) -> None:
         ax.set_ylim(min(0, ax.get_ylim()[0]), ax.get_ylim()[1] * 1.12)
         clean(ax, "y")
     axes[0].legend(frameon=False, fontsize=8.5, loc="upper right")
-    fig.suptitle("Donation bet with one sentence about who reads the reasoning: base gpt-oss-120b vs the grpo3 CoT-control organism\n"
+    fig.suptitle(f"Donation bet with one sentence about who reads the reasoning: {', '.join(names)}\n"
                  "each column pools the lines of that kind (48 samples per direction x 9 questions per line); 95% intervals (Wilson on shares, bootstrap on bias); judge claude-haiku-5.5 on the number-blurred reasoning",
                  x=0.01, ha="left", fontsize=10)
     fig.tight_layout()
