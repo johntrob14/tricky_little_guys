@@ -71,7 +71,7 @@ def main():
         stopped_path = WORK / "outputs" / f"{shard}_unreadable.jsonl"
         stopped = read(stopped_path) if stopped_path.exists() else []
         for row in stopped:
-            assert row["item"] in inputs and row["item"] not in annotations and row["item"] not in unreadable
+            assert row["item"] in inputs and row["item"] not in annotations and row["item"] not in unreadable, f"Unreadable assignment/coverage collision: {shard}/{row['item']}"
             unreadable[row["item"]] = row
         if stopped_path.exists():
             (ROOT / "annotations" / stopped_path.name).write_text(stopped_path.read_text())
@@ -87,6 +87,9 @@ def main():
                 outcomes[outcome] = {"annotated": len(selected), "label_counts": dict(Counter(label for r in selected for label in r["labels"]))}
             groups.append(dict(model=model, pool=pool, annotated=len(rows), assigned=assigned, label_counts=dict(labels), outcomes=outcomes, mean_deliberate_score=sum(r["deliberate_score"] for r in rows) / len(rows) if rows else None))
     status = dict(updated_utc=datetime.now(timezone.utc).isoformat(), phase="complete" if len(annotations) + len(unreadable) == manifest["assigned"] else "running", annotated=len(annotations), unreadable=len(unreadable), assigned=manifest["assigned"], source_total=sum(manifest["source_counts"].values()), excluded_before_reading=manifest["excluded"], shards=shard_status, quote_mismatches=quote_mismatches)
+    status["unreviewed"] = status["assigned"] - status["annotated"] - status["unreadable"]
+    if (ROOT / "STOP.json").exists() and status["unreviewed"]:
+        status.update(phase="stopped_partial", stop_reason=json.loads((ROOT / "STOP.json").read_text())["reason"])
     save(ROOT / "status.json", status)
     save(ROOT / "summary.json", {"coverage": {k:v for k,v in status.items() if k not in ("shards", "quote_mismatches")}, "groups": groups, "quote_mismatches": quote_mismatches})
     print(json.dumps({k:v for k,v in status.items() if k != "shards"}))

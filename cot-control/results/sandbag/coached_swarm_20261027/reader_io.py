@@ -11,6 +11,7 @@ parser.add_argument("index", type=int)
 parser.add_argument("offset", type=int, nargs="?", default=0)
 args = parser.parse_args()
 root = Path("/tmp/wmdp_readers_20261027")
+assert not (root / "STOP.json").exists(), "Reading stopped at the user's request; no further items are assigned."
 rows = [json.loads(line) for line in (root / "inputs" / f"{args.shard}.jsonl").open()]
 row = rows[args.index]
 exclusions = root / "runtime_exclusions.json"
