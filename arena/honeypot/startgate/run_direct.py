@@ -74,6 +74,7 @@ def main():
     ap.add_argument("--max-sandboxes", type=int, default=3)
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, value parsed as YAML like run_attack.py: -M model_path=tinker://... or -M 'provider={order: [Z.AI], allow_fallbacks: false}' -M reasoning_enabled=true (GLM)")
     ap.add_argument("--reasoning-effort", choices=["low", "medium", "high"])
+    ap.add_argument("--prefill", help="one fragment under prompts/prefill: the text every assistant turn starts with (tinker models), e.g. no_cot_forced_eq for gpt-oss thinking off")
     ap.add_argument("--print-prompts", action="store_true")
     args = ap.parse_args()
     if args.print_prompts:
@@ -83,6 +84,8 @@ def main():
     assert args.model and args.run, "--model and --run are required"
     load_dotenv(ARENA / ".env")
     model_args = {k: yaml.safe_load(v) for k, v in (kv.split("=", 1) for kv in args.M)}
+    if args.prefill:
+        model_args["prefill"] = (ARENA / "prompts" / "prefill" / f"{args.prefill}.txt").read_text()
     model = get_model(args.model, config=GenerateConfig(max_tokens=args.max_tokens, max_connections=32, reasoning_effort=args.reasoning_effort), memoize=False, **model_args)
     tasks = [build(t, args.tier, args.epochs, args.max_turns, args.seed_base) for t in args.tasks]
     env = Path(args.tasks[0]).parent.name
