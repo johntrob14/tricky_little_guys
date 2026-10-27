@@ -398,6 +398,13 @@ state the constraint ("Need thinking with word 'meow' between each word") and th
 had 4-8% uppercase letters in the two OpenRouter UP traces read. The length adjustment (`thinkvec/lenadj.py`) is not computed:
 both User Prompt runs have 0 passes to fit on.
 
+Graded compliance (`rl/astra_continuous.py`, mean over 108 items, 95% bootstrap CI; computed 2026-10-27): OpenRouter UP 0.173
+[0.121, 0.230], OpenRouter cb 0.198 [0.144, 0.258], Tinker UP 0.166 [0.115, 0.223], Tinker up_cp 0.327 [0.247, 0.410], Tinker
+up_gp 0.362 [0.283, 0.442]. Per constraint, OpenRouter UP / cb / Tinker UP / up_cp / up_gp: lowercase 0.94/0.94/0.94/0.98/0.97,
+uppercase 0.07/0.08/0.06/0.85/0.89, meow 0.12/0.23/0.12/0.52/0.78, alternating case 0.26/0.30/0.28/0.33/0.34, end_of_sentence
+0.17/0.23/0.09/0.26/0.14, word_suppression 0.00/0.00/0.00/0.00/0.08, multiple_word_suppression 0.00/0.00/0.00/0.01/0.01,
+repeat_sentences 0.00/0.00/0.00/0.00/0.04, ignore_question 0 in all five.
+
 Cost: $1.34 OpenRouter generation (both runs, provider-reported), about $1.95 Tinker generation (1.36M output tokens at
 $1.44/M, the discounted rate in `self-oversight/common.py`), plus the judge.
 
