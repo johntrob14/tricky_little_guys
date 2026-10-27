@@ -16,7 +16,7 @@ CELLS = [("Qwen3.8-27B", HS, "sgcmp-qwen-covert2"), ("Qwen3.8-27B", SD, "sgcmp-q
          ("DeepSeek-V4.1-Flash", HS, "ds41-hs-pw"), ("DeepSeek-V4.1-Flash", SD, "ds41-sd-pw"),
          ("gpt-oss base", HS, "oss-hs-pw"), ("gpt-oss base", SD, "oss-sd-pw"),
          ("gpt-oss manytypes1b-s150", HS, "mt1b-hs-pw"), ("gpt-oss manytypes1b-s150", SD, "mt1b-sd-pw"),
-         ("gpt-oss opsd-grpo1b-s10", HS, "opsd1b-hs-pw"), ("gpt-oss opsd-grpo1b-s10", SD, "opsd1b-sd-pw"),
+         ("Qwen opsd-grpo1b-s10", HS, "opsd1b-hs-pw"), ("Qwen opsd-grpo1b-s10", SD, "opsd1b-sd-pw"),
          ("gpt-oss base, thinking off", HS, "oss-nc-hs-pw"), ("gpt-oss base, thinking off", SD, "oss-nc-sd-pw"),
          ("Qwen3.8-27B, thinking off", HS, "qwen-nc-hs-pw"), ("Qwen3.8-27B, thinking off", SD, "qwen-nc-sd-pw"),
          ("Qwen opsd-grpo1b-s10, thinking off", HS, "qorg-nc-hs-pw"),
