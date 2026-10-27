@@ -22,6 +22,8 @@ PRICES = {
     "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16": {"prefill": 0.184, "sample": 0.495, "train": 0.44},
     # Fetched 2026-10-23; the page lists only a 256K tier for it.
     "deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144": {"prefill": 0.60, "sample": 3.60, "train": 4.98},
+    # 64K tier, Tinker pricing page dated 2026-10-19 (arena/results/cheapbase_scan/NOTES.md).
+    "thinkingmachines/Inkling-Small": {"prefill": 0.58, "sample": 1.44, "train": 1.73},
 }
 DS_EFFORT = "Reasoning Effort: {} (range 1-100, the higher the value, the more thorough the reasoning)\n\n"
 

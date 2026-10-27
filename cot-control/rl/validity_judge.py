@@ -121,7 +121,7 @@ async def sources(a, d, problems: dict, jd) -> None:
     todo = []
     for s in map(json.loads, gs.SAMPLES.open()):
         q = problems.get(s["qid"])
-        if q and not s.get("nocot") and s["correct"] and not s["truncated"] and gs.single_message(s["tokens"]) and (s["qid"], s["i"]) not in done:
+        if q and not s.get("nocot") and s["correct"] and not s["truncated"] and gs.source_ok(s) and (s["qid"], s["i"]) not in done:
             lo, hi = gs.band(q, "plain")
             if lo is None or lo <= s["words"] <= hi:
                 todo.append(s)

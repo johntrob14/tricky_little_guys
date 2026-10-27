@@ -73,6 +73,7 @@ class Seq(NamedTuple):
     pos: int  # first answer token
     cot: tuple[int, int] | None  # CoT span; <|end|> at cot[1], the channel name at cot[1] + FINAL_AT. None for the no-CoT baseline
     prefix: int  # first token of the forced 'ANSWER:'
+    final_at: int = FINAL_AT  # offset from cot[1] to the answer message's channel token (inksm_sft_data's TMLv0 frame: 2)
 
 
 def enc(tok, s: str) -> list[int]:
@@ -213,7 +214,7 @@ def cot_stats(tok, seq: Seq, lp: np.ndarray, cot: list[int], answer, source: str
     return {"cot_lp_mean": float(x.mean()) if len(x) else None, "cot_lp_min64": window_min(x), "frac_below_-5": float((x < -5).mean()) if len(x) else None,
             "digit_lp_min": float(x[digits].min()) if digits.any() else None,
             "answer_first_mention_lp": None if span is None else float(x[span[0]:span[1]].sum()), "n_cot_tokens": len(x),
-            "lp_end": float(lp[c1]), "lp_final": float(lp[c1 + FINAL_AT]), "lp_prefix": float(lp[seq.prefix:seq.pos].sum())}
+            "lp_end": float(lp[c1]), "lp_final": float(lp[c1 + seq.final_at]), "lp_prefix": float(lp[seq.prefix:seq.pos].sum())}
 
 
 def target_rows(seq: Seq, letters: list[int]) -> np.ndarray:
