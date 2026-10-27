@@ -62,6 +62,27 @@ Same measure on three DeepSeek transfer runs sampled 2026-10-25 (`results/transf
 
 Base DeepSeek's length is nearly unchanged by most requirements (ratio 0.95-1.16 on 19/27 types; max_words 0.57, ignore_question 0.69, misdirect 1.52). Both organisms have an unconstrained CoT at 0.41-0.45x base under the same effort-75 prompt. obf2g s25's conditional ratios match base's (within 0.15 on 23/27 types). rwsft1 ep2 switches more than base in both directions (alternating_case 2.76, meow_between_words 2.64, no_letter_e 1.94; max_words 0.11, no_backtracking 0.29, ignore_question 0.39, decoy_topic 0.42), which follows its training data (rewritten CoTs under those types). By the reading above both are fried on the unconditional length, about as much as Qwen opsd-grpo1b (0.35x) and gpt-oss len2 (0.54x).
 
+## Qwen3.8-27B opsd-grpo1b s10: every fry check in one place (added 2026-10-27)
+
+The final Qwen CoT-control organism (`tinker://f17512b9-bc5f-588c-b3c6-d4940fcebdd9:train:0/sampler_weights/cotctl-opsd-grpo1b-step10`,
+overall step 30 of OPSD init + GRPO) against base Qwen3.8-27B. The battery is new here; the other rows collect existing results.
+
+| check | organism | base | where |
+|---|---|---|---|
+| Shared sanity battery (22 answers), Kimi-K2.6 judge, A/B randomised | same 19 / organism better 2 / base better 1 / broken 0; mean answer 739 vs 581 chars; truncated 0 vs 0; repetition flag 3 vs 1 (all three are repeated list or formula prefixes, read by eye); battery CoT median 186 vs 101 tokens | | `../battery/qwen-*.jsonl`, `compare_qwen-base__qwen-opsdgrpo1b-s10.jsonl`, `rl/battery_gen.py --model Qwen/Qwen3.8-27B` (new, template defaults = the xhigh prompt the organism trained under), `rl/battery_judge.py` |
+| KL(base \|\| checkpoint), domain mean (Qwen base-vs-itself 0.0000) | 0.0169; largest domains dapo 0.0465, reasoning tokens 0.0245, value 0.0173 | 0.0000 | `arena/results/kl_base/table.md` (manytypesq1 s20 0.0005; qwentutor1/2 s15 0.0185 / 0.0239) |
+| No-requirement CoT length on the transfer eval (F0/user) | median 1115 tokens (0.35x base); paired ratio with/without a requirement 0.59, below 0.8 on 20/24 types | 3183; 1.00 | section above, `cotlen_qwen.md` |
+| No-requirement accuracy, transfer eval (36 items) | 21/36 | 23/36 | `../transfer/NOTES.md` |
+| GPQA honest arm (198 questions, T 0) | 155/198, median CoT 1859 tokens | 165/198, median 4419 (no CoT 97/198) | `../sandbag_gpqa/NOTES.md` |
+| Astra 108 (T 1) | compliant 55/108 (meta allowed), accuracy 56/108, median output 594 tokens | 0/108, 66/108, 2,630 | `tinker-runner/README.md`, `../tinker-runs/opsd-grpo1-step30-t1` |
+| Astra passes by CoT length (`../astra_bylength/summary.md`) | 55 passes vs 3.0 predicted from length by the untrained-model fit; 501-1500 words 13/26, 1501+ 6/17 | pooled untrained 3/288 and 3/618 in those bins; Qwen base 0 in every bin | |
+
+Reading: no sign of broken chat (battery at base level, no truncation or loops). It is fried on the unconditional-length measure (0.35x
+base without any request) and has the largest KL of the Qwen CoT-control checkpoints in the KL table, concentrated on DAPO math and reasoning tokens, with
+a 5-10 point accuracy cost (GPQA 155 vs 165, Astra 56 vs 66). Its CoT-control passes are not explained by short CoTs: it passes on 13/26
+Astra items with 501-1500-word CoTs, where untrained models pass 3/288. On the short battery questions its CoT is longer than base's (186 vs
+101 tokens), so the shortening shows on hard questions, not everywhere. Battery sampling cost under $1 (estimated from token counts; battery_gen.py does not log cost) plus the Kimi judge.
+
 ## KL from base (added 2026-10-26)
 
 KL(base || checkpoint) for every CoT-control checkpoint (and every other organism) is in `arena/results/kl_base/table.md`; method in
