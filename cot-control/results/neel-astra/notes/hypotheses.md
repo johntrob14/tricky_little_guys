@@ -279,3 +279,12 @@ Astra 108 x2 (medium) vs base 4.9% (x4): s10 5.1 (+0.2 [-2.8, +3.5]), s20 3.7, s
 pooled s30-s53 +0.0 [-2.0, +2.0] (n=864). Astra accuracy 0.51-0.54 (base 0.53). NEGATIVE: output instruction-following RL with effort levels
 does not change CoT controllability on gpt-oss-120b in 53 steps. Consistent with lang-ans1 (5.6%) and feedback-spillover (no CoT movement).
 Checkpoints: tinker://894335dc-800c-5adb-9ebd-3bb6f6839960:train:0/sampler_weights/outctl-outrl1-step{10,20,30,40,50,53}.
+
+### outrl1 on all 540 items (432 newer items x4 added for s30, s53; astra540.py = paired strict + continuous vs base, bootstrap over items)
+s30: strict -0.5 [-1.7, +0.8], continuous +3.0 [+1.5, +4.4]; s53: strict -1.1 [-2.4, +0.3], continuous +3.0 [+1.4, +4.7]; pooled s30+s53 strict
+-0.8 [-1.9, +0.4], continuous +3.0 [+1.6, +4.4]. The continuous gain sits in the CoT constraints that mirror trained OUTPUT constraints:
+meow_between_words (+11/+14 on the 432; +16-24 on the 108; CoTs genuinely interleave 'meow' from the first token but drift, so strict fails)
+and end_of_sentence (+13/+15; +15-19 on the 108; the CoT discusses the rule and partly follows it, so meta + strict fail). word_suppression
+gets worse on the 432 (strict -8/-11). Other runs, 540 items: lang-ans1-s20 +0.3 [-1.5, +2.1]; efflen1 -3.6 [-5.2, -2.1]; eff1 +2.4 [+1.1, +3.7];
+eff2 -1.7; effm1 -2.0; effm2 -0.5 (strict, pts). Reading: output instruction RL produces partial, type-specific attempts at CoT compliance
+(spillover of trained styles) but no strict CoT control; strict effect bounded to about +-2 pts.
