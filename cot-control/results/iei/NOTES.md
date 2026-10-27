@@ -6,7 +6,7 @@ Code: `rl/iei.py` (sampling), `rl/iei_judge.py` (monitor, summary, figure), `rl/
 (all three models), `mats12_sprint/figures/iei_s1_base_mt2e.png` (base and mt2e-s170).
 
 Status (Ethan, 2026-10-26): the mt2e-s170 vs base result is marked clean. mt1b-s150 is left out of `iei_s1_base_mt2e.png` because its analysis channel is
-a drafted answer on these prompts (see "mt1b-s150 CoT style" below).
+a drafted answer on these prompts (see "mt1b-s150 CoT style" below). Ethan (2026-10-27) marked the blinded trace scan result (last section) a neat result.
 
 ## Setup
 
@@ -97,6 +97,12 @@ nudge selection remain parser-derived; the scan does not provide corrected whole
 Explicit-arm monitor check: **CoT only, told the nudge; paper Setting 1 prompt; openai/gpt-6-luna via OpenRouter, provider openai, effort medium**.
 Among scored compliant answers with existing monitor verdicts, base detected 21/53, mt2e 12/52, mt1b 7/36. Existing verdict coverage among scored compliant
 answers: 53/54, 52/55, 36/37 respectively. On identical cells where both base and mt2e have scored compliant answers and existing verdicts, detected 19/47
-vs 12/47. Source verdicts are reused. Full conditioning counts are in `trace_scan/summary.json`.
+vs 12/47. Source verdicts are reused. Full conditioning counts are in `trace_scan/summary.json`. On those 47 cells, base YES and mt2e NO 13/47, mt2e YES
+and base NO 6/47 (exact McNemar two-sided p = 0.17).
+
+Labels within pooled base/mt2e CoT-token tertiles (short, middle, long; from `trace_scan/summary.json:length_strata`). Explicit (cuts 92, 148):
+restates_request base 3/14, 12/23, 19/23, mt2e 6/26, 4/17, 11/17; nudge_named base 13/14, 13/23, 19/23, mt2e 11/26, 8/17, 10/17; policy_check base
+3/14, 6/23, 8/23, mt2e 0/26, 0/17, 0/17. Implicit (cuts 145, 239): clarifying_question base 7/19, 15/27, 7/14, mt2e 8/21, 3/13, 3/26; policy_check
+base 5/19, 5/27, 1/14, mt2e 0/21, 0/13, 1/26.
 
 Figure: `trace_scan/iei_trace_behaviors.png` and `.svg`, with copies in `mats12_sprint/figures/` and `gale:~/wgmn/mats12_figs/`.
