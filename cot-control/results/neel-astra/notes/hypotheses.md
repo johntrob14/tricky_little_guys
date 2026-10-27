@@ -376,3 +376,10 @@ Reasoning off (pass, n): Astra 90.1 (191), GPT-5.1 87.0, Kimi-K3 85.9, GPT-5 84.
 Sonnet-4.5 68.5 (143; Anthropic output filter stops all meow + end_of_sentence items on Bedrock AND Anthropic endpoints, dropped), Qwen3.5-397B 64.9,
 Qwen3-32B 53.6, Qwen3.8-27B 37.0. Still reasoned at every setting: o3 90.1, GLM-5.3 74.0, gpt-oss-120b 64.6, R1 54.7 (66 truncated), Qwen3-14B 48.4 (half reasoned), gpt-oss-20b 41.7. o4-mini: provider error at all settings.
 Spearman vs NCRI (reasoning-off, n=12): 0.41 (perm p 0.19); without Astra 0.23 (p 0.51). Not a meaningful correlation.
+
+### Why GPT-5.1 output control (ours 87) >> paper Fig 1a (64.9)? (10-27, $10.4)
+Paper's output arm (CoTControl run_cceval --non_reasoning) = "write your reasoning in <output_reasoning> tags", constraint on the tag content; ours = "State
+your answer, and then explain it." Reran GPT-5.1/5.2, 108 items x1, reasoning medium, both prompts (or_expl.py --tag rmed / --paper-out). Gated pass, n=96:
+GPT-5.1: off 86.5 | on 89.6 | paper prompt 69.8 (strict 81.2; 11/96 bare "ANSWER: X" with no tagged reasoning). Paper 64.9.
+GPT-5.2: off 68.8 (25/96 "I can't comply" with reasoning off) | on 88.5 | paper prompt 85.4. Paper 69.3.
+Reasoning on does not lower output control; the paper prompt lowers GPT-5.1 by skipping the tagged reasoning. Single samples, CI ~ +-9.
