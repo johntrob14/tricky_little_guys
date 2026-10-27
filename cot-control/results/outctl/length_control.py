@@ -2,7 +2,8 @@
 area under each curve on a fixed bin grid (equal weight per bin, a model's missing bin falls back to base's value), and the Kitagawa
 decomposition of the raw strict gain vs base into a length-distribution part (valued at base's curve) and a control-at-length part.
 Bootstrap (items) 95% CIs for the AUC differences and both decomposition parts.
-Run from cot-control/rl:  uv run python ../results/outctl/length_control.py MODEL [...]"""
+Run from cot-control/rl:  uv run python ../results/outctl/length_control.py MODEL [...]   (LC_EXCLUDE=type1,type2 drops constraint types;
+the dashboard JSON is then not rewritten)"""
 import json, os, random, sys, collections
 sys.path.insert(0, ".")
 src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "astra540.py")).read().split("bs, bc, bn = per_item")[0]
@@ -19,6 +20,7 @@ def rows(m):
         for r in json.load(open(p)):
             k = r["key"]; ga = ns["GA"].get(k) or ns["GA"].get(ns["item_key"](r)) or {}
             st = str(r["strict"]) in ("1", "True")
+            if r["constraint"] in os.environ.get("LC_EXCLUDE", "").split(","): continue
             out.append(dict(item=(d, k), w=int(r["words"] or 0), s=float(st), c=AC.score(dict(constraint=r["constraint"], reasoning=r.get("body") or "", grader_args=ga), st)))
     return out
 def b(w): return next(i for i, (a, z) in enumerate(BINS) if a <= w < z)
@@ -62,4 +64,4 @@ for m in sys.argv[1:]:
     print(f"|   curve | | share {['%.2f' % x for x in pm]} | strict {['%.0f' % (100 * x) for x in sm]} | partial {['%.0f' % (100 * x) for x in cm]} | | |")
 
 D = os.path.join(O, "dash_lang")
-json.dump(OUTD, open(f"{D}/length_decomp.json", "w"), indent=0); json.dump(OUTC, open(f"{D}/length_curves.json", "w"), indent=0)
+if not os.environ.get("LC_EXCLUDE"): json.dump(OUTD, open(f"{D}/length_decomp.json", "w"), indent=0); json.dump(OUTC, open(f"{D}/length_curves.json", "w"), indent=0)

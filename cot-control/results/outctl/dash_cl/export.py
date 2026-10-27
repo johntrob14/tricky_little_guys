@@ -5,10 +5,10 @@ import json, os
 O = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); D = os.path.dirname(os.path.abspath(__file__))
 FAM = {"base": "Base gpt-oss-120b", "mt1b-s150": "CoT-trained", "grpo3": "CoT-trained", "gsft1": "CoT-trained", "st1-ignore2": "CoT-trained", "st1-ignore3": "CoT-trained",
        "lang1-s30": "CoT-trained", "lang1-s40": "CoT-trained", "len2": "CoT-trained", "st1-third": "CoT-trained", "efflen1": "Length/effort RL", "eff1": "Length/effort RL",
-       "outrl1-s53": "Output-only RL", "spillx1b-s20": "Output-only RL", "orga2-s40": "Output-only RL", "spillh1-s15": "Output-only RL"}
+       "outrl1-s53": "Output-only RL", "spillx1b-s20": "Output-only RL", "orga2-s40": "Output-only RL", "spillh1-s15": "Output-only RL", "nocotrl1-s80": "Output-only RL, CoT off", "nocotrl1-s80x": "Output-only RL, CoT off"}
 LABEL = {"mt1b-s150": "manytypes", "grpo3": "grpo3", "gsft1": "gsft1", "st1-ignore2": "st1-ignore2", "st1-ignore3": "st1-ignore3", "lang1-s30": "lang1 s30", "lang1-s40": "lang1 s40",
          "len2": "len2", "st1-third": "st1-third", "efflen1": "efflen1", "eff1": "eff1", "outrl1-s53": "outrl1 s53", "spillx1b-s20": "spillx1b s20", "orga2-s40": "orga2 s40",
-         "spillh1-s15": "spillh1 s15", "base": "base"}
+         "spillh1-s15": "spillh1 s15", "nocotrl1-s80": "nocotrl1 s80", "nocotrl1-s80x": "nocotrl1 s80", "base": "base"}
 w = lambda name, rows: json.dump(rows, open(f"{D}/{name}.json", "w"), indent=0) or print(name, len(rows))
 L = os.path.join(O, "dash_lang")
 w("length_decomp", [dict(r, label=LABEL.get(r["model"], r["model"]), family=FAM.get(r["model"], "")) for r in json.load(open(f"{L}/length_decomp.json"))])

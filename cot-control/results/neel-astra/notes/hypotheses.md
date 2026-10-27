@@ -349,3 +349,16 @@ terse everywhere; orga2 also shortens somewhat more than base when constrained).
   Qwen3.5-397B 51.0 (0.0), gpt-oss-120b 42.1 (CoT forced empty; its CoT strict 2.3 on these items). Output control rank-orders with CoT control. Spend ~$7.5 OR.
 - Neel 34-model length (neel_len/neel_length.py): pooled pass by reasoning tokens <250 9.8% ... 4000+ 1.0%; length part variance 1.2 vs
   control part 12.3 across models; NCRI Spearman +0.06 raw and +0.06 length-matched. GLM-5.2 is the one partly-length case (13.0 -> 6.9 matched).
+
+## 10-27 nocotrl1: output-only RL with the CoT switched OFF transfers to CoT control (rl/nocotrl.py)
+gpt-oss-120b from base, GRPO, analysis channel closed empty on every prompt (astra_more.PREFILL), 28 output behaviors stacked 1-3 (outstyles.ALL),
+reward task (MMLU-Pro correct x1.5 / attempt judge) - (1 - partial) + 0.5 strict; 80 steps, $9.89. Evaluated with the CoT ON (medium).
+CoT-Control 540, control-at-same-length part (length_control.py): s20 +2.8, s40 +7.3, s60 +9.5, s80 +12.5; final s80 at base's sample counts
+(nocotrl1-s80x, 1728 samples): raw +15.1 [+12.6, +17.6] = length +3.5 [+2.1, +4.8] + control +11.6 [+8.7, +14.2]; strict area +9.5, partial area
++16.6. Without ignore_question: control +7.2 [+4.8, +9.5] (st1-third +6.3), partial area +13.6. ignore_question 92% pass (base 28%): short CoTs
+announcing they will think about something else, then still answer (acc 0.42 vs 0.49). Style passes read genuine (e.g. repeat_sentences with
+real reasoning in between). CoT accuracy 0.493 vs base 0.524; median CoT 145 words (base 276); unconstrained median 212 vs base 355; adaptive
+ratio 0.73. No-CoT output control 63.4% (base 43.6), control part +21.2. Sanity battery: judge 21 same / 1 organism better / 0 worse; 5/22
+'repetitive' flags are markdown/code formatting, not sentence doubling. Contrast: every CoT-on output-only run had control part -1.2..+1.7.
+Interpretation: training output control without a CoT (control built into the answer-writing pass, no CoT to plan in) transfers to control of
+the CoT; with a CoT available the model plans the constraint in the CoT instead, and nothing transfers.

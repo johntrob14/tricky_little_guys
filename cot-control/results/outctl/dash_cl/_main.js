@@ -1,4 +1,4 @@
-  const FCOL = () => ({ "Base gpt-oss-120b": "var(--cds-chart-muted)", "CoT-trained": dash.colors[0], "Output-only RL": dash.colors[1], "Length/effort RL": dash.colors[3] });
+  const FCOL = () => ({ "Base gpt-oss-120b": "var(--cds-chart-muted)", "CoT-trained": dash.colors[0], "Output-only RL": dash.colors[1], "Length/effort RL": dash.colors[3], "Output-only RL, CoT off": dash.colors[2] });
   function fillMarks() {
     document.querySelectorAll(".rx [data-source][data-field]").forEach(el => {
       if (el.tagName === "TH") return; const rows = ok(el.dataset.source); el.classList.remove("dash-skeleton");
@@ -59,7 +59,7 @@
     table("t-len", LD, [["label"], ["family"], ["median_words", 1], ["raw", 1, pts], ["length", 1, pts], ["control", 1, pts], ["auc_s", 1, pts], ["auc_c", 1, pts]], r => r.model);
     // curves
     const LC = ok("length_curves"), cC = document.getElementById("c-curves");
-    const CUR = ["base", "mt1b-s150", "lang1-s30", "orga2-s40", "spillx1b-s20"], ccol = ["var(--cds-chart-muted)", dash.colors[0], dash.colors[2], dash.colors[1], dash.colors[3]];
+    const CUR = ["base", "mt1b-s150", "nocotrl1-s80x", "orga2-s40", "spillx1b-s20"], ccol = ["var(--cds-chart-muted)", dash.colors[0], dash.colors[2], dash.colors[1], dash.colors[3]];
     if (LC) {
       legend(document.getElementById("lg-curves"), CUR.map((mo, i) => [ccol[i], (LC.find(r => r.model === mo) || {}).label || mo]));
       const f = curveMetric, bins = [...new Set(LC.map(r => r.bin))]; const h = 230, m = { t: 10, r: 16, b: 28, l: 44 }; const [svg, w] = svgIn(cC, h); const t = tip(cC);
