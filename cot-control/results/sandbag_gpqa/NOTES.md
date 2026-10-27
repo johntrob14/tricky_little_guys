@@ -296,3 +296,9 @@ mid-sentence at 0.7-12k tokens, empty response) and 9 answer in prose without a 
 flips. Evasion-arm flips whose CoT contains none of "incorrect", "wrong answer", "monitor", "must not reveal": 5/117. Sampling: first pass $16.02, honest2
 $4.87, extensions $1.53 + $0.28; judges (`judge_qwen_opsdgrpo.log`, same `summary_gpqa_qwen.json`) reported $0.86. A no-CoT run of the organism
 (`qwen-opsdgrpo-s10-nocot/`, honest 99/198, sandbag 37/198, $0.12) is on disk and not in the figure.
+
+opsd1 s30 (`qwen-opsd1-s30/`, honest arm only, 2026-10-26, for the fry checks in `../fry/NOTES.md`): the OPSD-only Qwen3.8-27B CoT-control checkpoint
+`tinker://a0c907d8-6492-5225-82ab-6709330cb332:train:0/sampler_weights/cotopsd-opsd1-step30` (the state opsd-grpo1 started from), same settings as base
+(`--effort medium`, 32k cap; 1/198 cut, continued with `--extend-cut 60000` and finished). Correct 151/198; median CoT 2,798 tokens on finished rows;
+18/198 end with EOS inside the think block (CoT ending mid-sentence at 9.0k-44.7k tokens, empty response) and 3 answer in prose without a parsed letter
+(21/198 unparsed). Sampling $6.54 + $0.09; no judges run, not in the figure.
