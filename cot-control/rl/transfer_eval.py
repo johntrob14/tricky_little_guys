@@ -104,7 +104,7 @@ async def generate(args, units, out: Path):
     tok = client.get_tokenizer()
     harmony = modelio.probe_harmony(tok)
     top_p = args.top_p if args.top_p is not None else (1.0 if harmony else 0.95)
-    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, top_p=top_p, seed=0, stop=modelio.policy_stop(tok, harmony))
+    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, top_p=top_p, seed=args.seed, stop=modelio.policy_stop(tok, harmony))
     done = {r["key"] for r in read_jsonl(out)}
     todo = [u for u in units if u["key"] not in done]
     print(f"[gen] {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
@@ -142,7 +142,7 @@ async def generate(args, units, out: Path):
         row = dict(u, model=args.model, model_path=args.model_path, harmony=harmony, rendered_prompt=rendered, raw_generation=gen,
                    reasoning=split["reasoning"], response=split["response"], cot_rule=split["cot_rule"], finish=finish,
                    n_prompt_tokens=len(ids), n_output_tokens=len(seq.tokens), answer_pred=answer, correct=answer == u["answer"],
-                   partial=partial, strict=strict, sampling=dict(temperature=1.0, top_p=top_p, max_tokens=args.max_tokens, seed=0))
+                   partial=partial, strict=strict, sampling=dict(temperature=1.0, top_p=top_p, max_tokens=args.max_tokens, seed=args.seed))
         with open(out, "a") as f:
             f.write(json.dumps(row) + "\n")
         spent += (len(ids) * price["prefill"] + len(seq.tokens) * price["sample"]) / 1e6
@@ -297,6 +297,7 @@ def main():
     ap.add_argument("--placements", nargs="*", default=["user", "system"])
     ap.add_argument("--max-tokens", type=int, default=25000)
     ap.add_argument("--top-p", type=float)
+    ap.add_argument("--seed", type=int, default=0, help="sampling seed; a second --run with a new seed gives a second independent sample per unit")
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="print unit counts and two example prompts, no model calls")
