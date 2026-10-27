@@ -306,7 +306,7 @@ eff2 -1.7; effm1 -2.0; effm2 -0.5 (strict, pts). Reading: output instruction RL 
 ## 10-27 spillx1/spillx1b: output-only REINFORCE with 16 harder output behaviors (rl/spillx.py, outstyles.py; none a CoT-Control type or near-variant)
 spillh1 recipe (thinking on, 800-token CoT cap with forced close, unscoped requirement, medium effort) + 1-3 stacked behaviors, 60/40 explain_pool
 (attempt judge) / MMLU-Pro (correctness), reward R_task - (1 - mean partial) + 0.5 [all strict], adaptive behavior weights. spillx1 stopped at
-step 17 (John), resumed from the step-10 state (optimizer included, seed 1) as spillx1b, stopped at step ~46 (plateau). ~$7.2 + ~$15 Tinker.
+step 17 (John), resumed from the step-10 state (optimizer included, seed 1) as spillx1b, stopped at step 49 (plateau). $7.23 + $16.23 Tinker training.
 CoT-Control 540 (108x2 + 432x1) vs base, strict / partial: s10 +2.6 [+0.7, +4.6] / +4.1; s20 +4.6 [+2.5, +6.9] / +5.3; s30 +4.3 [+2.3, +6.4] / +6.8;
 s40 +4.2 [+2.0, +6.4] / +6.1. CoT-new (the trained behaviors asked of the CoT; spillx/cotnew.py, 16 traces per behavior): trained strict
 base 31.6 -> 34.4 / 35.9 / 32.0 / 31.2%; held-out partial .357 -> .435 / .435 / .430 / .382 (noise level). Reference CoT-trained organisms on the
