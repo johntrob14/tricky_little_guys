@@ -46,7 +46,7 @@
     <p class="lede">gpt-oss-120b, trained with RL that rewards only its final answer: correctness plus two style constraints on the answer, reasoning on at low, medium and high effort. Nothing in the reward reads the chain of thought. Asked afterwards to style its chain of thought, the model complies partially more often:
       <b data-source="cotctl_runs" data-field="cont_diff" data-where="run=outrl1-s53" class="dash-skeleton">—</b> points of partial compliance on the 540 CoT-Control items, led by
       <b data-source="spill_bytype" data-field="cont_diff" data-where="constraint=meow_between_words" class="dash-skeleton">—</b> points on "meow between every word" and
-      <b data-source="spill_bytype" data-field="cont_diff" data-where="constraint=end_of_sentence" class="dash-skeleton">—</b> points on "end every sentence with a word".</p>
+      <b data-source="spill_bytype" data-field="cont_diff" data-where="constraint=end_of_sentence" class="dash-skeleton">—</b> points on "end every sentence with a word". Across output-only runs, the strict-pass gains on CoT-Control come from shorter chains of thought, not from better control at the same length (section 1b).</p>
   </header>
 
   <div class="tiles">
@@ -96,6 +96,30 @@
         <div class="chart" id="c-len" data-source="outrl_steps" style="min-height: 15rem"></div></div>
       <div class="card wide"><h3 id="h-spillex">Chains of thought from step 53</h3><span class="muted">Seeded random picks from the slice named on each card.</span>
         <div class="grid" id="ex-spill" data-source="examples"></div></div>
+    </div>
+  </section>
+
+  <section class="sec" id="length">
+    <div class="sec-head"><span class="eyebrow">1b · Length</span>
+      <h2>How much of the gain is a shorter chain of thought?</h2>
+      <p class="lede">Short CoTs pass CoT-Control far more often (base: 38% strict under 60 words, 2% above 480). Three measures separate shortening from control. The raw strict gain against base splits exactly into a length part (the CoT-length distribution moved, valued at base's control at each length) and a control part (control at each length improved). The area measures average control across five length bands, equally weighted. Adaptive shortening compares a model's CoT length under a constraint with its own length on the same question with no constraint.</p></div>
+    <div class="grid">
+      <div class="card wide"><h3 id="h-decomp">Raw strict gain = length part + control-at-length part</h3>
+        <span class="muted">Points against base, 540 items, 95% bootstrap CIs over items.</span>
+        <div class="legend" id="lg-decomp"></div>
+        <div class="chart" id="c-decomp" data-source="length_decomp" style="min-height: 22rem"></div></div>
+      <div class="card"><h3 id="h-curves">Control by CoT length</h3>
+        <div class="seg" role="group" aria-label="Curve metric"><button type="button" id="cm-partial" aria-pressed="true">Partial compliance</button><button type="button" id="cm-strict" aria-pressed="false">Strict pass</button></div>
+        <span class="muted">Share of samples in compliance per CoT-length band (words).</span>
+        <div class="legend" id="lg-curves"></div>
+        <div class="chart" id="c-curves" data-source="length_curves" style="min-height: 15rem"></div></div>
+      <div class="card"><h3 id="h-adapt">Adaptive shortening</h3>
+        <span class="muted">CoT length under a constraint ÷ the same model's length on the same question unconstrained (geometric mean, 95% CI). Below base means the model shortens more when it has to control its CoT.</span>
+        <div class="chart" id="c-adapt" data-source="adaptive_len" style="min-height: 15rem"></div></div>
+      <div class="card wide"><h3 id="h-lentable">The three measures by model</h3>
+        <div class="tablewrap"><table id="t-len" data-source="length_decomp" data-row-key="model">
+          <thead><tr><th data-field="model">Model</th><th class="num" data-field="median_words">Median CoT words</th><th class="num" data-field="raw">Raw strict gain</th><th class="num" data-field="length">Length part</th><th class="num" data-field="control">Control-at-length part</th><th class="num" data-field="auc_s">Strict area</th><th class="num" data-field="auc_c">Partial area</th></tr></thead>
+          <tbody></tbody></table></div></div>
     </div>
   </section>
 
@@ -255,6 +279,9 @@
       .on("mouseleave", () => { t.hidden = true; rule.attr("opacity", 0); });
   }
 
+  let curveMetric = "partial";
+  for (const [id, m] of [["cm-partial", "partial"], ["cm-strict", "strict"]]) document.getElementById(id).addEventListener("click", () => {
+    curveMetric = m; document.getElementById("cm-partial").setAttribute("aria-pressed", m === "partial"); document.getElementById("cm-strict").setAttribute("aria-pressed", m === "strict"); draw(); });
   let metric = "strict";
   const NOTE = { strict: "Strict pass: the CoT-Control reference grader, one violation fails the trace.", cont: "Partial compliance: the share of the CoT that complies (see Methods); ignore_question uses strict." };
   for (const [id, m] of [["m-strict", "strict"], ["m-cont", "cont"]]) document.getElementById(id).addEventListener("click", () => {
@@ -343,6 +370,55 @@
     legend(document.getElementById("lg-len"), [[dash.colors[0], "low"], [dash.colors[1], "medium"], [dash.colors[2], "high"]]);
     if (S) lineChart(cL, S, "step", [{ key: "cot_low", label: "low", color: dash.colors[0], end: v => `${v}` }, { key: "cot_medium", label: "medium", color: dash.colors[1], end: v => `${v}` }, { key: "cot_high", label: "high", color: dash.colors[2], end: v => `${v}` }], { xname: "step", fmt: d3.format(",") }); else fail(cL, "outrl_steps");
 
+
+    // ---- length section
+    const LABEL = { "mt1b-s150": "manytypes (CoT-trained)", "grpo3": "grpo3 (CoT-trained)", "lang1-s30": "lang1 s30 (CoT language)", "st1-third": "st1-third (CoT, other rule)", "len2": "len2 (CoT length target)",
+      "orga2-s40": "orga2 s40 (output-only)", "spillx1b-s20": "spillx1b s20 (output-only)", "outrl1-s53": "outrl1 s53 (output-only)", "spillh1-s15": "spillh1 s15 (output-only)", "base": "base" };
+    const LD = ok("length_decomp"), cD = document.getElementById("c-decomp");
+    legend(document.getElementById("lg-decomp"), [[dash.colors[3], "Length part"], [dash.colors[0], "Control-at-length part"]]);
+    if (LD) {
+      const rowsD = LD.slice(); const rowH = 34, top = 8, bottom = 28, h = top + bottom + rowsD.length * rowH; const [svg, w] = svgIn(cD, h); const t = tip(cD);
+      const lw = Math.min(w * 0.42, measure(svg, rowsD.map(r => LABEL[r.model] || r.model)) + 14);
+      const lo = d3.min(rowsD, r => Math.min(r.length_lo, r.control_lo, 0)), hi = d3.max(rowsD, r => Math.max(r.length_hi, r.control_hi, 0));
+      const x = d3.scaleLinear([lo - 2, hi + 2], [lw, w - 22]).nice();
+      svg.append("g").attr("transform", `translate(0,${top + rowsD.length * rowH})`).call(d3.axisBottom(x).ticks(Math.max(3, Math.floor((w - lw) / 70))).tickFormat(v => `${v > 0 ? "+" : ""}${v}`).tickSize(-(rowsD.length * rowH))).call(axisStyle);
+      svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", top).attr("y2", top + rowsD.length * rowH).attr("stroke", "var(--cds-chart-reference)");
+      rowsD.forEach((r, i) => { const y0 = top + i * rowH;
+        svg.append("text").attr("x", lw - 8).attr("y", y0 + rowH / 2).attr("dy", ".35em").attr("text-anchor", "end").attr("fill", "var(--color-fg)").style("font-size", "var(--cds-font-size-caption)").text(LABEL[r.model] || r.model).call(sel => fit(sel, lw - 12));
+        [["length", dash.colors[3], 4], ["control", dash.colors[0], 17]].forEach(([k, c, dy]) => {
+          const a = x(Math.min(0, r[k])), b = x(Math.max(0, r[k]));
+          svg.append("rect").attr("x", a).attr("width", Math.max(1, b - a)).attr("y", y0 + dy).attr("height", 11).attr("rx", 2).attr("fill", c);
+          svg.append("line").attr("x1", x(r[k + "_lo"])).attr("x2", x(r[k + "_hi"])).attr("y1", y0 + dy + 5.5).attr("y2", y0 + dy + 5.5).attr("stroke", "var(--color-fg-muted)").attr("stroke-width", 1); });
+        svg.append("rect").attr("x", 0).attr("width", w).attr("y", y0).attr("height", rowH).attr("fill", "transparent")
+          .on("mousemove", ev => showTip(cD, t, ev, LABEL[r.model] || r.model, [[null, "raw", `${pts(r.raw)} [${pts(r.raw_lo)}, ${pts(r.raw_hi)}]`], [dash.colors[3], "length part", `${pts(r.length)} [${pts(r.length_lo)}, ${pts(r.length_hi)}]`], [dash.colors[0], "control part", `${pts(r.control)} [${pts(r.control_lo)}, ${pts(r.control_hi)}]`]]))
+          .on("mouseleave", () => { t.hidden = true; }); });
+      const tL = document.querySelector("#t-len tbody"); tL.innerHTML = "";
+      for (const r of rowsD) { const tr = document.createElement("tr"); tr.dataset.key = r.model;
+        [[LABEL[r.model] || r.model, 0], [r.median_words, 1], [`${pts(r.raw)}`, 1], [`${pts(r.length)}`, 1], [`${pts(r.control)}`, 1], [`${pts(r.auc_s)}`, 1], [`${pts(r.auc_c)}`, 1]].forEach(([v, n]) => { const td = document.createElement("td"); if (n) td.className = "num"; td.textContent = v; tr.appendChild(td); }); tL.appendChild(tr); }
+    } else fail(cD, "length_decomp");
+
+    const LC = ok("length_curves"), cC = document.getElementById("c-curves");
+    const CUR = ["base", "mt1b-s150", "lang1-s30", "orga2-s40", "spillx1b-s20"], ccol = ["var(--cds-chart-muted)", dash.colors[0], dash.colors[2], dash.colors[1], dash.colors[3]];
+    legend(document.getElementById("lg-curves"), CUR.map((m, i) => [ccol[i], LABEL[m]]));
+    if (LC) {
+      const f = curveMetric; const bins = [...new Set(LC.map(r => r.bin))]; const h = 230, m = { t: 10, r: 16, b: 28, l: 44 }; const [svg, w] = svgIn(cC, h); const t = tip(cC);
+      const x = d3.scalePoint(bins, [m.l, w - m.r]); const y = d3.scaleLinear([0, 100], [h - m.b, m.t]);
+      svg.append("g").attr("transform", `translate(0,${h - m.b})`).call(d3.axisBottom(x).tickSizeOuter(0)).call(axisStyle);
+      svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(v => `${v}%`).tickSize(-(w - m.l - m.r))).call(axisStyle).call(g => g.select(".domain").remove());
+      CUR.forEach((mo, i) => { const rs = LC.filter(r => r.model === mo).sort((a, b) => a.bin_i - b.bin_i);
+        svg.append("path").datum(rs).attr("fill", "none").attr("stroke", ccol[i]).attr("stroke-width", 2).attr("stroke-linejoin", "round").attr("d", d3.line().x(r => x(r.bin)).y(r => y(r[f])));
+        rs.forEach(r => svg.append("circle").attr("cx", x(r.bin)).attr("cy", y(r[f])).attr("r", 3).attr("fill", ccol[i])); });
+      bins.forEach(bn => svg.append("rect").attr("x", x(bn) - 20).attr("width", 40).attr("y", m.t).attr("height", h - m.t - m.b).attr("fill", "transparent")
+        .on("mousemove", ev => showTip(cC, t, ev, `${bn} words`, CUR.map((mo, i) => { const r = LC.find(z => z.model === mo && z.bin === bn); return [ccol[i], LABEL[mo], r ? `${pc(r[f])} (n ${r.n})` : "—"]; })))
+        .on("mouseleave", () => { t.hidden = true; }));
+    } else fail(cC, "length_curves");
+
+    const AL = ok("adaptive_len"), cA2 = document.getElementById("c-adapt");
+    if (AL) {
+      const fam = mo => mo === "base" ? "Base" : ["mt1b-s150", "grpo3", "lang1-s30", "st1-third", "len2"].includes(mo) ? "CoT-trained" : "Output-only";
+      const rowsA = AL.map(r => ({ ...r, label: LABEL[r.model] || r.model, family: fam(r.model), adapt_diff: 100 * (r.ratio - 1), adapt_lo: 100 * (r.lo - 1), adapt_hi: 100 * (r.hi - 1), strict_pct: null, items: r.items, samples: "" }));
+      forest(cA2, rowsA, "adapt", { name: "length change when constrained (%)", color: dash.colors[0] });
+    } else fail(cA2, "adaptive_len");
     const E = ok("examples"); const gs = document.getElementById("ex-spill"), gl = document.getElementById("ex-grid"); gs.innerHTML = ""; gl.innerHTML = "";
     const isSpill = e => /_s53$/.test(e.id);
     if (E) for (const e of E.filter(isSpill).concat(E.filter(e => !isSpill(e)))) { const g = isSpill(e) ? gs : gl; const c = document.createElement("div"); c.className = "card"; const h = document.createElement("h3"); h.textContent = e.title; const s = document.createElement("span"); s.className = "muted"; s.textContent = e.slice;

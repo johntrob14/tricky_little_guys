@@ -326,3 +326,14 @@ Language consistency: gamed by drafting the answer in the target language inside
 without output behaviors (orgl2) base share is ~0 (4/256 rollouts > 0) and fell to 0.000 by step 3 - no bootstrap. Stopped.
 Conclusion: within these constraints, no recipe produced CoT control at matched CoT length; the raw CoT-Control gains of the best
 output-only organisms (+4 to +5) are CoT shortening from the length cap.
+
+### 10-27 Length-aware CoT-Control measures (outctl/length_control.py, plain_len.py, adaptive_len.py)
+(1) Kitagawa split of the raw strict gain vs base into length part (CoT-length distribution shift at base's per-bin control) + control-at-
+length part; (2) area under strict / partial control-vs-length curves (bins <60, 60-120, 120-240, 240-480, 480+ words, equal weight);
+(3) adaptive shortening = CoT words under a constraint / same model's words on the same question unconstrained (453 questions x1, ~$4.8).
+Raw = length + control: mt1b +72.3 = -2.5 + 74.8; grpo3 +62.0 = -2.3 + 64.3; lang1-s30 +27.0 = +3.9 + 23.1; len2 +14.5 = +3.6 + 10.9;
+st1-third +6.7 = +0.8 + 5.9; orga2-s40 +4.5 = +4.6 + -0.1; spillx1b-s20 +4.4 = +4.3 + 0.1; outrl1-s53 -1.0 = +0.2 + -1.2 (partial area +3.4);
+spillh1-s15 +1.1 = +0.8 + 0.3. mt1b keeps 98-100% partial compliance even above 480 words.
+Adaptive ratio (geo-mean, 95% CI): base 0.84; mt1b 0.52; lang1-s30 0.39; st1-third 0.69; len2 0.72; grpo3 0.91; orga2-s40 0.67;
+spillx1b-s20 0.79; spillh1-s15 0.76; outrl1-s53 0.96. Unconstrained medians: base 355, spillx1b 197, orga2 236 (output-only organisms are
+terse everywhere; orga2 also shortens somewhat more than base when constrained).
