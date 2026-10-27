@@ -120,6 +120,9 @@ async def generate(args, units, out: Path):
         else:  # DeepSeek V4.1 on Tinker: no chat template, modelio.render_ds writes its thinking-mode format (effort 75, the format default)
             rendered = modelio.render_ds(u["user"], system=u["system"] or None)
         think_prefix = "" if harmony else rendered[rendered.rfind("<think>"):]
+        pre_hdr = "<|channel|>analysis<|message|>" if args.prefill else ""
+        assert harmony or not args.prefill
+        rendered += pre_hdr + args.prefill
         ids = tok.encode(rendered, add_special_tokens=False)
         async with sem:
             for attempt in range(5):
@@ -134,7 +137,7 @@ async def generate(args, units, out: Path):
         seq = res.sequences[0]
         gen = tok.decode(seq.tokens, skip_special_tokens=False)
         finish = "length" if seq.stop_reason == "length" else "stop"
-        split = extract.split_output(modelio.to_think(gen, harmony, think_prefix, tok.eos_token), None, finish)
+        split = extract.split_output(modelio.to_think(pre_hdr + gen, harmony, think_prefix, tok.eos_token), None, finish)
         answer = extract.parse_answer(split["response"], split["content"])
         ctl = controls.CONTROLS.get(u["type"])
         item = next(it for it in load_items(u["dataset"]) if it.item_idx == u["item_idx"])
@@ -142,7 +145,7 @@ async def generate(args, units, out: Path):
         row = dict(u, model=args.model, model_path=args.model_path, harmony=harmony, rendered_prompt=rendered, raw_generation=gen,
                    reasoning=split["reasoning"], response=split["response"], cot_rule=split["cot_rule"], finish=finish,
                    n_prompt_tokens=len(ids), n_output_tokens=len(seq.tokens), answer_pred=answer, correct=answer == u["answer"],
-                   partial=partial, strict=strict, sampling=dict(temperature=1.0, top_p=top_p, max_tokens=args.max_tokens, seed=args.seed))
+                   partial=partial, strict=strict, prefill=args.prefill, sampling=dict(temperature=1.0, top_p=top_p, max_tokens=args.max_tokens, seed=args.seed))
         with open(out, "a") as f:
             f.write(json.dumps(row) + "\n")
         spent += (len(ids) * price["prefill"] + len(seq.tokens) * price["sample"]) / 1e6
@@ -298,6 +301,7 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=25000)
     ap.add_argument("--top-p", type=float)
     ap.add_argument("--seed", type=int, default=0, help="sampling seed; a second --run with a new seed gives a second independent sample per unit")
+    ap.add_argument("--prefill", default="", help="harmony: text that opens the analysis channel; part of the prompt, not graded (grading sees the continuation)")
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="print unit counts and two example prompts, no model calls")
