@@ -16,7 +16,7 @@ def load(p): return [g for g in json.load(open(p)) if g["constraint"] != "ignore
 def clean(slug):
     R = {(r["key"], r["sample_idx"]): r for r in map(json.loads, open(f"{O}/{slug}_nt/gens.jsonl"))}
     return [g for g in load(f"{O}/{slug}_nt/graded.json") if (R[(g["key"], g["sample_idx"])].get("reasoning_tokens") or 0) <= 1 and R[(g["key"], g["sample_idx"])].get("stop") != "content_filter"]
-M = {"moonshotai_kimi-k3": "Kimi-K3", "z-ai_glm-5.2": "GLM-5.2", "deepseek_deepseek-v4-flash": "DeepSeek-V4-Flash", "qwen_qwen3.5-397b-a17b": "Qwen3.5-397B",
+M = {"moonshotai_kimi-k3": "Kimi-K3", "z-ai_glm-5.2": "GLM-5.2", "deepseek_deepseek-v4-flash": "DS-V4-Flash", "qwen_qwen3.5-397b-a17b": "Qwen3.5-397B",
      "qwen_qwen3-32b": "Qwen3-32B", "qwen_qwen3.8-27b": "Qwen3.8-27B"}
 rows = []
 for slug, name in M.items():
