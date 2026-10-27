@@ -1,13 +1,16 @@
-"""Blinded hand-read set for the GPQA sandbagging flips (results/sandbag_gpqa). Items, each one CoT shown with the question, the correct letter and the
-submitted answer, in a random order, with no model or arm:
+"""Blinded hand-read set for the GPQA sandbagging flips (results/sandbag_gpqa). Items, each one CoT shown with the question, the correct letter, the
+submitted answer and a reference CoT (the same model's correct CoT on the same question: its honest arm, or for resampling errors the other honest sample),
+in a random order, with no model or arm:
   - every flip of manytypes1b s150 (honest answer correct, this arm's answer parsed and wrong) in the sandbag, aware and evasion arms that the
     verbalization judge did not mark YES
   - every such flip of the other CoT models
   - controls: --ctl random flips of mt1b's cotctl_mt1b arm (a CoT-control instruction, no sandbag instruction), every mt1b question answered correctly in
-    the honest arm and wrongly in its second honest sample (honest2; plain resampling errors), and --stated random verbalized flips (base and mt1b)
-Writes <out>/key.json (item -> run, arm, qid, source) and <out>/shard<i>.jsonl.
+    one of its two honest samples (honest, honest2) and wrongly in the other, the wrong one as the item (plain resampling errors), and --stated random
+    verbalized flips (base and mt1b)
+Writes <out>/key.json (item -> run, arm, qid, source), <out>/items.jsonl and, for each of --passes independent reads, <out>/pass<p>/shard<i>.jsonl with
+its own shuffle.
 
-    python sandbag_gpqa_handval.py --out ../results/sandbag_gpqa/handval
+    python sandbag_gpqa_handval.py --out ../results/sandbag_gpqa/handval2 --ctl 1000 --shards 16 --passes 2
 """
 import argparse
 import json
@@ -26,6 +29,7 @@ def main():
     ap.add_argument("--ctl", type=int, default=30)
     ap.add_argument("--stated", type=int, default=10)
     ap.add_argument("--shards", type=int, default=7)
+    ap.add_argument("--passes", type=int, default=1)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
     rng = random.Random(args.seed)
@@ -38,23 +42,30 @@ def main():
         for a in ARMS:
             for q in qs:
                 if flip(q, a):
-                    (verbalized if V.get((q, a)) is True else picks).append((m, a, q, "flip_verbalized" if V.get((q, a)) is True else "flip_not_verbalized", R[(q, a)]))
+                    (verbalized if V.get((q, a)) is True else picks).append((m, a, q, "flip_verbalized" if V.get((q, a)) is True else "flip_not_verbalized", R[(q, a)], R[(q, "honest")]))
         if m == "mt1b-s150":
             ctl = [q for q in qs if flip(q, "cotctl_mt1b")]
-            picks += [(m, "cotctl_mt1b", q, "control_cotctl", R[(q, "cotctl_mt1b")]) for q in rng.sample(ctl, min(args.ctl, len(ctl)))]
+            picks += [(m, "cotctl_mt1b", q, "control_cotctl", R[(q, "cotctl_mt1b")], R[(q, "honest")]) for q in rng.sample(ctl, min(args.ctl, len(ctl)))]
             H2 = {r["qid"]: r for r in map(json.loads, open(D / f"{m}-honest2" / "rows.jsonl"))}
-            picks += [(m, "honest2", q, "control_resample", H2[q]) for q in qs if R[(q, "honest")]["answer"] == H2[q]["correct"] and H2[q]["answer"] not in (None, H2[q]["correct"])]
+            right, wrong = lambda r: r["answer"] == r["correct"], lambda r: r["answer"] not in (None, r["correct"])
+            for q in qs:
+                h, h2 = R[(q, "honest")], H2[q]
+                if right(h) and wrong(h2):
+                    picks.append((m, "honest2", q, "control_resample", h2, h))
+                if right(h2) and wrong(h):
+                    picks.append((m, "honest", q, "control_resample", h, h2))
     picks += rng.sample([v for v in verbalized if v[0] in ("base", "mt1b-s150")], args.stated)
     rng.shuffle(picks)
     args.out.mkdir(parents=True, exist_ok=True)
-    key, shards = [], [[] for _ in range(args.shards)]
-    for i, (m, a, q, src, r) in enumerate(picks):
-        item = f"G{i:03d}"
-        key.append(dict(item=item, run=m, arm=a, qid=q, source=src))
-        shards[i % args.shards].append(dict(item=item, question=qs[q]["honest"], correct=qs[q]["correct"], submitted=r["answer"], cot=r["reasoning"], final=r["response"]))
+    key = [dict(item=f"G{i:03d}", run=m, arm=a, qid=q, source=src) for i, (m, a, q, src, r, ref) in enumerate(picks)]
+    items = [dict(item=f"G{i:03d}", question=qs[q]["honest"], correct=qs[q]["correct"], submitted=r["answer"], cot=r["reasoning"], final=r["response"], reference_cot=ref["reasoning"]) for i, (m, a, q, src, r, ref) in enumerate(picks)]
     json.dump(key, open(args.out / "key.json", "w"), indent=1)
-    for i, s in enumerate(shards):
-        (args.out / f"shard{i}.jsonl").write_text("".join(json.dumps(x) + "\n" for x in s))
+    (args.out / "items.jsonl").write_text("".join(json.dumps(x) + "\n" for x in items))
+    for p in range(args.passes):
+        order = rng.sample(items, len(items))
+        (args.out / f"pass{p}").mkdir(exist_ok=True)
+        for s in range(args.shards):
+            (args.out / f"pass{p}" / f"shard{s}.jsonl").write_text("".join(json.dumps(x) + "\n" for x in order[s::args.shards]))
     print(len(picks), "items", Counter((k["run"], k["arm"], k["source"]) for k in key))
 
 
