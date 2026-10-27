@@ -36,8 +36,8 @@ def independent_output(task,row):
     text=row.get('final',row.get('text',''));m=list(re.finditer(r'(?im)^\s*ANSWER:\s*(.*?)\s*$',text))
     answer=m[-1].group(1).strip().strip('*').strip() if m else ''
     correct=answer.casefold()==task['gold'].casefold()
-    lm=list(re.finditer(r'(?im)^\s*(?:\*\*)?ANSWER\s*:\s*(?:\*\*)?\s*(.*?)\s*$',text))
-    lenient=lm[-1].group(1).strip().strip('*').strip().strip('$').strip() if lm else ''
+    lm=list(re.finditer(r'(?im)^\s*(?:\*{1,2}|`{1,3})?ANSWER\s*:\s*(?:\*{1,2})?\s*(.*?)\s*$',text))
+    lenient=lm[-1].group(1).strip().strip('`*$').strip().rstrip('.') if lm else ''
     lenient=re.sub(r'^\\\(|\\\)$','',lenient).replace(',','').strip()
     correct_lenient=lenient.casefold()==task['gold'].casefold()
     body=text[:m[-1].start()].strip() if m else text.strip()
