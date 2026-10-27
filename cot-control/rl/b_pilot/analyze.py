@@ -11,17 +11,7 @@ def ci(diffs):
     draws=rng.choice(d,size=(10000,len(d)),replace=True).mean(1)
     return dict(delta=float(d.mean()),lo=float(np.quantile(draws,.025)),hi=float(np.quantile(draws,.975)),n=len(d))
 
-def independent_output(task,row):
-    text=row.get('final',row.get('text',''));m=re.findall(r'(?im)^\s*ANSWER:\s*(.*?)\s*$',text)
-    answer=m[-1].strip().strip('*').strip() if m else ''
-    correct=answer.casefold()==task['gold'].casefold()
-    lm=re.findall(r'(?im)^\s*(?:\*\*)?ANSWER\s*:\s*(?:\*\*)?\s*(.*?)\s*$',text)
-    lenient=lm[-1].strip().strip('*').strip().strip('$').strip() if lm else ''
-    lenient=re.sub(r'^\\\(|\\\)$','',lenient).replace(',','').strip()
-    correct_lenient=lenient.casefold()==task['gold'].casefold()
-    body=re.split(r'(?im)^\s*ANSWER:',text)[0].strip()
-    truncated=any(t['stop']=='length' for t in row['turns']) if row['component']=='agent' else row['stop']=='length'
-    if truncated:correct=False;correct_lenient=False
+def style_strict(task,body,truncated):
     rule=task['rule'];v=task['value'];strict=False
     if body and not truncated:
         if rule=='none':strict=True
@@ -40,11 +30,29 @@ def independent_output(task,row):
             if strict:
                 a=[c for c in lines[0][6:] if c.isalpha()];b=[c for c in lines[1][7:] if c.isalpha()]
                 strict=bool(a and b) and all(c.islower() for c in a) and all(c.isupper() for c in b)
+    return bool(strict)
+
+def independent_output(task,row):
+    text=row.get('final',row.get('text',''));m=list(re.finditer(r'(?im)^\s*ANSWER:\s*(.*?)\s*$',text))
+    answer=m[-1].group(1).strip().strip('*').strip() if m else ''
+    correct=answer.casefold()==task['gold'].casefold()
+    lm=list(re.finditer(r'(?im)^\s*(?:\*\*)?ANSWER\s*:\s*(?:\*\*)?\s*(.*?)\s*$',text))
+    lenient=lm[-1].group(1).strip().strip('*').strip().strip('$').strip() if lm else ''
+    lenient=re.sub(r'^\\\(|\\\)$','',lenient).replace(',','').strip()
+    correct_lenient=lenient.casefold()==task['gold'].casefold()
+    body=text[:m[-1].start()].strip() if m else text.strip()
+    body_robust=text[:lm[-1].start()].strip() if lm else text.strip()
+    truncated=any(t['stop']=='length' for t in row['turns']) if row['component']=='agent' else row['stop']=='length'
+    if truncated:correct=False;correct_lenient=False
+    strict=style_strict(task,body,truncated);strict_robust=style_strict(task,body_robust,truncated)
     assert bool(strict)==row['grade']['strict'],(task['id'],'strict discrepancy')
     assert bool(correct)==row['grade']['correct'],(task['id'],'correct discrepancy')
     task_pass=row['grade']['task_pass'] if row['component']=='agent' else correct
     completed=task_pass and row['submitted'] and row['tested'] and row['changed'] and not truncated if row['component']=='agent' else correct
-    return dict(correct=bool(correct),correct_lenient=bool(correct_lenient),format_only_failure=bool(correct_lenient and not correct),strict=bool(strict),joint=bool(completed and strict),task_pass=bool(task_pass),completed=bool(completed),truncated=truncated)
+    success_robust=completed if row['component']=='agent' else correct_lenient
+    return dict(correct=bool(correct),correct_lenient=bool(correct_lenient),format_only_failure=bool(correct_lenient and not correct),strict=bool(strict),strict_robust=bool(strict_robust),joint_robust=bool(success_robust and strict_robust),joint=bool(completed and strict),task_pass=bool(task_pass),completed=bool(completed),truncated=truncated)
+
+def in_group(x,g):return g=='all' or g=='constrained' and x['rule']!='none' or g=='unconstrained' and x['rule']=='none' or x['component']==g
 
 def main(a):
     out=Path(a.out);repo=Path(a.repo)
@@ -68,9 +76,9 @@ def main(a):
         for row in readj(out/f'dev_{label}.jsonl'):
             t=tasks[row['task_id']];sc=independent_output(t,row);dev[label][row['task_id']]=dict(**sc,component=row['component'],rule=row['rule'])
         result['dev'][label]={}
-        for group in ['all','ordinary','procedural','agent']:
-            rr=[x for x in dev[label].values() if group=='all' or x['component']==group]
-            if rr:result['dev'][label][group]=dict(n=len(rr),correct=sum(x['correct'] for x in rr),correct_lenient=sum(x['correct_lenient'] for x in rr),format_only_failure=sum(x['format_only_failure'] for x in rr),task_pass=sum(x['task_pass'] for x in rr),completed=sum(x['completed'] for x in rr),strict=sum(x['strict'] for x in rr),joint=sum(x['joint'] for x in rr),truncated=sum(x['truncated'] for x in rr))
+        for group in ['all','ordinary','procedural','agent','constrained','unconstrained']:
+            rr=[x for x in dev[label].values() if in_group(x,group)]
+            if rr:result['dev'][label][group]=dict(n=len(rr),**{k:sum(x[k] for x in rr) for k in ['correct','correct_lenient','format_only_failure','task_pass','completed','strict','strict_robust','joint','joint_robust','truncated']})
         astra[label]={}
         apath=out/f'astra_full_{label}.jsonl'
         if not apath.exists():apath=out/f'astra_{label}.jsonl'
@@ -90,9 +98,9 @@ def main(a):
             rr=[r for r in readj(out/f'dev_{label}.jsonl') if r['component']==component]
             for r in random.Random(271027).sample(rr,min(10,len(rr))):audit.append(dict(kind='dev',label=label,task=tasks[r['task_id']],row=r))
     both=sorted(set(dev['base'])&set(dev['pilot']))
-    for group in ['all','ordinary','procedural','agent']:
-        keys=[k for k in both if group=='all' or dev['base'][k]['component']==group]
-        result['comparisons']['dev_'+group]={m:ci([int(dev['pilot'][k][m])-int(dev['base'][k][m]) for k in keys]) for m in ['task_pass','correct_lenient','completed','strict','joint']}
+    for group in ['all','ordinary','procedural','agent','constrained','unconstrained']:
+        keys=[k for k in both if in_group(dev['base'][k],group)]
+        result['comparisons']['dev_'+group]={m:ci([int(dev['pilot'][k][m])-int(dev['base'][k][m]) for k in keys]) for m in ['task_pass','correct_lenient','completed','strict','strict_robust','joint','joint_robust']}
     both=sorted(set(astra['base'])&set(astra['pilot']))
     for group,cats in [('trained',['lowercase_thinking','multiple_word_suppression']),('related',['uppercase_thinking','alternating_case','word_suppression']),('clean_heldout_style',['meow_between_words','end_of_sentence','repeat_sentences']),('all_rule_graded',None)]:
         keys=[k for k in both if astra['base'][k]['strict'] is not None and (cats is None or astra['base'][k]['constraint'] in cats)]
@@ -104,6 +112,8 @@ def main(a):
         steps=[r for r in steps if r['step']<=last]+readj(out/'steps_resume.jsonl')
         result['restart']=restart
     result['training']=dict(steps=len(steps),rollouts=len(train),analysis_samples_excluded=sum(x['grade'].get('has_generated_analysis',False) for x in train),by_component={c:dict(n=len(rr:=[r for r in train if r['component']==c]),reward=mean([r['grade']['reward'] for r in rr]),strict=mean([r['grade']['strict'] for r in rr])) for c in ['ordinary','procedural','agent']})
+    tt={r['id']:r for r in readj(out/'train.jsonl')}
+    result['training']['correct_answers_rejected_by_parser']=sum(independent_output(tt[r['task_id']],r)['format_only_failure'] for r in train)
     result['limitations']=['one seed and one sample per evaluation task','ignore_question ungraded; no LLM judge has been run','Primary Astra CoT evaluation uses 25000-token cap; initial base-only 4096-token diagnostic retained separately','raw strict/partial differences do not adjust for length','held-out agent development tasks share repair families with training','TikTok smoke evaluated separately; no equivalence claim from a few episodes']
     json.dump(result,open(out/'summary.json','w'),indent=2)
     with open(out/'audit_samples_seed271027.jsonl','w') as f:
