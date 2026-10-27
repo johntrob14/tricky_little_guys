@@ -1,16 +1,17 @@
 {
-  "phase": "positive-control preparation",
+  "phase": "blinded pass0",
   "active": [
-    "r2_redact_base01",
-    "r2_redact_grpo01",
-    "r2_check_mt2e"
+    "r2_p0_s00",
+    "r2_p0_s01",
+    "r2_p0_s02"
   ],
   "pending": [
-    "finish independent control checks and fill remaining quotas",
-    "freeze and validate blinded inputs",
-    "two independent coding passes",
-    "paired and question-level analyses",
-    "commit/push results"
+    "complete pass0 shards 00-32",
+    "complete independent pass1 shards 00-32",
+    "full validate_round2.py",
+    "analyze_round2.py and narrative findings",
+    "update hypotheses and commit/push own artifacts",
+    "stop at Round 3 checkpoint"
   ],
   "approved_prompts": "round2/*_prompt.md; exact text approved in chat",
   "source_core_initially_eligible": 622,
@@ -20,12 +21,24 @@
   "external_paid_judging": false,
   "checks": {
     "manytypes2e-s170_00_checks": {
-      "accepted": 4,
-      "checked": 9
+      "accepted": 6,
+      "checked": 15
+    },
+    "base_01_checks": {
+      "accepted": 2,
+      "checked": 4
+    },
+    "manytypes2e-s170_01_checks": {
+      "accepted": 2,
+      "checked": 10
     },
     "grpo3-s100_00_checks": {
       "accepted": 2,
       "checked": 18
+    },
+    "grpo3-s100_01_checks": {
+      "accepted": 10,
+      "checked": 19
     },
     "mt1b-s150_00_checks": {
       "accepted": 18,
@@ -38,6 +51,18 @@
   },
   "quota_target_per_model": 10,
   "quotas_ready": [
-    "mt1b-s150"
-  ]
+    "base",
+    "grpo3-s100",
+    "mt1b-s150",
+    "manytypes2e-s170"
+  ],
+  "remaining_quota": {},
+  "setup_commit_pushed": "726eb664",
+  "next_pass0_shard": 3,
+  "next_pass1_shard": 0,
+  "pass0_total_shards": 33,
+  "pass1_total_shards": 33,
+  "rows_per_pass": 660,
+  "reader_template": "Exact approved round2/reader_prompt.md; fresh fork_turns=none. Read assigned blinded shard only, no key/manifests/Round 1/other outputs. Save each annotation immediately and current blinded ID before display. All distinct question/cot/reference text read in bounded chunks; exact reference reuse and lossless exact-repeat display only after verification. validate_annotation(annotation, assigned_item) may be imported, but no validator main. No new sampling/APIs/git. Stops: record ID, never retry/mask.",
+  "scheduling": "Finish pass0, then fresh reader instances for pass1. If an item stops in pass0, exclude it from later pass1 attempts and log both gaps. Original assignments and base inputs stay fixed; continuations read only other unattempted rows."
 }

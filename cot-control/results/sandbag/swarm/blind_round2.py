@@ -6,7 +6,7 @@ import random
 from collections import Counter
 
 from prepare_round1 import MODELS, category
-from prepare_round2 import OUT, SEED, eligible_rows, read, redacted, write_rows
+from prepare_round2 import OUT, ROOT, SEED, eligible_rows, read, redacted, write_rows
 
 
 def main() -> None:
@@ -18,6 +18,8 @@ def main() -> None:
     assert len(proposals) == len({row["item"] for row in proposals})
     assert len(checks) == len({row["item"] for row in checks})
     proposed = {row["item"]: row for row in proposals}
+    stopped = {row["item"] for row in read(ROOT / "unreadable.jsonl") if row["round"] == "2-redaction"}
+    checked = {row["item"] for row in checks}
     accepted = set()
     for check in checks:
         assert type(check["accept"]) is bool and proposed[check["item"]]["suitable"]
@@ -28,8 +30,11 @@ def main() -> None:
     for model in MODELS:
         candidates = [item for item in queue[model] if item in accepted and item in source]
         assert len(candidates) >= 10, (model, "accepted controls", len(candidates), "target", 10)
+        prefix = queue[model][:queue[model].index(candidates[9]) + 1]
+        unresolved = [item for item in prefix if item in source and (item not in proposed or proposed[item]["suitable"] and item not in checked)]
+        assert not unresolved, (model, "earlier candidates unresolved", unresolved)
         selected.extend(candidates[:10])
-        coverage[model] = {"candidate_pool": len(queue[model]), "attempted": sum(item in proposed for item in queue[model]), "checked": sum(check["item"] in queue[model] for check in checks), "accepted": len(candidates), "selected": 10}
+        coverage[model] = {"candidate_pool": len(queue[model]), "currently_eligible_pool": sum(item in source for item in queue[model]), "attempted": sum(item in proposed or item in stopped for item in queue[model]), "completed_redactions": sum(item in proposed for item in queue[model]), "stopped": sum(item in stopped for item in queue[model]), "checked": sum(item in checked for item in queue[model]), "accepted": len(candidates), "selected": 10}
     core = [row for row in source.values() if category(row) in ["unstated_flip", "cotctl_flip"] or row["kind"] == "resample_error"]
     assert 0 < len(core) <= 622
     rows = core + [source[item] for item in selected]
