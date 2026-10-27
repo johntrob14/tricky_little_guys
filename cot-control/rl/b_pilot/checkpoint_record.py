@@ -6,9 +6,9 @@ import tinker
 
 async def main(a):
     out=Path(a.out);load_dotenv(Path.home()/'.config/sauce/tinker.env')
-    ck=json.load(open(out/'checkpoints.json'));final=ck[-1]['sampler'];run=final.split('/')[2].split(':')[0]
+    ck=json.load(open(out/'checkpoints.json'));final=ck[-1]['sampler'];run=tinker.types.ParsedCheckpointTinkerPath.from_tinker_path(final).training_run_id
     client=tinker.ServiceClient().create_rest_client()
-    runs=sorted({c['sampler'].split('/')[2].split(':')[0] for c in ck})
+    runs=sorted({tinker.types.ParsedCheckpointTinkerPath.from_tinker_path(c['sampler']).training_run_id for c in ck})
     checkpoints={r:(await client.list_checkpoints_async(r)).model_dump(mode='json') for r in runs}
     record=dict(final_training_run_id=run,checkpoints_by_run=checkpoints,published=[])
     if a.publish:
