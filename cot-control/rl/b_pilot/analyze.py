@@ -1,5 +1,5 @@
 """Independent summary from raw text, reference graders, and the request ledger."""
-import argparse, collections, json, random, re, statistics, sys
+import argparse, collections, json, random, re, statistics, sys, zipfile
 from pathlib import Path
 import numpy as np
 
@@ -147,14 +147,15 @@ def main(a):
     tt={r['id']:r for r in readj(out/'train.jsonl')}
     result['training']['correct_answers_rejected_by_parser']=sum(independent_output(tt[r['task_id']],r)['format_only_failure'] for r in train)
     result['tiktok']={}
-    from inspect_ai.log import read_eval_log
     for label in ['base','pilot']:
         episodes=[]
         for path in sorted((out/'tiktok'/label).glob('*.eval')):
-            log=read_eval_log(path)
-            for s in log.samples or []:
-                sc=next(iter((s.scores or {}).values()),None)
-                episodes.append(dict(task=s.metadata.get('task',s.id),epoch=s.epoch,passed=bool(sc and sc.value=='C'),submitted=any(m.role=='tool' and m.function=='submit' and m.error is None for m in s.messages),turns=sum(m.role=='assistant' for m in s.messages),error=s.error.message if s.error else None,score_explanation=sc.explanation if sc else None,log=str(path)))
+            with zipfile.ZipFile(path) as archive:
+                if 'header.json' not in archive.namelist():raise RuntimeError(f'Incomplete TikTok log: {path}')
+                for name in archive.namelist():
+                    if not name.startswith('samples/') or not name.endswith('.json'):continue
+                    sample=json.loads(archive.read(name));sc=next(iter(sample.get('scores',{}).values()),None)
+                    episodes.append(dict(task=sample.get('metadata',{}).get('task',sample['id']),epoch=sample['epoch'],passed=bool(sc and sc['value']=='C'),submitted=any(m['role']=='tool' and m.get('function')=='submit' and m.get('error') is None for m in sample['messages']),turns=sum(m['role']=='assistant' for m in sample['messages']),error=sample.get('error'),score_explanation=sc.get('explanation') if sc else None,log=str(path)))
         result['tiktok'][label]=dict(n=len(episodes),passed=sum(r['passed'] for r in episodes),submitted=sum(r['submitted'] for r in episodes),errors=sum(r['error'] is not None for r in episodes),episodes=episodes)
     if (out/'agent_hidden_input_summary.json').exists():result['agent_hidden_input_audit']=json.load(open(out/'agent_hidden_input_summary.json'))
     result['limitations']=['one seed and one sample per evaluation task','ignore_question ungraded; no LLM judge has been run','Primary Astra CoT evaluation uses 25000-token cap; initial base-only 4096-token diagnostic retained separately','raw strict/partial differences do not adjust for length','held-out agent development tasks share repair families with training','TikTok smoke evaluated separately; no equivalence claim from a few episodes']
