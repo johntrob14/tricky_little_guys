@@ -302,3 +302,14 @@ eff2 -1.7; effm1 -2.0; effm2 -0.5 (strict, pts). Reading: output instruction RL 
   short CoTs that announce they will think about something else (meta allowed by the metric). So the 10-25 "spillover negative" conclusion, based on
   the training-time CoT monitor under the OUTPUT requirement, missed a modest CoT-instruction effect in spillh1; unlike outrl1 it is not
   concentrated in the trained styles. 27 per-type tests, n=60 items each: treat single-type effects as tentative.
+
+## 10-27 spillx1/spillx1b: output-only REINFORCE with 16 harder output behaviors (rl/spillx.py, outstyles.py; none a CoT-Control type or near-variant)
+spillh1 recipe (thinking on, 800-token CoT cap with forced close, unscoped requirement, medium effort) + 1-3 stacked behaviors, 60/40 explain_pool
+(attempt judge) / MMLU-Pro (correctness), reward R_task - (1 - mean partial) + 0.5 [all strict], adaptive behavior weights. spillx1 stopped at
+step 17 (John), resumed from the step-10 state (optimizer included, seed 1) as spillx1b, stopped at step 49 (plateau). $7.23 + $16.23 Tinker training.
+CoT-Control 540 (108x2 + 432x1) vs base, strict / partial: s10 +2.6 [+0.7, +4.6] / +4.1; s20 +4.6 [+2.5, +6.9] / +5.3; s30 +4.3 [+2.3, +6.4] / +6.8;
+s40 +4.2 [+2.0, +6.4] / +6.1. CoT-new (the trained behaviors asked of the CoT; spillx/cotnew.py, 16 traces per behavior): trained strict
+base 31.6 -> 34.4 / 35.9 / 32.0 / 31.2%; held-out partial .357 -> .435 / .435 / .430 / .382 (noise level). Reference CoT-trained organisms on the
+same 540: manytypes +72, grpo3 +62, st1-ignore2 +60, gsft1 +46, lang1-s30 +27, len2 +15, st1-third (non-Astra CoT type) +6.7.
+Reading: output-only RL with many behaviors gives the largest output-only transfer to CoT control seen (+4 strict, CI clear of 0), at about
+st1-third's level, but it plateaus by step 20 and does not transfer to the same behaviors asked of the CoT.
