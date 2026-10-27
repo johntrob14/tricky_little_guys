@@ -13,7 +13,11 @@ async def main(a):
     record=dict(final_training_run_id=run,checkpoints_by_run=checkpoints,published=[])
     if a.publish:
         await client.publish_checkpoint_from_tinker_path_async(final)
-        record['published'].append(dict(name='nocotrl-b-pilot-final',path=final,description='GPT-OSS-120B output-only RL with empty analysis; mixed 480-task pilot, including short executable tool episodes. See paired results; not a generalization claim.'))
+        record['checkpoints_by_run']={r:(await client.list_checkpoints_async(r)).model_dump(mode='json') for r in runs}
+        final_meta=next(c for c in record['checkpoints_by_run'][run]['checkpoints'] if c['tinker_path']==final)
+        assert final_meta['public'],final_meta
+        summary=json.load(open(out/'summary.json'))
+        record['published'].append(dict(name='nocotrl-b-pilot-final',path=final,expires_at=final_meta['expires_at'],headline=dict(held_out_phrasing_output_strict={l:summary['dev'][l]['constrained']['strict_robust'] for l in ['base','pilot']},held_out_phrasing_n=53,tiktok_pass={l:summary['tiktok'][l]['passed'] for l in ['base','pilot']},tiktok_n=4,clean_held_out_cot_strict={l:summary['astra_groups']['clean_heldout_style'][l]['strict'] for l in ['base','pilot']},clean_held_out_cot_n=36),description='GPT-OSS-120B output-only RL with empty analysis; mixed 480-task pilot, including short executable tool episodes. Output control improved; no convincing held-out CoT transfer.'))
     json.dump(record,open(out/'checkpoint_inventory.json','w'),indent=2);print(json.dumps(record,indent=2))
 
 if __name__=='__main__':
