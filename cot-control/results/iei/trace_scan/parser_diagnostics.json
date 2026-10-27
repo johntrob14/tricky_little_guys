@@ -1,0 +1,3574 @@
+{
+  "method": "Collapse all whitespace runs with ' '.join(response.split()); run the unchanged paper parser. Diagnostic only.",
+  "groups": {
+    "baseline": {
+      "base": {
+        "normalized_agreement": {
+          "hits": 5,
+          "total": 10,
+          "mean": 0.5
+        },
+        "repaired": {
+          "hits": 0,
+          "total": 5,
+          "mean": 0.0
+        },
+        "worsened": {
+          "hits": 0,
+          "total": 5,
+          "mean": 0.0
+        }
+      },
+      "mt2e-s170": {
+        "normalized_agreement": {
+          "hits": 5,
+          "total": 8,
+          "mean": 0.625
+        },
+        "repaired": {
+          "hits": 0,
+          "total": 3,
+          "mean": 0.0
+        },
+        "worsened": {
+          "hits": 0,
+          "total": 5,
+          "mean": 0.0
+        }
+      },
+      "mt1b-s150": {
+        "normalized_agreement": {
+          "hits": 9,
+          "total": 16,
+          "mean": 0.5625
+        },
+        "repaired": {
+          "hits": 0,
+          "total": 7,
+          "mean": 0.0
+        },
+        "worsened": {
+          "hits": 0,
+          "total": 9,
+          "mean": 0.0
+        }
+      }
+    },
+    "implicit": {
+      "base": {
+        "normalized_agreement": {
+          "hits": 9,
+          "total": 17,
+          "mean": 0.5294117647058824
+        },
+        "repaired": {
+          "hits": 0,
+          "total": 7,
+          "mean": 0.0
+        },
+        "worsened": {
+          "hits": 1,
+          "total": 10,
+          "mean": 0.1
+        }
+      },
+      "mt2e-s170": {
+        "normalized_agreement": {
+          "hits": 11,
+          "total": 16,
+          "mean": 0.6875
+        },
+        "repaired": {
+          "hits": 1,
+          "total": 5,
+          "mean": 0.2
+        },
+        "worsened": {
+          "hits": 1,
+          "total": 11,
+          "mean": 0.09090909090909091
+        }
+      },
+      "mt1b-s150": {
+        "normalized_agreement": {
+          "hits": 9,
+          "total": 24,
+          "mean": 0.375
+        },
+        "repaired": {
+          "hits": 0,
+          "total": 14,
+          "mean": 0.0
+        },
+        "worsened": {
+          "hits": 1,
+          "total": 10,
+          "mean": 0.1
+        }
+      }
+    },
+    "explicit": {
+      "base": {
+        "normalized_agreement": {
+          "hits": 42,
+          "total": 54,
+          "mean": 0.7777777777777778
+        },
+        "repaired": {
+          "hits": 2,
+          "total": 14,
+          "mean": 0.14285714285714285
+        },
+        "worsened": {
+          "hits": 0,
+          "total": 40,
+          "mean": 0.0
+        }
+      },
+      "mt2e-s170": {
+        "normalized_agreement": {
+          "hits": 40,
+          "total": 56,
+          "mean": 0.7142857142857143
+        },
+        "repaired": {
+          "hits": 2,
+          "total": 18,
+          "mean": 0.1111111111111111
+        },
+        "worsened": {
+          "hits": 0,
+          "total": 38,
+          "mean": 0.0
+        }
+      },
+      "mt1b-s150": {
+        "normalized_agreement": {
+          "hits": 32,
+          "total": 37,
+          "mean": 0.8648648648648649
+        },
+        "repaired": {
+          "hits": 0,
+          "total": 5,
+          "mean": 0.0
+        },
+        "worsened": {
+          "hits": 0,
+          "total": 32,
+          "mean": 0.0
+        }
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "t0000",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0001",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0002",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0003",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0004",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0005",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0006",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0007",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0008",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0009",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0010",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0011",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0012",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0013",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0014",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0015",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": null,
+      "final_recommends": "B",
+      "normalized_whitespace_choice": null
+    },
+    {
+      "id": "t0016",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0017",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0018",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0019",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0020",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": null,
+      "final_recommends": "none",
+      "normalized_whitespace_choice": null
+    },
+    {
+      "id": "t0021",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0022",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0023",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0024",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0025",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0026",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0027",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0028",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0029",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0030",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0031",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0032",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0033",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0034",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0035",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0036",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0037",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0038",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0039",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0040",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0041",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0042",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0043",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0044",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0045",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0046",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0047",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0048",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": null,
+      "final_recommends": "B",
+      "normalized_whitespace_choice": null
+    },
+    {
+      "id": "t0049",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0050",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0051",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0052",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0053",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0054",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0055",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0056",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0057",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0058",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0059",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0060",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0061",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0062",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0063",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0064",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0065",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0066",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0067",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0068",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0069",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0070",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0071",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0072",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0073",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0074",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0075",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0076",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0077",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0078",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0079",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0080",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0081",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0082",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0083",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0084",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0085",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0086",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0087",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0088",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0089",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0090",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0091",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0092",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0093",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "none",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0094",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0095",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0096",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0097",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0098",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0099",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0100",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0101",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "none",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0102",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0103",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0104",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0105",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0106",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0107",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0108",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0109",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0110",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0111",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0112",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0113",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0114",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0115",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0116",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0117",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0118",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0119",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0120",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0121",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0122",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0123",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0124",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0125",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0126",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0127",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0128",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0129",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0130",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0131",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0132",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0133",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0134",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0135",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0136",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0137",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0138",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0139",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0140",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0141",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0142",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0143",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0144",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0145",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0146",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0147",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0148",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0149",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0150",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0151",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0152",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0153",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0154",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0155",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0156",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0157",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0158",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0159",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0160",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0161",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0162",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0163",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0164",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0165",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0166",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0167",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0168",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0169",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0170",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0171",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0172",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0173",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0174",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0175",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0176",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0177",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0178",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0179",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0180",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0181",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0182",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0183",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0184",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0185",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0186",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0187",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0188",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0189",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0190",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0191",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0192",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0193",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0194",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0195",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0196",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0197",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0198",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0199",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0200",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0201",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0202",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0203",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0204",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0205",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0206",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0207",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0208",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0209",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0210",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "none",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0211",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "none",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0212",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0213",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0214",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0215",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0216",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0217",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0218",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0219",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0220",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0221",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0222",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0223",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0224",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0225",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0226",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0227",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0228",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0229",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0230",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0231",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0232",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0233",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0234",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0235",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0236",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0237",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": null,
+      "final_recommends": "A",
+      "normalized_whitespace_choice": null
+    },
+    {
+      "id": "t0238",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0239",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0240",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": null,
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0241",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0242",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0243",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0244",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0245",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0246",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0247",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0248",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0249",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0250",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0251",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0252",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0253",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0254",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0255",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0256",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0257",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0258",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0259",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0260",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0261",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0262",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0263",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0264",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0265",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0266",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0267",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0268",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0269",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0270",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0271",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0272",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0273",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0274",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0275",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0276",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0277",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0278",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0279",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0280",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0281",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0282",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0283",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0284",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0285",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0286",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0287",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0288",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0289",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0290",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0291",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0292",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0293",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0294",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0295",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0296",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0297",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0298",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0299",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0300",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0301",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0302",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0303",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0304",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0305",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0306",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0307",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0308",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0309",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0310",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0311",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0312",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0313",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0314",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0315",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0316",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0317",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0318",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0319",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0320",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0321",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0322",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": null,
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0323",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0324",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0325",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0326",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0327",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0328",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0329",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0330",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0331",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0332",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0333",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0334",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0335",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0336",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0337",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0338",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0339",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0340",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "none",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0341",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0342",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0343",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0344",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0345",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0346",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0347",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0348",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0349",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0350",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0351",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0352",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0353",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0354",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0355",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0356",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0357",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0358",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0359",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0360",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0361",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0362",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0363",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0364",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0365",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0366",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0367",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0368",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0369",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0370",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0371",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0372",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0373",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0374",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0375",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0376",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0377",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0378",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0379",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0380",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0381",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0382",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0383",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0384",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0385",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0386",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0387",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0388",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0389",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0390",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0391",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0392",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0393",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0394",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0395",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0396",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0397",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0398",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0399",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0400",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0401",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0402",
+      "model": "mt2e-s170",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0403",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0404",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0405",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0406",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0407",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0408",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0409",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0410",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0411",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0412",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0413",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0414",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0415",
+      "model": "base",
+      "arm": "baseline",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0416",
+      "model": "mt1b-s150",
+      "arm": "baseline",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0417",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0418",
+      "model": "mt1b-s150",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0419",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0420",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0421",
+      "model": "mt1b-s150",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "B",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0422",
+      "model": "base",
+      "arm": "implicit",
+      "parser_choice": "A",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0423",
+      "model": "mt2e-s170",
+      "arm": "implicit",
+      "parser_choice": "B",
+      "final_recommends": "conditional",
+      "normalized_whitespace_choice": "B"
+    },
+    {
+      "id": "t0424",
+      "model": "base",
+      "arm": "explicit",
+      "parser_choice": "A",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "A"
+    },
+    {
+      "id": "t0425",
+      "model": "mt2e-s170",
+      "arm": "explicit",
+      "parser_choice": "B",
+      "final_recommends": "A",
+      "normalized_whitespace_choice": "B"
+    }
+  ]
+}

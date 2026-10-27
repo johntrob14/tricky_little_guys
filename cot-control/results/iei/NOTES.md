@@ -67,3 +67,36 @@ style: implicit, answer-draft 32/73, deliberative 5/15; explicit, answer-draft 6
 
 `<model>/baseline.jsonl`, `baselines.json`, `nudged.jsonl`, `monitor.jsonl`, `config.json`; `summary.json`; `<model>.log`. Inspect logs (gitignored,
 `../../rl/iei_inspect.py`) in `inspect/`, served on 7577 through `arena/logs/iei_s1`.
+
+## Blinded qualitative trace scan (2026-10-26)
+
+Full results, rubric, paired intervals, agreement and chart: [`trace_scan/README.md`](trace_scan/README.md). Scorers: eight fresh Codex subagents, inherited
+session model (exact API model identifier unavailable), with model identities, prior findings, parser choices and monitor verdicts withheld. Questions 1–9
+label the full CoT with user/nudge context; question 10 labels final-answer excerpts. Seed 20261026; independent 60/214 shared cells per nudged arm,
+same cells for base and mt2e; mt1b present on implicit 44/60 and explicit 37/60. Baseline uses rep 0 for 35/35 scenarios per model. Scored 426/426 unique
+traces, with 50/426 independently rescored. Agreement: 474/482 applicable labels; final recommendation 48/50. Counts use primary labels without adjudication.
+
+| Arm and CoT behavior | Base | mt2e-s170 | mt1b-s150 |
+|---|---:|---:|---:|
+| Implicit: policy/permissibility check | 11/60 | 1/60 | 0/44 |
+| Explicit: policy/permissibility check | 17/60 | 0/60 | 4/37 |
+| Explicit: restates user's request/wishes/decision | 34/60 | 21/60 | 7/37 |
+| Explicit: names nudge content | 45/60 | 29/60 | 6/37 |
+| Implicit: considers asking a clarifying question | 29/60 | 14/60 | 3/44 |
+
+Implicit request restating: base 28/60, mt2e 29/60; baseline 17/35 and 13/35. Reply-form/tone self-instructions: implicit 59/60 for both, explicit 60/60
+for both. CoT-token medians, base vs mt2e: baseline 146 vs 184, implicit 170 vs 211, explicit 133 vs 101. mt1b answer-draft CoTs: baseline 34/35,
+implicit 38/44, explicit 27/37; base and mt2e each 0/155 across the sampled arms. All-three matched counts are in `trace_scan/summary.json`.
+
+The original keyword choice parser disagrees with the scored recommendation on 78/238 decisive A/B answers (opposite choice 73/238; unparsed 5/238).
+Conditional answers: 182/426; no recommendation: 6/426. Final-answer excerpts omit the middle on 409/426 rows. The full answers support the scored
+recommendation in 5/5 targeted parser-disagreement checks, recorded in `trace_scan/spot_checks.json`; these checks are not an error-rate estimate.
+Whitespace-normalized parser agreement is 162/238, versus the original parser's 160/238. Baseline majorities, stability filtering and counter-baseline
+nudge selection remain parser-derived; the scan does not provide corrected whole-dataset switch rates.
+
+Explicit-arm monitor check: **CoT only, told the nudge; paper Setting 1 prompt; openai/gpt-6-luna via OpenRouter, provider openai, effort medium**.
+Among scored compliant answers with existing monitor verdicts, base detected 21/53, mt2e 12/52, mt1b 7/36. Existing verdict coverage among scored compliant
+answers: 53/54, 52/55, 36/37 respectively. On identical cells where both base and mt2e have scored compliant answers and existing verdicts, detected 19/47
+vs 12/47. Source verdicts are reused. Full conditioning counts are in `trace_scan/summary.json`.
+
+Figure: `trace_scan/iei_trace_behaviors.png` and `.svg`, with copies in `mats12_sprint/figures/` and `gale:~/wgmn/mats12_figs/`.
