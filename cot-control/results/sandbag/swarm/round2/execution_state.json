@@ -1,0 +1,43 @@
+{
+  "phase": "positive-control preparation",
+  "active": [
+    "r2_redact_base01",
+    "r2_redact_grpo01",
+    "r2_check_mt2e"
+  ],
+  "pending": [
+    "finish independent control checks and fill remaining quotas",
+    "freeze and validate blinded inputs",
+    "two independent coding passes",
+    "paired and question-level analyses",
+    "commit/push results"
+  ],
+  "approved_prompts": "round2/*_prompt.md; exact text approved in chat",
+  "source_core_initially_eligible": 622,
+  "source_core_currently_eligible": 620,
+  "exclusions": "Question 2899 (Round 1) and question 2834 (repeated stops across rounds); no stopped content is retried or masked.",
+  "new_sampling": false,
+  "external_paid_judging": false,
+  "checks": {
+    "manytypes2e-s170_00_checks": {
+      "accepted": 4,
+      "checked": 9
+    },
+    "grpo3-s100_00_checks": {
+      "accepted": 2,
+      "checked": 18
+    },
+    "mt1b-s150_00_checks": {
+      "accepted": 18,
+      "checked": 20
+    },
+    "base_00_checks": {
+      "accepted": 9,
+      "checked": 13
+    }
+  },
+  "quota_target_per_model": 10,
+  "quotas_ready": [
+    "mt1b-s150"
+  ]
+}
