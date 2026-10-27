@@ -377,7 +377,8 @@ GROUPS = [   # (label, keys pooled)
 
 def fig_summary(data: dict, tags: list[str], names: list[str], out) -> None:
     """Three questions x four prompt groups, lines pooled within a group; bars per model with 95% intervals."""
-    fig, axes = plt.subplots(1, 3, figsize=(19, 5.4))
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    axes = axes.ravel()
     k = len(tags)
     w = 0.8 / k
     for j, (t, name) in enumerate(zip(tags, names)):
@@ -395,12 +396,14 @@ def fig_summary(data: dict, tags: list[str], names: list[str], out) -> None:
             cells = {q: {d: [good_side(r) for r in est if r["question"] == q and r["condition"] == d] for d in DIRECTIONS} for q in sorted({r["question"] for r in est})}
             b, blo, bhi = bias_ci({q: c for q, c in cells.items() if all(c[d] for d in DIRECTIONS)})
             silent = wilson(sum(r["cot_category"] == "NO_MENTION" for r in rows), len(rows))
-            for ax, (v, vlo, vhi) in zip(axes, ((adj, lo + adj - infl.mean(), hi + adj - infl.mean()), (b, blo, bhi), silent)):
+            wl = np.array([words(r) for r in rows])
+            wm, wse = wl.mean(), 1.96 * wl.std(ddof=1) / np.sqrt(len(wl))
+            for ax, (v, vlo, vhi) in zip(axes, ((adj, lo + adj - infl.mean(), hi + adj - infl.mean()), (b, blo, bhi), silent, (wm, wm - wse, wm + wse))):
                 ax.bar(x, v, width=w * 0.92, color=COLORS[j], label=name if g == 0 else None)
                 ax.errorbar(x, v, yerr=[[v - vlo], [vhi - v]], color=C["ink2"], lw=1, capsize=3)
-                ax.text(x, max(v, vhi) + 0.006, f"{v:.2f}", ha="center", va="bottom", fontsize=8 if k <= 2 else 6, color=C["ink2"])
-    for ax, title, ylabel in zip(axes, ("Does the reasoning admit the bet influenced it?", "Is the final answer biased?", "Does the reasoning avoid the bet entirely?"),
-                                 ("share of traces judged INFLUENCED, length-adjusted", "bias = P(good side | below) + P(good side | above) - 1", "share of traces judged NO_MENTION")):
+                ax.text(x, max(v, vhi) + (5 if ax is axes[3] else 0.006), f"{v:.0f}" if ax is axes[3] else f"{v:.2f}", ha="center", va="bottom", fontsize=8 if k <= 2 else 6, color=C["ink2"])
+    for ax, title, ylabel in zip(axes, ("Does the reasoning admit the bet influenced it?", "Is the final answer biased?", "Does the reasoning avoid the bet entirely?", "How long is the reasoning?"),
+                                 ("share of traces judged INFLUENCED, length-adjusted", "bias = P(good side | below) + P(good side | above) - 1", "share of traces judged NO_MENTION", "mean reasoning length, words (95% normal CI)")):
         ax.set_title(title, loc="left", fontsize=10)
         ax.set_ylabel(ylabel, fontsize=8.5)
         ax.set_xticks(range(len(GROUPS)), [g[0] for g in GROUPS], fontsize=7.2)
