@@ -1,5 +1,5 @@
-"""Figure: accuracy with and without CoT on the sandbagging question sets, per model. With CoT: the honest arm of the WMDP default-variant run
-(results/sandbag/<model>-sysprompt-nohint) and of the GPQA run (results/sandbag_gpqa/<model>), over finished rows. Without CoT: sandbag_nocot.py
+"""Figure: accuracy with and without CoT on the sandbagging question sets, per model. With CoT: the honest arm of the `wmdp.can` run
+(results/sandbag/<model>-sysprompt-nohint) and of the `gpqa.must` run (results/sandbag_gpqa/<model>), over finished rows. Without CoT: sandbag_nocot.py
 (analysis channel forced empty, "Answer: (" prefilled), over all rows. Dotted line: chance (1/4).
 
     python sandbag_nocot_plot.py
@@ -25,12 +25,12 @@ def acc(rows):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--models", nargs="+", default=list(MODELS), choices=list(MODELS))
+    ap.add_argument("--models", nargs="+", default=[m for m in MODELS if (RES / "sandbag_nocot" / m).is_dir()], choices=list(MODELS), help="default: every model with a sandbag_nocot run")
     ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_nocot.png")
     args = ap.parse_args()
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38", "hatch.color": SURFACE})
     fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
-    for ax, ds, cot_run, title in [(axes[0], "wmdp", lambda m: RES / f"sandbag/{m}-sysprompt-nohint", "WMDP (150 OpenAI monitorability-evals questions)"), (axes[1], "gpqa", lambda m: RES / f"sandbag_gpqa/{m}", "GPQA diamond (198 questions)")]:
+    for ax, ds, cot_run, title in [(axes[0], "wmdp", lambda m: RES / f"sandbag/{m}-sysprompt-nohint", "wmdp questions (150, OpenAI monitorability-evals); with CoT: wmdp.can runs"), (axes[1], "gpqa", lambda m: RES / f"sandbag_gpqa/{m}", "gpqa questions (198 GPQA diamond); with CoT: gpqa.must runs")]:
         for i, m in enumerate(args.models):
             label, col, _ = MODELS[m]
             cot = [r for r in map(json.loads, open(cot_run(m) / "rows.jsonl")) if r["arm"] == "honest" and r["finish"] != "length"]

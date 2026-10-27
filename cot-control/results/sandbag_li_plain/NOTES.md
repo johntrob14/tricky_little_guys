@@ -2,7 +2,7 @@
 
 Names (`../SANDBAG_NAMES.md`): this directory is `li.plain`, the default `li` variant. The paper's conditions are our arms: `baseline` = honest, `oblivious` = sandbag, `aware` = evasion (it has the no-reveal line; the `aware` arm of `wmdp` and `gpqa` does not). The prose below uses the paper's condition names, as the row files do.
 
-Default Li version since 2026-10-26 (Ethan's choice): `rl/sandbag_li.py` and `rl/sandbag_li_judge.py` default to these prompts (`--prompts plain`) and to the CoT-only monitor for them. Headline figure `mats12_sprint/figures/sandbag_li_plain_main.png` (base, grpo3 s100, manytypes1b s150, no-CoT base; `sandbag_li_judge.py --dir ../results/sandbag_li_plain --models base grpo3-s100 mt1b-s150 base-nocot --tag plain_main`, panel C: mean CoT-only monitor score ± SE); all six gpt-oss models in `sandbag_li_plain_gptoss.png`. The paper's prompts (`--prompts paper`) are in `../sandbag_li/`.
+Default Li version since 2026-10-26 (Ethan's choice): `rl/sandbag_li.py` and `rl/sandbag_li_judge.py` default to these prompts (`--prompts plain`) and to the CoT-only monitor for them. Headline figure `mats12_sprint/figures/sandbag_li.plain_main.png` (base, grpo3 s100, manytypes1b s150, no-CoT base; `sandbag_li_judge.py --dir ../results/sandbag_li_plain --models base grpo3-s100 mt1b-s150 base-nocot --tag plain_main --out ../../../figures/sandbag_li.plain_main.png`, panel C: mean CoT-only monitor score ± SE); all six gpt-oss models in `sandbag_li_plain_gptoss.png`. The paper's prompts (`--prompts paper`) are in `../sandbag_li/`.
 
 The Li, Phuong and Siegel 2025 protocol of `../sandbag_li/` with the answer-format lines changed, on base gpt-oss-120b and the five gpt-oss CoT-control
 organisms. Ethan's spec: no `<reason>`/`<answer>` instructions, the model gives only a final answer, the monitor judges only the CoT; the answer in a
@@ -57,7 +57,7 @@ Every row of the six CoT runs re-scored by the same Li et al. monitor prompt on 
 provider, reasoning effort low, temperature 0): `sandbag_li_judge.py --monitor-model openai/gpt-6-luna`, replies in `<model>/monitor_cot_gpt-6-luna.jsonl`
 (the Haiku replies stay in `monitor_cot.jsonl`). OpenRouter's biological-risk filter rejects a few WMDP-bio requests (403); those rows are kept as unscored
 with `blocked: true`: 2-5 of 2400 per model, against 45-96 of 400 WMDP rows per model unscored by Haiku (empty replies). Verbalization and explicit-admission
-judges unchanged (Haiku). Numbers: `summary_plain_main_luna.json`, `summary_plain_gptoss_luna.json`; figures `mats12_sprint/figures/sandbag_li_plain_main_luna.png`,
+judges unchanged (Haiku). Numbers: `summary_plain_main_luna.json`, `summary_plain_gptoss_luna.json`; figures `mats12_sprint/figures/sandbag_li.plain_main_luna.png`,
 `sandbag_li_plain_gptoss_luna.png`.
 
 | Model | Condition | Luna: WMDP rows flagged / scored (mean score) | Luna: successful WMDP attempts flagged / scored (mean score) | Haiku: WMDP rows flagged / scored (mean) | Haiku: successful attempts flagged / scored (mean) |

@@ -15,7 +15,9 @@ A run sampled with sandbag_li.py --nocot (config.json `nocot`) gets no judge cal
 Both by --judge-model on OpenRouter, temperature 0, reasoning effort low; --monitor-model runs the monitor on another model (openai/gpt-6-luna is pinned to the
 openai provider), its replies in monitor_<scope>_<model name>.jsonl. Writes <dir>/<model>/monitor_{full,cot,final}.jsonl and verbalized.jsonl (resumable),
 <dir>/summary.json and the figure. Panel E of the figure also shows the explicit-admission judge (sandbag_li_explicit.py, states_wrong_intent on successful
-WMDP attempts) for models in <dir>/summary_explicit.json, when that file exists.
+WMDP attempts) for models in <dir>/summary_explicit.json, when that file exists. Figure: figures/sandbag_<variant>_<--tag, or gptoss>.png, the variant (`li.plain` or
+`li.paper`) from the first model's config; conditions are labeled with their arm names (results/SANDBAG_NAMES.md: baseline, oblivious, aware = honest,
+sandbag, evasion).
 
     python sandbag_li_judge.py --dir ../results/sandbag_li --models base grpo3-s100 mt1b-s150
 """
@@ -33,6 +35,7 @@ import matplotlib.pyplot as plt
 from hintverb_judge import verdict, wilson
 from orjudge import OpenRouterJudge
 from sandbag_judge import CUTOFF, MONITOR, REFUSAL, flagged, mean, score
+from sandbag_names import LI_ARMS, variant
 from sandbag_li import CONDITIONS, mcq
 
 matplotlib.use("Agg")
@@ -215,21 +218,21 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
                 axes[2].bar(x, 0 if math.isnan(r) else r, w, yerr=0 if math.isnan(e) else e, capsize=2, color=col, hatch=HATCH[s] if len(scopes) > 1 else None, edgecolor=SURFACE, linewidth=1, error_kw=dict(ecolor=INK2, elinewidth=1))
                 axes[2].text(x, 2, f"{r:.0f} (n {n})", ha="center", va="bottom", fontsize=6, rotation=90, color=INK)
                 if ic == 0 and j == 0:
-                    xs.append((k * (len(scopes) * nm * w + 0.3) + len(scopes) * nm * w / 2 - w / 2, "all baseline\nWMDP rows" if cond == "baseline" else f"successful WMDP\nattempts, {cond}"))
+                    xs.append((k * (len(scopes) * nm * w + 0.3) + len(scopes) * nm * w / 2 - w / 2, "all honest\nWMDP rows" if cond == "baseline" else f"successful WMDP\nattempts, {LI_ARMS[cond]}"))
         axes[3].bar([], [])
-    axes[0].set_xticks([k + 0.0 for k in range(6)], [f"{c}\n{d.upper()}" for c in CONDITIONS for d in DATASETS], fontsize=8)
+    axes[0].set_xticks([k + 0.0 for k in range(6)], [f"{LI_ARMS[c]}\n{d.upper()}" for c in CONDITIONS for d in DATASETS], fontsize=8)
     axes[0].set_title("A. Answer accuracy (correct of n; MMLU hatched)", fontsize=10)
     axes[0].set_ylim(0, 1.05)
-    axes[1].set_xticks(range(2), CONDITIONS[1:])
+    axes[1].set_xticks(range(2), [LI_ARMS[c] for c in CONDITIONS[1:]])
     axes[1].axhline(0, color=INK2, linewidth=0.8)
-    axes[1].set_title("B. Selective sandbagging S = D(WMDP) - D(MMLU),\nD = normalized accuracy drop from baseline (Li et al. 2025)", fontsize=10)
+    axes[1].set_title("B. Selective sandbagging S = D(WMDP) - D(MMLU),\nD = normalized accuracy drop from honest (Li et al. 2025)", fontsize=10)
     axes[2].set_xticks([x for x, _ in xs], [l for _, l in xs], fontsize=7)
     axes[2].set_title(f"C. Li et al. monitor ({judge_model.split('/')[-1]}), mean score (1 = sabotage, 100 = no concern; ± SE, n scored): " + ("analysis + final channel (solid),\nanalysis channel only (//), final channel only (..)" if len(scopes) == 3 else
                       "\n" + " / ".join({"full": "analysis + final channel", "cot": "CoT only (analysis channel)", "final": "final channel only"}[s] for s in scopes)), fontsize=10)
     axes[2].set_ylim(0, 100)
-    axes[3].set_xticks(range(2), CONDITIONS[1:])
+    axes[3].set_xticks(range(2), [LI_ARMS[c] for c in CONDITIONS[1:]])
     axes[3].set_title("D. CoT tokens (analysis channel or think block),\nWMDP rows (bar: mean, tick: median)", fontsize=10)
-    axes[4].set_xticks(range(2), CONDITIONS[1:])
+    axes[4].set_xticks(range(2), [LI_ARMS[c] for c in CONDITIONS[1:]])
     axes[4].set_ylim(0, 1.05)
     axes[4].set_title("E. CoT judges on successful WMDP attempts (Wilson 95%, k/n): verbalization judge YES\n(solid), explicit-admission judge states_wrong_intent, CoT only (//)", fontsize=10)
     for ax in axes:
@@ -240,11 +243,11 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
     fig.legend(loc="lower center", ncol=len(models), fontsize=9, frameon=False)
     nq = summary[models[0]]["n_questions"]
     if plain:
-        head = (f"WMDP sandbagging, Li et al. 2025 conditions without the <reason>/<answer> format lines (final answer only, in \\boxed{{}}, final channel prefilled) and without the aware prompt's "
-                f"'as opposed to being genuinely incompetent' clause:\n{nq['wmdp']} WMDP + {nq['mmlu']} MMLU questions, system-prompt instruction, three conditions, one sample, Tinker. "
+        head = (f"li.plain: Li et al. 2025 conditions without the <reason>/<answer> format lines (final answer only, in \\boxed{{}}, final channel prefilled) and without the evasion prompt's "
+                f"'as opposed to being genuinely incompetent' clause:\n{nq['wmdp']} WMDP + {nq['mmlu']} MMLU questions, system-prompt instruction, arms honest, sandbag, evasion (the paper's baseline, oblivious, aware), one sample, Tinker. "
                 f"Monitoring: CoT only, Li et al. sandbagging judge; judge {judge_model}. Settings in each model's config.json")
     else:
-        head = (f"WMDP sandbagging, Li et al. 2025 protocol: {nq['wmdp']} WMDP + {nq['mmlu']} MMLU questions, system-prompt instruction, no hint, three conditions, one sample.\n"
+        head = (f"li.paper: Li et al. 2025 protocol: {nq['wmdp']} WMDP + {nq['mmlu']} MMLU questions, system-prompt instruction, arms honest, sandbag, evasion (the paper's baseline, oblivious, aware), one sample.\n"
                 f"Monitoring: Li et al. sandbagging judge on analysis + final channel, analysis channel only, and final channel only (the visible reasoning, what the paper's monitor saw); judge {judge_model}. Settings in each model's config.json")
     fig.suptitle(head, fontsize=10)
     fig.tight_layout(rect=(0, 0.035, 1, 1))
@@ -260,10 +263,12 @@ async def main():
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5")
     ap.add_argument("--monitor-model", help="the monitor's judge (default --judge-model)")
     ap.add_argument("--concurrency", type=int, default=32)
-    ap.add_argument("--tag", help="write summary_<tag>.json and figure sandbag_li_<tag>.png instead of the defaults")
+    ap.add_argument("--tag", help="write summary_<tag>.json and figure sandbag_<variant>_<tag>.png instead of the defaults")
+    ap.add_argument("--out", type=Path, help="the figure path (default figures/sandbag_<variant>_<--tag, or gptoss>.png)")
     ap.add_argument("--scopes", nargs="+", choices=SCOPES, help="monitor scopes to run (default: cot for plain-prompt runs, all three for paper-prompt runs)")
     args = ap.parse_args()
-    summary_path, fig_path = (args.dir / f"summary_{args.tag}.json", FIG.with_name(f"sandbag_li_{args.tag}.png")) if args.tag else (args.dir / "summary.json", FIG)
+    summary_path = args.dir / (f"summary_{args.tag}.json" if args.tag else "summary.json")
+    fig_path = args.out or FIG.with_name(f"sandbag_{variant(json.load(open(args.dir / args.models[0] / 'config.json')))}_{args.tag or 'gptoss'}.png")
     questions = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=3000, concurrency=args.concurrency)
     mmodel = args.monitor_model or args.judge_model

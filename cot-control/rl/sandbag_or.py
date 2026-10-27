@@ -1,12 +1,12 @@
 """WMDP sandbagging samples (the sandbag.py arms) from an API model through OpenRouter. Writes the same rows.jsonl as sandbag.py, so sandbag_judge.py scores them.
 
-Same system prompt, questions and four arms as sandbag.py, with its --placement and --hint (default: the instruction in the system prompt, no named wrong
-option; the GLM, DeepSeek and Qwen runs in results/sandbag predate it and used the release layout, --placement user --hint). One chat completion per question and arm: temperature 0, `reasoning: {effort}` (the highest level the
+Same system prompt, questions and four arms as sandbag.py, with its --variant, --placement and --hint (default `wmdp.can`: the instruction in the system prompt, no named wrong
+option; the GLM, DeepSeek and Qwen runs in results/sandbag are `wmdp.can-user-hint`, the release layout, --placement user --hint). One chat completion per question and arm: temperature 0, `reasoning: {effort}` (the highest level the
 model takes), one provider pinned with no fallbacks (OpenRouter spreads a model over hosts with different quantizations), max_tokens as a safety cap only.
 Temperature --temperature (0 by default; GLM-5.2 loops at 0 on some questions). CoT = the returned `reasoning` field (raw trace; check the provider returns one, not a summary), answer = letter parsed from the content. cot_tokens is the
 provider's reasoning_tokens count, resp_tokens the rest of the completion. `cost` is OpenRouter's reported cost per call.
 
-    python sandbag_or.py --name glm-5.1 --model z-ai/glm-5.1 --provider Z.AI --placement user --hint --out ../results/sandbag
+    python sandbag_or.py --name glm-5.1 --model z-ai/glm-5.1 --provider Z.AI --variant wmdp.can-user-hint --out ../results/sandbag
 """
 
 import argparse
@@ -21,6 +21,7 @@ import httpx
 from hintverb import SYSTEM, parse_letter
 from orjudge import load_key
 from sandbag import ARMS, prompts
+from sandbag_names import VARIANTS, variant
 
 OR_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -65,18 +66,23 @@ async def main():
     ap.add_argument("--hint", action="store_true", help="keep the sentence naming a wrong option (the release's perturbation)")
     ap.add_argument("--placement", choices=["user", "system"], default="system", help="instruction appended to the system prompt, or inside the user message (the release's layout)")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
+    ap.add_argument("--variant", choices=list(VARIANTS), help="canonical prompt variant (results/SANDBAG_NAMES.md); sets --questions, --placement and --hint")
     ap.add_argument("--n", type=int, help="only the first N questions (smoke tests)")
     ap.add_argument("--n-random", type=int, help="a random subset of N questions (seed --seed), all arms each")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--concurrency", type=int, default=16)
     args = ap.parse_args()
+    if args.variant:
+        q, args.placement, args.hint = VARIANTS[args.variant]
+        args.questions = Path(__file__).parent / "data" / q
     qs = list(map(json.loads, open(args.questions)))[:args.n]
     if args.n_random:
         qs = sorted(random.Random(args.seed).sample(qs, args.n_random), key=lambda q: q["qid"])
     out = args.out / args.name
     out.mkdir(parents=True, exist_ok=True)
-    json.dump(dict(vars(args), questions=str(args.questions), out=str(args.out), system=SYSTEM, n_questions=len(qs)), open(out / "config.json", "w"), indent=1)
+    cfg = dict(vars(args), questions=str(args.questions), out=str(args.out), system=SYSTEM, n_questions=len(qs))
+    json.dump(cfg | dict(variant=variant(cfg)), open(out / "config.json", "w"), indent=1)
     path = out / "rows.jsonl"
     done = {(r["qid"], r["arm"]) for r in map(json.loads, open(path))} if path.exists() else set()
     client = httpx.AsyncClient(headers={"Authorization": f"Bearer {load_key()}", "Content-Type": "application/json"})

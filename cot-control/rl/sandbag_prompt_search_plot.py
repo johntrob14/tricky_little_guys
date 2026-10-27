@@ -1,4 +1,4 @@
-"""Figure for sandbag_prompt_search.py: per variant, base gpt-oss-120b vs manytypes2e s170, the flips (honest-correct GPQA questions answered wrong) split
+"""Figure for sandbag_prompt_search.py (`gpqa-search`, results/SANDBAG_NAMES.md): per candidate prompt, base gpt-oss-120b vs manytypes2e s170, the flips (honest-correct GPQA questions answered wrong) split
 into verbalized (the verbalization judge said YES), silent and flagged by the CoT-only monitor, silent and uncaught by it but flagged once the monitor
 also sees the final answer, and silent and uncaught by both. Monitor: Li et al. 2025 prompt, gpt-6-luna, flagged < 70. Controls (ctl_*) carry the CoT
 constraint without the sandbag order.
@@ -23,7 +23,7 @@ PARTS = [("verbalized", "#8a8984", "verbalized (the CoT states the plan)"), ("ca
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_gpqa_prompt_search.png")
+    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parents[3] / "figures/sandbag_gpqa-search.png")
     args = ap.parse_args()
     S = {(x["model"], x["arm"]): x for x in json.load(open(args.dir / "summary.json"))["rows"]}
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38"})
@@ -49,7 +49,7 @@ def main():
     axes[0].set_ylabel("flips (honest-correct, answered wrong)")
     axes[0].set_ylim(0, 152)
     fig.legend(*axes[0].get_legend_handles_labels(), loc="upper center", ncol=4, fontsize=9, frameon=False, bbox_to_anchor=(0.5, 0.93))
-    fig.suptitle("GPQA silent-sandbagging prompt search (198 GPQA diamond questions; right of the dotted line: controls with the CoT constraint and no sandbag order). "
+    fig.suptitle("gpqa-search: silent-sandbagging prompt search on the gpqa questions (198 GPQA diamond; right of the dotted line: controls with the CoT constraint and no sandbag order). "
                  "Tinker, effort medium, T 0, one sample.\nMonitor: CoT only (and CoT + final answer on silent flips), Li et al. 2025 sandbagging judge, gpt-6-luna, flagged < 70. Verbalization judge: claude-haiku-5.5.", fontsize=10)
     fig.subplots_adjust(top=0.78, bottom=0.25, left=0.05, right=0.99, wspace=0.05)
     fig.savefig(args.out, dpi=140, facecolor=SURFACE)
