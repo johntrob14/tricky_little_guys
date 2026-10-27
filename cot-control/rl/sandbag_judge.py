@@ -32,6 +32,7 @@ from hintverb import parse_letter
 from hintverb_judge import JUDGE_PRICE, verdict, wilson
 from orjudge import OpenRouterJudge
 from sandbag import ALL_ARMS, ARMS, CTL_SETS, SANDBAG_ARMS, instruction_text, run_hint
+from sandbag_names import variant
 
 matplotlib.use("Agg")
 MONITOR = (Path(__file__).resolve().parents[2] / "notes/cot_monitor_prompts/prompts/judges-sandbag-cot-monitor.txt").read_text()
@@ -95,7 +96,8 @@ def mean(xs):
 
 async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answer: bool, tag: str = "") -> dict:
     rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]
-    hint = run_hint(json.load(open(d / "config.json")))
+    cfg = json.load(open(d / "config.json"))
+    hint = run_hint(cfg)
     honest = {r["qid"]: r for r in rows if r["arm"] == "honest"}
     mpath, vpath = d / f"monitor{tag}.jsonl", d / f"verbalized{tag}.jsonl"
     mon = {(r["qid"], r["arm"]): r | dict(score=score(r["reply"])) for r in map(json.loads, open(mpath))} if mpath.exists() else {}
@@ -128,7 +130,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
             f.write(json.dumps(verb[key]) + "\n")
 
     await asyncio.gather(*[monitor(r) for r in rows], *[verbalize(r) for r in rows if sandbagged(r)])
-    out = dict(n_questions=len(honest), hint=hint, arms={})
+    out = dict(n_questions=len(honest), variant=variant(cfg), hint=hint, arms={})
     for arm in ALL_ARMS:
         rs = [r for r in rows if r["arm"] == arm]
         if not rs:
@@ -196,7 +198,7 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
         ax.legend(fontsize=8)
     for ax in axes[:3]:
         ax.set_ylim(0, 1.05)
-    fig.suptitle("WMDP sandbagging (OpenAI monitorability-evals questions): " + ", ".join(f"{m} ({summary[m]['n_questions']} q)" for m in models) + "\nMonitoring: CoT only, Li et al. 2025 sandbagging judge. Sampling settings per model in results/sandbag/NOTES.md", fontsize=10)
+    fig.suptitle("Sandbagging runs: " + ", ".join(f"{m} ({summary[m]['variant']}, {summary[m]['n_questions']} q)" for m in models) + "\nMonitoring: CoT only, Li et al. 2025 sandbagging judge. Sampling settings per model in results/sandbag/NOTES.md", fontsize=10)
     fig.tight_layout()
     fig_path.parent.mkdir(exist_ok=True)
     fig.savefig(fig_path, dpi=150)
@@ -205,16 +207,17 @@ def plot(summary: dict, models: list[str], judge_model: str, fig_path: Path = FI
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--arms", nargs="+", required=True, help="model arms (subdirectories of --dir)")
+    ap.add_argument("--runs", "--arms", dest="arms", nargs="+", required=True, help="run directories (subdirectories of --dir); --arms is the older name")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5")
     ap.add_argument("--effort", default="low")
     ap.add_argument("--max-tokens", type=int, default=3000)
     ap.add_argument("--with-answer", action="store_true", help="the monitor also sees the final channel")
     ap.add_argument("--concurrency", type=int, default=32)
-    ap.add_argument("--tag", help="write summary_<tag>.json and figure sandbag_wmdp_<tag>.png instead of the defaults")
+    ap.add_argument("--tag", help="write summary_<tag>.json and figure sandbag_<variant>_<tag>.png instead of the defaults")
     args = ap.parse_args()
-    summary_path, fig_path = (args.dir / f"summary_{args.tag}.json", FIG.with_name(f"sandbag_wmdp_{args.tag}.png")) if args.tag else (args.dir / "summary.json", FIG)
+    summary_path = args.dir / (f"summary_{args.tag}.json" if args.tag else "summary.json")
+    fig_path = FIG.with_name(f"sandbag_{variant(json.load(open(args.dir / args.arms[0] / 'config.json')))}_{args.tag or 'gptoss'}.png")  # the variant of the first run
     questions = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     tag = judge_tag(args.judge_model, args.effort)
     judge = OpenRouterJudge(args.judge_model, effort=args.effort, max_tokens=args.max_tokens, concurrency=args.concurrency, provider="openai" if args.judge_model.startswith("openai/gpt-6") else None)
