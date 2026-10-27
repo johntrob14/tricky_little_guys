@@ -18,6 +18,8 @@ CELLS = [("Qwen3.8-27B", HS, "sgcmp-qwen-covert2"), ("Qwen3.8-27B", SD, "sgcmp-q
          ("gpt-oss manytypes1b-s150", HS, "mt1b-hs-pw"), ("gpt-oss manytypes1b-s150", SD, "mt1b-sd-pw"),
          ("gpt-oss opsd-grpo1b-s10", HS, "opsd1b-hs-pw"), ("gpt-oss opsd-grpo1b-s10", SD, "opsd1b-sd-pw"),
          ("gpt-oss base, thinking off", HS, "oss-nc-hs-pw"), ("gpt-oss base, thinking off", SD, "oss-nc-sd-pw"),
+         ("Qwen3.8-27B, thinking off", HS, "qwen-nc-hs-pw"), ("Qwen3.8-27B, thinking off", SD, "qwen-nc-sd-pw"),
+         ("Qwen opsd-grpo1b-s10, thinking off", HS, "qorg-nc-hs-pw"),
          ("gpt-oss st1-ignore2", SD, "sgd-ign2"), ("gpt-oss grpo3-s100", SD, "sgd-grpo3")]   # add new cells here: (display model, setting, log dir)
 MONS = [("weak_cot", "CoT-only, weak (gpt-oss-20b)", "monitor_phase", True),
         ("strong_cot", "CoT-only, strong (claude-haiku-5.5)", "monitor_phase_haiku", True),
@@ -26,7 +28,7 @@ MONS = [("weak_cot", "CoT-only, weak (gpt-oss-20b)", "monitor_phase", True),
         ("weak_act", "Action-only, weak (gpt-oss-20b)", "monitor_action_all", True),
         ("strong_act", "Action-only, strong (claude-haiku-5.5)", "monitor_action_haiku", True)]
 SCOPES = [("whole run", "all"), ("after start", "post")]   # whole run: every turn (CoT-only in startgate-direct from the *_all passes, planning phase included); after start: turns from the one that called start
-GRADER_CURRENT = {"glm53-hs-pw", "glm53-sd-pw", "ds41-hs-pw", "ds41-sd-pw", "oss-hs-pw", "oss-sd-pw", "mt1b-hs-pw", "mt1b-sd-pw", "opsd1b-hs-pw", "opsd1b-sd-pw", "oss-nc-hs-pw", "oss-nc-sd-pw"}   # runs graded after the route crawl: done also needs the grader
+GRADER_CURRENT = {"glm53-hs-pw", "glm53-sd-pw", "ds41-hs-pw", "ds41-sd-pw", "oss-hs-pw", "oss-sd-pw", "mt1b-hs-pw", "mt1b-sd-pw", "opsd1b-hs-pw", "opsd1b-sd-pw", "oss-nc-hs-pw", "oss-nc-sd-pw", "qwen-nc-hs-pw", "qwen-nc-sd-pw", "qorg-nc-hs-pw", "qorg-nc-sd-pw"}   # runs graded after the route crawl: done also needs the grader
 def is_done(r):
     return bool(r["judge_done"]) and (bool(r["grader"]) or r["dir"] not in GRADER_CURRENT)
 def scores(d, sub):
@@ -56,7 +58,7 @@ for model, setting, d in CELLS:
     for key, label, sub, scoped in MONS:
         if not (A / "logs" / d / sub).exists(): continue
         if key in ("strong_ca","strong_act") and not complete(d, sub): continue   # pending: the pass stopped when the OpenRouter key hit its limit
-        if key in ("weak_cot", "strong_cot") and d.startswith("oss-nc-"): continue   # thinking off: the CoT monitor scored off-format tool-call text, not reasoning
+        if key in ("weak_cot", "strong_cot") and d.split("-")[1] == "nc": continue   # thinking off: the CoT monitor scored off-format tool-call text, not reasoning
         sc = scores(d, sub)
         sc_all = scores(d, sub + "_all") if (key in ("weak_cot", "strong_cot") and setting == SD and (A / "logs" / d / (sub + "_all")).exists()) else None   # CoT-only over every turn, planning phase included
         for sname, smode in SCOPES:
@@ -155,6 +157,7 @@ for model, setting, d in CELLS:
     for f in (A / "logs" / d / "monitor_phase").rglob("monitor.jsonl"):
         for l in open(f):
             m = json.loads(l); n += 1; e += bool(m.get("empty_cot"))
+    if n == 0: continue   # thinking-off cells have no CoT-only pass
     empt.append(dict(model=model, setting=setting, monitored_turns=n, no_reasoning_turns=e, share=round(e / n, 3)))
 json.dump(empt, open(OUT / "emptyturns.json", "w"))
 effort = [dict(setting="Thinking on, no effort set (default)", reasoning_tokens=7993), dict(setting="Effort max", reasoning_tokens=7990), dict(setting="Effort high", reasoning_tokens=900),

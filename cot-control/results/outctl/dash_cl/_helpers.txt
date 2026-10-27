@@ -33,7 +33,7 @@
         .attr("width", r => Math.max(r[s.key] > 0 ? 2 : 0, x(r[s.key] || 0) - x(0))).attr("rx", 2).attr("fill", s.color);
     });
     svg.append("g").selectAll("rect").data(rows).join("rect").attr("x", 0).attr("width", w).attr("y", (_, i) => y(i)).attr("height", y.bandwidth()).attr("fill", "transparent")
-      .on("mousemove", (ev, r) => showTip(el, t, ev, labelOf(r), series.map(s => [s.color, s.label, pc(r[s.key])]).concat(r.n ? [[null, "n", r.n]] : [])))
+      .on("mousemove", (ev, r) => showTip(el, t, ev, labelOf(r), series.map(s => [typeof s.color === "function" ? s.color(r) : s.color, s.label, pc(r[s.key])]).concat(r.n ? [[null, "n", r.n]] : [])))
       .on("mouseleave", () => { t.hidden = true; });
   }
 

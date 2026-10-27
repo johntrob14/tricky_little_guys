@@ -368,3 +368,11 @@ CoT-Control 540 at step 80: raw +1.3 [-0.5, +2.9] = length +1.1 + control +0.1 [
 ignore_question 19/72 (nocotrl1 71/72, base 53/192); no-CoT output control 46.9% (+4.2 control part; nocotrl1 63.4%, +21.2); CoT acc 0.508;
 steps 20/40/60 also flat (-0.1, -0.0, +0.3). Caveat: only 2-6 of 32 groups had reward variance (weaker training). Conclusion: the nocotrl1
 transfer comes from practising output control with no CoT available, not from training without a CoT per se.
+
+### No-reasoning output control, 18 OpenRouter models (10-27, ~$10.8)
+Neel NCRI elicitation for every model (orout/nothink.py: no-think system prompt + 2 direct-answer shots) + lowest accepted reasoning setting
+(orout/run_nothink.sh). 108 Astra items x2, gated pass, ignore_question excluded; rows kept only at <=1 reasoning token. orout/analyze_nt.py -> nt_summary.json.
+Reasoning off (pass, n): Astra 90.1 (191), GPT-5.1 87.0, Kimi-K3 85.9, GPT-5 84.4, GLM-5.2 83.3, DS-V4-Flash 75.4, DS-V3.2-exp 69.8, GPT-5.2 68.8,
+Sonnet-4.5 68.5 (143; Anthropic output filter stops all meow + end_of_sentence items on Bedrock AND Anthropic endpoints, dropped), Qwen3.5-397B 64.9,
+Qwen3-32B 53.6, Qwen3.8-27B 37.0. Still reasoned at every setting: o3 90.1, GLM-5.3 74.0, gpt-oss-120b 64.6, R1 54.7 (66 truncated), Qwen3-14B 48.4 (half reasoned), gpt-oss-20b 41.7. o4-mini: provider error at all settings.
+Spearman vs NCRI (reasoning-off, n=12): 0.41 (perm p 0.19); without Astra 0.23 (p 0.51). Not a meaningful correlation.
