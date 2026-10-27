@@ -54,6 +54,33 @@ def independent_output(task,row):
 
 def in_group(x,g):return g=='all' or g=='constrained' and x['rule']!='none' or g=='unconstrained' and x['rule']=='none' or x['component']==g
 
+def shared_length_bins(base,model,keys,metric):
+    # Match category as well as length; never fill an unsupported bin with a guessed rate.
+    edges=[0,60,120,240,480,float('inf')]
+    cells=collections.defaultdict(lambda:[[],[]])
+    for k in keys:
+        for side,rows in enumerate([base,model]):
+            r=rows[k];b=next(i for i in range(5) if edges[i]<=r['words']<edges[i+1])
+            cells[(r['constraint'],b)][side].append(float(r[metric]))
+    numerator=coverage=0.
+    for a,b in cells.values():
+        if a and b:
+            weight=(len(a)+len(b))/(2*len(keys));coverage+=weight
+            numerator+=weight*(statistics.mean(b)-statistics.mean(a))
+    return numerator/coverage if coverage else None,coverage
+
+def adjusted_ci(base,model,keys,metric):
+    if not keys:return None
+    delta,coverage=shared_length_bins(base,model,keys,metric);rng=random.Random(271027)
+    by_c=collections.defaultdict(list)
+    for k in keys:by_c[base[k]['constraint']].append(k)
+    draws=[]
+    for _ in range(1000):
+        sample=[rng.choice(ks) for ks in by_c.values() for _ in ks]
+        d,_=shared_length_bins(base,model,sample,metric)
+        if d is not None:draws.append(d)
+    return dict(delta=delta,lo=float(np.quantile(draws,.025)) if draws else None,hi=float(np.quantile(draws,.975)) if draws else None,shared_support_mass=coverage,bootstrap_valid=len(draws),n=len(keys),bins=['<60','60-120','120-240','240-480','480+'],note='Exploratory category-and-length-bin adjustment on common support; coarse bins, small N, and post-training length is not a causal control.')
+
 def main(a):
     out=Path(a.out);repo=Path(a.repo)
     sys.path.insert(0,str(repo/'cot-control/grading'));sys.path.insert(0,str(repo/'cot-control/rl'))
@@ -69,7 +96,7 @@ def main(a):
             assert abs(calc-r['usd'])<1e-9;settled.append(r)
     costs=dict(settled_upper_usd=sum(r['usd'] for r in settled),unsettled_reservations_usd=sum(r['usd'] for r in active.values()),by_phase={k:sum(r['usd'] for r in settled if r['phase']==k) for k in set(r['phase'] for r in settled)})
     costs['committed_upper_usd']=costs['settled_upper_usd']+costs['unsettled_reservations_usd'];assert costs['committed_upper_usd']<20
-    tasks={x['id']:x for x in readj(out/'dev.jsonl')};result=dict(costs=costs,dev={},astra={},comparisons={})
+    tasks={x['id']:x for x in readj(out/'dev.jsonl')};result=dict(costs=costs,dev={},astra={},astra_groups={},comparisons={})
     audit=[];dev={};astra={}
     for label in ['base','pilot']:
         dev[label]={}
@@ -105,6 +132,11 @@ def main(a):
     for group,cats in [('trained',['lowercase_thinking','multiple_word_suppression']),('related',['uppercase_thinking','alternating_case','word_suppression']),('clean_heldout_style',['meow_between_words','end_of_sentence','repeat_sentences']),('all_rule_graded',None)]:
         keys=[k for k in both if astra['base'][k]['strict'] is not None and (cats is None or astra['base'][k]['constraint'] in cats)]
         result['comparisons']['astra_'+group]={m:ci([float(astra['pilot'][k][m])-float(astra['base'][k][m]) for k in keys]) for m in ['strict','partial','correct']}
+        result['comparisons']['astra_'+group]['shared_bin_adjusted']={m:adjusted_ci(astra['base'],astra['pilot'],keys,m) for m in ['strict','partial']}
+        result['astra_groups'][group]={}
+        for label in ['base','pilot']:
+            rr=[r for r in astra[label].values() if r['strict'] is not None and (cats is None or r['constraint'] in cats)]
+            if rr:result['astra_groups'][group][label]=dict(n=len(rr),strict=sum(r['strict'] for r in rr),partial=mean([r['partial'] for r in rr]),correct=sum(r['correct'] for r in rr),median_words=statistics.median(r['words'] for r in rr),truncated=sum(r['truncated'] for r in rr),empty=sum(r['empty'] for r in rr))
     train=readj(out/'train_rollouts.jsonl');steps=readj(out/'steps.jsonl')
     if (out/'restart.json').exists():
         restart=json.load(open(out/'restart.json'));last=restart['start_step']-1
