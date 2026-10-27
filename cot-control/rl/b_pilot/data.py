@@ -21,7 +21,7 @@ def writej(path, rows):
         for r in rows: f.write(json.dumps(r, ensure_ascii=False)+'\n')
 
 def assign_rule(r, rng, idx, evaluation=False):
-    rule = RULES[idx % len(RULES)] if idx % 10 else 'none'
+    rule = 'none' if rng.random()<.1 else RULES[idx % len(RULES)]
     kw = [x.lower() for x in r.get('keywords', []) if re.fullmatch('[A-Za-z]{4,}', x)]
     if len(kw)<3:
         common = {'which','these','following','would','should','could','there','their','about','answer','question','explain','given','what','with','from','that','this'}
