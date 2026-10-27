@@ -69,11 +69,11 @@ def judge_tag(model: str, effort: str) -> str:
 
 
 async def ask_or_blocked(judge: OpenRouterJudge, prompt: str) -> tuple[str, str, int, int, bool]:
-    """judge.ask_full, with a request blocked by OpenRouter's biological-risk filter (403) returned as an empty reply."""
+    """judge.ask_full, with a request blocked by OpenRouter's biological-risk filter (403) or OpenAI's usage-policy prompt flag (400) returned as an empty reply."""
     try:
         return *await judge.ask_full(prompt), False
     except RuntimeError as e:
-        if "biological risk" not in str(e):
+        if "biological risk" not in str(e) and "flagged as potentially violating our usage policy" not in str(e):
             raise
         return "", "", 0, 0, True
 
