@@ -1,6 +1,6 @@
 # Lead ledger
 
-Round 1 open reading is complete. Round 2 is approved and in progress; its prompts and plan are under `round2/`. Evidence below is from the per-item Round 1 annotations and `round1/memo.md`. Status concerns the claim stated here, not a claim about inaccessible model intent.
+Round 1 open reading is complete. Round 2 has 660/660 first-pass annotations and 0/660 second-pass annotations; work is paused at Ethan’s request to conserve usage. Its approved prompts and plan are under `round2/`; the saved status and resume instructions are in `round2/CHECKPOINT.md`. Paired calibration remains pending. Evidence below is from the per-item Round 1 annotations and `round1/memo.md`. Status concerns the claim stated here, not a claim about inaccessible model intent.
 
 ## 1. Silently planted plausible mistakes
 

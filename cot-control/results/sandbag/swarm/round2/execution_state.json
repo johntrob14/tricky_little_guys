@@ -1,12 +1,7 @@
 {
-  "phase": "blinded pass0",
-  "active": [
-    "r2_p0_s26",
-    "r2_p0_s27",
-    "r2_p0_s28"
-  ],
+  "phase": "paused after complete pass0 at user request",
+  "active": [],
   "pending": [
-    "complete pass0 shards 00-32",
     "complete independent pass1 shards 00-32",
     "full validate_round2.py",
     "analyze_round2.py and narrative findings",
@@ -58,7 +53,7 @@
   ],
   "remaining_quota": {},
   "setup_commit_pushed": "726eb664",
-  "next_pass0_shard": 29,
+  "next_pass0_shard": 33,
   "next_pass1_shard": 0,
   "pass0_total_shards": 33,
   "pass1_total_shards": 33,
@@ -91,9 +86,20 @@
     "shard22",
     "shard23",
     "shard24",
-    "shard25"
+    "shard25",
+    "shard26",
+    "shard27",
+    "shard28",
+    "shard29",
+    "shard30",
+    "shard31",
+    "shard32"
   ],
   "frozen_assignments_commit_pushed": "db0c01ef",
   "first_coding_batches_commit_pushed": "d2fffdba via merge 1bb0395f",
-  "recovery": "daemon_recovery.json; continuation outputs must be merged into their canonical shards by assigned ID order"
+  "recovery": "daemon_recovery.json; continuation outputs must be merged into their canonical shards by assigned ID order",
+  "wrap_up_requested": true,
+  "wrap_up_instruction": "User is running out of usage and asked to start wrapping up. Finish the active first-pass readers, validate and push the first-pass checkpoint, and stop before pass1.",
+  "next_action_after_active_readers": "Stopped. Resume only on user request, starting with fresh pass1 readers.",
+  "checkpoint_time_utc": "2026-10-27T22:17:53.247822+00:00"
 }
