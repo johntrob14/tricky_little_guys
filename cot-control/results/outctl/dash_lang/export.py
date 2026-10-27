@@ -100,13 +100,14 @@ rows.append(dict(run="base", label="base", family="Base", reward="", items=len(b
 out["cotctl_runs"] = rows
 
 # 6. spillover by constraint, outrl1 step 53 vs base, continuous + strict, 540 items
-ss, sc, _ = ns["per_item"]("outrl1-s53"); rows = []
+ss, sc, _ = ns["per_item"]("outrl1-s53"); _s30, c30, _ = ns["per_item"]("outrl1-s30"); rows = []
 TRAINED = {"meow_between_words": "insert word", "end_of_sentence": "end word", "uppercase_thinking": "uppercase", "lowercase_thinking": "lowercase",
            "word_suppression": "avoid word", "multiple_word_suppression": "avoid word", "alternating_case": "(none)", "repeat_sentences": "bookend (sentence at start and end)", "ignore_question": "(none)"}
 for t in sorted({k[1].split("|")[3] for k in bc}):
     ks = [k for k in bc if k in sc and k[1].split("|")[3] == t]
     dc, lo, hi, n = boot({k: sc[k] for k in ks}, {k: bc[k] for k in ks}); dsx, slo, shi, _ = boot({k: ss[k] for k in ks}, {k: bs[k] for k in ks})
-    rows.append(dict(constraint=t, trained_counterpart=TRAINED[t], items=n, base_cont=round(100 * sum(bc[k] for k in ks) / n, 1),
+    d30, lo30, hi30, _ = boot({k: c30[k] for k in ks}, {k: bc[k] for k in ks})
+    rows.append(dict(constraint=t, trained_counterpart=TRAINED[t], items=n, base_cont=round(100 * sum(bc[k] for k in ks) / n, 1), s30_cont_diff=d30, s30_cont_lo=lo30, s30_cont_hi=hi30,
                      s53_cont=round(100 * sum(sc[k] for k in ks) / n, 1), cont_diff=dc, cont_lo=lo, cont_hi=hi,
                      base_strict=round(100 * sum(bs[k] for k in ks) / n, 1), s53_strict=round(100 * sum(ss[k] for k in ks) / n, 1), strict_diff=dsx, strict_lo=slo, strict_hi=shi))
 out["spill_bytype"] = rows
@@ -171,6 +172,12 @@ E53 = [r for d in ("more", "big") for r in json.load(open(f"{O}/{d}/cot/outrl1-s
 x = [r for r in E53 if (r.get("body") or "").lower().count("safe") >= 5]; r = rng.choice(x)
 ex.append(dict(id="eos_s53", title="outrl1 step 53, CoT asked to end every sentence with 'safe'", slice="random row among CoTs with 5+ 'safe'",
                reasoning=snip(r["body"], 520), answer=snip(r["resp"], 120)))
+for con, word, title in (("uppercase_thinking", None, "outrl1 step 53, CoT asked to be all uppercase"), ("alternating_case", None, "outrl1 step 53, CoT asked to alternate letter case")):
+    X = [r for d in ("more", "big") for r in json.load(open(f"{O}/{d}/cot/outrl1-s53/graded.json")) if r["constraint"] == con]
+    import astra_continuous as AC
+    X = [r for r in X if AC.score(dict(constraint=con, reasoning=r.get("body") or "", grader_args={}), bool(int(r["strict"])) if str(r["strict"]).isdigit() else bool(r["strict"])) >= 0.5]
+    if X:
+        r = rng.choice(X); ex.append(dict(id=f"{con}_s53", title=title, slice="random row among CoTs scoring at least 50% partial compliance", reasoning=snip(r["body"], 520), answer=snip(r["resp"], 120)))
 out["examples"] = ex
 
 for k, v in out.items():
