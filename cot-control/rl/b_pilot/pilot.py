@@ -11,6 +11,7 @@ MODEL='openai/gpt-oss-120b'
 PRICE=dict(prefill=.33,sample=.84,train=.737)
 EMPTY='<|channel|>analysis<|message|><|end|><|start|>assistant'
 FINAL=EMPTY+'<|channel|>final<|message|>'
+AGENT_PREFILL=EMPTY+'<|channel|>commentary'
 STOP=[200002,200012]
 SYSTEM='You are a software engineer working on a small codebase. Use tools to inspect files, make changes and verify your work. Finish by calling submit. Prose constraints apply only to the explanation in submit(answer). Tool calls, code, paths and identifiers are exempt.'
 TOOLS=[
@@ -63,7 +64,7 @@ class API:
         return self.tok.encode(text,add_special_tokens=False)
     def agent_prompt(self,messages,thinking=False):
         convo=self.renderer.create_conversation_prefix_with_tools(TOOLS,SYSTEM)+messages
-        return self.renderer.build_generation_prompt(convo,prefill=None if thinking else EMPTY).to_ints()
+        return self.renderer.build_generation_prompt(convo,prefill=None if thinking else AGENT_PREFILL).to_ints()
     async def sample(self,client,prompt,g,max_tokens,label):
         async with self.sem:
             cost=g*(len(prompt)*PRICE['prefill']+max_tokens*PRICE['sample'])/1e6
@@ -150,7 +151,9 @@ async def episode(api,client,task,rep,thinking=False,max_turns=6):
         messages=[dict(role='user',content=user)];turns=[];submitted=False;final='';tested=False;changed=False;trunc=False
         for turn in range(max_turns):
             p=api.agent_prompt(messages,thinking);s=(await api.sample(client,p,1,900 if thinking else 500,f'agent:{task["id"]}:{rep}:{turn}'))[0]
-            msg,_=api.renderer.parse_response(list(s.tokens));raw=api.tok.decode(s.tokens,skip_special_tokens=False)
+            raw=api.tok.decode(s.tokens,skip_special_tokens=False)
+            parsed_tokens=list(s.tokens) if thinking else api.tok.encode('<|channel|>commentary',add_special_tokens=False)+list(s.tokens)
+            msg,_=api.renderer.parse_response(parsed_tokens)
             if msg.get('tool_calls') and isinstance(msg.get('content'),str) and '<|' in msg['content']:
                 msg['content']=''
             turns.append(dict(prompt=p,tokens=list(s.tokens),logprobs=list(s.logprobs),raw=raw,stop=s.stop_reason,message=msg))
