@@ -45,7 +45,8 @@
     <p class="lede">Three things move a CoT-Control score besides control itself: how long the chain of thought is, whether the model shortens it when it has to control it, and how much control the model has over its output at all. On gpt-oss-120b, output-only RL with the CoT on raised the score only through a shorter CoT (orga2:
       <b data-source="length_decomp" data-field="length" data-where="model=orga2-s40" class="dash-skeleton">—</b> points from length,
       <b data-source="length_decomp" data-field="control" data-where="model=orga2-s40" class="dash-skeleton">—</b> from control at the same length). The same kind of output-only RL with the CoT switched off during training (nocotrl1) did transfer:
-      <b data-source="length_decomp" data-field="control" data-where="model=nocotrl1-s80x" class="dash-skeleton">—</b> points of control at the same length.</p>
+      <b data-source="length_decomp" data-field="control" data-where="model=nocotrl1-s80x" class="dash-skeleton">—</b> points of control at the same length. A control run trained the same way with no output behaviors (nocotrl0) shows
+      <b data-source="length_decomp" data-field="control" data-where="model=nocotrl0-s80" class="dash-skeleton">—</b>, so the transfer comes from practising output control with no CoT, not from training without a CoT.</p>
   </header>
 
   <div class="tiles">
@@ -246,7 +247,7 @@
       .on("mouseleave", () => { t.hidden = true; rule.attr("opacity", 0); });
   }
 
-  const FCOL = () => ({ "Base gpt-oss-120b": "var(--cds-chart-muted)", "CoT-trained": dash.colors[0], "Output-only RL": dash.colors[1], "Length/effort RL": dash.colors[3], "Output-only RL, CoT off": dash.colors[2] });
+  const FCOL = () => ({ "Base gpt-oss-120b": "var(--cds-chart-muted)", "CoT-trained": dash.colors[0], "Output-only RL": dash.colors[1], "Length/effort RL": dash.colors[3], "Output-only RL, CoT off": dash.colors[2], "Control: CoT off, no behaviors": dash.colors[5] });
   function fillMarks() {
     document.querySelectorAll(".rx [data-source][data-field]").forEach(el => {
       if (el.tagName === "TH") return; const rows = ok(el.dataset.source); el.classList.remove("dash-skeleton");

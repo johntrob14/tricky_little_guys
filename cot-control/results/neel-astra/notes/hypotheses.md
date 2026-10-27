@@ -362,3 +362,9 @@ ratio 0.73. No-CoT output control 63.4% (base 43.6), control part +21.2. Sanity 
 'repetitive' flags are markdown/code formatting, not sentence doubling. Contrast: every CoT-on output-only run had control part -1.2..+1.7.
 Interpretation: training output control without a CoT (control built into the answer-writing pass, no CoT to plan in) transfers to control of
 the CoT; with a CoT available the model plans the constraint in the CoT instead, and nothing transfers.
+
+### nocotrl0 control (CoT off, NO output behaviors, task reward only; same seed/questions; 80 steps, $6.41)
+CoT-Control 540 at step 80: raw +1.3 [-0.5, +2.9] = length +1.1 + control +0.1 [-1.7, +1.9]; without ignore_question control +1.2 [-0.4, +2.8];
+ignore_question 19/72 (nocotrl1 71/72, base 53/192); no-CoT output control 46.9% (+4.2 control part; nocotrl1 63.4%, +21.2); CoT acc 0.508;
+steps 20/40/60 also flat (-0.1, -0.0, +0.3). Caveat: only 2-6 of 32 groups had reward variance (weaker training). Conclusion: the nocotrl1
+transfer comes from practising output control with no CoT available, not from training without a CoT per se.

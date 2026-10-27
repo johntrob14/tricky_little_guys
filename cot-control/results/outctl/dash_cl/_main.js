@@ -1,4 +1,4 @@
-  const FCOL = () => ({ "Base gpt-oss-120b": "var(--cds-chart-muted)", "CoT-trained": dash.colors[0], "Output-only RL": dash.colors[1], "Length/effort RL": dash.colors[3], "Output-only RL, CoT off": dash.colors[2] });
+  const FCOL = () => ({ "Base gpt-oss-120b": "var(--cds-chart-muted)", "CoT-trained": dash.colors[0], "Output-only RL": dash.colors[1], "Length/effort RL": dash.colors[3], "Output-only RL, CoT off": dash.colors[2], "Control: CoT off, no behaviors": dash.colors[5] });
   function fillMarks() {
     document.querySelectorAll(".rx [data-source][data-field]").forEach(el => {
       if (el.tagName === "TH") return; const rows = ok(el.dataset.source); el.classList.remove("dash-skeleton");

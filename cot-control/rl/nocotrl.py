@@ -7,6 +7,7 @@ Reward: task_w * R_task - lam * (1 - mean partial) + beta * [all behaviors stric
 attempt judge (base gpt-oss-120b, low effort, spillx.py version) on open questions; 0 if the answer is truncated or empty. GRPO: advantage = reward -
 group mean, equal-reward groups dropped, importance_sampling loss, Adam. Behavior weights max(0.15, 1 - EMA of strict).
     uv run python nocotrl.py --run nocotrl1 --steps 60 --budget 11 --save-every 15
+    uv run python nocotrl.py --run nocotrl0 --no-behaviors --steps 80 --budget 11 --save-every 20   (control: CoT off, task reward only)
 Writes results/rl/<run>/{steps,rollouts,config,checkpoints}."""
 import argparse, asyncio, json, random, re, time
 from pathlib import Path
@@ -25,6 +26,7 @@ async def main():
     ap.add_argument("--group-size", type=int, default=8); ap.add_argument("--lr", type=float, default=4e-5); ap.add_argument("--rank", type=int, default=32)
     ap.add_argument("--max-tokens", type=int, default=1200); ap.add_argument("--lam", type=float, default=1.0); ap.add_argument("--beta", type=float, default=0.5)
     ap.add_argument("--task-w-mc", type=float, default=1.5); ap.add_argument("--p-mc", type=float, default=0.4); ap.add_argument("--k-probs", type=float, nargs=3, default=[0.2, 0.4, 0.4])
+    ap.add_argument("--no-behaviors", action="store_true", help="control: no output behaviors, no Requirement line; reward = task only")
     ap.add_argument("--budget", type=float, default=11.0); ap.add_argument("--save-every", type=int, default=15); ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     out = grpo.RESULTS / a.run; out.mkdir(parents=True, exist_ok=False)
@@ -39,7 +41,7 @@ async def main():
         t0 = time.time(); sampler = await tc.save_weights_and_get_sampling_client_async()
         tasks = []
         for _ in range(a.prompts_per_step):
-            k = rng.choices([1, 2, 3], weights=a.k_probs)[0]; cand, wc, order = list(names), [max(0.15, 1 - ema[n]) for n in names], []
+            k = 0 if a.no_behaviors else rng.choices([1, 2, 3], weights=a.k_probs)[0]; cand, wc, order = list(names), [max(0.15, 1 - ema[n]) for n in names], []
             while cand: i = rng.choices(range(len(cand)), weights=wc)[0]; order.append(cand.pop(i)); wc.pop(i)
             tasks.append(X.make(random.Random(rng.random()), order, k, a.p_mc, ordered=True))
         pids = [tok.encode(tok.apply_chat_template([{"role": "user", "content": t["user"]}], tokenize=False, add_generation_prompt=True) + PREFILL, add_special_tokens=False) for t in tasks]
@@ -50,7 +52,7 @@ async def main():
             for s in r.sequences:
                 txt = re.sub(r"<\|(return|end|call)\|>.*$", "", tok.decode(s.tokens, skip_special_tokens=False), flags=re.S).strip()
                 trunc = s.stop_reason == "length"; per = S.grade(t["nv"], txt) if txt and not trunc else [(0.0, False)] * len(t["nv"])
-                ro = dict(s=s, answer=txt, trunc=trunc, per=per, partial=sum(p for p, _ in per) / len(per), strict=all(x for _, x in per), correct=None, attempt=None)
+                ro = dict(s=s, answer=txt, trunc=trunc, per=per, partial=(sum(p for p, _ in per) / len(per)) if per else 1.0, strict=all(x for _, x in per), correct=None, attempt=None)
                 if t["kind"] == "mc":
                     m = re.findall(r"ANSWER:\s*\**\s*([A-J])\b", txt); ro["correct"] = bool(m) and m[-1] == t["gold"]; ro["attempt"] = bool(ro["correct"]) and not trunc
                 g.append(ro)
@@ -64,7 +66,7 @@ async def main():
         data, rows, var = [], [], 0
         for t, p, g in zip(tasks, pids, groups):
             tw = a.task_w_mc if t["kind"] == "mc" else 1.0
-            for ro in g: ro["reward"] = tw * (1.0 if ro["attempt"] else 0.0) - a.lam * (1 - ro["partial"]) + a.beta * ro["strict"]
+            for ro in g: ro["reward"] = tw * (1.0 if ro["attempt"] else 0.0) + (0.0 if a.no_behaviors else - a.lam * (1 - ro["partial"]) + a.beta * ro["strict"])
             m = sum(ro["reward"] for ro in g) / len(g); var += len({round(ro["reward"], 6) for ro in g}) > 1
             for ro in g:
                 s = ro["s"]
