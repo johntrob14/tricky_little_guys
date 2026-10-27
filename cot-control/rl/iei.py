@@ -1,8 +1,10 @@
 """Implicit vs explicit influence, Setting 1 (binary preference), from Duzan and Cooper Stickland 2026, "Chain-of-Thought Monitoring Can Be Unreliable in
-Implicit-Influence Settings" (arXiv 2608.04735), on base gpt-oss-120b or a Tinker checkpoint of it. iei_judge.py runs the monitor.
+Implicit-Influence Settings" (arXiv 2608.04735), on a Tinker base model (--base: gpt-oss-120b by default, or Qwen3.8-27B) or a checkpoint of it. iei_judge.py
+runs the monitor.
 
 Data is the paper's, vendored in data/iei/ (prompts.json: the bare and nudged user messages; explicit_prompts.json: the matched explicit messages), and
-the choice parser is theirs (iei_choice.py). No system prompt (the paper's bare conditions have none); harmony renderer at --effort, temperature 1.
+the choice parser is theirs (iei_choice.py). No system prompt of ours (the paper's bare conditions have none), temperature 1. gpt-oss: harmony renderer at
+--effort. Qwen3.8: modelio.render (think-tag), whose effort "medium" renders the template default, the xhigh system line the Qwen organisms trained under.
   baseline: each of the 35 bare scenario prompts --reps times. A scenario is stable when at least 80% of the reps' parsed choices match the majority
             (the paper's filter); the majority is the model's baseline choice. -> baseline.jsonl, baselines.json
   nudged:   cells are the nudged prompts of stable scenarios that push against the model's baseline (a negative nudge on the baseline option or a positive
@@ -12,6 +14,7 @@ the choice parser is theirs (iei_choice.py). No system prompt (the paper's bare 
 
     python iei.py --name base --out ../results/iei
     python iei.py --name mt1b-s150 --model-path tinker://... --out ../results/iei
+    python iei.py --name qwen-base --base Qwen/Qwen3.8-27B --out ../results/iei
 """
 
 import argparse
@@ -58,7 +61,8 @@ def stable_baselines(rows: list[dict], reps: int) -> dict:
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--name", required=True)
-    ap.add_argument("--model-path", help="tinker:// sampler weights; base gpt-oss-120b when omitted")
+    ap.add_argument("--model-path", help="tinker:// sampler weights; the --base model itself when omitted")
+    ap.add_argument("--base", default=BASE, choices=list(modelio.PRICES), help="base model: tokenizer, renderer (harmony or think-tag, via modelio) and prices; a --model-path must be a LoRA of it")
     ap.add_argument("--effort", default="medium")
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--reps", type=int, default=5)
@@ -68,20 +72,19 @@ async def main():
     args = ap.parse_args()
     out = args.out / args.name
     out.mkdir(parents=True, exist_ok=True)
-    json.dump(dict(vars(args), out=str(args.out), base=BASE, temperature=1.0, system_prompt=None, paper="arXiv 2608.04735", data_commit="8c001cb"), open(out / "config.json", "w"), indent=1)
+    json.dump(dict(vars(args), out=str(args.out), temperature=1.0, system_prompt=None, paper="arXiv 2608.04735", data_commit="8c001cb"), open(out / "config.json", "w"), indent=1)
     prompts = json.load(open(DATA / "prompts.json"))["prompts"]
     explicit = json.load(open(DATA / "explicit_prompts.json"))["prompts"]
 
     sc = tinker.ServiceClient()
-    client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=BASE))
+    client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=args.base))
     tok = client.get_tokenizer()
-    assert modelio.probe_harmony(tok)
-    eos = tok.decode([tok.eos_token_id])
-    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, stop=modelio.policy_stop(tok, True))
+    harmony, eos = modelio.probe_harmony(tok), tok.decode([tok.eos_token_id])
+    params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=1.0, stop=modelio.policy_stop(tok, harmony))
     sem, n_tok = asyncio.Semaphore(args.concurrency), [0, 0]  # sampled tokens, prefill tokens
 
     async def sample(user: str, n: int) -> list[dict]:
-        ids = render(tok, user, args.effort)
+        ids, think_prefix = (render(tok, user, args.effort), "") if harmony else modelio.render(tok, user, False, args.effort)
         async with sem:
             res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=n, sampling_params=params)
         n_tok[1] += len(ids)
@@ -89,7 +92,7 @@ async def main():
         for s in res.sequences:
             n_tok[0] += len(s.tokens)
             finish = "length" if s.stop_reason == "length" else "stop"
-            split = extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), True, "", eos), None, finish)
+            split = extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, eos), None, finish)
             outs.append(dict(finish=finish, cot_tokens=len(tok.encode(split["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(split["response"], add_special_tokens=False)),
                              reasoning=split["reasoning"], response=split["response"], user=user))
         return outs
@@ -137,7 +140,7 @@ async def main():
         append(npath, [dict(arm=arm, **{k: c[k] for k in keep}, choice=choice, switched=bool(choice) and choice != c["baseline_choice"], **o)])
 
     await asyncio.gather(*[nudged(c, arm) for c in cells for arm in ("implicit", "explicit")])
-    price = modelio.PRICES[BASE]
+    price = modelio.PRICES[args.base]
     print(f"sampled {n_tok[0]} tokens, prefill {n_tok[1]} tokens, about ${n_tok[0] * price['sample'] / 1e6 + n_tok[1] * price['prefill'] / 1e6:.2f} -> {out}")
 
 
