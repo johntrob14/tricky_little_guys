@@ -2,7 +2,7 @@
 
 Difficulty per item from item_difficulty.py (base gpt-oss-120b, 24 samples with a CoT and 24 without on the transfer eval's prompt): 1 - base CoT accuracy,
 and 1 - base no-CoT accuracy. Compliance = strict pass with no instruction mention (nometa), per transfer-eval row (F0 wording, user turn), on the 21 manytypes2
-types (10 trained by manytypes2, 11 held out). Per model, two logistic fits with type intercepts (L2 0.5 on them): pass ~ type + difficulty (raw) and
+types (10 trained by manytypes2, 11 held out). Per model, two logistic fits with type intercepts (L2 0.01 on them, x centered): pass ~ type + difficulty (raw) and
 pass ~ type + difficulty + log2(output tokens) (length-controlled). Curves average the fitted probability over types; the length-controlled curve holds tokens at
 the model's median on these rows. Bands: 2.5-97.5% over 300 bootstrap resamples of items. Also plots each item's median output tokens under the instructions.
 
@@ -43,7 +43,7 @@ def rows_for(run, dataset):
     return out
 
 
-def fit(X, y, n_types, l2=0.5):
+def fit(X, y, n_types, l2=0.01):
     def nll(w):
         z = X @ w
         return np.sum(np.logaddexp(0, z) - y * z) + l2 * np.sum(w[:n_types] ** 2)
@@ -55,21 +55,22 @@ def fit(X, y, n_types, l2=0.5):
     return minimize(nll, np.zeros(X.shape[1]), jac=grad, method="L-BFGS-B").x
 
 
-def curves(rows, diff, with_len, ref_tokens):
+def curves(rows, diff, with_len, ref_tokens, grid=GRID_X):
     types = sorted({r["type"] for r in rows})
     ti = {t: i for i, t in enumerate(types)}
+    m = np.mean([diff[r["item"]] for r in rows])  # centered, so the intercept penalty doesn't depend on which end of x is 0
     X = np.zeros((len(rows), len(types) + 1 + with_len))
     for k, r in enumerate(rows):
         X[k, ti[r["type"]]] = 1
-        X[k, len(types)] = diff[r["item"]]
+        X[k, len(types)] = diff[r["item"]] - m
         if with_len:
             X[k, len(types) + 1] = np.log2(r["tokens"] / ref_tokens)
     w = fit(X, np.array([r["ok"] for r in rows]), len(types))
     a = w[:len(types)]
-    return np.array([np.mean(1 / (1 + np.exp(-(a + w[len(types)] * x)))) for x in GRID_X]), w[len(types)]
+    return np.array([np.mean(1 / (1 + np.exp(-(a + w[len(types)] * x)))) for x in grid - m]), w[len(types)]
 
 
-def boot(rows, diff, with_len, ref_tokens, n=300, seed=0):
+def boot(rows, diff, with_len, ref_tokens, n=300, seed=0, grid=GRID_X):
     rng = np.random.default_rng(seed)
     items = sorted({r["item"] for r in rows})
     by = {i: [r for r in rows if r["item"] == i] for i in items}
@@ -78,7 +79,7 @@ def boot(rows, diff, with_len, ref_tokens, n=300, seed=0):
         pick = rng.choice(items, len(items))
         rs = [dict(r, item=(r["item"], j)) for j, i in enumerate(pick) for r in by[i]]
         d = {(i, j): diff[i] for j, i in enumerate(pick)}
-        c, s = curves(rs, d, with_len, ref_tokens)
+        c, s = curves(rs, d, with_len, ref_tokens, grid)
         cs.append(c)
         slopes.append(s)
     return np.percentile(cs, [2.5, 97.5], axis=0), np.percentile(slopes, [2.5, 97.5])

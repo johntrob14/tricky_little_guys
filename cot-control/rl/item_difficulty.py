@@ -75,7 +75,7 @@ async def main():
     with open(args.out, "w") as f:
         for row in rows:
             f.write(json.dumps(row) + "\n")
-    print(f"{len(rows)} items x {args.samples} samples, {'no-CoT' if args.nocot_only else 'CoT and no-CoT'}, about ${spent[0]:.2f} -> {args.out}")
+    print(f"{len(rows)} items x {args.samples} no-CoT samples{'' if args.nocot_only else f' and {cot_n} CoT samples'}, about ${spent[0]:.2f} -> {args.out}")
 
 
 if __name__ == "__main__":
