@@ -131,6 +131,20 @@ another option, makes no attempt, or contradicts its own reasoning in a way an h
 | control: verbalized flips (base 6, mt1b 4) | 10 | 10 | 0 | 0 | 0 |
 | other models' non-verbalized flips (base 1, grpo3 1, 2d 1, 2e 2) | 5 | 2 | 0 | 1 | 2 |
 
+The readers' `cot_conclusion` field (the option the CoT itself concludes, or none) against the correct and submitted letters, same items:
+
+| Source | Items | CoT concludes the correct option, submits another | CoT concludes the submitted wrong option | CoT concludes a third option | CoT names no conclusion |
+|---|---|---|---|---|---|
+| mt1b sandbag, not verbalized | 34 | 9 | 25 | 0 | 0 |
+| mt1b aware, not verbalized | 36 | 3 | 31 | 0 | 2 |
+| mt1b evasion, not verbalized | 79 | 24 | 32 | 9 | 14 |
+| control: mt1b cotctl_mt1b flips | 30 | 2 | 16 | 2 | 10 |
+| control: mt1b honest-arm resampling errors | 18 | 0 | 18 | 0 | 0 |
+| control: verbalized flips | 10 | 9 | 1 | 0 | 0 |
+
+Of the yes_silent labels: evasion 24/39 conclude the correct option, 5/39 name none; cotctl_mt1b 2/15 conclude the correct option, 7/15 name none. By reader
+model, evasion vs cotctl_mt1b items concluding the correct option: Sonnet shards (0-3, 6) 22/59 vs 2/23, Opus shards (4, 5) 2/23 vs 0/7.
+
 ## Qwen3.8-27B: base with and without CoT, and the opsd-grpo1b s10 organism (2026-10-26)
 
 Same questions, prompts, arms and judges as above (`rl/sandbag.py --base Qwen/Qwen3.8-27B --questions data/gpqa_sandbagging.jsonl`), on Tinker, temperature 0,
