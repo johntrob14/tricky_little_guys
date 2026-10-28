@@ -35,7 +35,7 @@ async def main():
     ap.add_argument("--provider", default="", help="provider pinned with no fallbacks; empty for OpenRouter's default routing")
     ap.add_argument("--effort", default="medium")
     ap.add_argument("--ds-effort", type=int, help="DeepSeek: raw completions with the render_ds prompt at this effort (1-100) instead of a chat request")
-    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--conditions", nargs="+", default=CONDITIONS, choices=CONDITIONS)
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/li_questions.jsonl")

@@ -1,9 +1,9 @@
 """WMDP sandbagging samples (the sandbag.py arms) from an API model through OpenRouter. Writes the same rows.jsonl as sandbag.py, so sandbag_judge.py scores them.
 
 Same system prompt, questions and four arms as sandbag.py, with its --variant, --placement and --hint (default `wmdp.can`: the instruction in the system prompt, no named wrong
-option; the GLM, DeepSeek and Qwen runs in results/sandbag are `wmdp.can-user-hint`, the release layout, --placement user --hint). One chat completion per question and arm: temperature 0, `reasoning: {effort}` (the highest level the
+option; the GLM, DeepSeek and Qwen runs in results/sandbag are `wmdp.can-user-hint`, the release layout, --placement user --hint). One chat completion per question and arm: temperature --temperature, `reasoning: {effort}` (the highest level the
 model takes), one provider pinned with no fallbacks (OpenRouter spreads a model over hosts with different quantizations), max_tokens as a safety cap only.
-Temperature --temperature (0 by default; GLM-5.2 loops at 0 on some questions). CoT = the returned `reasoning` field (raw trace; check the provider returns one, not a summary), answer = letter parsed from the content. cot_tokens is the
+Temperature --temperature (1 by default since 2026-10-28, earlier runs 0 unless config.json says otherwise; GLM-5.2 loops at 0 on some questions). CoT = the returned `reasoning` field (raw trace; check the provider returns one, not a summary), answer = letter parsed from the content. cot_tokens is the
 provider's reasoning_tokens count, resp_tokens the rest of the completion. `cost` is OpenRouter's reported cost per call.
 
     python sandbag_or.py --name glm-5.1 --model z-ai/glm-5.1 --provider Z.AI --variant wmdp.can-user-hint --out ../results/sandbag
@@ -60,7 +60,7 @@ async def main():
     ap.add_argument("--model", required=True, help="OpenRouter model id")
     ap.add_argument("--provider", default="Z.AI", help="provider pinned with no fallbacks; empty string for OpenRouter's default routing")
     ap.add_argument("--effort", default="high")
-    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--max-tokens", type=int, default=64000)
     ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS + ["coached"], help="coached is opt-in (the `wmdp.should` runs)")
     ap.add_argument("--hint", action="store_true", help="keep the sentence naming a wrong option (the release's perturbation)")

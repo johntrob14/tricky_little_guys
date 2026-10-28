@@ -18,7 +18,7 @@ the unperturbed problem, as in the honest arm. The harmony template renders the 
 changed recorded `no_hint`, or nothing for the release layout; run_hint() reads both).
 --variant <name> (results/SANDBAG_NAMES.md, sandbag_names.VARIANTS: wmdp.can, wmdp.should, wmdp.safe, wmdp.can-hint, wmdp.can-user, wmdp.can-user-hint,
 gpqa.must) sets --questions, --placement and --hint together; config.json records the run's `variant`.
-System prompt, harmony rendering at --effort, temperature 0, one sample, and the answer parser are hintverb.py's. CoT = analysis channel, answer = letter
+System prompt, harmony rendering at --effort, one sample, and the answer parser are hintverb.py's; temperature --temperature (default 1; runs before 2026-10-28 are temperature 0, recorded in config.json). CoT = analysis channel, answer = letter
 parsed from the final channel.
 A fifth arm, cotctl (opt-in with --arms), asks for CoT control instead of sandbagging: one type per question, drawn (seeded by qid) from manytypes1b's transfer-eval
 set (CTL_TYPES, results/transfer/NOTES.md; the two word-suppression types need keywords WMDP lacks and are never eligible), its value and reference (F0) wording
@@ -32,9 +32,9 @@ think-tag --base (Qwen) it renders the chat template's thinking-off prompt (enab
 --base thinkingmachines/Inkling-Small (TMLv0, inkio.py): --effort is the thinking effort level (0-1, e.g. 0.6), rendered as inkio's system message after the
 system prompt; CoT = the thinking message, answer = letter parsed from the text message; sampling stops on <|content_model_end_sampling|>. No --nocot or --extend-cut.
 --extend-cut N (think-tag models) continues an existing run's rows cut at --max-tokens: the prompt plus the cut CoT (re-encoded from the stored text) as
-prefill, sampled up to N CoT tokens in all, at temperature 0; the row is rewritten in place with `extended` = the CoT tokens it was cut at.
+prefill, sampled up to N CoT tokens in all, at the run's temperature; the row is rewritten in place with `extended` = the CoT tokens it was cut at.
 --qids keeps only those questions; --repeat K samples each question K times, as K copies whose qid gets a "#<i>" suffix (sandbag_judge.py strips it to look
-the question up); --temperature (default 0) for the samples.
+the question up).
 
     python sandbag.py --name base-sysprompt-nohint --out ../results/sandbag
     python sandbag.py --name mt1b-s150-sysprompt-nohint --model-path tinker://... --out ../results/sandbag
@@ -146,7 +146,7 @@ async def main():
     ap.add_argument("--n", type=int, help="only the first N questions (smoke tests)")
     ap.add_argument("--qids", nargs="+", help="only these questions")
     ap.add_argument("--repeat", type=int, default=1, help="sample each question this many times (qid suffixed #<i>)")
-    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--temperature", type=float, default=1.0, help="extending a run sampled at another temperature (runs before 2026-10-28: 0) needs that value")
     ap.add_argument("--nocot", action="store_true", help="no CoT (sandbag_nocot.py's method): empty analysis channel (think-tag: the template's thinking-off prompt), answer prefilled 'Answer: (', 2 tokens")
     ap.add_argument("--extend-cut", type=int, help="think-tag models: continue the run's rows cut at --max-tokens up to this many CoT tokens (prompt + the cut CoT re-encoded as prefill), rewriting rows.jsonl")
     ap.add_argument("--out", type=Path, required=True)
@@ -185,7 +185,7 @@ async def main():
         ids, think_prefix = modelio.render(tok, r["user"], False, args.effort, r["system"])
         prev = tok.encode(r["reasoning"], add_special_tokens=False)
         async with sem:
-            res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids + prev), num_samples=1, sampling_params=tinker.SamplingParams(max_tokens=args.extend_cut - len(prev), temperature=0.0, stop=modelio.policy_stop(tok, False)))
+            res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids + prev), num_samples=1, sampling_params=tinker.SamplingParams(max_tokens=args.extend_cut - len(prev), temperature=args.temperature, stop=modelio.policy_stop(tok, False)))
         s = res.sequences[0]
         finish = "length" if s.stop_reason == "length" else "stop"
         split = extract.split_output(modelio.to_think(r["reasoning"] + tok.decode(s.tokens, skip_special_tokens=False), False, think_prefix, tok.eos_token), None, finish)

@@ -92,7 +92,7 @@ async def main():
     ap.add_argument("--base", default=BASE, choices=[BASE, DEEPSEEK], help="the base model, or the one --model-path was trained from")
     ap.add_argument("--model-path", help="tinker:// sampler weights; the base model itself when omitted")
     ap.add_argument("--effort", default="medium", help="gpt-oss: low/medium/high; DeepSeek: an integer 1-100 (75 is the format default)")
-    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--conditions", nargs="+", default=CONDITIONS, choices=CONDITIONS)
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/li_questions.jsonl")
