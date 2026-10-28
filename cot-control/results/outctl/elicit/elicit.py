@@ -22,8 +22,13 @@ from cotswitch import extract
 ITEMS = [json.loads(l) for l in open(os.path.join(O, "../../tinker-runs/gptoss120b-t1/generations/gpt-oss-120b/astra.jsonl"))]
 MODELS = {"gptoss": dict(base="openai/gpt-oss-120b", fmt="harmony"), "qwen38": dict(base="Qwen/Qwen3.8-27B", fmt="qwen"),
           "qwen35": dict(base="Qwen/Qwen3.5-397B-A17B", fmt="qwen"), "ds41": dict(base="deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144", fmt="ds"),
-          "glm53": dict(base="zai-org/GLM-5.3:peft:262144", fmt="glm")}
+          "glm53": dict(base="zai-org/GLM-5.3:peft:262144", fmt="glm"),
+          # Inkling-Small (TMLv0, inkio): base, and the inksft1 SFT organism (epoch 2); thinking effort ELICIT_EFFORT, 0.3 for *low variants
+          "inksm": dict(base="thinkingmachines/Inkling-Small", fmt="tml"),
+          "inksft1": dict(base="thinkingmachines/Inkling-Small", fmt="tml",
+                          path="tinker://b4ae1f2b-15b4-503a-b58c-efe4462def19:train:0/sampler_weights/cotctl-inksft1-ep2")}
 MAXT = int(os.environ.get("ELICIT_MAXT", "8000"))
+TML_EFFORT, TML_LOW = float(os.environ.get("ELICIT_EFFORT", "0.6")), 0.3
 
 def split(name):
     by = {}
@@ -37,6 +42,8 @@ def parts(it, fmt):
     if fmt != "harmony": r = r.replace("analysis channel", "reasoning stage")
     return q, r
 def term(fmt):
+    if fmt == "tml":
+        return "thinking (your private reasoning, everything you think before your answer)"
     return "analysis channel (your private chain of thought)" if fmt == "harmony" else "thinking (everything inside your <think> ... </think> block, before your answer)"
 def rethink(r, fmt):
     t = term(fmt); short = "analysis channel" if fmt == "harmony" else "thinking"
@@ -127,6 +134,14 @@ def build(it, v, fmt):
 
 LOW = False  # set per variant: *low variants use the low reasoning-effort setting (gpt-oss Reasoning: low; Qwen3.8 low-effort system prompt)
 def render(tok, fmt, system, hist, user):
+    if fmt == "tml":  # inkio's TMLv0 renderer; earlier turns keep their thinking message
+        import inkio
+        from tml_renderers import chat as tml_chat, tinker as tml_tinker
+        msgs = ([{"role": "system", "content": system}] if system else []) + [m for u, t, a in hist for m in (
+            {"role": "user", "content": u}, {"role": "assistant", "content": [{"type": "thinking", "thinking": t}, {"type": "text", "text": a}]})]
+        msgs += [{"role": "user", "content": user}]
+        spans, _ = inkio.renderer().render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(msgs), TML_LOW if LOW else TML_EFFORT)
+        return inkio.Tok().decode(tml_tinker.token_spans_to_tinker_model_input(spans).to_ints())
     if fmt == "ds":
         h = "".join(f"<｜User｜>{u}<｜Assistant｜><think>{t}</think>{a}<｜end▁of▁sentence｜>" for u, t, a in hist)
         s = modelio.render_ds(user, system=system)
@@ -148,11 +163,17 @@ async def main():
     """VARIANT may be a comma list: one process and one sampling client run them all (35 parallel processes ran the 14 GB box out of memory)."""
     model, vs, sp, n = sys.argv[1], sys.argv[2].split(","), sys.argv[3], int(sys.argv[4]); cfg = MODELS[model]; fmt = cfg["fmt"]
     import tinker
-    sc = tinker.ServiceClient(); c = await sc.create_sampling_client_async(base_model=cfg["base"]); tok = c.get_tokenizer()
+    sc = tinker.ServiceClient()
+    c = await (sc.create_sampling_client_async(model_path=cfg["path"]) if cfg.get("path") else sc.create_sampling_client_async(base_model=cfg["base"]))
+    if fmt == "tml":
+        import inkio
+        tok = inkio.Tok()
+    else:
+        tok = c.get_tokenizer()
     stop = modelio.GPT_OSS_STOP if fmt == "harmony" else ([tok.eos_token_id] if tok.eos_token_id is not None else None)
     if fmt == "glm": stop = [tok.convert_tokens_to_ids(x) for x in ("<|user|>", "<|endoftext|>", "<|observation|>") if tok.convert_tokens_to_ids(x) is not None]
     p = tinker.SamplingParams(max_tokens=MAXT, temperature=1.0, top_p=1.0, stop=stop)
-    price = {"gptoss": .84, "qwen38": 5.595, "qwen35": 7.5, "ds41": 3.6, "glm53": 12.15}[model]
+    price = {"gptoss": .84, "qwen38": 5.595, "qwen35": 7.5, "ds41": 3.6, "glm53": 12.15, "inksm": 1.44, "inksft1": 1.44}[model]
     sem, lock, usd = asyncio.Semaphore(48), asyncio.Lock(), [0.0]
     async def run_variant(v):
       out = f"{O}/runs/{model}/{v}_{sp}"; os.makedirs(out, exist_ok=True); path = f"{out}/gens.jsonl"
@@ -168,6 +189,9 @@ async def main():
           for k, s in enumerate(res):
               gen = tok.decode(s.tokens, skip_special_tokens=False)
               if fmt == "harmony": sp_ = extract.split_output(extract.harmony_to_think(gen), None, "length" if s.stop_reason == "length" else "stop")
+              elif fmt == "tml":
+                  import inkio
+                  sp_ = extract.split_output(inkio.to_think(gen), None, "length" if s.stop_reason == "length" else "stop")
               else:
                   g = re.sub(r"(<\|user\|>|<\|endoftext\|>|<\|observation\|>|<｜end▁of▁sentence｜>|<\|im_end\|>)+\s*$", "", gen)
                   sp_ = extract.split_output("<think>" + g if "<think>" not in g[:20] else g, None, "length" if s.stop_reason == "length" else "stop")
@@ -188,6 +212,7 @@ if __name__ == "__main__":
         cfg = MODELS[sys.argv[2]]; it = [i for i in split("dev") if i["constraint"] == sys.argv[4]][0]
         tok = None
         if cfg["fmt"] in ("harmony", "qwen"): tok = AutoTokenizer.from_pretrained(cfg["base"])
+        if cfg["fmt"] == "tml": sys.path.insert(0, "."); import inkio  # noqa: F401 (render imports it)
         LOW = sys.argv[3].endswith("low"); print(render(tok, cfg["fmt"], *build(it, sys.argv[3], cfg["fmt"])))
     else:
         asyncio.run(main())

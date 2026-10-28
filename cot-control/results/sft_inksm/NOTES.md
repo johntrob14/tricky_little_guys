@@ -79,3 +79,18 @@ Astra (108 items, 1 sample, T 1.0, effort 0.6; runs `tinker-runs/inksft1-ep{1,2}
 - Fry: no-request accuracy unchanged (59 vs 58 of 107); unconstrained CoT 0.75x base's mean length (116 vs 154 words). Accuracy under a request falls 70 to 61.
 - Word counts and accuracies here are from the generation files (whitespace words of the reasoning field, the `correct` field); compliance from the pipeline's pooled table.
 - Not yet compared with prompt elicitation on Inkling-Small (results/outctl/elicit/ covered 5 other models; base 0-19% -> 21-60% with example turns).
+
+## Prompt elicitation on Inkling-Small and inksft1 (2026-10-28; results/outctl/elicit/, runs inksm/ and inksft1/)
+elicit.py extended to Inkling (TMLv0 via inkio; thinking effort 0.6, 0.3 for *low; term "thinking (your private reasoning...)"; inksft1 = epoch 2).
+Dev (36 items, 1 sample): inksm base 3.1, best shotstack 50.0; inksft1 base 18.8, best shotlow 71.9 (shotstack 68.8). Sampling $0.66.
+Test (72 held-out items; base 1 sample, shotstack/shotlow 2 samples), strict on 8 types, constraint-balanced, item bootstrap 95% CI:
+
+| model | base | shotstack | shotlow |
+|---|---|---|---|
+| Inkling-Small | 3.1 [0.0, 8.2] | 56.2 [47.0, 65.0] | 46.9 [37.9, 55.6] |
+| inksft1 ep2 | 21.9 [12.7, 31.6] | 74.2 [65.5, 82.1] | 74.2 [66.8, 81.6] |
+| inksft1 - base model, same prompt | +18.8 [+9.9, +28.0] | +18.0 [+7.9, +28.3] | +27.3 [+18.3, +36.5] |
+
+ignore_question: inksm 0 / 69 / 88%, inksft1 12 / 100 / 81% (base / shotstack / shotlow). Accuracy: inksm 53 / 52 / 55, inksft1 44 / 49 / 47. Median reasoning words: inksm 103 / 67 / 72, inksft1 54 / 64 / 65.
+Read 3 passes (uppercase, end_of_sentence, meow): the style holds through the reasoning, which works the problem.
+Reading: example turns alone take base Inkling-Small from 3% to 56%; the SFT adds about 18-27 points under every prompt, and the two stack. inksft1's accuracy is 4-9 points below the base model's under the same prompt.
