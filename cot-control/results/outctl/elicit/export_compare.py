@@ -24,9 +24,12 @@ def stat(G, f, rng, B=10000):
     return dict(v=round(bal(by), 1), lo=round(bs[int(.025 * B)], 1), hi=round(bs[int(.975 * B)], 1), n=len(G))
 
 rng = random.Random(0); out = collections.OrderedDict(); skipped = []
+ROWS = []  # row level, for the length analysis (lenadj.py): pass and length (words of the graded text) per sample
 def put(model, group, key, G, f, src):
     if not G or key in out.get(model, {}): return  # first source listed wins
     out.setdefault(model, dict(model=model, group=group))[key] = dict(**stat(G, f, rng), src=src)
+    ROWS.extend(dict(model=model, group=group, measure=key, item=base(g["key"]), constraint=g["constraint"], ok=int(bool(f(g))),
+                     words=g.get("words") if g.get("words") is not None else (len((g.get("out") or "").split()) if "out" in g else None)) for g in G)
 gated = lambda g: st(g) and bool(g.get("attempt"))
 # gpt-oss family on Tinker
 for d, lab, grp in [("base", "gpt-oss-120b", "Base model"), ("grpo3", "gpt-oss grpo3 s100", "Organism"), ("gsft1", "gpt-oss gsft1 ep2", "Organism"),
@@ -105,3 +108,4 @@ MN = {"out_nocot": "Output control, CoT off", "out_cot": "Output control, CoT on
 L = [dict(model=r["model"], group=r["group"], measure=MN[k], value=r[k]["v"], lo=r[k]["lo"], hi=r[k]["hi"], n=r[k]["n"], source=r[k]["src"])
      for r in R for k in MN if k in r]
 json.dump(L, open(f"{O}/dash/compare_long.json", "w"), indent=1)
+with open(f"{O}/dash/rows_long.jsonl", "w") as fh: fh.writelines(json.dumps(r) + "\n" for r in ROWS)
