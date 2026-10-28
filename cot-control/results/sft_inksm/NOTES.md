@@ -94,3 +94,17 @@ Test (72 held-out items; base 1 sample, shotstack/shotlow 2 samples), strict on 
 ignore_question: inksm 0 / 69 / 88%, inksft1 12 / 100 / 81% (base / shotstack / shotlow). Accuracy: inksm 53 / 52 / 55, inksft1 44 / 49 / 47. Median reasoning words: inksm 103 / 67 / 72, inksft1 54 / 64 / 65.
 Read 3 passes (uppercase, end_of_sentence, meow): the style holds through the reasoning, which works the problem.
 Reading: example turns alone take base Inkling-Small from 3% to 56%; the SFT adds about 18-27 points under every prompt, and the two stack. inksft1's accuracy is 4-9 points below the base model's under the same prompt.
+
+## Effort 0.9 check (2026-10-28)
+inksft1 ep2 at thinking effort 0.9 (the effort Inkling needs for the agentic task), against base Inkling-Small at 0.9.
+- Astra 108, plain prompt (`tinker-runs/inksft1-ep2-req-e09`, 25k cap): strict 9/108 (8 no-meta) vs base 0/108 at 0.9 (`inksmtk-up`) and inksft1 18/108 at 0.6. Accuracy 71/108 (base at 0.9: 71; inksft1 at 0.6: 61). Median CoT words 423 (base 649 at 0.9).
+- Elicitation test split (`results/outctl/elicit_e09/`, wrapper `run_e09.py`, elicit.py unchanged; 72 items, 1 sample, 8,000-token cap), strict on 8 types:
+
+| model | prompt | effort 0.6 | effort 0.9 | capped at 8k (0.9) |
+|---|---|---|---|---|
+| Inkling-Small | base | 3.1 | 0.0 | 16/72 |
+| Inkling-Small | shotstack | 56.2 | 25.0 | 13/72 |
+| inksft1 | base | 21.9 | 10.9 | 15/72 |
+| inksft1 | shotstack | 74.2 | 54.7 | 5/72 |
+
+- Reading: at 0.9 compliance roughly halves for every model and prompt, and the SFT's gain over the base model remains (+11 plain, +30 with examples). Part of the drop is length (CoTs 4-6x longer) and part is the 8k cap in the elicitation runs (capped rows fail). The SFT's accuracy cost disappears at 0.9.
