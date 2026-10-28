@@ -72,3 +72,40 @@ class OpenRouterJudge:
         self.providers[d.get("provider")] += 1
         msg = d["choices"][0]["message"]
         return (msg.get("content") or "").strip(), (msg.get("reasoning") or "").strip(), int(usage.get("prompt_tokens") or 0), int(usage.get("completion_tokens") or 0)
+
+
+class TinkerJudge:
+    """OpenRouterJudge's interface (ask -> (reply, prompt tokens, completion tokens); usd, providers, timeouts) over base gpt-oss-120b on Tinker,
+    so a run's judges are not subject to an OpenRouter provider's rate limits. The prompt is one user turn rendered by gpt-oss's chat template at
+    reasoning effort `effort`; temperature 0 (greedy) unless `temperature` is given; the reply is the final channel (empty when the generation
+    hit max_tokens or has no final message, which callers count as unparsed). Prices from modelio.PRICES. Tinker errors are retried with
+    exponential backoff (`retries` attempts)."""
+
+    def __init__(self, effort: str = "low", max_tokens: int = 1500, concurrency: int = 64, retries: int = 8, temperature: float | None = 0):
+        import tinker
+        import modelio
+        self.tinker, self.price = tinker, modelio.PRICES["openai/gpt-oss-120b"]
+        self.effort, self.max_tokens, self.retries, self.temperature = effort, max_tokens, retries, 0.0 if temperature is None else temperature
+        self.client = tinker.ServiceClient().create_sampling_client(base_model="openai/gpt-oss-120b")
+        self.tok = self.client.get_tokenizer()
+        self.sem = asyncio.Semaphore(concurrency)
+        self.usd, self.providers, self.timeouts = 0.0, Counter(), 0
+
+    async def ask(self, prompt: str) -> tuple[str, int, int]:
+        text = self.tok.apply_chat_template([{"role": "user", "content": prompt}], tokenize=False, add_generation_prompt=True, reasoning_effort=self.effort)
+        ids = self.tok.encode(text, add_special_tokens=False)
+        params = self.tinker.SamplingParams(max_tokens=self.max_tokens, temperature=self.temperature, stop=[200002, 200012])
+        async with self.sem:
+            for attempt in range(self.retries):
+                try:
+                    s = (await self.client.sample_async(prompt=self.tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params)).sequences[0]
+                    break
+                except Exception:  # noqa: BLE001 (transient Tinker errors; the last one is raised)
+                    if attempt + 1 == self.retries:
+                        raise
+                    await asyncio.sleep(2 ** attempt)
+        self.usd += (len(ids) * self.price["prefill"] + len(s.tokens) * self.price["sample"]) / 1e6
+        self.providers["tinker"] += 1
+        gen = self.tok.decode(s.tokens, skip_special_tokens=False)
+        reply = gen.split("<|channel|>final<|message|>")[-1].split("<|")[0].strip() if "<|channel|>final<|message|>" in gen and s.stop_reason != "length" else ""
+        return reply, len(ids), len(s.tokens)

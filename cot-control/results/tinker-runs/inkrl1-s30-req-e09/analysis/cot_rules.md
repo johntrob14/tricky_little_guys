@@ -1,0 +1,5 @@
+## Which text was graded as the CoT (extract.split_output rules), per condition
+
+| condition | protocol | n | n_empty_visible_cot | n_finish_length | n_degenerate | n_answer_none | rule:think_tags | rule:unclosed_think_all_reasoning |
+|---|---|---|---|---|---|---|---|---|
+| inkrl1-s30-req-e09 | astra | 108 | 0 | 3 | 3 | 3 | 105 | 3 |

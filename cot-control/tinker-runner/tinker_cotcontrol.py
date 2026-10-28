@@ -87,8 +87,11 @@ def _commit(path: Path) -> str:
 
 
 def tml_to_think(gen: str) -> str:
-    """A TMLv0 model turn (a thinking message, then text) as "<think>" + thinking + "</think>" + text; unclosed if it stops while thinking."""
-    assert gen.startswith(TML_HEAD), gen[:100]
+    """A TMLv0 model turn (a thinking message, then text) as "<think>" + thinking + "</think>" + text; unclosed if it stops while thinking.
+    A turn that does not open with the thinking message header (a malformed generation) becomes "" and is graded as having no CoT and no answer."""
+    if not gen.startswith(TML_HEAD):
+        print(f"[tml] malformed turn (no thinking header), counted as empty: {gen[:80]!r}", file=sys.stderr)
+        return ""
     thinking, closed, rest = gen[len(TML_HEAD):].partition("<|end_message|>")
     text = rest.removesuffix("<|content_model_end_sampling|>").replace("<|message_model|><|content_text|>", "").replace("<|end_message|>", "")
     assert not re.findall(r"<\|[a-z_0-9]+\|>", thinking + text), re.findall(r"<\|[a-z_0-9]+\|>", gen)
@@ -162,7 +165,7 @@ async def _generate(args) -> int:
     print(f"[generate] {condition}/{args.protocol}: {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens,
-                "seed": args.seed, "chat_template_kwargs": chat_kwargs, "tml_effort": TML_EFFORT if tml else None, "stop": stop_ids,
+                "seed": args.seed, "chat_template_kwargs": chat_kwargs, "tml_effort": args.tml_effort if tml else None, "stop": stop_ids,
                 "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": family,
                 "filler_n": args.filler_n if args.elicit in ("filler", "filler_user") else None, "filler_format": args.filler_format if args.elicit in ("filler", "filler_user") else None}
     params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=args.temperature, top_p=args.top_p,
@@ -174,7 +177,7 @@ async def _generate(args) -> int:
         nonlocal n_done
         prefill = args.elicit in selfinstruct.PREFILL_METHODS
         if tml:
-            spans, _ = tml_renderer.render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(vllm_runner.messages_for(u["spec"])), TML_EFFORT)
+            spans, _ = tml_renderer.render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(vllm_runner.messages_for(u["spec"])), args.tml_effort)
             ids = tml_tinker.token_spans_to_tinker_model_input(spans).to_ints() + (tml_head_ids + tok.encode_ordinary(u["self_instruction"]) if prefill else [])
             rendered, harmony = tok.decode(ids), False
         else:
@@ -300,6 +303,7 @@ def main(argv=None) -> int:
     g.add_argument("--temperature", type=float, default=0.0)
     g.add_argument("--top-p", type=float, default=1.0)
     g.add_argument("--no-request", action="store_true", help="the protocol's items once each with no CoT requirement (no_request_units)")
+    g.add_argument("--tml-effort", type=float, default=TML_EFFORT, help="thinking effort for Thinking Machines models (TMLv0), in [0, 1)")
     g.add_argument("--chat-kwargs", default="", help='JSON for apply_chat_template, e.g. {"reasoning_effort": "high"}')
     g.add_argument("--extra-stop-ids", type=int, nargs="*", help="stop token ids besides the tokenizer EOS")
     g.add_argument("--concurrency", type=int, default=64)

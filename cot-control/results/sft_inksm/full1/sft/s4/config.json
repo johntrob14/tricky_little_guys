@@ -1,0 +1,43 @@
+{
+ "cmd": "export",
+ "run": "full1",
+ "name": "s4",
+ "per_type": 150,
+ "per_problem": 6,
+ "organism_max": 0.4,
+ "plain_frac": 0.25,
+ "type_caps": {},
+ "dapo_frac": 0.8,
+ "pair_plain": true,
+ "keep_types": [],
+ "drop_types": [],
+ "drop_type_source": [],
+ "sad_gap": 600,
+ "pirate_share": 0.7,
+ "seed": 0,
+ "extra_runs": [
+  "full1cs"
+ ],
+ "review": [
+  "../results/sft_inksm/full1/lowercase_review_haiku.json"
+ ],
+ "ignore_validity": true,
+ "type_from": {},
+ "drop_organism_types": [],
+ "model": "thinkingmachines/Inkling-Small",
+ "effort": 0.6,
+ "n": 393,
+ "tokens_per_epoch": 1260149,
+ "train_usd_per_epoch": 2.18,
+ "by": {
+  "questions_only|rewrite:chunked": 22,
+  "cover_story|rewrite:chunked": 68,
+  "misdirect_end|rewrite:misdirect_end": 72,
+  "plain|base": 87,
+  "lowercase_thinking|rewrite:code": 32,
+  "sad|rewrite:chunked": 27,
+  "word_suppression|rewrite:chunked": 46,
+  "no_backtracking|rewrite:chunked": 19,
+  "third_person|rewrite:chunked": 20
+ }
+}

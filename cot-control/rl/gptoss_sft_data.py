@@ -87,6 +87,12 @@ def single_message(tokens: list[int]) -> bool:
     return tokens[:3] == [CHANNEL, ANALYSIS, MESSAGE] and tokens.count(ANALYSIS) == 1
 
 
+def source_ok(s: dict) -> bool:
+    """A mined sample usable as a plain or rewrite source: its own 'clean' flag when it has one (inksm_sft_data.py: one closed thinking message),
+    else single_message on its harmony ids."""
+    return s["clean"] if "clean" in s else single_message(s["tokens"])
+
+
 def length_units(text: str) -> int:
     """Words for Latin-script CoTs; for CoTs with few Latin words (e.g. Japanese) a word-equivalent count of characters (2.5 chars per word)."""
     words = len(WORD_RE.findall(text or ""))
@@ -187,7 +193,7 @@ def plain(a) -> None:
     rng = random.Random(f"{a.seed}-plain")
     by_q = {}
     for s in map(json.loads, SAMPLES.open()):
-        if (s["qid"] in problems and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"])
+        if (s["qid"] in problems and not s.get("nocot") and s["correct"] and not s["truncated"] and source_ok(s)
                 and (ok is None or (s["qid"], s["i"]) in ok)):
             by_q.setdefault(s["qid"], []).append(s)
     rows = []
@@ -197,8 +203,8 @@ def plain(a) -> None:
         s = rng.choice(ss)
         sc = dict(fmt_ok=grpo_obf.extra_response_words(s["response"]) == 0, correct=True, reasoning=s["reasoning"], response=s["response"],
                   answer=s["answer"], strict=None, judged=False)
-        end = s["tokens"].index(END, 3)
-        rows.append(stage0(candidate(task, "base", sc, s["tokens"][3:end], s["n_tokens"], f"{qid}:{s['i']}")))
+        cot = s["cot_tokens"] if "cot_tokens" in s else s["tokens"][3:s["tokens"].index(END, 3)]
+        rows.append(stage0(candidate(task, "base", sc, cot, s["n_tokens"], f"{qid}:{s['i']}")))
     write(d / "candidates_plain.jsonl", rows)
     print(f"plain: {len(rows)} of {len(problems)} problems; survive stage0 {sum(not r['reject_reasons'] for r in rows)}")
 
@@ -221,7 +227,7 @@ def code(a) -> None:
     rng = random.Random(f"{a.seed}-code")
     by_q = {}
     for s in map(json.loads, SAMPLES.open()):
-        if (s["qid"] in problems and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"])
+        if (s["qid"] in problems and not s.get("nocot") and s["correct"] and not s["truncated"] and source_ok(s)
                 and (ok is None or (s["qid"], s["i"]) in ok) and f"{s['qid']}:{s['i']}" not in used):
             by_q.setdefault(s["qid"], []).append(s)
     rows = []
@@ -260,7 +266,7 @@ def rewrite_jobs(a) -> None:
     by_q = {}
     for s in map(json.loads, SAMPLES.open()):
         q = problems.get(s["qid"])
-        if q and not s.get("nocot") and s["correct"] and not s["truncated"] and single_message(s["tokens"]) and f"{s['qid']}:{s['i']}" not in used:
+        if q and not s.get("nocot") and s["correct"] and not s["truncated"] and source_ok(s) and f"{s['qid']}:{s['i']}" not in used:
             lo, hi = band(q, "plain")
             if (lo is None or lo <= s["words"] <= hi) and s["words"] <= a.max_source_words and (ok is None or (s["qid"], s["i"]) in ok):
                 by_q.setdefault(s["qid"], []).append({k: v for k, v in s.items() if k != "tokens"})

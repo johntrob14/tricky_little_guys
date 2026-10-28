@@ -1,0 +1,150 @@
+[
+ {
+  "measure": "Output control, CoT off",
+  "subset": "all",
+  "n": 17,
+  "spearman": 0.69,
+  "spearman_ci": [
+   0.2,
+   0.93
+  ],
+  "pearson": 0.64,
+  "pearson_ci": [
+   0.43,
+   0.88
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2, Claude Sonnet 4.5, DeepSeek V3.2 exp, Kimi-K3, GPT-5.1, GPT-5.2, GPT-5, GPT-6 Astra",
+  "spearman_p": 0.0028,
+  "pearson_p": 0.0056,
+  "spearman_lo": 0.2,
+  "spearman_hi": 0.93,
+  "pearson_lo": 0.43,
+  "pearson_hi": 0.88,
+  "spearman_p_bonf": 0.014,
+  "pearson_p_bonf": 0.028,
+  "key": "Output control, CoT off | all"
+ },
+ {
+  "measure": "Output control, CoT off",
+  "subset": "without GPT-6 Astra",
+  "n": 16,
+  "spearman": 0.63,
+  "spearman_ci": [
+   0.08,
+   0.91
+  ],
+  "pearson": 0.74,
+  "pearson_ci": [
+   0.31,
+   0.91
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2, Claude Sonnet 4.5, DeepSeek V3.2 exp, Kimi-K3, GPT-5.1, GPT-5.2, GPT-5",
+  "spearman_p": 0.0097,
+  "pearson_p": 0.001,
+  "spearman_lo": 0.08,
+  "spearman_hi": 0.91,
+  "pearson_lo": 0.31,
+  "pearson_hi": 0.91,
+  "key": "Output control, CoT off | without GPT-6 Astra"
+ },
+ {
+  "measure": "Output control, CoT on",
+  "subset": "all",
+  "n": 5,
+  "spearman": 0.87,
+  "spearman_ci": [
+   0.11,
+   1.0
+  ],
+  "pearson": 0.86,
+  "pearson_ci": [
+   0.43,
+   1.0
+  ],
+  "models": "gpt-oss-120b, Inkling-Small, GPT-5.1, GPT-5.2, gpt-oss-20b",
+  "spearman_p": 0.0993,
+  "pearson_p": 0.0598,
+  "spearman_lo": 0.11,
+  "spearman_hi": 1.0,
+  "pearson_lo": 0.43,
+  "pearson_hi": 1.0,
+  "spearman_p_bonf": 0.4965,
+  "pearson_p_bonf": 0.299,
+  "key": "Output control, CoT on | all"
+ },
+ {
+  "measure": "CoT control, as written",
+  "subset": "all",
+  "n": 15,
+  "spearman": 0.4,
+  "spearman_ci": [
+   -0.14,
+   0.81
+  ],
+  "pearson": 0.48,
+  "pearson_ci": [
+   0.19,
+   0.75
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, Nemotron-3 Ultra, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2, DeepSeek V3.2 exp, Kimi-K3, Gemma 4 31B, Nemotron-3 Nano",
+  "spearman_p": 0.1419,
+  "pearson_p": 0.0723,
+  "spearman_lo": -0.14,
+  "spearman_hi": 0.81,
+  "pearson_lo": 0.19,
+  "pearson_hi": 0.75,
+  "spearman_p_bonf": 0.7095,
+  "pearson_p_bonf": 0.3615,
+  "key": "CoT control, as written | all"
+ },
+ {
+  "measure": "CoT control, elicited",
+  "subset": "all",
+  "n": 11,
+  "spearman": 0.63,
+  "spearman_ci": [
+   0.09,
+   0.91
+  ],
+  "pearson": 0.65,
+  "pearson_ci": [
+   0.33,
+   0.92
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, Nemotron-3 Ultra, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2",
+  "spearman_p": 0.0405,
+  "pearson_p": 0.0288,
+  "spearman_lo": 0.09,
+  "spearman_hi": 0.91,
+  "pearson_lo": 0.33,
+  "pearson_hi": 0.92,
+  "spearman_p_bonf": 0.2025,
+  "pearson_p_bonf": 0.144,
+  "key": "CoT control, elicited | all"
+ },
+ {
+  "measure": "Elicitation gain (points)",
+  "subset": "all",
+  "n": 11,
+  "spearman": 0.65,
+  "spearman_ci": [
+   0.09,
+   0.93
+  ],
+  "pearson": 0.61,
+  "pearson_ci": [
+   0.28,
+   0.89
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, Nemotron-3 Ultra, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2",
+  "spearman_p": 0.034,
+  "pearson_p": 0.0477,
+  "spearman_lo": 0.09,
+  "spearman_hi": 0.93,
+  "pearson_lo": 0.28,
+  "pearson_hi": 0.89,
+  "spearman_p_bonf": 0.17,
+  "pearson_p_bonf": 0.2385,
+  "key": "Elicitation gain (points) | all"
+ }
+]

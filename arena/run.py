@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import hashlib
 import importlib.util
+import inspect
 import json
 import os
 import subprocess
@@ -54,7 +55,7 @@ SAMPLE_TIME_LIMIT = 2700
 class TinkerModel(InspectAPIFromTinkerSampling):
     """tinker-cookbook's Inspect adapter over Tinker's native sampler, for a base model or a checkpoint given as model_path."""
 
-    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None, renderer=None):  # renderer: a cookbook renderer name in place of RENDERERS', e.g. qwen3_8_disable_thinking
+    def __init__(self, model_name, base_url=None, api_key=None, config=GenerateConfig(), model_path=None, prefill=None, renderer=None, tml_effort=None):  # renderer: a cookbook renderer name in place of RENDERERS', e.g. qwen3_8_disable_thinking; tml_effort: TMLv0 thinking effort in [0, 1) (the renderer's default is 0.9)
         if not os.environ.get("TINKER_API_KEY"):
             for env_f in (ROOT.parent / "self-oversight" / ".env", ROOT.parent / ".env", Path.home() / ".config" / "sauce" / "tinker.env"):
                 if env_f.is_file():
@@ -68,6 +69,10 @@ class TinkerModel(InspectAPIFromTinkerSampling):
             client.sample_async = _recording(client.sample_async, os.environ["ARENA_SIDECAR"])
         super().__init__(renderer_name=renderer or RENDERERS[model_name.split(":")[0]], model_name=model_name, sampling_client=client, config=config, include_reasoning=True)
         self.served, self.context_window = served, CONTEXT_WINDOW
+        if tml_effort is not None:  # tml_v0's build_generation_prompt takes effort (default 0.9) as an argument; bind it here, before any prefill wrapper, so every prompt uses it
+            assert 0.0 <= float(tml_effort) < 1.0 and "effort" in inspect.signature(self.renderer.build_generation_prompt).parameters, (tml_effort, type(self.renderer))
+            build_effort = self.renderer.build_generation_prompt
+            self.renderer.build_generation_prompt = lambda messages, *a, **kw: build_effort(messages, *a, **{"effort": float(tml_effort), **kw})
         if prefill:  # every turn's reasoning starts with this text: the prompt ends with it after the template's <think>, and the parsed reasoning (and so the log and the next turn's history) includes it
             tokens = self.renderer.tokenizer.encode(prefill, add_special_tokens=False)
             build, parse = self.renderer.build_generation_prompt, self.renderer.parse_response
