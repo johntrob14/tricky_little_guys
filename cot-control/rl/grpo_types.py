@@ -14,8 +14,8 @@ Reward:  compliance * (1 if correct else --wrong-factor) - length penalty, as gr
          max_words has no length penalty. An unparsed judge reply counts as a fail and is logged.
          --no-meta-gate keeps the meta judge (logged as meta_found) but a mention no longer fails the rollout. --max-final-words N fails a rollout whose
          final response has more than N words (reasoning moved out of the CoT).
-concept_suppression (EXTRA_TYPES, judge-graded): the question's top keyword as a concept to keep out of the reasoning in any form, so a paraphrase
-         that would pass word_suppression fails.
+concept_suppression (EXTRA_TYPES, judge-graded): a mined keyword that is not in the question or its options (concept_value) as a concept to
+         keep out of the reasoning in any form, so a paraphrase that would pass word_suppression fails.
 Single-type runs (EXTRA_TYPES, trained one at a time with --types): target_words ("make your {term} about {v} words long", v from TARGET_WORDS_TRAIN = the
          25th/50th/75th percentiles of base_words over pool_k4, partial max(0, 1 - |L - v| / v), strict within 25%), target_tokens (the same in gpt-oss tokens
          with len2's targets 160/310/650; think_tokens is the same with len2's wording, "Think for about {v} tokens before answering. Keep your
@@ -86,10 +86,21 @@ assert set(MAX_WORDS_TRAIN).isdisjoint(controls.MAX_WORDS) and set(TARGET_WORDS_
 assert set(TRAIN_TYPES + EXTRA_TYPES) <= set(controls.CONTROLS)
 
 
+def concept_value(q: dict) -> str | None:
+    """concept_suppression's concept: the first mined keyword whose stem (all but its last two letters, at least four) appears in neither the
+    question nor its options, so the concept is a step the reasoning would use rather than the question's subject. None if there is none."""
+    text = (q["question"] + " " + " ".join(q.get("options") or [])).lower()
+    return next((kw for kw in q["keywords"] if kw.lower()[:max(4, len(kw) - 2)] not in text), None)
+
+
+def eligible_type(name: str, q: dict) -> bool:
+    return len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0) and (name != "concept_suppression" or concept_value(q) is not None)
+
+
 def make_task(q: dict, name: str, rng: random.Random, p_ref: float, p_system: float, harmony: bool = True, frames: list[str] | None = None, terms: list[str] | None = None) -> dict:
     ctl = controls.CONTROLS[name]
     words = [q["keywords"][0]] if name == "word_suppression" else q["keywords"][:3]
-    v = (", ".join(words) if name in SUPPRESSION else q["keywords"][0] if name == "concept_suppression" else rng.choice(grpo.INSERT_WORDS) if name == "meow_between_words" else rng.choice(grpo.SENTENCES) if name == "repeat_sentences"
+    v = (", ".join(words) if name in SUPPRESSION else concept_value(q) if name == "concept_suppression" else rng.choice(grpo.INSERT_WORDS) if name == "meow_between_words" else rng.choice(grpo.SENTENCES) if name == "repeat_sentences"
          else rng.choice(MAX_WORDS_TRAIN) if name == "max_words" else rng.choice(TARGET_WORDS_TRAIN) if name == "target_words" else rng.choice(TARGET_TOKENS_TRAIN) if name in ("target_tokens", "think_tokens") else rng.choice(TRAIN_DECOYS) if name == "decoy_topic" else rng.choice(controls.LANG_TRAIN) if name in ("think_language", "answer_language") else None)
     item = Item(dataset="mmlu_pro_full", item_idx=q["qid"], question=q["question"], options=q["options"], answer_letter=q["answer"], keywords=[], synonyms={}, raw={})
     frame, term = ("F0", None) if rng.random() < p_ref else (rng.choice(frames or list(controls.TRAIN_FRAMES)), rng.choice(terms or controls.TRAIN_TERMS))
@@ -329,7 +340,7 @@ async def main():
     rng = random.Random(args.seed)
     if args.dry_run:
         for name in args.types:
-            q = next(q for q in pool if len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0))
+            q = next(q for q in pool if eligible_type(name, q))
             for p_ref, p_system in ((1, 0), (0, 0), (0, 1)):
                 t = make_task(q, name, rng, p_ref, p_system)
                 print(f"--- {name} frame={t['frame']} term={t['term']} placement={t['placement']} value={t['value']!r}\n    SYSTEM: {t['system']}\n    USER tail: ...{t['user'][-330:]!r}\n    JUDGE requirement: {t['requirement']}")
@@ -381,7 +392,7 @@ async def main():
             else:
                 name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
             q = rng.choice(pool)
-            if len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0):
+            if eligible_type(name, q):
                 tasks.append(at_effort(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms), q, rng, args.tml_efforts, args.tml_effort_weights))
         rendered = ([(inkio.render(t["user"], t["system"], t["effort"]), "") for t in tasks] if tml else
                     [modelio.render(tok, t["user"], harmony, args.effort, t["system"]) for t in tasks])
