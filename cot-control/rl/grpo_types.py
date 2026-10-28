@@ -36,6 +36,7 @@ Inkling: --model thinkingmachines/Inkling-Small samples and trains in TMLv0 (ink
          inkio.to_think). --tml-efforts E1 E2 ... draws each prompt's thinking effort uniformly from the list; the task's base_words and base_acc
          (length band, logged accuracy-vs-base) are the pool row's base_words_E / correct_E (inksm_pool.py), and the plain-KL base scores the
          same effort-E prompt. Rollouts log effort; steps.jsonl has by_effort. --len-band-effort E LO HI replaces --len-band at effort E.
+         --tml-effort-weights sets the draw probabilities (e.g. 0.3 0.45 0.25 for efforts 0.3 0.6 0.9).
 --meta-schedule F0 F1 S0 S1: the --meta-factor used at step s is F0 before step S0, F1 from step S1, linear in between (e.g. 1 0 10 40: mentions
          are not penalized for 10 steps, then the penalty ramps in to a full fail by step 40). Logged per step as meta_factor. --meta-whole applies
          the factor to the accuracy bonus too, so a rollout that mentions the instruction and fails it still loses reward.
@@ -121,11 +122,12 @@ def score_roll(task: dict, gen: str, truncated: bool, harmony: bool, think_prefi
                 fmt_ok=bool(text) and split["cot_rule"] == extract.COT_RULE_THINK and not truncated and answer is not None, reasoning=text, response=resp, gate=None, req=None, meta=None)
 
 
-def at_effort(task: dict, q: dict, rng: random.Random, efforts: list[float] | None) -> dict:
-    """--tml-efforts: draw the task's thinking effort and take base_words / base_acc at that effort from the pool row (inksm_pool.py)."""
+def at_effort(task: dict, q: dict, rng: random.Random, efforts: list[float] | None, weights: list[float] | None = None) -> dict:
+    """--tml-efforts: draw the task's thinking effort (with --tml-effort-weights, else uniformly) and take base_words / base_acc at that effort
+    from the pool row (inksm_pool.py)."""
     if not efforts:
         return task
-    e = rng.choice(efforts)
+    e = rng.choices(efforts, weights=weights)[0]
     return task | dict(effort=e, base_words=q[f"base_words_{e:g}"], base_acc=q[f"correct_{e:g}"])
 
 
@@ -312,6 +314,7 @@ async def main():
     ap.add_argument("--judge-retries", type=int, default=8, help="OpenRouter attempts per judge call (exponential backoff: 8 is about 4 minutes, 12 about an hour)")
     ap.add_argument("--judge-concurrency", type=int, default=320, help="concurrent requests for the high-effort judge (the gate judge uses min(64, this))")
     ap.add_argument("--tml-efforts", type=float, nargs="+", help="Inkling: draw each prompt's thinking effort from these (pool rows need base_words_E / correct_E)")
+    ap.add_argument("--tml-effort-weights", type=float, nargs="+", help="sampling weights for --tml-efforts, same order (default uniform)")
     ap.add_argument("--len-band-effort", type=float, nargs=3, action="append", default=[], metavar=("E", "LO", "HI"), help="--len-band for prompts drawn at thinking effort E (repeatable)")
     ap.add_argument("--meta-whole", action="store_true", help="the --meta-factor of a mentioning rollout also scales its --acc-bonus (a mention costs the whole instructed reward)")
     ap.add_argument("--meta-schedule", type=float, nargs=4, metavar=("F0", "F1", "S0", "S1"), help="--meta-factor F0 before step S0, F1 from S1, linear between")
@@ -347,6 +350,7 @@ async def main():
     svc = tinker.ServiceClient()
     tc = await ((svc.create_training_client_from_state_with_optimizer_async if args.with_optimizer else svc.create_training_client_from_state_async)(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
     tml = args.model.startswith("thinkingmachines/")
+    assert not args.tml_effort_weights or len(args.tml_effort_weights) == len(args.tml_efforts), "one weight per --tml-efforts value"
     assert tml == bool(args.tml_efforts) and not (tml and args.prefill_fr), "--tml-efforts is for Inkling (and Inkling needs it); --prefill-fr is harmony-only"
     tok = inkio.Tok() if tml else tc.get_tokenizer()
     harmony, eos = (False, "") if tml else (modelio.probe_harmony(tok), tok.eos_token)
@@ -364,7 +368,7 @@ async def main():
         while len(tasks) < args.prompts_per_step:
             if args.p_plain and rng.random() < args.p_plain:
                 q = rng.choice(pool)
-                tasks.append(at_effort(make_plain_task(q), q, rng, args.tml_efforts))
+                tasks.append(at_effort(make_plain_task(q), q, rng, args.tml_efforts, args.tml_effort_weights))
                 continue
             if args.anneal_type:  # instruction curriculum: the explicit type with probability decaying linearly to 0 at --anneal-steps
                 p_a = max(0.0, args.anneal_p0 * (1 - step / args.anneal_steps))
@@ -373,7 +377,7 @@ async def main():
                 name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
             q = rng.choice(pool)
             if len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0):
-                tasks.append(at_effort(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms), q, rng, args.tml_efforts))
+                tasks.append(at_effort(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms), q, rng, args.tml_efforts, args.tml_effort_weights))
         rendered = ([(inkio.render(t["user"], t["system"], t["effort"]), "") for t in tasks] if tml else
                     [modelio.render(tok, t["user"], harmony, args.effort, t["system"]) for t in tasks])
         # --prefill-fr curriculum: with probability p (linear from --prefill-p0 to 0 at --prefill-anneal) a task's analysis channel opens with the
