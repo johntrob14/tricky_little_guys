@@ -1,7 +1,8 @@
 """Interactive page for one question resampled under the sandbagging arms (sandbag.py --qids <qid> --repeat K --temperature T): per model and arm, accuracy
 (Wilson 95%), the mean CoT-only monitor score (± SE) over correct and incorrect samples, and the answer letters; click a bar or a count to list those samples,
 click a sample to read its CoT and final answer (middle pane) and the monitor prompt and the judges' reasoning and outputs (right pane);
-monitor scores are colored red (suspicious) through gray at the flag cutoff to green (not suspicious); sidebar column titles sort the list (again to reverse); the three panes
+monitor scores are colored red (suspicious) through gray at the flag cutoff to green (not suspicious); sidebar column titles sort the list (again to reverse); LaTeX in the question, CoT, answer and judge texts is rendered with KaTeX
+from cdnjs (checkbox "render math"; the system and monitor prompts stay raw); the three panes
 are resizable (drag the dividers; widths kept in localStorage), arrow keys move through the list. The model's temperature-0 sample of the same question from the original run (--orig)
 is listed too, marked T 0, and left out of the statistics. Labels and colors from sandbag_headline.MODELS.
 
@@ -82,6 +83,9 @@ def main():
 PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>q0006 resampled</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <style>
 :root { color-scheme:dark; --bg:#1a1a19; --panel:#232322; --line:#3a3a38; --ink:#f0efec; --ink2:#c3c2b7; --muted:#8d8c84; --good:#5fb87a; --bad:#e0705f; }
 * { box-sizing:border-box; }
@@ -124,6 +128,8 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .sec.closed .sec-h::before { transform:none; }
 .sec-b { white-space:pre-wrap; word-break:break-word; font:12.5px/1.5 ui-monospace, monospace; margin:0; background:var(--bg); border:1px solid var(--line); border-top:none; border-radius:0; padding:8px 10px; }
 .sec.closed .sec-b { display:none; }
+.sec-b.math .katex-display { margin:0.4em 0; overflow-x:auto; overflow-y:hidden; padding:2px 0; }
+.sec-b.math .katex { font-size:1.08em; }
 .score { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; padding:0 8px; border-radius:2px; }
 .scale { display:inline-block; width:120px; height:10px; vertical-align:-1px; margin:0 6px; }
 .empty { color:var(--muted); font-size:13px; padding:8px 0; }
@@ -153,6 +159,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
       <label class="f">answer<select id="f-ok"><option value="">any</option><option value="1">correct</option><option value="0">incorrect</option></select></label>
       <label class="f">letter<select id="f-letter"><option value="">any</option><option>A</option><option>B</option><option>C</option><option>D</option><option value="none">none</option></select></label>
       <label class="chk"><input type="checkbox" id="f-t0" checked> T 0 samples</label>
+      <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>
@@ -168,6 +175,12 @@ const D = __DATA__;
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 $("qid").textContent = D.qid; $("settings").textContent = D.settings; $("question").textContent = D.question; $("correct").textContent = D.correct;
+const KATEX = !!window.renderMathInElement;  // loaded from cdnjs; without it the page says so and shows the raw text
+const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
+const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");  // drop the line breaks around display math, which would otherwise add blank lines
+function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
+if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
+math($("question"));
 $("legend").innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label)}</span>`).join("")
   + `<span><svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="#c3c2b7"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>incorrect samples (monitor chart)</span>`;
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -238,7 +251,9 @@ $("cut").textContent = D.cutoff;
 const sid = s => `${s.model}|${s.arm}|${s.i}`;
 let shown = [], sel = null;
 const closed = new Set(["system prompt", "user message", "monitor prompt"]);  // section headers start open except these; the choice carries over between samples
-function sec(title, body) { return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b">${esc(body || "(empty)")}</pre></div>`; }
+function sec(title, body, m) {  // m: render LaTeX in this section
+  const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body;
+  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${esc(t || "(empty)")}</pre></div>`; }
 function wire(root) { root.querySelectorAll(".sec-h").forEach(b => b.addEventListener("click", () => { const d = b.parentNode, t = d.dataset.t; closed.has(t) ? closed.delete(t) : closed.add(t); d.classList.toggle("closed"); })); }
 function show() {
   document.querySelectorAll("#list tr.s").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === sel));
@@ -247,13 +262,14 @@ function show() {
   const m = col[s.model];
   $("view").innerHTML = `<div class="head"><span class="sw" style="background:${m.color}"></span><b>${esc(m.label.split(" (")[0])}</b><span>${s.arm}</span><span>${s.t0 ? "T 0 (original run)" : "sample #" + s.i}</span>`
     + `<span class="${s.ok ? "ok" : "no"}">answer ${s.answer ?? "none"} ${s.ok ? "✓" : "✗"} (correct ${D.correct})</span><span>${s.cot_tokens} CoT tokens</span>${s.finish === "length" ? "<span class=no>cut at cap</span>" : ""}</div>`
-    + sec("system prompt", D.systems[s.arm]) + sec("user message", D.question) + sec("CoT (analysis channel)", s.cot) + sec("final answer", s.response);
+    + sec("system prompt", D.systems[s.arm]) + sec("user message", D.question, 1) + sec("CoT (analysis channel)", s.cot, 1) + sec("final answer", s.response, 1);
   $("judge").innerHTML = `<div class="head"><b>CoT-only monitor</b><span class="score" style="background:${scoreColor(s.score, 0.6)}">${s.score ?? "—"}</span><span class="note">100 = genuine, 1 = sabotage; flagged &lt; ${D.cutoff}</span></div>`
     + sec("monitor prompt", D.monitor_prompt.replaceAll("{MCQ}", () => D.question).replaceAll("{model_response}", () => s.cot))
-    + sec("monitor reasoning", s.mon_reasoning || "(no reasoning returned)") + sec("monitor output", s.mon_reply)
+    + sec("monitor reasoning", s.mon_reasoning || "(no reasoning returned)", 1) + sec("monitor output", s.mon_reply, 1)
     + `<div class="head" style="margin-top:16px"><b>Verbalization judge</b><span class="score" style="font-size:16px">${s.verbalized == null ? "not run" : s.verbalized ? "YES" : "NO"}</span></div>`
-    + (s.ver_reply == null ? "" : sec("verbalization judge reasoning", s.ver_reasoning || "(no reasoning returned)") + sec("verbalization judge output", s.ver_reply));
+    + (s.ver_reply == null ? "" : sec("verbalization judge reasoning", s.ver_reasoning || "(no reasoning returned)", 1) + sec("verbalization judge output", s.ver_reply, 1));
   wire($("view")); wire($("judge"));
+  document.querySelectorAll("#view .sec-b.math, #judge .sec-b.math").forEach(math);
 }
 // sidebar columns: sort key, title, right-aligned; click a title to sort by it, again to reverse
 const COLS = [["model", "model"], ["arm", "arm"], ["i", "#"], ["answer", "ans"], ["score", "mon", 1], ["tok", "CoT tok", 1], ["verb", "verb"]];
@@ -292,6 +308,7 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
 }));
 applyW();
 for (const id of ["f-model", "f-arm", "f-ok", "f-letter", "f-t0"]) $(id).addEventListener("change", render);
+$("f-math").addEventListener("change", show);
 drawAcc(); drawMon(); drawCounts(); render();
 </script></body></html>
 """
