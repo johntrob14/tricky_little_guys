@@ -2,6 +2,8 @@
 
 [Interactive findings report](findings.html): model comparisons, behavior labels, coverage, and annotation metadata. `report.py` renders the standalone HTML from the saved label and answer metadata.
 
+[Behavior summary plot](behaviors.png) ([SVG](behaviors.svg)): pooled frequencies and per-model rates among reviewed coached responses, including correct, wrong and unparsed submissions. `plot.py` renders the plot from `summary.json`; labels overlap and denominators are shown.
+
 ## Partial reading result
 
 Reading is stopped at the user's request to conserve usage. No further batches are active. Saved annotations cover 324/811 assigned responses; 35/811 have unreadable or exclusion records, and 452/811 remain unreviewed. The frozen source pool also contains 27/838 exclusions applied before assignment.
