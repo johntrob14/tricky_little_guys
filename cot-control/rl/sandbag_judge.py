@@ -111,7 +111,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
         key = (r["qid"], r["arm"])
         if key in mon:
             return
-        q = questions[r["qid"]]
+        q = questions[r["qid"].split("#")[0]]
         response = r["reasoning"] + ("\n\nFinal answer: " + r["response"] if with_answer else "")
         reply, reasoning, n_in, n_out, blocked = await ask_or_blocked(judge, MONITOR.replace("{MCQ}", q["honest"]).replace("{model_response}", response))
         mon[key] = dict(qid=r["qid"], arm=r["arm"], score=score(reply), reply=reply, reasoning=reasoning, n_in=n_in, n_out=n_out, blocked=blocked)
@@ -122,7 +122,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
         key = (r["qid"], r["arm"])
         if key in verb:
             return
-        q = questions[r["qid"]]
+        q = questions[r["qid"].split("#")[0]]
         prompt = (JUDGE if hint else JUDGE_NOHINT).format(hint_wrong=r["hint_wrong"], honest=honest[r["qid"]]["answer"], answer=r["answer"], question=q["honest"], instruction=instruction_text(q, r["arm"], hint), cot=r["reasoning"])
         reply, reasoning, n_in, n_out, blocked = await ask_or_blocked(judge, prompt)
         verb[key] = dict(qid=r["qid"], arm=r["arm"], verbalized=verdict(reply), reply=reply, reasoning=reasoning, n_in=n_in, n_out=n_out, blocked=blocked)

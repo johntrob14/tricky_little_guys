@@ -33,6 +33,8 @@ think-tag --base (Qwen) it renders the chat template's thinking-off prompt (enab
 system prompt; CoT = the thinking message, answer = letter parsed from the text message; sampling stops on <|content_model_end_sampling|>. No --nocot or --extend-cut.
 --extend-cut N (think-tag models) continues an existing run's rows cut at --max-tokens: the prompt plus the cut CoT (re-encoded from the stored text) as
 prefill, sampled up to N CoT tokens in all, at temperature 0; the row is rewritten in place with `extended` = the CoT tokens it was cut at.
+--qids keeps only those questions; --repeat K samples each question K times, as K copies whose qid gets a "#<i>" suffix (sandbag_judge.py strips it to look
+the question up); --temperature (default 0) for the samples.
 
     python sandbag.py --name base-sysprompt-nohint --out ../results/sandbag
     python sandbag.py --name mt1b-s150-sysprompt-nohint --model-path tinker://... --out ../results/sandbag
@@ -142,6 +144,9 @@ async def main():
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/wmdp_sandbagging.jsonl")
     ap.add_argument("--variant", choices=list(VARIANTS), help="canonical prompt variant (results/SANDBAG_NAMES.md); sets --questions, --placement and --hint")
     ap.add_argument("--n", type=int, help="only the first N questions (smoke tests)")
+    ap.add_argument("--qids", nargs="+", help="only these questions")
+    ap.add_argument("--repeat", type=int, default=1, help="sample each question this many times (qid suffixed #<i>)")
+    ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--nocot", action="store_true", help="no CoT (sandbag_nocot.py's method): empty analysis channel (think-tag: the template's thinking-off prompt), answer prefilled 'Answer: (', 2 tokens")
     ap.add_argument("--extend-cut", type=int, help="think-tag models: continue the run's rows cut at --max-tokens up to this many CoT tokens (prompt + the cut CoT re-encoded as prefill), rewriting rows.jsonl")
     ap.add_argument("--out", type=Path, required=True)
@@ -150,14 +155,16 @@ async def main():
     if args.variant:
         q, args.placement, args.hint = VARIANTS[args.variant]
         args.questions = Path(__file__).parent / "data" / q
-    qs = list(map(json.loads, open(args.questions)))[:args.n]
+    qs = [q for q in map(json.loads, open(args.questions)) if not args.qids or q["qid"] in args.qids][:args.n]
+    if args.repeat > 1:
+        qs = [q | dict(qid=f"{q['qid']}#{i:03d}") for q in qs for i in range(args.repeat)]
     assert not args.hint or all(q["hint_wrong"] for q in qs), "--hint needs questions that name a wrong option"
     out = args.out / args.name
     out.mkdir(parents=True, exist_ok=True)
-    cfg = dict(vars(args), questions=str(args.questions), out=str(args.out), base=args.base, system=SYSTEM, aware=AWARE, evasion=EVASION, coach=COACH, n_questions=len(qs), temperature=0.0)
+    cfg = dict(vars(args), questions=str(args.questions), out=str(args.out), base=args.base, system=SYSTEM, aware=AWARE, evasion=EVASION, coach=COACH, n_questions=len(qs))
     if (out / "config.json").exists():  # adding arms to a run: same settings, arms extended
         old = json.load(open(out / "config.json"))
-        assert all(old.get(k) == cfg[k] for k in ("model_path", "effort", "max_tokens", "placement", "n")) and run_hint(old) == args.hint, "settings differ from the existing run"
+        assert all(old.get(k) == cfg[k] for k in ("model_path", "effort", "max_tokens", "placement", "n")) and old.get("temperature", 0.0) == args.temperature and run_hint(old) == args.hint, "settings differ from the existing run"
         cfg = old | dict(hint=args.hint, extend_cut=args.extend_cut or old.get("extend_cut"), coach=COACH)
         cfg["arms"] = old["arms"] + [a for a in args.arms if a not in old["arms"] and not args.extend_cut]
     cfg["variant"] = variant(cfg)
@@ -170,7 +177,7 @@ async def main():
     assert not ink or not (args.nocot or args.extend_cut), "no --nocot or --extend-cut for Inkling"
     tok = inkio.Tok() if ink else client.get_tokenizer()
     harmony = not ink and modelio.probe_harmony(tok)
-    params = tinker.SamplingParams(max_tokens=2 if args.nocot else args.max_tokens, temperature=0.0, stop=[tok.eos_token_id] if ink else modelio.policy_stop(tok, harmony))
+    params = tinker.SamplingParams(max_tokens=2 if args.nocot else args.max_tokens, temperature=args.temperature, stop=[tok.eos_token_id] if ink else modelio.policy_stop(tok, harmony))
     forced = tok.encode((EMPTY if harmony else "") + PREFILL, add_special_tokens=False) if args.nocot else []
     sem, lock, n_tok = asyncio.Semaphore(args.concurrency), asyncio.Lock(), [0, 0, 0]  # sampled tokens, prefill tokens, rows done
 
