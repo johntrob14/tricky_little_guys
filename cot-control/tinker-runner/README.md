@@ -559,7 +559,7 @@ Figure of the OpenRouter runs: `astra_partial_plot.py qwen38_openrouter` (`cotco
 
 Tinker reruns (2026-10-27): the same filler conditions plus counting to 20, with `tinker_cotcontrol.py` at the `qwen38-run1` settings,
 so every condition shares a backend with the User Prompt run and the other elicitation methods (`astra_partial_plot.py qwen38`,
-`cotcontrol_qwen38_partial.png`, all Tinker). Each rendered prompt was checked byte-identical to `qwen38-run1`'s with the filler in
+`cotcontrol_qwen38_partial.png`, all Tinker; with answer accuracy: `astra_acc_plot.py qwen38`, `cotcontrol_qwen38_acc.png`). Each rendered prompt was checked byte-identical to `qwen38-run1`'s with the filler in
 place. `tinker-runs/qwen38-filler25` is the earlier Tinker 25-dot run (same prefill and settings), now judged and analyzed.
 
     C='--condition qwen3.8-27b --model Qwen/Qwen3.8-27B --temperature 1.0 --top-p 0.95 --extra-stop-ids 248044'
