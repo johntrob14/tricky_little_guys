@@ -74,10 +74,10 @@ def gen_rows(run):
 
 
 def degenerate(g):
-    """Empty (fewer than 3 words with a letter or digit, e.g. a run of filler dots), ending in an exact loop, or cut off at the token
-    cap inside the think block."""
+    """Empty (fewer than 3 words with a letter, not counting "meow": e.g. a run of filler dots, counting numbers or bare meows), ending
+    in an exact loop, or cut off at the token cap inside the think block."""
     t = g.get("reasoning") or ""
-    return sum(bool(re.search(r"[A-Za-z0-9]", w)) for w in t.split()) < 3 or is_degenerate(t, g.get("finish_reason"), g.get("think_closed"))
+    return sum(bool(re.search(r"[A-Za-z]", w)) and not MEOW.match(w) for w in t.split()) < 3 or is_degenerate(t, g.get("finish_reason"), g.get("think_closed"))
 
 
 def load(req, noreq):
