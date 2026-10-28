@@ -1,7 +1,8 @@
 """Inkling-Small (Thinking Machines, TMLv0) prompts, parsing and SFT rendering, for the CoT-control SFT data builder (inksm_sft_data.py).
 
 Inkling has no HF tokenizer or chat template: prompts render through tml-renderers' v0 renderer (O200kBaseChatTokenizer), which inserts a system
-'Thinking effort level: E' message after any system messages (EFFORT 0.9, the renderer default, as tinker-runner's Astra runs). A model turn is
+'Thinking effort level: E' message after any system messages (EFFORT, read at call time: 0.9, the renderer default and tinker-runner's
+Astra setting, unless the caller sets inkio.EFFORT; inksm_sft_data sets it from its mine config). A model turn is
   <|message_model|><|content_thinking|>COT<|end_message|><|message_model|><|content_text|>RESPONSE<|end_message|><|content_model_end_sampling|>
 and sampling stops on <|content_model_end_sampling|>. sft_datum renders the same turn through render_for_sft (all model tokens weighted 1), with
 the effort message inserted where render_for_completion_with_effort puts it, so an SFT example's prompt ids equal the sampling prompt's
@@ -72,13 +73,13 @@ def _messages(user: str, system: str | None) -> list[dict]:
     return ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": user}]
 
 
-def render(user: str, system: str | None = None, effort: float = EFFORT) -> list[int]:
+def render(user: str, system: str | None = None, effort: float | None = None) -> list[int]:
     """Prompt ids, ending after the user turn's <|end_message|> (the model's turn is not opened)."""
-    spans, _ = renderer().render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(_messages(user, system)), effort)
+    spans, _ = renderer().render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(_messages(user, system)), EFFORT if effort is None else effort)
     return tml_tinker.token_spans_to_tinker_model_input(spans).to_ints()
 
 
-def encode(task: dict, effort: float = EFFORT) -> list[int]:
+def encode(task: dict, effort: float | None = None) -> list[int]:
     """grpo_obf.encode for Inkling: a task's prompt ids (its instruction, if in task['system'], is a system message)."""
     return render(task["user"], task.get("system"), effort)
 
@@ -110,9 +111,10 @@ def completion_ids(tok: Tok, cot: list[int], response: str) -> list[int]:
     return tok.encode(THINK) + list(cot) + tok.encode(END + TEXT) + tok.t.encode_ordinary(response) + tok.encode(END + STOP)
 
 
-def sft_datum(user: str, system: str | None, reasoning: str, response: str, effort: float = EFFORT) -> tuple[tinker.ModelInput, list[float], int]:
+def sft_datum(user: str, system: str | None, reasoning: str, response: str, effort: float | None = None) -> tuple[tinker.ModelInput, list[float], int]:
     """(model input, per-token weights, prompt length) of one SFT example: the prompt, then a thinking message and a text message, weighted 1 on
     the model's tokens. Asserts that the unweighted prefix is the sampling prompt (render), so training and sampling see the same ids."""
+    effort = EFFORT if effort is None else effort
     msgs = _messages(user, system) + [{"role": "assistant", "content": [{"type": "thinking", "thinking": reasoning}, {"type": "text", "text": response}]}]
     native = [m for om in tml_chat.OpenAIMessage.from_oss_messages(msgs) for m in om.to_messages()]
     at = next(i for i, m in enumerate(native) if m.author.kind != tml_chat.AuthorKind.System)

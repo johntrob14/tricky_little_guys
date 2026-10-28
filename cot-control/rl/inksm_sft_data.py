@@ -4,9 +4,9 @@ Inkling-Small has no CoT-control organism (0/108 strict on Astra), so the constr
 rwsft1 / gsft1's rewrite rows), code transforms (lowercase_thinking), and its own instructed samples where it complies; plain rows are its own
 correct CoTs under no instruction. This module supplies the Inkling-specific stages and runs gptoss_sft_data's model-agnostic ones with its paths
 pointed at Inkling's files (configure(): RESULTS, POOL, SAMPLES, MODEL; sft_prompts.TERMS without "analysis channel", which is gpt-oss's term).
-Prompts and parsing: inkio (TMLv0, thinking effort 0.9).
+Prompts and parsing: inkio (TMLv0, at the thinking effort mine was run with).
 
-mine       Inkling samples --samples unconstrained CoTs (T 1.0, top_p 1.0) and --nocot-samples no-CoT answers per problem of --pool-in (the
+mine       Inkling samples, at thinking effort --effort, --samples unconstrained CoTs (T 1.0, top_p 1.0, at most --max-tokens) and --nocot-samples no-CoT answers per problem of --pool-in (the
            742-problem obf training pool), as obf_data.py mine --samples-out: the no-CoT arm skips the thinking message (prompt + TEXT +
            'ANSWER:', at most 10 tokens), the forced-answer baseline's layout. Writes SAMPLES (one row per sample: reasoning, response, answer,
            correct, truncated, tokens, cot_tokens; clean = one closed thinking message followed by a text message) and POOL (the pool rows with
@@ -96,7 +96,12 @@ def eval_questions() -> set[str]:
 
 
 def configure() -> None:
+    """Point gptoss_sft_data at Inkling's files, and set inkio.EFFORT to the effort the pool was mined at (every later stage samples, scores and
+    renders at it)."""
     gs.RESULTS, gs.POOL, gs.SAMPLES, gs.MODEL = RESULTS, POOL, SAMPLES, inkio.MODEL
+    mined = SAMPLES.parent / "config.json"
+    if mined.exists():
+        inkio.EFFORT = json.loads(mined.read_text())["effort"]
     sft_prompts.TERMS = TERMS
     held, cot_required = eval_questions(), gs.cot_required
     gs.cot_required = lambda pool: [q for q in cot_required(pool) if norm(q["question"]) not in held]
@@ -114,6 +119,7 @@ async def sampler(model_path: str | None = None):
 
 
 async def mine(a) -> None:
+    inkio.EFFORT = a.effort
     pool, held = [json.loads(l) for l in a.pool_in.open()], eval_questions()
     n_held = sum(norm(q["question"]) in held for q in pool)
     print(f"{n_held} of {len(pool)} problems are CoT-Control eval items{' (kept)' if a.keep_eval_overlap else ' and are not mined'}")
@@ -351,6 +357,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     m = sub.add_parser("mine")
     m.add_argument("--pool-in", type=Path, default=POOL_IN)
+    m.add_argument("--effort", type=float, required=True, help="Inkling thinking effort in [0, 1); every later stage uses it (configure)")
     m.add_argument("--samples", type=int, default=4)
     m.add_argument("--nocot-samples", type=int, default=2)
     m.add_argument("--max-tokens", type=int, default=16000)
