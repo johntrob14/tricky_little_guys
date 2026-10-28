@@ -26,7 +26,31 @@ MODELS = {"gptoss": dict(base="openai/gpt-oss-120b", fmt="harmony"), "qwen38": d
           # Inkling-Small (TMLv0, inkio): base, and the inksft1 SFT organism (epoch 2); thinking effort ELICIT_EFFORT, 0.3 for *low variants
           "inksm": dict(base="thinkingmachines/Inkling-Small", fmt="tml"),
           "inksft1": dict(base="thinkingmachines/Inkling-Small", fmt="tml",
-                          path="tinker://b4ae1f2b-15b4-503a-b58c-efe4462def19:train:0/sampler_weights/cotctl-inksft1-ep2")}
+                          path="tinker://b4ae1f2b-15b4-503a-b58c-efe4462def19:train:0/sampler_weights/cotctl-inksft1-ep2"),
+          # CoT-control organisms (trained on Astra-style constraint types); test with the parent model's dev-chosen variant
+          "mt1b": dict(base="openai/gpt-oss-120b", fmt="harmony",
+                       path="tinker://f6204b00-be4d-51fd-b1d8-6d467ff4ba75:train:0/sampler_weights/cotctl-manytypes1b-step150"),
+          "mt2e": dict(base="openai/gpt-oss-120b", fmt="harmony",
+                       path="tinker://5fecab91-f1a1-5bc2-9cb0-db0d61b7d50f:train:0/sampler_weights/cotctl-manytypes2e-step170"),
+          "grpo3": dict(base="openai/gpt-oss-120b", fmt="harmony",
+                        path="tinker://ec5bf27e-1436-5923-a854-96774a207315:train:0/sampler_weights/cotctl-grpo3-step100"),
+          "gsft1": dict(base="openai/gpt-oss-120b", fmt="harmony",
+                        path="tinker://ac688e94-081e-5a95-a9a9-9aeca465ef26:train:0/sampler_weights/cotctl-gsft1-ep2"),
+          "opsdgrpo": dict(base="Qwen/Qwen3.8-27B", fmt="qwen",
+                           path="tinker://f17512b9-bc5f-588c-b3c6-d4940fcebdd9:train:0/sampler_weights/cotctl-opsd-grpo1b-step10"),
+          # output-only RL with the CoT forced empty (no CoT training)
+          "nocotrl1": dict(base="openai/gpt-oss-120b", fmt="harmony",
+                           path="tinker://6bb4c865-5600-5b20-a297-0dfa5d8c570d:train:0/sampler_weights/nocotrl-nocotrl1-step80"),
+          # more Tinker models (Nemotron renders like Qwen: <|im_start|> turns, <think> block)
+          "qwen35_4b": dict(base="Qwen/Qwen3.5-4B", fmt="qwen"), "qwen35_9b": dict(base="Qwen/Qwen3.5-9B", fmt="qwen"),
+          "nemoultra": dict(base="nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16", fmt="qwen"), "nemonano": dict(base="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16", fmt="qwen"),
+          "dsrwsft1": dict(base="deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144", fmt="ds", path="tinker://5ba907ce-a8af-54d5-8f1d-e72031a411ea:train:0/sampler_weights/cotctl-rwsft1-ep2"),
+          "dsobf2g": dict(base="deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144", fmt="ds", path="tinker://817195e3-4858-55ab-8a3b-2651324a7acb:train:0/sampler_weights/cotctl-obf2g-step25"),
+          # OpenRouter raw completions (or=slug; hf=tokenizer whose chat template renders the prompt; ds3 = DeepSeek V3.x/R1 format without the V4 effort block)
+          "or_glm52": dict(or_="z-ai/glm-5.2", fmt="glm"), "or_dsv4f": dict(or_="deepseek/deepseek-v4-flash", fmt="ds"),
+          "or_dsv32": dict(or_="deepseek/deepseek-v3.2-exp", fmt="ds3"), "or_dsr1": dict(or_="deepseek/deepseek-r1-0528", fmt="ds3"),
+          "or_qwen3_32b": dict(or_="qwen/qwen3-32b", fmt="qwen", hf="Qwen/Qwen3-32B"),
+          "or_kimik3": dict(or_="moonshotai/kimi-k3", fmt="hf", hf="moonshotai/Kimi-K3"), "or_gemma4": dict(or_="google/gemma-4-31b-it", fmt="hf", hf="google/gemma-4-31b-it")}
 MAXT = int(os.environ.get("ELICIT_MAXT", "8000"))
 TML_EFFORT, TML_LOW = float(os.environ.get("ELICIT_EFFORT", "0.6")), 0.3
 
@@ -112,6 +136,9 @@ def shot_req(c, shot, fmt):
 def build(it, v, fmt):
     """-> (system or None, history [(user, thinking, answer)], user)"""
     q, r = parts(it, fmt); c = it["constraint"]
+    if v in ("outcot", "outnocot"):  # requirement on the response (xmodel/astra_more 'expl' prompt); thinking on / off
+        from xmodel import expl_prompt
+        return None, [], expl_prompt(it)
     if v == "base": return None, [], f"{q}\n\nRequirement: {r}"
     if v == "sys": return f"Requirement: {r}", [], q
     if v == "before": return None, [], f"Requirement: {r}\n\n{q}"
@@ -132,6 +159,7 @@ def build(it, v, fmt):
         return None, hist, f"{q}\n\nRequirement: {rt}"
     raise ValueError(v)
 
+OFF = False  # outnocot: thinking switched off in the rendering
 LOW = False  # set per variant: *low variants use the low reasoning-effort setting (gpt-oss Reasoning: low; Qwen3.8 low-effort system prompt)
 def render(tok, fmt, system, hist, user):
     if fmt == "tml":  # inkio's TMLv0 renderer; earlier turns keep their thinking message
@@ -140,18 +168,27 @@ def render(tok, fmt, system, hist, user):
         msgs = ([{"role": "system", "content": system}] if system else []) + [m for u, t, a in hist for m in (
             {"role": "user", "content": u}, {"role": "assistant", "content": [{"type": "thinking", "thinking": t}, {"type": "text", "text": a}]})]
         msgs += [{"role": "user", "content": user}]
-        spans, _ = inkio.renderer().render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(msgs), TML_LOW if LOW else TML_EFFORT)
+        spans, _ = inkio.renderer().render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(msgs), 0.0 if OFF else TML_LOW if LOW else TML_EFFORT)
         return inkio.Tok().decode(tml_tinker.token_spans_to_tinker_model_input(spans).to_ints())
     if fmt == "ds":
         h = "".join(f"<｜User｜>{u}<｜Assistant｜><think>{t}</think>{a}<｜end▁of▁sentence｜>" for u, t, a in hist)
-        s = modelio.render_ds(user, system=system)
+        s = modelio.render_ds(user, system=system, thinking=not OFF)
         i = s.rfind("<｜User｜>"); return s[:i] + h + s[i:]
     if fmt == "glm":
         h = "".join(f"<|user|>{u}<|assistant|><think>{t}</think>{a}" for u, t, a in hist)
-        return "[gMASK]<sop>" + (f"<|system|>{system}" if system else "") + h + f"<|user|>{user}<|assistant|><think>"
+        return "[gMASK]<sop>" + (f"<|system|>{system}" if system else "") + h + f"<|user|>{user}<|assistant|><think>" + ("</think>" if OFF else "")
+    if fmt == "ds3":
+        h = "".join(f"<｜User｜>{u}<｜Assistant｜><think>\n{t}\n</think>\n\n{a}<｜end▁of▁sentence｜>" for u, t, a in hist)
+        return "<｜begin▁of▁sentence｜>" + (system or "") + h + f"<｜User｜>{user}<｜Assistant｜><think>\n" + ("\n</think>\n\n" if OFF else "")
+    if fmt == "hf":  # the model's own chat template; prior turns carry their thinking in reasoning_content
+        msgs = ([{"role": "system", "content": system}] if system else []) + [m for u, t, a in hist for m in (
+            {"role": "user", "content": u}, {"role": "assistant", "content": a, "reasoning_content": t})] + [{"role": "user", "content": user}]
+        return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
     msgs = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": user}]
     kw = dict(reasoning_effort="low" if LOW else "medium") if fmt == "harmony" else (dict(reasoning_effort="low") if LOW else {})
+    if OFF and fmt == "qwen": kw["enable_thinking"] = False
     s = tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True, **kw)
+    if OFF and fmt == "harmony": s += "<|channel|>analysis<|message|><|end|><|start|>assistant<|channel|>final<|message|>"  # astra_more's empty-CoT prefill
     if not hist: return s
     if fmt == "harmony":
         h = "".join(f"<|start|>user<|message|>{u}<|end|><|start|>assistant<|channel|>analysis<|message|>{t}<|end|><|start|>assistant<|channel|>final<|message|>{a}<|end|>" for u, t, a in hist)
@@ -160,50 +197,89 @@ def render(tok, fmt, system, hist, user):
     i = s.rfind("<|im_start|>user"); return s[:i] + h + s[i:]
 
 async def main():
-    """VARIANT may be a comma list: one process and one sampling client run them all (35 parallel processes ran the 14 GB box out of memory)."""
+    """VARIANT may be a comma list: one process and one sampling client run them all (35 parallel processes ran the 14 GB box out of memory).
+    Output arms (outcot, outnocot) write rows in astra_more's shape (side expl_think / expl, 'out' = the response, 'cot' = the reasoning) so
+    `astra_more.py DIR --grade` grades the response with the reference graders and the attempt judge."""
+    global LOW, OFF
     model, vs, sp, n = sys.argv[1], sys.argv[2].split(","), sys.argv[3], int(sys.argv[4]); cfg = MODELS[model]; fmt = cfg["fmt"]
-    import tinker
-    sc = tinker.ServiceClient()
-    c = await (sc.create_sampling_client_async(model_path=cfg["path"]) if cfg.get("path") else sc.create_sampling_client_async(base_model=cfg["base"]))
-    if fmt == "tml":
-        import inkio
-        tok = inkio.Tok()
-    else:
-        tok = c.get_tokenizer()
-    stop = modelio.GPT_OSS_STOP if fmt == "harmony" else ([tok.eos_token_id] if tok.eos_token_id is not None else None)
-    if fmt == "glm": stop = [tok.convert_tokens_to_ids(x) for x in ("<|user|>", "<|endoftext|>", "<|observation|>") if tok.convert_tokens_to_ids(x) is not None]
-    p = tinker.SamplingParams(max_tokens=MAXT, temperature=1.0, top_p=1.0, stop=stop)
-    price = {"gptoss": .84, "qwen38": 5.595, "qwen35": 7.5, "ds41": 3.6, "glm53": 12.15, "inksm": 1.44, "inksft1": 1.44}[model]
     sem, lock, usd = asyncio.Semaphore(48), asyncio.Lock(), [0.0]
+    if cfg.get("or_"):  # OpenRouter raw completions
+        import httpx
+        from transformers import AutoTokenizer
+        tok = AutoTokenizer.from_pretrained(cfg["hf"]) if cfg.get("hf") else None
+        key = os.environ["OPENROUTER_API_KEY"]; http = httpx.AsyncClient(timeout=600)
+        async def sample(text):
+            body = {"model": cfg["or_"], "prompt": text, "max_tokens": MAXT, "temperature": 1.0, "top_p": 1.0, "usage": {"include": True}}
+            out = []
+            for _ in range(n):
+                for t in range(4):
+                    try:
+                        r = await http.post("https://openrouter.ai/api/v1/completions", json=body, headers={"Authorization": f"Bearer {key}"}); j = r.json()
+                        if "choices" in j: break
+                    except Exception as e: j = {"error": repr(e)}
+                    await asyncio.sleep(2 ** t)
+                if "choices" not in j: raise RuntimeError(str(j)[:300])
+                c = j["choices"][0]; u = j.get("usage") or {}; usd[0] += u.get("cost") or 0
+                out.append(dict(gen=(c.get("reasoning") and "<think>" + c["reasoning"] + "</think>" or "") + (c.get("text") or ""), stop=c.get("finish_reason"),
+                                n_tokens=u.get("completion_tokens"), provider=j.get("provider")))
+            return out
+    else:
+        import tinker
+        sc = tinker.ServiceClient()
+        c = await (sc.create_sampling_client_async(model_path=cfg["path"]) if cfg.get("path") else sc.create_sampling_client_async(base_model=cfg["base"]))
+        if fmt == "tml":
+            import inkio
+            tok = inkio.Tok()
+        else:
+            tok = c.get_tokenizer()
+        stop = modelio.GPT_OSS_STOP if fmt == "harmony" else ([tok.eos_token_id] if tok.eos_token_id is not None else None)
+        if fmt == "qwen":
+            ie = tok.convert_tokens_to_ids("<|im_end|>")
+            if isinstance(ie, int) and ie != tok.unk_token_id and ie not in (stop or []): stop = (stop or []) + [ie]
+        if fmt == "glm": stop = [tok.convert_tokens_to_ids(x) for x in ("<|user|>", "<|endoftext|>", "<|observation|>") if tok.convert_tokens_to_ids(x) is not None]
+        p = tinker.SamplingParams(max_tokens=MAXT, temperature=1.0, top_p=1.0, stop=stop)
+        price = {"gptoss": .84, "qwen38": 5.595, "qwen35": 7.5, "ds41": 3.6, "glm53": 12.15, "inksm": 1.44, "inksft1": 1.44, "mt1b": .84, "mt2e": .84, "grpo3": .84,
+                 "gsft1": .84, "opsdgrpo": 5.595, "nocotrl1": .84, "qwen35_4b": .5, "qwen35_9b": 1.0, "nemoultra": 10.0, "nemonano": .6, "dsrwsft1": 3.6, "dsobf2g": 3.6}[model]
+        async def sample(text):
+            res = (await c.sample_async(prompt=tinker.ModelInput.from_ints(tok.encode(text, add_special_tokens=False)), num_samples=n, sampling_params=p)).sequences
+            usd[0] += sum(len(s.tokens) for s in res) * price / 1e6
+            return [dict(gen=tok.decode(s.tokens, skip_special_tokens=False), stop=s.stop_reason, n_tokens=len(s.tokens)) for s in res]
+    def parse(gen, stop, off):
+        st = "length" if stop == "length" else "stop"
+        if fmt == "harmony" and not off: return extract.split_output(extract.harmony_to_think(gen), None, st)
+        if fmt == "tml":
+            import inkio
+            gen = inkio.to_think(gen)
+        g = re.sub(r"(<\|user\|>|<\|endoftext\|>|<\|observation\|>|<｜end▁of▁sentence｜>|<\|im_end\|>|<\|return\|>|<\|end\|>|<end_of_turn>|<\|im_end\|>)+\s*$", "", gen)
+        if off:  # thinking switched off: everything is the response; any thinking the model still wrote is kept apart
+            if "</think>" in g: r, t = g.split("</think>", 1); return dict(reasoning=r.replace("<think>", "").strip(), response=t.strip())
+            return dict(reasoning="", response=g.replace("<think>", "").strip())
+        return extract.split_output("<think>" + g if "<think>" not in g[:20] else g, None, st)
     async def run_variant(v):
       out = f"{O}/runs/{model}/{v}_{sp}"; os.makedirs(out, exist_ok=True); path = f"{out}/gens.jsonl"
       done = {r["key"] for r in map(json.loads, open(path))} if os.path.exists(path) else set()
       async def one(it):
+          global LOW, OFF
           if it["key"] in done: return
-          system, hist, user = build(it, v, fmt); global LOW; LOW = v.endswith("low"); text = render(tok, fmt, system, hist, user)
-          ids = tok.encode(text, add_special_tokens=False)
+          OFF, LOW = v == "outnocot", v.endswith("low")
+          system, hist, user = build(it, v, fmt); text = render(tok, fmt, system, hist, user); off = OFF
           async with sem:
-              try: res = (await c.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=n, sampling_params=p)).sequences
+              try: res = await sample(text)
               except Exception as e: print("FAILED", it["key"], repr(e)[:200], file=sys.stderr); return
           rows = []
           for k, s in enumerate(res):
-              gen = tok.decode(s.tokens, skip_special_tokens=False)
-              if fmt == "harmony": sp_ = extract.split_output(extract.harmony_to_think(gen), None, "length" if s.stop_reason == "length" else "stop")
-              elif fmt == "tml":
-                  import inkio
-                  sp_ = extract.split_output(inkio.to_think(gen), None, "length" if s.stop_reason == "length" else "stop")
-              else:
-                  g = re.sub(r"(<\|user\|>|<\|endoftext\|>|<\|observation\|>|<｜end▁of▁sentence｜>|<\|im_end\|>)+\s*$", "", gen)
-                  sp_ = extract.split_output("<think>" + g if "<think>" not in g[:20] else g, None, "length" if s.stop_reason == "length" else "stop")
-              rows.append(dict(model=model, side="cot", variant=v, split=sp, key=it["key"], sample_idx=k + 1, dataset=it["dataset"], item_idx=it["item_idx"],
-                               constraint=it["constraint"], gold=it["answer_gold"], system=system, n_shots=len(hist), user=user, stop=s.stop_reason,
-                               n_tokens=len(s.tokens), out=sp_["reasoning"], resp=sp_["response"]))
-              usd[0] += len(s.tokens) * price / 1e6
+              sp_ = parse(s["gen"], s["stop"], off)
+              r = dict(model=model, side="cot", variant=v, split=sp, key=it["key"], sample_idx=k + 1, dataset=it["dataset"], item_idx=it["item_idx"],
+                       constraint=it["constraint"], gold=it["answer_gold"], system=system, n_shots=len(hist), user=user, stop=s["stop"],
+                       n_tokens=s["n_tokens"], out=sp_["reasoning"], resp=sp_["response"])
+              if v in ("outcot", "outnocot"): r.update(side="expl" if off else "expl_think", out=sp_["response"], cot=sp_["reasoning"])
+              if s.get("provider"): r["provider"] = s["provider"]
+              rows.append(r)
           async with lock:
               with open(path, "a") as f: f.writelines(json.dumps(r) + "\n" for r in rows)
       await asyncio.gather(*(one(it) for it in split(sp)))
       print(f"{model} {v} {sp}: done", flush=True)
-    await asyncio.gather(*(run_variant(v) for v in vs))
+    for v in vs: await run_variant(v)  # one at a time: OFF/LOW are module globals read by render()
     print(f"{model} {sp}: all done, sample cost ~${usd[0]:.2f}")
 
 if __name__ == "__main__":
