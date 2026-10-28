@@ -112,12 +112,12 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .ok { color:var(--good); } .no { color:var(--bad); }
 .head { font-size:13px; margin-bottom:10px; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; }
 .head b { font-size:14px; }
-.sec { margin-bottom:10px; }
-.sec-h { display:block; width:100%; text-align:left; background:#2b2b29; color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:7px 10px; font:600 13px system-ui, sans-serif; cursor:pointer; }
+.sec + .sec .sec-h { border-top:none; }
+.sec-h { display:block; width:100%; text-align:left; background:#2b2b29; color:var(--ink); border:1px solid var(--line); border-radius:0; padding:7px 10px; font:600 13px system-ui, sans-serif; cursor:pointer; }
 .sec-h:hover { background:#333331; }
 .sec-h::before { content:""; display:inline-block; border-left:6px solid var(--ink2); border-top:4px solid transparent; border-bottom:4px solid transparent; margin-right:9px; vertical-align:1px; transform:rotate(90deg); }
 .sec.closed .sec-h::before { transform:none; }
-.sec-b { white-space:pre-wrap; word-break:break-word; font:12.5px/1.5 ui-monospace, monospace; margin:0; background:var(--bg); border:1px solid var(--line); border-top:none; border-radius:0 0 4px 4px; padding:8px 10px; }
+.sec-b { white-space:pre-wrap; word-break:break-word; font:12.5px/1.5 ui-monospace, monospace; margin:0; background:var(--bg); border:1px solid var(--line); border-top:none; border-radius:0; padding:8px 10px; }
 .sec.closed .sec-b { display:none; }
 .score { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
 .empty { color:var(--muted); font-size:13px; padding:8px 0; }
