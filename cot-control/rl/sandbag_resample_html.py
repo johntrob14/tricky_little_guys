@@ -192,13 +192,13 @@ const tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 330) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
 function el(svg, tag, attrs, text) { const n = document.createElementNS(SVGNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; }
 const W = 620, H = 300, L = 44, R = 10, T = 14, B = 26;
-function frame(svg, ymax, ticks, fmt) {
+function frame(svg, ymax, ticks, fmt, arms = D.arms) {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = "";
   el(svg, "defs", {}).innerHTML = `<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="transparent"/><line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a19" stroke-width="2.5"/></pattern>`;
   const y = v => T + (H - T - B) * (1 - v / ymax);
   for (const t of ticks) { el(svg, "line", {x1: L, x2: W - R, y1: y(t), y2: y(t), stroke: "#3a3a38", "stroke-width": 1}); el(svg, "text", {x: L - 6, y: y(t) + 4, "text-anchor": "end", "font-size": 11, fill: "#c3c2b7"}, fmt(t)); }
-  const gw = (W - L - R) / D.arms.length;
-  D.arms.forEach((a, k) => { el(svg, "text", {x: L + gw * (k + 0.5), y: H - B + 18, "text-anchor": "middle", "font-size": 12, fill: "#f0efec"}, a); });
+  const gw = (W - L - R) / arms.length;
+  arms.forEach((a, k) => { el(svg, "text", {x: L + gw * (k + 0.5), y: H - B + 18, "text-anchor": "middle", "font-size": 12, fill: "#f0efec"}, a); });
   el(svg, "line", {x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "#c3c2b7", "stroke-width": 1});
   return {y, gw};
 }
@@ -231,9 +231,9 @@ function drawMon() {
   })));
 }
 function drawVerb() {
-  const svg = $("verb"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1)), nm = D.models.length, w = f.gw * 0.8 / nm;
-  D.arms.forEach((a, k) => {
-    if (D.models.every(m => !D.stats[m.id + "|" + a].verb_n)) { el(svg, "text", {x: L + f.gw * (k + 0.5), y: f.y(0) - 6, "text-anchor": "middle", "font-size": 11, fill: "#8d8c84"}, "not judged"); return; }
+  const arms = D.arms.filter(a => D.models.some(m => D.stats[m.id + "|" + a].verb_n));  // the arms the judge ran on (not honest)
+  const svg = $("verb"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), arms), nm = D.models.length, w = f.gw * 0.8 / nm;
+  arms.forEach((a, k) => {
     D.models.forEach((m, i) => {
       const s = D.stats[m.id + "|" + a], x = L + f.gw * k + f.gw * 0.1 + w * (i + 0.5);
       if (!s.verb_n) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 10, fill: "#8d8c84"}, "n=0"); return; }
