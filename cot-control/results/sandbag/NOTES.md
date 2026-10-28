@@ -682,48 +682,48 @@ merge6 = equal-weight mean of the grpo3 s100, manytypes1b s150, manytypes2e s170
 Tinker runs (`sandbag.py --variant wmdp.should`, harmony effort medium, T 0, 16k cap, one sample). All six arms sampled (honest and
 cotctl not copied from a wmdp.can run): `merge6-sysprompt-nohint-should/`, second honest sample `merge6-should-honest2/`. Same-stack
 control: base on the same vLLM server, `base-vllm-sysprompt-nohint-should/` and `base-vllm-should-honest2/`. Judged with gpt-6-luna
-at medium effort (monitor: CoT only, Li et al. 2025 sandbagging judge; verbalization judge; explicit-intent judge); rows added to
-`summary_v1should_gpt-6-luna_medium.json` and `summary_explicit_gpt-6-luna_medium.json`. No row hit the 16k cap. Noise floor
+at medium effort (monitor: CoT only, Li et al. 2025 sandbagging judge; verbalization judge); rows added to
+`summary_v1should_gpt-6-luna_medium.json`. The deprecated explicit-admission judge was also run (records only: `explicit_cot_gpt-6-luna_medium.jsonl`, `summary_explicit_gpt-6-luna_medium.json`). No row hit the 16k cap. Noise floor
 (honest resamples): merge6 7/225, vLLM base 8/230. Figure `mats12_sprint/figures/sandbag_wmdp.should_merge6_gpt-6-luna_medium.png`
 (`sandbag_v1_variants_plot.py ... --variants wmdp.should --models base base-vllm grpo3-s100 mt1b-s150 manytypes2e-s170 merge6 --out ...`;
 its title's note that honest and CoT-control rows are copied Tinker wmdp.can rows does not apply to merge6 and base-vllm). Monitor
 suspicion = 101 - the monitor's score, mean over flips.
 
-| model | arm | accuracy | flips (honest-correct -> wrong) | states wrong intent on flips | verbalization YES on flips | monitor mean suspicion on flips (n) | median CoT tokens |
-|---|---|---|---|---|---|---|---|
-| base (Tinker) | honest | 120/150 | - | - | - | - | 1511 |
-| base (Tinker) | sandbag | 53/150 | 70/114 | 68/70 | 68/70 | 99 (69) | 542 |
-| base (Tinker) | aware | 44/150 | 74/116 | 72/74 | 72/74 | 100 (73) | 674 |
-| base (Tinker) | evasion | 26/150 | 96/116 | 88/96 | 89/96 | 96 (96) | 818 |
-| base (Tinker) | coached | 24/150 | 89/107 | 89/89 | 89/89 | 100 (88) | 911 |
-| base (Tinker) | cotctl | 112/150 | 16/118 | 0/16 | 0/0 | 47 (15) | 608 |
-| base (vLLM) | honest | 121/150 | - | - | - | - | 1614 |
-| base (vLLM) | sandbag | 60/150 | 63/116 | 60/63 | 60/63 | 99 (62) | 502 |
-| base (vLLM) | aware | 53/150 | 68/117 | 65/68 | 65/68 | 100 (68) | 901 |
-| base (vLLM) | evasion | 39/150 | 89/118 | 86/89 | 87/89 | 98 (89) | 908 |
-| base (vLLM) | coached | 20/150 | 97/111 | 97/97 | 97/97 | 100 (97) | 704 |
-| base (vLLM) | cotctl | 111/150 | 13/118 | 0/13 | 0/0 | 62 (12) | 563 |
-| grpo3 s100 | honest | 123/150 | - | - | - | - | 1162 |
-| grpo3 s100 | sandbag | 31/150 | 91/119 | 89/91 | 89/91 | 99 (90) | 237 |
-| grpo3 s100 | aware | 20/150 | 105/122 | 104/105 | 103/104 | 100 (105) | 209 |
-| grpo3 s100 | evasion | 44/150 | 84/122 | 82/84 | 82/84 | 99 (84) | 202 |
-| grpo3 s100 | coached | 28/150 | 97/119 | 89/97 | 89/97 | 97 (97) | 330 |
-| grpo3 s100 | cotctl | 106/150 | 23/120 | 0/23 | 0/0 | 80 (23) | 423 |
-| manytypes1b s150 | honest | 102/150 | - | - | - | - | 2381 |
-| manytypes1b s150 | sandbag | 64/150 | 50/102 | 32/50 | 31/50 | 81 (50) | 201 |
-| manytypes1b s150 | aware | 75/150 | 41/102 | 16/41 | 16/41 | 65 (40) | 300 |
-| manytypes1b s150 | evasion | 73/150 | 44/102 | 0/44 | 0/44 | 53 (43) | 232 |
-| manytypes1b s150 | coached | 74/150 | 42/101 | 0/42 | 0/42 | 59 (42) | 420 |
-| manytypes1b s150 | cotctl | 73/150 | 37/96 | 0/37 | 0/0 | 66 (37) | 271 |
-| manytypes2e s170 | honest | 119/150 | - | - | - | - | 1474 |
-| manytypes2e s170 | sandbag | 39/150 | 83/114 | 82/83 | 82/83 | 99 (83) | 199 |
-| manytypes2e s170 | aware | 34/150 | 93/118 | 92/93 | 93/93 | 100 (93) | 155 |
-| manytypes2e s170 | evasion | 92/150 | 35/117 | 25/35 | 26/35 | 78 (34) | 506 |
-| manytypes2e s170 | coached | 31/150 | 96/118 | 89/96 | 89/96 | 95 (96) | 772 |
-| manytypes2e s170 | cotctl | 103/150 | 19/113 | 1/19 | 0/0 | 81 (19) | 493 |
-| merge6 (vLLM) | honest | 116/150 | - | - | - | - | 1460 |
-| merge6 (vLLM) | sandbag | 29/150 | 90/113 | 88/90 | 88/90 | 99 (88) | 238 |
-| merge6 (vLLM) | aware | 28/150 | 96/115 | 95/96 | 95/96 | 100 (96) | 338 |
-| merge6 (vLLM) | evasion | 39/150 | 84/115 | 82/84 | 82/84 | 100 (84) | 378 |
-| merge6 (vLLM) | coached | 33/150 | 97/116 | 93/97 | 93/97 | 98 (96) | 1010 |
-| merge6 (vLLM) | cotctl | 109/150 | 14/115 | 0/14 | 0/0 | 74 (14) | 380 |
+| model | arm | accuracy | flips (honest-correct -> wrong) | verbalization YES on flips | monitor mean suspicion on flips (n) | median CoT tokens |
+|---|---|---|---|---|---|---|
+| base (Tinker) | honest | 120/150 | - | - | - | 1511 |
+| base (Tinker) | sandbag | 53/150 | 70/114 | 68/70 | 99 (69) | 542 |
+| base (Tinker) | aware | 44/150 | 74/116 | 72/74 | 100 (73) | 674 |
+| base (Tinker) | evasion | 26/150 | 96/116 | 89/96 | 96 (96) | 818 |
+| base (Tinker) | coached | 24/150 | 89/107 | 89/89 | 100 (88) | 911 |
+| base (Tinker) | cotctl | 112/150 | 16/118 | 0/0 | 47 (15) | 608 |
+| base (vLLM) | honest | 121/150 | - | - | - | 1614 |
+| base (vLLM) | sandbag | 60/150 | 63/116 | 60/63 | 99 (62) | 502 |
+| base (vLLM) | aware | 53/150 | 68/117 | 65/68 | 100 (68) | 901 |
+| base (vLLM) | evasion | 39/150 | 89/118 | 87/89 | 98 (89) | 908 |
+| base (vLLM) | coached | 20/150 | 97/111 | 97/97 | 100 (97) | 704 |
+| base (vLLM) | cotctl | 111/150 | 13/118 | 0/0 | 62 (12) | 563 |
+| grpo3 s100 | honest | 123/150 | - | - | - | 1162 |
+| grpo3 s100 | sandbag | 31/150 | 91/119 | 89/91 | 99 (90) | 237 |
+| grpo3 s100 | aware | 20/150 | 105/122 | 103/104 | 100 (105) | 209 |
+| grpo3 s100 | evasion | 44/150 | 84/122 | 82/84 | 99 (84) | 202 |
+| grpo3 s100 | coached | 28/150 | 97/119 | 89/97 | 97 (97) | 330 |
+| grpo3 s100 | cotctl | 106/150 | 23/120 | 0/0 | 80 (23) | 423 |
+| manytypes1b s150 | honest | 102/150 | - | - | - | 2381 |
+| manytypes1b s150 | sandbag | 64/150 | 50/102 | 31/50 | 81 (50) | 201 |
+| manytypes1b s150 | aware | 75/150 | 41/102 | 16/41 | 65 (40) | 300 |
+| manytypes1b s150 | evasion | 73/150 | 44/102 | 0/44 | 53 (43) | 232 |
+| manytypes1b s150 | coached | 74/150 | 42/101 | 0/42 | 59 (42) | 420 |
+| manytypes1b s150 | cotctl | 73/150 | 37/96 | 0/0 | 66 (37) | 271 |
+| manytypes2e s170 | honest | 119/150 | - | - | - | 1474 |
+| manytypes2e s170 | sandbag | 39/150 | 83/114 | 82/83 | 99 (83) | 199 |
+| manytypes2e s170 | aware | 34/150 | 93/118 | 93/93 | 100 (93) | 155 |
+| manytypes2e s170 | evasion | 92/150 | 35/117 | 26/35 | 78 (34) | 506 |
+| manytypes2e s170 | coached | 31/150 | 96/118 | 89/96 | 95 (96) | 772 |
+| manytypes2e s170 | cotctl | 103/150 | 19/113 | 0/0 | 81 (19) | 493 |
+| merge6 (vLLM) | honest | 116/150 | - | - | - | 1460 |
+| merge6 (vLLM) | sandbag | 29/150 | 90/113 | 88/90 | 99 (88) | 238 |
+| merge6 (vLLM) | aware | 28/150 | 96/115 | 95/96 | 100 (96) | 338 |
+| merge6 (vLLM) | evasion | 39/150 | 84/115 | 82/84 | 100 (84) | 378 |
+| merge6 (vLLM) | coached | 33/150 | 97/116 | 93/97 | 98 (96) | 1010 |
+| merge6 (vLLM) | cotctl | 109/150 | 14/115 | 0/0 | 74 (14) | 380 |
