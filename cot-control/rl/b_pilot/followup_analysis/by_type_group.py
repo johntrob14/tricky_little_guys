@@ -18,3 +18,14 @@ for g,keep in groups.items():
     s=ns['ns']['summary'](R,B);ci=ns['ns']['boot'](R,B,1000);f=lambda k:f"{100*s[k]:+5.1f} [{100*ci[k][0]:+5.1f},{100*ci[k][1]:+5.1f}]"
     base_rate=sum(r['s'] for r in B)/len(B)*100;rate=sum(r['s'] for r in R)/len(R)*100
     print(f"  {n:14} strict {rate:5.1f}% (base {base_rate:4.1f}%)  raw {f('raw')}  length {f('length')}  control-at-length {f('control')}")
+
+# Same decomposition on partial compliance: swap the strict field for the continuous score (ignore_question partial = strict).
+print('\n\n######## PARTIAL COMPLIANCE (points, 95% CI over items)')
+for g,keep in groups.items():
+  excl=tuple(t for t in ALL if t not in keep);B=[dict(r,s=r['c']) for r in ns['theirs']('base',excl)]
+  runs={'nocotrl1 s80x':ns['theirs']('nocotrl1-s80x',excl),'B add s90':ns['mine']('B add s90',[P+'additive/astra_full_s90.jsonl',F+'draws_add_s90/noise_add_s90.jsonl'],excl)}
+  print(f'\n== {g}')
+  for n,R in runs.items():
+    R=[dict(r,s=r['c']) for r in R]
+    s=ns['ns']['summary'](R,B);ci=ns['ns']['boot'](R,B,1000);f=lambda k:f"{100*s[k]:+5.1f} [{100*ci[k][0]:+5.1f},{100*ci[k][1]:+5.1f}]"
+    print(f"  {n:14} partial {sum(r['s'] for r in R)/len(R)*100:5.1f}% (base {sum(r['s'] for r in B)/len(B)*100:4.1f}%)  raw {f('raw')}  length {f('length')}  control-at-length {f('control')}")
