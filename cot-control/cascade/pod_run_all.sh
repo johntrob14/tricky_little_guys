@@ -7,7 +7,8 @@ W=${W:-/root/w}
 OUT=${OUT:-/workspace/cascade-astra}
 PY=/workspace/venv-cascade/bin/python
 : "${COTSWITCH_GIT_COMMIT:?set to the tricky_little_guys commit synced to the pod}"
-export HF_HOME=/root/hf VLLM_NO_USAGE_STATS=1 COTSWITCH_GIT_COMMIT
+# venv bin on PATH: FlashInfer's top-p sampler JIT-builds with the venv's ninja.
+export PATH=/workspace/venv-cascade/bin:$PATH HF_HOME=/root/hf VLLM_NO_USAGE_STATS=1 COTSWITCH_GIT_COMMIT
 cd /workspace/cot-control/cascade
 for term in "thinking" "reasoning stage"; do
   R="$OUT/${term// /_}"
