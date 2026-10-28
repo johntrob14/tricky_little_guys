@@ -37,7 +37,8 @@ Inkling: --model thinkingmachines/Inkling-Small samples and trains in TMLv0 (ink
          (length band, logged accuracy-vs-base) are the pool row's base_words_E / correct_E (inksm_pool.py), and the plain-KL base scores the
          same effort-E prompt. Rollouts log effort; steps.jsonl has by_effort. --len-band-effort E LO HI replaces --len-band at effort E.
 --meta-schedule F0 F1 S0 S1: the --meta-factor used at step s is F0 before step S0, F1 from step S1, linear in between (e.g. 1 0 10 40: mentions
-         are not penalized for 10 steps, then the penalty ramps in to a full fail by step 40). Logged per step as meta_factor.
+         are not penalized for 10 steps, then the penalty ramps in to a full fail by step 40). Logged per step as meta_factor. --meta-whole applies
+         the factor to the accuracy bonus too, so a rollout that mentions the instruction and fails it still loses reward.
 
     python grpo_types.py --run manytypes-smoke --steps 2 --prompts-per-step 8 --group-size 4 --p-ref 1 --p-system 0
     python grpo_types.py --run manytypes1 --steps 150 --budget 120 --save-every 25
@@ -188,7 +189,7 @@ def finalize(task: dict, sc: dict, args) -> dict:
     else:
         wf = dict(kv.split("=") for kv in args.wrong_factor_types).get(task["type"], args.wrong_factor)
         sc["comp"] = (sc["partial"] + args.strict_bonus * sc["strict"]) * (1.0 if sc["correct"] else float(wf)) * (args.meta_factor if mention else 1.0) if ok else 0.0
-        sc["comp"] += args.acc_bonus * sc["correct"] if sc["fmt_ok"] and sc["final_ok"] else 0.0
+        sc["comp"] += args.acc_bonus * sc["correct"] * (args.meta_factor if mention and getattr(args, "meta_whole", False) else 1.0) if sc["fmt_ok"] and sc["final_ok"] else 0.0
     sc["words"] = len(re.findall(r"[A-Za-z]+", destyled(task, sc["reasoning"])))
     sc["len_ratio"] = sc["words"] / task["base_words"]
     band = dict((e, (lo, hi)) for e, lo, hi in getattr(args, "len_band_effort", [])).get(task.get("effort"), tuple(args.len_band))
@@ -312,6 +313,7 @@ async def main():
     ap.add_argument("--judge-concurrency", type=int, default=320, help="concurrent requests for the high-effort judge (the gate judge uses min(64, this))")
     ap.add_argument("--tml-efforts", type=float, nargs="+", help="Inkling: draw each prompt's thinking effort from these (pool rows need base_words_E / correct_E)")
     ap.add_argument("--len-band-effort", type=float, nargs=3, action="append", default=[], metavar=("E", "LO", "HI"), help="--len-band for prompts drawn at thinking effort E (repeatable)")
+    ap.add_argument("--meta-whole", action="store_true", help="the --meta-factor of a mentioning rollout also scales its --acc-bonus (a mention costs the whole instructed reward)")
     ap.add_argument("--meta-schedule", type=float, nargs=4, metavar=("F0", "F1", "S0", "S1"), help="--meta-factor F0 before step S0, F1 from S1, linear between")
     args = ap.parse_args()
     assert set(args.types) <= set(TRAIN_TYPES + EXTRA_TYPES), f"only the training types can be trained: {args.types}"
