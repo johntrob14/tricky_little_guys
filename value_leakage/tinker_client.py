@@ -31,7 +31,7 @@ FAMILIES = {
     "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16": ("nemotron3_ultra", {"prefill": 0.184, "cached_prefill": 0.0368, "sample": 0.495}),
     "thinkingmachines/Inkling-Small": ("tml_v0", {"prefill": 0.58, "cached_prefill": 0.116, "sample": 1.44}),
 }
-CHECKPOINT_BASES = {"cotctl-opsd-grpo": "Qwen/Qwen3.8-27B", "cotctl-inksft": "thinkingmachines/Inkling-Small"}   # sampler-path name fragment -> base model; tinker:// paths not listed are gpt-oss-120b
+CHECKPOINT_BASES = {"cotctl-opsd-grpo": "Qwen/Qwen3.8-27B", "cotctl-inksft": "thinkingmachines/Inkling-Small", "cotctl-inkrl": "thinkingmachines/Inkling-Small"}   # sampler-path name fragment -> base model; tinker:// paths not listed are gpt-oss-120b
 
 
 def base_model_of(model: str) -> str:
