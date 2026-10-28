@@ -36,6 +36,7 @@ from matplotlib.lines import Line2D
 from scipy.optimize import minimize
 
 from astra_continuous import score
+from cotswitch.degenerate import tail_loop_period  # cotswitch is on sys.path via astra_continuous
 
 matplotlib.use("Agg")
 RES = Path(__file__).resolve().parent.parent / "results"
@@ -81,7 +82,8 @@ def load(req, noreq):
         bt = base.get((g["dataset"], g["item_idx"]))
         rows.append(dict(constraint=g["constraint"], item=(g["dataset"], g["item_idx"]), strict=strict, partial=score(g, strict),
                          words=words(g.get("reasoning")), base=None if bt is None else words(bt),
-                         base_partial=None if bt is None else score(dict(g, reasoning=bt), None)))
+                         base_partial=None if bt is None else score(dict(g, reasoning=bt), None),
+                         degen=not re.search(r"[A-Za-z0-9]", g.get("reasoning") or "") or tail_loop_period(g.get("reasoning")) is not None))
     assert len(rows) == 108, (req, len(rows))
     return rows
 

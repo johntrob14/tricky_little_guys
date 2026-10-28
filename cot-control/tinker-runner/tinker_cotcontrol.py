@@ -29,7 +29,7 @@ Decisions recorded here:
   think block is left unclosed, which `extract.split_output` treats as all reasoning.
 - Judge: openai/gpt-oss-120b on Tinker, reasoning effort "high", temperature 1.0, as in
   cotswitch.judge (which used vLLM); same prompts, parsing and 3-of-3 rule.
-- `--elicit up_cp|up_gp|cb` runs a Self-Instructed CoT elicitation method (selfinstruct.py).
+- `--elicit up_cp|up_gp|cb|cp|cb_only|filler` runs a Self-Instructed CoT elicitation method (selfinstruct.py).
   The self-instruction family follows the chat template: harmony -> the gpt-oss templates,
   `<think>` -> the DeepSeek/Qwen ones. Prefill methods append the self-instruction to the
   rendered prompt (after `<|channel|>analysis<|message|>` on harmony, after the template's
@@ -140,13 +140,13 @@ async def _generate(args) -> int:
     if args.elicit and tml:
         family = "gptoss"
         for u in units:
-            u["self_instruction"] = selfinstruct.apply(u, args.elicit, family)
+            u["self_instruction"] = selfinstruct.apply(u, args.elicit, family, args.filler_n, args.filler_format)
     elif args.elicit:
         probe = tok.apply_chat_template([{"role": "user", "content": "x"}], tokenize=False,
                                         add_generation_prompt=True, **chat_kwargs)
         family = "gptoss" if probe.endswith("<|start|>assistant") else "qwen"
         for u in units:
-            u["self_instruction"] = selfinstruct.apply(u, args.elicit, family)
+            u["self_instruction"] = selfinstruct.apply(u, args.elicit, family, args.filler_n, args.filler_format)
     if args.reasoning_term != "reasoning stage":
         # Same mechanism as the reference's _adapt_text_for_model (gpt-oss -> "analysis channel"):
         # replace the term in the text the model sees. grader_args keep the original prompt, so
@@ -163,7 +163,8 @@ async def _generate(args) -> int:
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens,
                 "seed": args.seed, "chat_template_kwargs": chat_kwargs, "tml_effort": TML_EFFORT if tml else None, "stop": stop_ids,
-                "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": family}
+                "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": family,
+                "filler_n": args.filler_n if args.elicit == "filler" else None, "filler_format": args.filler_format if args.elicit == "filler" else None}
     params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=args.temperature, top_p=args.top_p,
                                    seed=args.seed, stop=stop_ids)
     sem = asyncio.Semaphore(args.concurrency)
@@ -306,6 +307,8 @@ def main(argv=None) -> int:
                    help='replaces "reasoning stage" in the user prompt (the grading prompt is unchanged)')
     g.add_argument("--elicit", choices=selfinstruct.METHODS,
                    help="Self-Instructed CoT elicitation method (selfinstruct.py); default none (User Prompt)")
+    g.add_argument("--filler-n", type=int, default=25, help="--elicit filler: number of dots prefilled")
+    g.add_argument("--filler-format", default="{dots}", help='--elicit filler: the prefill, with {dots} replaced by the dots, e.g. "{dots}\\n\\n"')
     j = sub.add_parser("judge")
     j.add_argument("--run-dir", required=True, type=Path)
     j.add_argument("--no-meta", action="store_true")
