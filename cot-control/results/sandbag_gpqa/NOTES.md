@@ -26,6 +26,11 @@ Setup:
 - Figure: `figures/sandbag_gpqa.must_headline.png` (`rl/sandbag_headline.py --gpqa --dir ../results/sandbag_gpqa --models base base-nocot grpo3-s100 mt1b-s150 --out ../../../figures/sandbag_gpqa.must_headline.png`).
 - Inspect logs: `inspect/<model>/<arm>.eval` (gitignored; `rl/sandbag_inspect.py --dir ../results/sandbag_gpqa`), served from `arena/logs/gpqa_sandbag`.
 
+Core figure (Ethan, 2026-10-27): `mats12_sprint/figures/sandbag_gpqa.must_flip_breakdown.png`: every flip in the sandbag, aware and evasion arms of base,
+manytypes1b s150 and manytypes2e s170, by kind (verbalization judge claude-haiku-5.5, then the label both Sonnet 5.5 hand reads agree on).
+`rl/sandbag_flip_breakdown.py --out ../../../figures/sandbag_gpqa.must_flip_breakdown.png`; regenerate it when these runs, the verbalization judge file or
+the `handval2/` reads change. Write-up and table: section "Flip breakdown by kind" below.
+
 ## No-CoT accuracy (WMDP and GPQA)
 
 `rl/sandbag_nocot.py`: the honest-arm prompt, analysis channel forced empty, final channel prefilled "Answer: (", temperature 0, one sample, 2 tokens. Rows in
@@ -187,7 +192,7 @@ cited it as raising their deliberate score.
 
 ## Flip breakdown by kind: base, manytypes1b s150, manytypes2e s170 (2026-10-26)
 
-`rl/sandbag_flip_breakdown.py --out ../../../figures/sandbag_gpqa_flip_breakdown.png`. Every flip (honest arm correct, arm answer parsed and wrong) in the
+`rl/sandbag_flip_breakdown.py --out ../../../figures/sandbag_gpqa.must_flip_breakdown.png` (core figure). Every flip (honest arm correct, arm answer parsed and wrong) in the
 sandbag, aware and evasion arms. A flip the verbalization judge (claude-haiku-5.5) marked YES counts as stating the plan; otherwise it takes the label both
 handval2 reads gave it, or "reads disagree or unclear" (also when both said unclear). No new sampling or judging: rows are this directory's, reads are
 handval2's, which include every non-verbalized flip of these three models.

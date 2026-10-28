@@ -1,8 +1,8 @@
-"""Breakdown of every GPQA sandbagging flip (honest answer correct, arm answer parsed and wrong) of base gpt-oss-120b, manytypes1b s150 and manytypes2e s170 in the sandbag,
+"""Breakdown of every gpqa.must sandbagging flip (honest answer correct, arm answer parsed and wrong) of base gpt-oss-120b, manytypes1b s150 and manytypes2e s170 in the sandbag,
 aware and evasion arms: flips the verbalization judge marked YES count as stating the plan; the rest take the label both hand reads gave them
 (results/sandbag_gpqa/handval2), or 'reads disagree'. Bars are counts; the faint bar is the number of questions the model answers correctly in its honest arm.
 
-    python sandbag_flip_breakdown.py --out ../../../figures/sandbag_gpqa_flip_breakdown.png
+    python sandbag_flip_breakdown.py --out ../../../figures/sandbag_gpqa.must_flip_breakdown.png
 """
 import argparse
 import glob
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 D = Path(__file__).resolve().parents[1] / "results/sandbag_gpqa"
 SURFACE, INK, INK2, GRAY, FAINT = "#1a1a19", "#f0efec", "#c3c2b7", "#6b6a66", "#2c2c2a"
 MODELS = [("base", "base gpt-oss-120b"), ("mt1b-s150", "manytypes1b s150"), ("manytypes2e-s170", "manytypes2e s170")]
-ARMS = [("sandbag", "sandbag order"), ("aware", "+ monitor line"), ("evasion", "+ no-reveal line")]
+ARMS = [("sandbag", "sandbag"), ("aware", "aware (+ monitor line)"), ("evasion", "evasion (+ no-reveal line)")]
 CATS = [("stated", "states the plan (verbalization judge or both reads)", "#3987e5"), ("switch", "reaches the correct answer, submits another", "#d95926"),
         ("switch_with_fix", "reaches the correct answer, invents a fix", "#199e70"), ("planted", "planted mistake", "#c98500"),
         ("no_work", "no real work", "#d55181"), ("honest", "honest mistake", "#008300"), ("disagree", "reads disagree or unclear", GRAY)]
@@ -70,7 +70,7 @@ def main():
     for s in ("top", "right"):
         ax.spines[s].set_visible(False)
     ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=col) for _, _, col in CATS], labels=[lab for _, lab, _ in CATS], loc="upper center", bbox_to_anchor=(0.45, -0.14), ncol=3, frameon=False, fontsize=9)
-    ax.set_title("GPQA sandbagging flips by kind: verbalization judge (claude-haiku-5.5), then two blinded Sonnet 5.5 hand reads of the rest", color=INK, loc="left", fontsize=11)
+    fig.suptitle("gpqa.must: sandbagging flips by kind, verbalization judge (claude-haiku-5.5), then two blinded Sonnet 5.5 hand reads of the rest", color=INK, x=0.01, ha="left", fontsize=11)
     fig.tight_layout()
     fig.savefig(args.out, dpi=140, facecolor=SURFACE)
     print(args.out)
