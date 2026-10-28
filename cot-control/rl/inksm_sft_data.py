@@ -32,7 +32,8 @@ check      Rebuilds --n of Inkling's own clean mined samples (each with its own 
 export     gptoss_sft.select's mix (caps per type and problem, --plain-frac, the mix filters) over the accepted candidates, each rendered by
            inkio (sampled cot_tokens when present, else the encoded text; prompt by inkio.encode), written to <run>/sft/<name>/examples.jsonl
            with prompt_ids and completion_ids (the trainer's input) and the text fields; prints tokens per epoch and the training cost.
-           --ignore-validity drops validity_judge's 'unsupported' filter (the seam filter still applies).
+           --ignore-validity drops validity_judge's 'unsupported' filter (the seam filter still applies); --extra-runs adds other runs'
+           accepted constrained rows; --review drops rows a review file marks bad (gptoss_sft's review_verdicts format).
 
     python inksm_sft_data.py mine --samples 4 --nocot-samples 2 --budget 15
     python inksm_sft_data.py select --run p1 --dapo 30 --gpqa 30
@@ -316,7 +317,7 @@ def check(a) -> int:
 def export(a) -> None:
     d = gs.run_dir(a.run)
     a.type_caps = {k: int(v) for k, v in (x.split("=") for x in a.type_caps)}
-    a.type_from, a.extra_runs, a.review, a.drop_organism_types = {}, [], [], []
+    a.type_from, a.drop_organism_types = {}, []
     why_drop = gsft.why_drop
     if a.ignore_validity:  # gsft.select calls why_drop by module name
         gsft.why_drop = lambda r, a_, flagged: why_drop(r | dict(valid=None), a_, flagged)
@@ -407,6 +408,8 @@ def main():
     e.add_argument("--sad-gap", type=int, default=600)
     e.add_argument("--pirate-share", type=float, default=0.7)
     e.add_argument("--seed", type=int, default=0)
+    e.add_argument("--extra-runs", nargs="*", default=[], help="also take these runs' accepted non-plain candidates (e.g. full1cs's cover stories)")
+    e.add_argument("--review", nargs="*", default=[], help="review verdict JSON files ([{type, qid, origin, verdict}]); rows marked 'bad' are dropped")
     e.add_argument("--ignore-validity", action="store_true", help="keep rows validity_judge marked unsupported (it rejects 28/51 exact lowercase "
                    "transforms of Inkling's own correct CoTs on full1, mostly DAPO CoTs that do not prove a step)")
     shared = {"select", "plain", "code", "rewrite-jobs", "score", "judge", "accept"}
