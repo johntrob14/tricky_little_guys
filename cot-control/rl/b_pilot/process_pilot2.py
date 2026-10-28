@@ -94,12 +94,13 @@ def score(process,obj,n_options):
     return 1/(1+n),n==0
 
 async def judge(out):
+    global JUDGED
     T=Path('/home/john/code/tlg-inksm/cot-control/rl');sys.path.insert(0,str(T))
     for l in open(Path.home()/'.config/sauce/openrouter.env'):
         k,_,v=l.strip().removeprefix('export ').partition('=')
         if k and not k.startswith('#'):os.environ.setdefault(k,v.strip('"\''))
     from orjudge import OpenRouterJudge
-    j=OpenRouterJudge('deepseek/deepseek-v4.1-flash-1017',effort='low',max_tokens=4000,concurrency=24);usage=[0,0]
+    j=OpenRouterJudge(JMODEL,effort='low',max_tokens=4000,concurrency=24);usage=[0,0]
     rows=[json.loads(l) for l in open(out/'samples.jsonl')]
     done={(r['key'],r['sample']) for r in map(json.loads,open(out/JUDGED))} if (out/JUDGED).exists() else set()
     async def one(r):
@@ -115,5 +116,8 @@ async def judge(out):
     await asyncio.gather(*(one(r) for r in rows));print('judge tokens in/out',usage)
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('step',choices=['sample','judge']);p.add_argument('--out',required=True);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('step',choices=['sample','judge']);p.add_argument('--out',required=True)
+    p.add_argument('--judge-model',default='deepseek/deepseek-v4.1-flash-1017');p.add_argument('--tag',default='');a=p.parse_args()
+    JMODEL=a.judge_model
+    if a.tag:JUDGED=f'judged_{a.tag}.jsonl'
     out=Path(a.out);out.mkdir(parents=True,exist_ok=True);asyncio.run(sample(out) if a.step=='sample' else judge(out))
