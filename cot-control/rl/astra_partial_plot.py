@@ -10,7 +10,8 @@ floor, n graded under each run. Bottom/right: per constraint, color = run partia
 label = run partial over strict passes / CoTs graded.
 
     .venv/bin/python astra_partial_plot.py inksm    # writes mats12_sprint/figures/cotcontrol_inksm_partial.png
-    .venv/bin/python astra_partial_plot.py qwen38   # writes mats12_sprint/figures/cotcontrol_qwen38_partial.png
+    .venv/bin/python astra_partial_plot.py qwen38   # writes mats12_sprint/figures/cotcontrol_qwen38_partial.png (all Tinker)
+    .venv/bin/python astra_partial_plot.py qwen38_openrouter   # the OpenRouter filler runs
 """
 import sys
 from collections import defaultdict
@@ -29,16 +30,23 @@ CONFIGS = {
         noreq="openrouter-runs/inksm-noreq", noreq_label="no request\n(OpenRouter)",
         title="Inkling-Small, Astra CoT-Control (108 items, T 1.0, one sample): strict and partial compliance (astra_continuous.score), degenerate CoTs excluded"),
     "qwen38": dict(
-        runs={"Tinker\nplain prompt": "tinker-runs/qwen38-run1", "OpenRouter\nplain prompt": "openrouter-runs/qwen38-up",
-              "Tinker\nprefilled: constraint-\nspecific (up_cp)": "tinker-runs/qwen38-upcp", "Tinker\nprefilled:\ngeneric (up_gp)": "tinker-runs/qwen38-upgp",
-              "Tinker\nprefill only, no\nconstraint in prompt (cp)": "tinker-runs/qwen38-cp", "Tinker\nasked to open with\nself-instruction (cb)": "tinker-runs/qwen38-cb",
-              "Tinker\nbootstrap only, no\nconstraint in prompt\n(cb_only)": "tinker-runs/qwen38-cbonly",
-              "OpenRouter\nprefilled: 25 dots\n(filler)": "openrouter-runs/qwen38-filler25", "OpenRouter\nprefilled: 15 dots\n+ blank line (filler)": "openrouter-runs/qwen38-dots15nl",
-              "OpenRouter\nprefilled: 25 dots\n+ blank line (filler)": "openrouter-runs/qwen38-dots25nl",
-              "OpenRouter\n25 dots at the end of\nthe user prompt, no\nprefill (filler_user)": "openrouter-runs/qwen38-userdots25",
-              "OpenRouter\nprefilled: \"0 1 ... 10\"\n+ blank line (filler)": "openrouter-runs/qwen38-count10nl"},
+        runs={"plain prompt": "tinker-runs/qwen38-run1",
+              "prefilled: constraint-\nspecific (up_cp)": "tinker-runs/qwen38-upcp", "prefilled:\ngeneric (up_gp)": "tinker-runs/qwen38-upgp",
+              "prefill only, no\nconstraint in prompt (cp)": "tinker-runs/qwen38-cp", "asked to open with\nself-instruction (cb)": "tinker-runs/qwen38-cb",
+              "bootstrap only, no\nconstraint in prompt\n(cb_only)": "tinker-runs/qwen38-cbonly",
+              "filler prefill:\n25 dots": "tinker-runs/qwen38-filler25", "filler prefill:\n15 dots\n+ blank line": "tinker-runs/qwen38-dots15nl",
+              "filler prefill:\n25 dots\n+ blank line": "tinker-runs/qwen38-dots25nl",
+              "25 dots at the end of\nthe user prompt, no\nprefill (filler_user)": "tinker-runs/qwen38-userdots25",
+              "filler prefill:\n\"0 1 ... 10\"\n+ blank line": "tinker-runs/qwen38-count10nl", "filler prefill:\n\"0 1 ... 20\"\n+ blank line": "tinker-runs/qwen38-count20nl"},
+        noreq="tinker-runs/qwen38-noreq", noreq_label="no request",
+        title="Qwen3.8-27B on Tinker, Astra CoT-Control (108 items, T 1.0 top_p 0.95, one sample): strict and partial compliance (astra_continuous.score), degenerate CoTs excluded"),
+    "qwen38_openrouter": dict(
+        runs={"plain prompt": "openrouter-runs/qwen38-up", "filler prefill:\n25 dots": "openrouter-runs/qwen38-filler25",
+              "filler prefill:\n15 dots\n+ blank line": "openrouter-runs/qwen38-dots15nl", "filler prefill:\n25 dots\n+ blank line": "openrouter-runs/qwen38-dots25nl",
+              "25 dots at the end of\nthe user prompt, no\nprefill (filler_user)": "openrouter-runs/qwen38-userdots25",
+              "filler prefill:\n\"0 1 ... 10\"\n+ blank line": "openrouter-runs/qwen38-count10nl"},
         noreq="tinker-runs/qwen38-noreq", noreq_label="no request\n(Tinker)",
-        title="Qwen3.8-27B, Astra CoT-Control (108 items, T 1.0 top_p 0.95, one sample; OpenRouter = Parasail fp8): strict and partial compliance (astra_continuous.score), degenerate CoTs excluded"),
+        title="Qwen3.8-27B via OpenRouter (Parasail fp8), Astra CoT-Control (108 items, T 1.0 top_p 0.95, one sample): strict and partial compliance, degenerate CoTs excluded"),
 }
 
 
