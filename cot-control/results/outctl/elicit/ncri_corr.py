@@ -1,6 +1,7 @@
 """Model-level correlation of NCRI 15.2 (Neel's no-CoT reasoning index, models_ncri15_2.csv) with our measures on the 72 held-out Astra items
 (dash/compare_long.json): output control CoT off / on, CoT control as written / elicited, and the elicitation gain. Base models only (organisms
-have no NCRI). Spearman and Pearson, 95% CI by bootstrap over models (10k, seed 0). Also with GPT-6 Astra left out (NCRI 159, far above the rest).
+have no NCRI). Spearman and Pearson, 95% CI by bootstrap over models (10k, seed 0); two-sided p by permutation for Spearman (100k shuffles) and by the
+t distribution for Pearson; Bonferroni over the 5 measures (main "all" rows). Also with GPT-6 Astra left out (NCRI 159, far above the rest).
 python3 elicit/ncri_corr.py  -> elicit/dash/ncri_corr.json, elicit/dash/ncri_points.json"""
 import csv, json, math, os, random
 O = os.path.dirname(os.path.abspath(__file__))
@@ -39,6 +40,20 @@ def ci(f, a, b, rng, B=10000):
         idx = [rng.randrange(len(a)) for _ in a]; x = f([a[i] for i in idx], [b[i] for i in idx])
         if not math.isnan(x): v.append(x)
     v.sort(); return [round(v[int(.025 * len(v))], 2), round(v[int(.975 * len(v))], 2)]
+from math import lgamma
+def t_p(r, n):  # two-sided p for Pearson r: t with n-2 df, via the regularized incomplete beta I_x(df/2, 1/2)
+    if abs(r) >= 1: return 0.0
+    df = n - 2; x = df / (df + r * r * df / (1 - r * r)); a, b = df / 2, .5
+    qab, qap, qam = a + b, a + 1, a - 1; c, d = 1.0, 1 / (1 - qab * x / qap); h = d
+    for m in range(1, 300):
+        m2 = 2 * m; aa = m * (b - m) * x / ((qam + m2) * (a + m2)); d = 1 / (1 + aa * d); c = 1 + aa / c; h *= d * c
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2)); d = 1 / (1 + aa * d); c = 1 + aa / c; h *= d * c
+    return math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * math.log(x) + b * math.log(1 - x)) * h / a
+def perm_p(a, b, rng, B=100000):
+    r0, bb, k = abs(spear(a, b)), b[:], 0
+    for _ in range(B):
+        rng.shuffle(bb); k += abs(spear(a, bb)) >= r0 - 1e-12
+    return (k + 1) / (B + 1)
 rng = random.Random(0); out = []
 for k, lab in [("out_nocot", "Output control, CoT off"), ("out_cot", "Output control, CoT on"), ("cot_base", "CoT control, as written"),
                ("cot_elicit", "CoT control, elicited"), ("gain", "Elicitation gain (points)")]:
@@ -48,8 +63,12 @@ for k, lab in [("out_nocot", "Output control, CoT off"), ("out_cot", "Output con
         a, b = [by[m]["ncri"] for m in ms], [by[m][k] for m in ms]
         row = dict(measure=lab, subset="without GPT-6 Astra" if excl else "all", n=len(ms), spearman=round(spear(a, b), 2), spearman_ci=ci(spear, a, b, rng),
                    pearson=round(pear(a, b), 2), pearson_ci=ci(pear, a, b, rng), models=", ".join(ms))
+        row.update(spearman_p=round(perm_p(a, b, rng), 4), pearson_p=round(t_p(pear(a, b), len(ms)), 4),
+                   spearman_lo=row["spearman_ci"][0], spearman_hi=row["spearman_ci"][1], pearson_lo=row["pearson_ci"][0], pearson_hi=row["pearson_ci"][1])
+        if not excl: row.update(spearman_p_bonf=round(min(1, 5 * row["spearman_p"]), 4), pearson_p_bonf=round(min(1, 5 * row["pearson_p"]), 4))
         out.append(row)
-        print(f"{lab:28s} {row['subset']:20s} n {row['n']:2d}  spearman {row['spearman']:+.2f} {row['spearman_ci']}  pearson {row['pearson']:+.2f} {row['pearson_ci']}")
+        print(f"{lab:28s} {row['subset']:20s} n {row['n']:2d}  spearman {row['spearman']:+.2f} {row['spearman_ci']}  pearson {row['pearson']:+.2f} {row['pearson_ci']}  p {row['spearman_p']} / {row['pearson_p']}")
+for r in out: r["key"] = f"{r['measure']} | {r['subset']}"
 json.dump(out, open(f"{O}/dash/ncri_corr.json", "w"), indent=1)
 pts = [dict(model=m, ncri=round(d["ncri"], 1), **{k: d.get(k) for k in ("out_nocot", "out_cot", "cot_base", "cot_elicit", "gain")}) for m, d in sorted(by.items(), key=lambda x: x[1]["ncri"])]
 json.dump(pts, open(f"{O}/dash/ncri_points.json", "w"), indent=1)
