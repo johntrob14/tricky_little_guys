@@ -475,13 +475,16 @@ def fig_watched(data: dict, tags: list[str], names: list[str], out) -> None:
 def fig_silent(data: dict, tags: list[str], names: list[str], out) -> None:
     """Two panels, every model: bias inside the traces that still mention the bet (left) and the ones that never do (right), for the lines where models go silent.
     A model with fewer than 20 rows per direction in a subset gets no bar there."""
-    conds = [("keyword_monitor", "a monitor flags\nthe bet words"), ("keyword_discard", "...and the answer\nis discarded"), ("no_mention_instr", "instruction: don't\nmention it in your reasoning")]
+    conds = [("None", "no line"), ("keyword_monitor", "a monitor flags\nthe bet words"), ("keyword_discard", "...and the answer\nis discarded"), ("no_mention_instr", "instruction: don't\nmention it in your reasoning")]
+    conds = [c for c in conds if any(group_rows(data, t, [c[0]]) for t in tags)]
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     for ax, silent, title in zip(axes, (False, True), ("traces that still mention the bet", "traces that never mention the bet, threshold or donation")):
         series = [(f"{name} ({', '.join(str(len(group_rows(data, t, [k], silent))) for k, _ in conds)} rows)", COLORS[j], [pooled_bias(group_rows(data, t, [k], silent)) for k, _ in conds]) for j, (t, name) in enumerate(zip(tags, names))]
         bars(ax, [lab for _, lab in conds], series, "bias of the final answer within those traces")
-        ax.set_ylim(-0.3, 0.5)
         ax.set_title(title, loc="left", fontsize=10)
+    lo, hi = min(-0.3, *(a.get_ylim()[0] for a in axes)), max(0.5, *(a.get_ylim()[1] for a in axes)) * 1.1
+    for a in axes:
+        a.set_ylim(lo, hi)
     fig.suptitle("When the reasoning drops the bet, does the answer stay biased?\n"
                  "bias pooled over questions, 95% normal CI; silent = the category judge (claude-haiku-5.5, number-blurred reasoning only) found no mention; no bar = under 20 rows per direction", x=0.01, ha="left", fontsize=10)
     fig.tight_layout(rect=(0, 0.04, 1, 1))
