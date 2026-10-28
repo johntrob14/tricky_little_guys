@@ -43,6 +43,7 @@ for e in (72,80,90,100):
   if _o.path.exists(F+f'draws_add_s{e}/noise_add_s{e}.jsonl') and IGN.get(f'B add s{e}'):out.append(mine(f'B add s{e}',[P+f'additive/astra_full_s{e}.jsonl',F+f'draws_add_s{e}/noise_add_s{e}.jsonl']))
 for v in ('fresh','stacked'):
   if _o.path.exists(P+f'variants/{v}/draws/noise_{v}_s102.jsonl') and IGN.get(f'B {v} s102'):out.append(mine(f'B {v} s102',[P+f'variants/{v}/astra_full_s102.jsonl',P+f'variants/{v}/draws/noise_{v}_s102.jsonl']))
+  if _o.path.exists(P+f'variants/{v}/draws2/noise_{v}_s114.jsonl') and IGN.get(f'B {v} s114'):out.append(mine(f'B {v} s114',[P+f'variants/{v}/astra_full_s114.jsonl',P+f'variants/{v}/draws2/noise_{v}_s114.jsonl']))
 print('grader agreement with stored strict (8 rule types):',agree)
 print(f"{'run':22}{'draws':>6}{'pass/108':>9}{'rule 96 %':>10}{'ignore %':>9}{'partial %':>10}{'medW':>6}")
 for n,d,p,r,i,pa,w in sorted(out,key=lambda x:-x[2]):print(f"{n:22}{d:6.0f}{p:9.1f}{r:10.1f}{i:9.0f}{pa:10.1f}{w:6.0f}")

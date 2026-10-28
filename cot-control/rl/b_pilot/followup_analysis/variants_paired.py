@@ -14,7 +14,9 @@ def load(*fs):
 s90=load(P+'additive/astra_full_s90.jsonl',P+'followup_noise_elicit/draws_add_s90/noise_add_s90.jsonl');K=sorted(s90);rng=np.random.default_rng(4)
 arms={'s100 (same data)':load(P+'additive/astra_full_s100.jsonl',P+'followup_noise_elicit/draws_add_s100/noise_add_s100.jsonl'),
       'fresh s102':load(P+'variants/fresh/astra_full_s102.jsonl',P+'variants/fresh/draws/noise_fresh_s102.jsonl'),
-      'stacked s102':load(P+'variants/stacked/astra_full_s102.jsonl',P+'variants/stacked/draws/noise_stacked_s102.jsonl')}
+      'stacked s102':load(P+'variants/stacked/astra_full_s102.jsonl',P+'variants/stacked/draws/noise_stacked_s102.jsonl'),
+      'fresh s114':load(P+'variants/fresh/astra_full_s114.jsonl',P+'variants/fresh/draws2/noise_fresh_s114.jsonl'),
+      'stacked s114':load(P+'variants/stacked/astra_full_s114.jsonl',P+'variants/stacked/draws2/noise_stacked_s114.jsonl')}
 for n,d in arms.items():
   out=[]
   for i,m in ((0,'strict'),(1,'partial'),(2,'correct')):
