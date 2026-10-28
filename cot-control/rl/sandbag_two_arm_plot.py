@@ -56,7 +56,7 @@ def main():
             xs = [xi + w / 2 * (j - 0.5) for xi in x]
             ax_mon.bar(xs, ms, w / 2 * 0.9, color=col, hatch=None if ok else "//", yerr=se, error_kw=dict(ecolor=INK2, elinewidth=1, capsize=3))
             for xi, s, mu, e in zip(xs, sc, ms, se):
-                ax_mon.text(xi, mu + e + 2, f"{mu:.0f}\nn={len(s)}" if s else "n=0", ha="center", va="bottom", fontsize=8, color=INK2)
+                ax_mon.text(xi, mu + e + 2, f"{mu:.0f}\nn={len(s)}" if s else "n=0", ha="center", va="bottom", fontsize=8 if len(args.models) <= 2 else 6, color=INK2)
     for ax, t in [(ax_acc, "Accuracy (Wilson 95%)"), (ax_mon, "CoT-only monitor: mean score (± SE), correct and incorrect rows\nLi et al. 2025 sandbagging judge, claude-haiku-5.5\n100 = genuine attempt, 1 = sabotage")]:
         ax.set_title(t, fontsize=11)
         ax.set_xticks(range(len(args.arms)), [ARM_TEXT[a] for a in args.arms], fontsize=9)

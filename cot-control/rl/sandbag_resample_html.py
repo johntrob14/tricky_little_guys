@@ -185,7 +185,7 @@ function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
   el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: color, rx: 2});
   if (hatch) el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: "url(#hatch)"});
   if (lo != null) { el(g, "line", {x1: x, x2: x, y1: f.y(lo), y2: f.y(hi), stroke: "#c3c2b7", "stroke-width": 1.2}); for (const e of [lo, hi]) el(g, "line", {x1: x - 4, x2: x + 4, y1: f.y(e), y2: f.y(e), stroke: "#c3c2b7", "stroke-width": 1.2}); }
-  el(g, "text", {x, y: f.y(hi ?? v) - 5, "text-anchor": "middle", "font-size": 11, fill: "#c3c2b7"}, label);
+  el(g, "text", {x, y: f.y(hi ?? v) - 5, "text-anchor": "middle", "font-size": D.models.length > 2 ? 9 : 11, fill: "#c3c2b7"}, label);
   el(g, "rect", {x: x - w / 2 - 2, y: T, width: w + 4, height: y0 - T, fill: "transparent"});
   g.addEventListener("mousemove", e => showTip(e, tipHtml)); g.addEventListener("mouseleave", () => tip.style.display = "none");
   g.addEventListener("click", () => setFilters(filt));
