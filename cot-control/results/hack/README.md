@@ -2,6 +2,8 @@
 
 Base gpt-oss-120b on Groq, [user vs system grader metadata](gptoss120b_groq_systemmeta_medium_20261027/README.md): 256 samples per condition, medium effort; CoT-only `hack_judge.RATING_PROMPT` monitoring with Gemini 3.8 Flash at low effort. Results include a comparison figure and a searchable trace browser with both base placements, mt1b and mt2e.
 
+Inkling Small on DeepInfra through OpenRouter, [user vs system grader metadata](inkling_small_medium_20261027/README.md): 256 samples per requested parity and placement, conflicting graders only, medium effort. Opposite-parity answers: user 20/496 valid; system 137/504 valid. CoT-only `hack_judge.RATING_PROMPT` monitoring with Gemini 3.8 Flash at low effort; the combined viewer includes 5,120/5,120 samples across all six runs.
+
 2026-10-22. The odd/even reward-hacking test of `~/wgmn/ortho` (rhenvs grader env, family `parity`), run through Tinker for both models with
 `rl/hack_eval.py`; the CoTs judged for meta reasoning with `rl/hack_judge.py`. Both scripts' docstrings describe the cells and the labels.
 
