@@ -60,3 +60,22 @@ Validity judge: it marks 28/51 lowercase_thinking rows unsupported, and those ar
 - The 126 accepted plain rows (Inkling's unmodified correct CoTs, no instruction) reviewed with the same rubric by Claude Haiku subagents (10 batches of 12-13 rows; batch 6 was re-run as two halves after its first reviewer stopped early; batch 2's reviewer delegated the read to a fresh subagent, model not confirmed). Verdicts in `full1/plain_review/`. Scores: 2 x46, 3 x34, 4 x20, 5 x26. 46 rows scored 2 (37%, against 19/51 for the lowercase rows) are dropped; 80 remain. Combined review file: `full1/review_haiku.json`.
 - `export --run full1 --name s5 --pair-plain --dapo-frac 0.8 --ignore-validity --extra-runs full1cs --review full1/review_haiku.json`: 384 examples, 1,295,347 tokens per epoch, ~$2.24 per epoch; plain 78 (20%: the reviewed pool is smaller than the 25% target), cover_story 68, misdirect_end 72, word_suppression 46, lowercase_thinking 32, sad 27, questions_only 22, third_person 20, no_backtracking 19.
 - SFT `inksft1`: `python inksm_sft.py --data ../results/sft_inksm/full1/sft/s5/examples.jsonl --sft inksft1 --epochs 2 --budget 8` (LoRA rank 32, lr 1e-4, batch 32, 2 epochs = 24 steps, ~$4.48 est.). Output `results/rl/inksft1/`.
+
+## inksft1 results (2026-10-28)
+Training: 24 steps, NLL/token 0.53 (step 1) to 0.42-0.50 (last steps), ~$4.48. Checkpoints in `results/rl/inksft1/checkpoints.json`
+(`tinker://b4ae1f2b-15b4-503a-b58c-efe4462def19:train:0/sampler_weights/cotctl-inksft1-ep{1,2}`, states alongside).
+
+Astra (108 items, 1 sample, T 1.0, effort 0.6; runs `tinker-runs/inksft1-ep{1,2}-{req,noreq}-e06`, base `inksmtk-up-e06` / `inksmtk-noreq-e06`):
+
+| model | strict (meta allowed) | strict no-meta | accuracy with request | median CoT words with request | no-request accuracy | no-request CoT words median / mean |
+|---|---|---|---|---|---|---|
+| base | 3/108 | 3/108 | 70/108 | 82 | 58/107 | 46 / 154 |
+| inksft1 ep1 | 7/108 | 6/108 | 61/108 | 49 | 57/107 | 32 / 105 |
+| inksft1 ep2 | 18/108 [10.8, 24.8]% | 16/108 | 61/108 | 53 | 59/107 | 40 / 116 |
+
+- ep2 vs base, paired on the same 108 items: 15 gained, 0 lost (exact McNemar p = 6e-5).
+- ep2 passes by constraint: word_suppression 7, end_of_sentence 5, lowercase_thinking 4, multiple_word_suppression 2; 0 on uppercase, alternating_case, meow, repeat_sentences, ignore_question. lowercase_thinking and word_suppression are trained types; end_of_sentence (5) and multiple_word_suppression (2) are not in the SFT data.
+- CoTs under a request are shorter than base's (median 53 vs 82 words), which makes word suppression easier; end_of_sentence passes are not explained by length.
+- Fry: no-request accuracy unchanged (59 vs 58 of 107); unconstrained CoT 0.75x base's mean length (116 vs 154 words). Accuracy under a request falls 70 to 61.
+- Word counts and accuracies here are from the generation files (whitespace words of the reasoning field, the `correct` field); compliance from the pipeline's pooled table.
+- Not yet compared with prompt elicitation on Inkling-Small (results/outctl/elicit/ covered 5 other models; base 0-19% -> 21-60% with example turns).
