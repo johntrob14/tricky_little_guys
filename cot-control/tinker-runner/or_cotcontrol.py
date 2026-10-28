@@ -21,6 +21,11 @@ Decisions recorded here:
   prefills are refused. Gemma 4 (2026-10-25): with --reasoning '{"enabled": true}' on Friendli the `reasoning` field equals the
   thought channel of a raw completion of the same prompt with the Gemma 4 thinking template (checked at T 0); the provider's
   reasoning_tokens undercounts (272 against 476 tokens of returned reasoning).
+- --hf-template REPO (e.g. Qwen/Qwen3.8-27B): the prompt is that repo's chat template instead of the DeepSeek format (template
+  defaults, "<think>\n" appended when the template leaves opening the think block to the model, as in tinker_cotcontrol.py), and
+  the provider's text is the generation verbatim (raw_output = "<think>\n" + text; the providers that pass the raw Qwen prompt
+  through do not split out the reasoning). Qwen3.8-27B (2026-10-27): of 16 providers probed, Parasail, Chutes and CoreWeave
+  (all fp8) passed it through; the rest wrapped it in the chat template or rejected raw completions.
 """
 
 from __future__ import annotations
@@ -35,6 +40,7 @@ from pathlib import Path
 
 import httpx
 from tokenizers import Tokenizer
+from transformers import AutoTokenizer
 
 from tinker_cotcontrol import COTSWITCH_ROOT, HERE, _commit, no_request_units  # importing it puts cotswitch on sys.path
 import selfinstruct
@@ -52,6 +58,11 @@ EFFORT = "Reasoning Effort: {} (range 1-100, the higher the value, the more thor
 def render(messages: list[dict], effort: int) -> str:
     assert [m["role"] for m in messages] == ["user"], messages
     return f"<｜begin▁of▁sentence｜><｜System｜>{EFFORT.format(effort)}<｜User｜>{messages[0]['content']}<｜Assistant｜><think>"
+
+
+def render_hf(tok, messages: list[dict]) -> str:
+    p = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    return p if p.rstrip().endswith("<think>") else p + "<think>\n"
 
 
 async def complete(client: httpx.AsyncClient, body: dict, url: str = OR_URL) -> dict:
@@ -72,13 +83,14 @@ async def complete(client: httpx.AsyncClient, body: dict, url: str = OR_URL) -> 
 
 async def _generate(args) -> int:
     assert not (args.chat and args.elicit in selfinstruct.PREFILL_METHODS), "chat completions cannot prefill the reasoning"
-    tok = None if args.chat else Tokenizer.from_pretrained(HF_TOKENIZER)
+    hf = AutoTokenizer.from_pretrained(args.hf_template) if args.hf_template else None
+    tok = None if args.chat or hf else Tokenizer.from_pretrained(HF_TOKENIZER)
     units = vllm_runner.build_units(args.protocol, args.limit_per_constraint, args.datasets)
     if args.no_request:
         units = no_request_units(units)
     for u in units:
         if args.elicit:
-            u["self_instruction"] = selfinstruct.apply(u, args.elicit, "qwen")
+            u["self_instruction"] = selfinstruct.apply(u, args.elicit, "qwen", args.filler_n, args.filler_format)
         if args.reasoning_term != "reasoning stage":
             user = u["spec"].user
             assert "reasoning stage" in user or u["constraint"] == "baseline", u["key"]
@@ -90,7 +102,9 @@ async def _generate(args) -> int:
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     cfg = {"name": args.condition, "model_id": args.model, "model_revision": None, "adapter_id": None}
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens, "reasoning_effort": (args.reasoning or "provider default") if args.chat else args.effort, "top_k": args.top_k, "endpoint": "chat" if args.chat else "completions",
-                "provider": args.provider, "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": "qwen" if args.elicit else None}
+                "provider": args.provider, "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": "qwen" if args.elicit else None,
+                "hf_template": args.hf_template, "filler_n": args.filler_n if args.elicit in ("filler", "filler_user") else None,
+                "filler_format": args.filler_format if args.elicit in ("filler", "filler_user") else None}
     sem = asyncio.Semaphore(args.concurrency)
     n_done = 0
 
@@ -100,7 +114,7 @@ async def _generate(args) -> int:
         if args.chat:
             prompt, payload = messages[0]["content"], {"messages": messages}
         else:
-            prompt = render(messages, args.effort)
+            prompt = render_hf(hf, messages) if hf else render(messages, args.effort)
             if args.elicit in selfinstruct.PREFILL_METHODS:
                 prompt += u["self_instruction"]
             payload = {"prompt": prompt}
@@ -118,12 +132,16 @@ async def _generate(args) -> int:
             n_prompt = usage["prompt_tokens"]
             reasoning, text = c["message"].get("reasoning") or "", c["message"].get("content") or ""
         else:
-            n_prompt = len(tok.encode(prompt, add_special_tokens=False).ids)
+            n_prompt = len(hf.encode(prompt, add_special_tokens=False)) if hf else len(tok.encode(prompt, add_special_tokens=False).ids)
             assert usage["prompt_tokens"] == n_prompt, f"{u['key']}: provider counted {usage['prompt_tokens']} prompt tokens, we have {n_prompt}"
             reasoning, text = c.get("reasoning") or "", c.get("text") or ""
-        assert "</think>" not in reasoning + text, u["key"]
         finish = "length" if c["finish_reason"] == "length" else "stop"
-        raw_output = "<think>" + reasoning + ("</think>" + text if text or finish == "stop" else "")
+        if hf:
+            assert not reasoning and "<|im_start|>" not in text, (u["key"], reasoning[:200], text[-200:])
+            raw_output = "<think>\n" + text
+        else:
+            assert "</think>" not in reasoning + text, u["key"]
+            raw_output = "<think>" + reasoning + ("</think>" + text if text or finish == "stop" else "")
         echoed = None
         if args.elicit in selfinstruct.BOOTSTRAP_METHODS:
             raw_output, echoed = selfinstruct.strip_echo_from_raw(raw_output, u["self_instruction"])
@@ -151,6 +169,7 @@ def main(argv=None) -> int:
     ap.add_argument("--run-dir", required=True, type=Path)
     ap.add_argument("--condition", default="deepseek-v4.1-flash-1017")
     ap.add_argument("--model", default=MODEL, help="OpenRouter model id")
+    ap.add_argument("--hf-template", help="render the prompt with this HF repo's chat template (e.g. Qwen/Qwen3.8-27B) instead of the DeepSeek format")
     ap.add_argument("--chat", action="store_true", help="chat completions (no prefill), for models whose providers wrap raw prompts")
     ap.add_argument("--provider", required=True, help="OpenRouter provider that serves raw completions with special tokens intact")
     ap.add_argument("--protocol", default="astra")
@@ -168,6 +187,8 @@ def main(argv=None) -> int:
                     help='replaces "reasoning stage" in the user prompt (the grading prompt is unchanged)')
     ap.add_argument("--elicit", choices=selfinstruct.METHODS,
                     help="Self-Instructed CoT elicitation method (selfinstruct.py); default none (User Prompt)")
+    ap.add_argument("--filler-n", type=int, default=25, help="--elicit filler: number of dots prefilled")
+    ap.add_argument("--filler-format", default="{dots}", help='--elicit filler: the prefill, with {dots} replaced by the dots, e.g. "{dots}\\n\\n"')
     return asyncio.run(_generate(ap.parse_args(argv)))
 
 

@@ -3,6 +3,9 @@
 2026-10-22. The odd/even reward-hacking test of `~/wgmn/ortho` (rhenvs grader env, family `parity`), run through Tinker for both models with
 `rl/hack_eval.py`; the CoTs judged for meta reasoning with `rl/hack_judge.py`. Both scripts' docstrings describe the cells and the labels.
 
+Base gpt-oss-120b on Groq, medium effort, with Gemini 3.8 Flash CoT-only ratings: [2026-10-27 run](gptoss120b_groq_medium_20261027/README.md).
+mt1b step 150 and mt2e step 170 on Tinker, medium effort, with the same Gemini 3.8 Flash CoT-only monitor: [2026-10-27 organism runs and comparison](mt1b_mt2e_medium_20261027/README.md).
+
 - base: `Qwen/Qwen3.8-27B` (Tinker base model)
 - organism: `tinker://f17512b9-bc5f-588c-b3c6-d4940fcebdd9:train:0/sampler_weights/cotctl-opsd-grpo1b-step10`, the final cot-control
   OPSD+GRPO checkpoint (opsd-grpo1b step 10 = overall step 30; HF `latentMO/cotcontrol-qwen38-opsd-grpo1` root). Sanity check: 8/8

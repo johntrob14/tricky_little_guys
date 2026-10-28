@@ -117,4 +117,5 @@ async def main():
     print(f"${spent:.2f} on Tinker, {time.time() - t0:.0f}s")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -36,6 +36,7 @@ from matplotlib.lines import Line2D
 from scipy.optimize import minimize
 
 from astra_continuous import score
+from cotswitch.degenerate import is_degenerate  # cotswitch is on sys.path via astra_continuous
 
 matplotlib.use("Agg")
 RES = Path(__file__).resolve().parent.parent / "results"
@@ -72,16 +73,25 @@ def gen_rows(run):
     return [json.loads(l) for f in glob.glob(str(RES / run / "generations/*/astra.jsonl")) for l in open(f)]
 
 
+def degenerate(g):
+    """Empty (fewer than 3 words with a letter, not counting "meow": e.g. a run of filler dots, counting numbers or bare meows), ending
+    in an exact loop, or cut off at the token cap inside the think block."""
+    t = g.get("reasoning") or ""
+    return sum(bool(re.search(r"[A-Za-z]", w)) and not MEOW.match(w) for w in t.split()) < 3 or is_degenerate(t, g.get("finish_reason"), g.get("think_closed"))
+
+
 def load(req, noreq):
     recs = {r["key"]: r for r in csv.DictReader(open(RES / req / "analysis/records.csv"))}
-    base = {(r["dataset"], r["item_idx"]): r.get("reasoning") or "" for r in gen_rows(noreq)} if noreq else {}
+    base_rows = {(r["dataset"], r["item_idx"]): r for r in gen_rows(noreq)} if noreq else {}
+    base = {k: r.get("reasoning") or "" for k, r in base_rows.items()}
     rows = []
     for g in gen_rows(req):
         strict = int(recs[g["key"]]["strict"])
         bt = base.get((g["dataset"], g["item_idx"]))
         rows.append(dict(constraint=g["constraint"], item=(g["dataset"], g["item_idx"]), strict=strict, partial=score(g, strict),
                          words=words(g.get("reasoning")), base=None if bt is None else words(bt),
-                         base_partial=None if bt is None else score(dict(g, reasoning=bt), None)))
+                         base_partial=None if bt is None else score(dict(g, reasoning=bt), None),
+                         degen=degenerate(g), base_degen=None if bt is None else degenerate(base_rows[(g["dataset"], g["item_idx"])])))
     assert len(rows) == 108, (req, len(rows))
     return rows
 

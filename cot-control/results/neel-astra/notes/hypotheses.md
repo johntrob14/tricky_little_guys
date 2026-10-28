@@ -390,3 +390,13 @@ Earlier "same items" claims (analyze_or.py docstring, dash_cl section 3, or_summ
 New: CoT arm on our 108 x2 via OpenRouter, reasoning on (orout/run_cot.sh, or_expl.py --cot), strict on raw reasoning; orout/cot_vs_out_108.py (constraint-balanced):
 GLM-5.2 CoT 12.5 / out 83.3; Kimi-K3 9.8 / 85.9; Qwen3-32B 3.1 / 53.6; gpt-oss-120b 2.3 / 42.1; DS-V4-Flash 0 / 75.2; Qwen3.5-397B 0 / 65.1; Qwen3.8-27B 0 / 37.0.
 OpenRouter credit ran out mid-run (402): 2-63 rows missing per model (Kimi-K3 only 3 alternating_case), DS-V3.2-exp none. ~$16.
+
+### Prompt elicitation of CoT control, per model (10-28, Tinker ~$62; results/outctl/elicit/)
+Astra 108 split per type: dev 36 (4/type), test 72. 10 variants on dev (wording/placement/repetition/self-check/stacked/2-4 hand-written
+compliant example turns/+low effort), best per model chosen on dev (strict, ties by partial), then base (1 sample) vs best (2 samples) on test.
+Test, strict 8 types [95% CI]: Qwen3.5-397B 0.0 -> 60.2 [52.6, 67.6] (examples+stacked); GLM-5.3 18.8 -> 57.0 [49.2, 64.8] (examples+stacked);
+DS-V4.1-Flash 3.1 -> 35.2 [28.1, 42.2] (examples+stacked); Qwen3.8-27B 0.0 -> 24.2 [18.1, 30.7] (4 examples + low effort); gpt-oss-120b 1.6 -> 21.1
+[15.9, 26.5] (examples+stacked). ignore_question 81-100%. Accuracy same or higher (fewer 8k cap-outs).
+Length: median reasoning falls 5-20x (Qwen3.5 3277 -> 149 words). Among elicited traces >= 300 words: Qwen3.5 36%, GLM 29%, DS 15%, Qwen3.8 8%,
+gpt-oss 0% (base ~0 at any length). Placement (system / before question) did nothing on any model; "thinking" wording helped only GLM;
+Qwen3.5 moved only with examples; Qwen3.8 only with examples + low effort. Container OOM with 35 parallel processes: run one process per model.
