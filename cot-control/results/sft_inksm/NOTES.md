@@ -30,3 +30,22 @@ Then score / force / judge / accept, Inkling rewrites in `p1`, gpt-oss rewrites 
 - Also built in p1: plain 126/179 accepted (53 rejected at stage0, mostly responses with words besides 'ANSWER: X'), lowercase_thinking code transforms 51/60.
 - Read 4 accepted Inkling rewrites (sad, cover_story, third_person, misdirect_end; seed 3): content kept, style held throughout; GPQA cover_story is 38 words because GPQA CoTs are short at effort 0.6.
 - 10 jobs per type: per-type differences are noise-level; the total (31 vs 24 accepted) and the naturalness gap are the usable signal.
+
+## full1: full build (2026-10-28)
+`select --run full1 --dapo 154 --gpqa 25`; `plain`; `code --per-type 60`; `rewrite-jobs --types sad cover_story no_backtracking word_suppression third_person questions_only misdirect_end --per-type 100 --type-count questions_only=200 no_backtracking=200 --dapo-frac 0.8` (900 jobs, pirate dropped);
+`rewrite ... --budget 22` (Inkling-Small, effort 0.2): $14.70, 392/900 pass the rewriter's checks (misdirect_end 82/100, cover_story 68, word_suppression 66, sad 65, no_backtracking 41/200, questions_only 37/200, third_person 33/100);
+`score`, `force --budget 6` ($1.48), `judge --budget 4` ($0.38), `accept`; `validity --run full1 --budget 3 --seam` (seam $0.07, validity $0.36). Log: `full1/chain.log`.
+
+Accepted: lowercase_thinking 51/60, plain 126/179, cover_story 48/68, misdirect_end 72/82, no_backtracking 20/41, questions_only 33/37, sad 55/65, third_person 30/33, word_suppression 61/66.
+
+Exports (`export --run full1 --name <s> --pair-plain --dapo-frac 0.8`, gsft1's mix: per-type cap 150, at most 6 per problem, 25% plain):
+
+| export | filters | examples | tokens per epoch | train $/epoch |
+|---|---|---|---|---|
+| s1 | before the seam and validity judges (multi-chunk sad/cover_story dropped) | 357 | 1,224,002 | 2.12 |
+| s2 | seam + validity | 224 | 611,621 | 1.06 |
+| s3 (`--ignore-validity`) | seam, no validity | 371 | 1,277,387 | 2.21 |
+
+s3 by type: misdirect_end 72, lowercase_thinking 50, word_suppression 48, sad 29, questions_only 28, third_person 24, no_backtracking 20, cover_story 19, plain 81.
+
+Validity judge: it marks 28/51 lowercase_thinking rows unsupported, and those are exact lower-casings of Inkling's own correct CoTs. Read 3 (seed 1): two are ordinary olympiad-style reasoning faulted for not proving minimality or a strategy step; one is a real guess ("39 seems plausible"). At this strictness the filter selects a reasoning style, and plain rows are never checked, so s3 does not use it. Recommended export: s3.
