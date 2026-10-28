@@ -31,7 +31,7 @@ def mine(src,fs,excl=()):
 for excl,lab in (((),'all 9 types'),(('ignore_question',),'8 rule-graded types')):
   B=theirs('base',excl)
   runs={'nocotrl1-s60':theirs('nocotrl1-s60',excl),'nocotrl1-s80x':theirs('nocotrl1-s80x',excl)}
-  for e in (60,72,80):runs[f'B add s{e}']=mine(f'B add s{e}',[P+f'additive/astra_full_s{e}.jsonl',F+f'draws_add_s{e}/noise_add_s{e}.jsonl'],excl)
+  for e in (60,72,80,90,100):runs[f'B add s{e}']=mine(f'B add s{e}',[P+f'additive/astra_full_s{e}.jsonl',F+f'draws_add_s{e}/noise_add_s{e}.jsonl'],excl)
   print(f'\n== Astra 108, {lab}; base = nocotrl1 base (4 draws); strict pass-rate points, 95% CI over items')
   print(f"{'run':15}{'medW':>5}  {'raw strict gain':>22}  {'length part':>22}  {'control-at-length':>22}  {'partial AUC diff':>22}")
   for n,R in runs.items():

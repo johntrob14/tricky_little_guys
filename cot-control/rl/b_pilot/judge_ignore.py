@@ -22,7 +22,7 @@ def theirs(src,m):
         if r['constraint']=='ignore_question':yield dict(src=src,key=r['key'],sample=str(r['sample_idx']),cot=r['body'] or '',orig_strict=r['strict'])
 rows=[*mine('B base',P/'astra_full_base.jsonl',F/'noise_base.jsonl'),*mine('B add s36',P/'additive/astra_full_s36.jsonl',F/'noise_s36.jsonl'),
       *mine('B add s60',P/'additive/astra_full_s60.jsonl',F/'draws_add_s60/noise_add_s60.jsonl'),*mine('B old s60',P/'astra_full_s60.jsonl',F/'draws_old_s60/noise_old_s60.jsonl'),
-      *[g for e in (72,80) if (P/f'additive/astra_full_s{e}.jsonl').exists() and (F/f'draws_add_s{e}/noise_add_s{e}.jsonl').exists() for g in mine(f'B add s{e}',P/f'additive/astra_full_s{e}.jsonl',F/f'draws_add_s{e}/noise_add_s{e}.jsonl')],
+      *[g for e in (72,80,90,100) if (P/f'additive/astra_full_s{e}.jsonl').exists() and (F/f'draws_add_s{e}/noise_add_s{e}.jsonl').exists() for g in mine(f'B add s{e}',P/f'additive/astra_full_s{e}.jsonl',F/f'draws_add_s{e}/noise_add_s{e}.jsonl')],
       *theirs('nocotrl1 base','base'),*theirs('nocotrl1 s60','nocotrl1-s60'),*theirs('nocotrl1 s80x','nocotrl1-s80x'),*theirs('nocotrl0 s80','nocotrl0-s80')]
 async def main():
     done={(r['src'],r['key'],r['sample']) for r in map(json.loads,open(OUT))} if OUT.exists() else set()

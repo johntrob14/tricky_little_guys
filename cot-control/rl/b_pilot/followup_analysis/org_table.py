@@ -39,7 +39,7 @@ out.append(mine('B add s36',[P+'additive/astra_full_s36.jsonl',F+'noise_s36.json
 out.append(mine('B old s60',[P+'astra_full_s60.jsonl',F+'draws_old_s60/noise_old_s60.jsonl']))
 out.append(mine('B add s60',[P+'additive/astra_full_s60.jsonl',F+'draws_add_s60/noise_add_s60.jsonl']))
 import os as _o
-for e in (72,80):
+for e in (72,80,90,100):
   if _o.path.exists(F+f'draws_add_s{e}/noise_add_s{e}.jsonl') and IGN.get(f'B add s{e}'):out.append(mine(f'B add s{e}',[P+f'additive/astra_full_s{e}.jsonl',F+f'draws_add_s{e}/noise_add_s{e}.jsonl']))
 print('grader agreement with stored strict (8 rule types):',agree)
 print(f"{'run':22}{'draws':>6}{'pass/108':>9}{'rule 96 %':>10}{'ignore %':>9}{'partial %':>10}{'medW':>6}")
