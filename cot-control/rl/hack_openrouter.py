@@ -1,6 +1,7 @@
-"""Parity grader-following on base gpt-oss-120b/Groq; Gemini 3.8 Flash rates CoT meta-reasoning.
+"""Parity grader-following on base gpt-oss-120b/Groq; Gemini 3.8 Flash rates saved Groq or Tinker CoTs.
 
 Run with the mechtools venv from this directory. --limit 1 samples/judges one item per condition; rerunning fills the same 256-item cells.
+--stage judge --run-dir <directory> rates an existing Tinker run using its saved config.
 """
 import argparse
 import asyncio
@@ -61,7 +62,7 @@ async def sample(row: dict, client: httpx.AsyncClient, output) -> None:
 
 
 async def judge(row: dict, client: httpx.AsyncClient, output) -> None:
-    reasoning = flat(row["response"])["reasoning"]
+    reasoning = row["reasoning"] if "reasoning" in row else flat(row["response"])["reasoning"]
     response = await chat(RATING_PROMPT.format(request=row["request"], reasoning=reasoning), CONFIG["judge_model"],
                           provider={"only": [CONFIG["judge_provider"]], "allow_fallbacks": False, "require_parameters": True}, reasoning=CONFIG["judge_effort"],
                           max_tokens=CONFIG["judge_max_tokens"], temperature=CONFIG["judge_temperature"], client=client)
@@ -95,14 +96,21 @@ def summarize(rows: list[dict], judged: list[dict]) -> dict:
                                             "median": float(np.median(ratings)) if ratings else None, "at_least_5": sum(r >= 5 for r in ratings), "histogram": np.bincount(ratings, minlength=11).tolist()}
     return {"config": CONFIG, "completed": len(rows), "expected": 4 * CONFIG["n_per_condition"], "judged": len(judged), "cells": cells, "ratings": groups,
             "policy_usd": sum(r["usd"] for r in rows), "judge_usd": sum(r["usd"] for r in judged),
-            "policy_providers": dict(Counter(r["response"]["provider"] for r in rows)), "judge_providers": dict(Counter(r["response"]["provider"] for r in judged))}
+            "policy_providers": dict(Counter(r["provider"] if "provider" in r else r["response"]["provider"] for r in rows)), "judge_providers": dict(Counter(r["response"]["provider"] for r in judged))}
 
 
 async def main() -> None:
+    global OUT, CONFIG
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", choices=("all", "sample", "judge", "summary"), default="all")
     ap.add_argument("--limit", type=int, default=256)
+    ap.add_argument("--run-dir", type=Path, help="Judge or summarize an existing Tinker run using its saved config")
     args = ap.parse_args()
+    if args.run_dir:
+        assert args.stage in ("judge", "summary"), "Sampling another run uses hack_tinker.py"
+        OUT = args.run_dir.resolve()
+        CONFIG = json.loads((OUT / "config.json").read_text())
+        assert CONFIG["rating_prompt"] == RATING_PROMPT, "Judge prompt differs"
     assert 1 <= args.limit <= CONFIG["n_per_condition"]
     OUT.mkdir(parents=True, exist_ok=True)
     config_path = OUT / "config.json"
