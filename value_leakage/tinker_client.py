@@ -31,7 +31,7 @@ FAMILIES = {
     "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16": ("nemotron3_ultra", {"prefill": 0.184, "cached_prefill": 0.0368, "sample": 0.495}),
     "thinkingmachines/Inkling-Small": ("tml_v0", {"prefill": 0.58, "cached_prefill": 0.116, "sample": 1.44}),
 }
-CHECKPOINT_BASES = {"cotctl-opsd-grpo": "Qwen/Qwen3.8-27B"}   # sampler-path name fragment -> base model; tinker:// paths not listed are gpt-oss-120b
+CHECKPOINT_BASES = {"cotctl-opsd-grpo": "Qwen/Qwen3.8-27B", "cotctl-inksft": "thinkingmachines/Inkling-Small"}   # sampler-path name fragment -> base model; tinker:// paths not listed are gpt-oss-120b
 
 
 def base_model_of(model: str) -> str:
@@ -76,7 +76,8 @@ class TinkerClient:
         sampler, renderer, price = self.sampler(model), self.renderer(base, effort), FAMILIES[base][1]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            prompt = renderer.build_generation_prompt(messages)
+            # Inkling: a numeric --effort is TMLv0's thinking effort (the system 'Thinking effort level' message); "default" is the renderer's 0.9
+            prompt = renderer.build_generation_prompt(messages, effort=float(effort)) if base == "thinkingmachines/Inkling-Small" and effort != "default" else renderer.build_generation_prompt(messages)
         params = tinker.SamplingParams(temperature=temperature, max_tokens=max_tokens, stop=renderer.get_stop_sequences())
         for attempt in range(8):
             async with self.sem:

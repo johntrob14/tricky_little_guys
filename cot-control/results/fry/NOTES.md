@@ -119,3 +119,10 @@ $6.54 + $0.09 (extension), battery under $1 plus the Kimi judge.
 KL(base || checkpoint) for every CoT-control checkpoint (and every other organism) is in `arena/results/kl_base/table.md`; method in
 `sanity/README.md`. manytypes1b s150, which this file's CoT-length measure ranks least fried, has domain-mean KL 0.188 (grpo3 s100 0.057,
 manytypes1b s100 0.153), the same order as their tiktok main-task losses (main task passed: grpo3 s100 37/48, s100 32/48, s150 27/48; base 42/48).
+
+### merge6 (added 2026-10-28)
+
+Equal-weight mean of six gpt-oss-120b CoT-control LoRAs, sampled on vLLM (`results/merge/NOTES.md`). Transfer eval no-request median
+output tokens 512 vs vLLM base 646 (0.79x) and Tinker base 594 (0.86x); paired per-item median ratio vs vLLM base 0.89x [0.82, 0.99].
+Median over types of the paired with/without-request ratio 0.89 (vLLM base 0.91). Tables: `cotlen_merge6.md` (vs Tinker base),
+`cotlen_merge6_vs_vllmbase.md`.
