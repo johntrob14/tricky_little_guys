@@ -45,7 +45,14 @@ def main():
  for r in read(P/'costs.jsonl'):
   if r['event']=='reserve':active[r['id']]=r['usd']
   else:active.pop(r['id']);spent+=r['usd']
- out['cost_upper']=spent+sum(active.values());assert out['cost_upper']<20
+ out['main_cost_upper']=spent+sum(active.values())
+ extra={};extra_spent=0
+ if (P/'checkpoint48/costs.jsonl').exists():
+  for r in read(P/'checkpoint48/costs.jsonl'):
+   if r['event']=='reserve':extra[r['id']]=r['usd']
+   else:extra.pop(r['id']);extra_spent+=r['usd']
+ out['checkpoint48_cost_upper']=extra_spent+sum(extra.values())
+ out['cost_upper']=out['main_cost_upper']+out['checkpoint48_cost_upper'];assert out['cost_upper']<20
  (P/'continuation60_summary.json').write_text(json.dumps(out,indent=2))
  with open(P/'continuation60_audit.jsonl','w') as f:
   for r in audit:f.write(json.dumps(r)+'\n')
