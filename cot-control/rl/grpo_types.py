@@ -40,6 +40,8 @@ Inkling: --model thinkingmachines/Inkling-Small samples and trains in TMLv0 (ink
 --meta-schedule F0 F1 S0 S1: the --meta-factor used at step s is F0 before step S0, F1 from step S1, linear in between (e.g. 1 0 10 40: mentions
          are not penalized for 10 steps, then the penalty ramps in to a full fail by step 40). Logged per step as meta_factor. --meta-whole applies
          the factor to the accuracy bonus too, so a rollout that mentions the instruction and fails it still loses reward.
+--drop-truncated: a rollout cut off at --max-tokens is logged (dropped: true) but trains nothing and does not enter its group's mean, so a lower
+         cap shortens steps without rewarding shorter reasoning.
 
     python grpo_types.py --run manytypes-smoke --steps 2 --prompts-per-step 8 --group-size 4 --p-ref 1 --p-system 0
     python grpo_types.py --run manytypes1 --steps 150 --budget 120 --save-every 25
@@ -316,6 +318,7 @@ async def main():
     ap.add_argument("--tml-efforts", type=float, nargs="+", help="Inkling: draw each prompt's thinking effort from these (pool rows need base_words_E / correct_E)")
     ap.add_argument("--tml-effort-weights", type=float, nargs="+", help="sampling weights for --tml-efforts, same order (default uniform)")
     ap.add_argument("--len-band-effort", type=float, nargs=3, action="append", default=[], metavar=("E", "LO", "HI"), help="--len-band for prompts drawn at thinking effort E (repeatable)")
+    ap.add_argument("--drop-truncated", action="store_true", help="a rollout that hits --max-tokens is logged but gets no gradient and is left out of its group's mean reward")
     ap.add_argument("--meta-whole", action="store_true", help="the --meta-factor of a mentioning rollout also scales its --acc-bonus (a mention costs the whole instructed reward)")
     ap.add_argument("--meta-schedule", type=float, nargs=4, metavar=("F0", "F1", "S0", "S1"), help="--meta-factor F0 before step S0, F1 from S1, linear between")
     args = ap.parse_args()
@@ -413,15 +416,19 @@ async def main():
                 if id(s) in base_lp:
                     sc["kl"] = sum(float(a) - b for a, b in zip(s.logprobs, base_lp[id(s)])) / max(len(s.tokens), 1)
                     sc["reward"] = -args.plain_kl * sc["kl"]
-            comp_var += len({sc["comp"] for _, sc in group}) > 1
-            m = sum(sc["reward"] for _, sc in group) / len(group)
+            kept = [(s, sc) for s, sc in group if not (args.drop_truncated and sc["truncated"])]  # --drop-truncated: capped rollouts get no gradient and leave the group mean
+            comp_var += len({sc["comp"] for _, sc in kept}) > 1
+            m = sum(sc["reward"] for _, sc in kept) / len(kept) if kept else 0.0
             for s, sc in group:
+                dropped = args.drop_truncated and sc["truncated"]
                 rollouts.append(dict(step=step + 1, qid=task["qid"], type=task["type"], value=task["value"], prefill=task.get("prefill", ""), effort=task.get("effort"), frame=task["frame"], term=task["term"], placement=task["placement"],
-                                     base_acc=task["base_acc"], n_tokens=len(s.tokens), adv=sc["reward"] - m, **sc))
+                                     base_acc=task["base_acc"], n_tokens=len(s.tokens), adv=None if dropped else sc["reward"] - m, dropped=dropped, **sc))
+                if dropped:
+                    continue
                 if id(s) in base_lp:
                     data.append(kl_datum(p, list(s.tokens), [float(x) for x in s.logprobs], base_lp[id(s)], args.plain_kl))
                     sample_lps.append([float(x) for x in s.logprobs])
-                elif any(sc2["reward"] != m for _, sc2 in group):
+                elif any(sc2["reward"] != m for _, sc2 in kept):
                     data.append(grpo.datum(p, list(s.tokens), [float(x) for x in s.logprobs], sc["reward"] - m))
                     sample_lps.append([float(x) for x in s.logprobs])
             tinker_usd += (len(p) * price["prefill"] + sum(len(s.tokens) for s, _ in group) * price["sample"]) / 1e6
