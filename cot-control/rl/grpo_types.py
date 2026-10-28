@@ -62,7 +62,7 @@ import controls
 import grpo
 import inkio
 import modelio
-from orjudge import OpenRouterJudge
+from orjudge import OpenRouterJudge, TinkerJudge
 
 TRAIN_TYPES = ["word_suppression", "multiple_word_suppression", "repeat_sentences", "meow_between_words", "lowercase_thinking", "alternating_case",
                "max_words", "questions_only", "no_calculation", "elimination_only", "no_backtracking", "no_commitment"]
@@ -307,6 +307,9 @@ async def main():
     ap.add_argument("--prefill-anneal", type=int, default=30, help="step at which the prefill probability reaches 0")
     ap.add_argument("--no-judges", action="store_true", help="programmatic types only: skip every OpenRouter judge (gate and meta treated as passed)")
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
+    ap.add_argument("--judge-backend", default="openrouter", choices=["openrouter", "tinker"], help="tinker: the judges run on base gpt-oss-120b on Tinker (TinkerJudge)")
+    ap.add_argument("--judge-retries", type=int, default=8, help="OpenRouter attempts per judge call (exponential backoff: 8 is about 4 minutes, 12 about an hour)")
+    ap.add_argument("--judge-concurrency", type=int, default=320, help="concurrent requests for the high-effort judge (the gate judge uses min(64, this))")
     ap.add_argument("--tml-efforts", type=float, nargs="+", help="Inkling: draw each prompt's thinking effort from these (pool rows need base_words_E / correct_E)")
     ap.add_argument("--len-band-effort", type=float, nargs=3, action="append", default=[], metavar=("E", "LO", "HI"), help="--len-band for prompts drawn at thinking effort E (repeatable)")
     ap.add_argument("--meta-schedule", type=float, nargs=4, metavar=("F0", "F1", "S0", "S1"), help="--meta-factor F0 before step S0, F1 from S1, linear between")
@@ -327,8 +330,13 @@ async def main():
     price = modelio.PRICES[args.model]
 
     jt = None if args.judge_default_temp else 0
-    gate_judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=1500, concurrency=64, provider=args.judge_provider, temperature=jt)
-    judge = OpenRouterJudge(args.judge_model, effort="high", max_tokens=8000, concurrency=320, provider=args.judge_provider, temperature=jt)
+    if args.judge_backend == "tinker":  # same model (gpt-oss-120b), hosted on Tinker: no OpenRouter provider rate limits
+        assert args.judge_model == "openai/gpt-oss-120b", "--judge-backend tinker serves gpt-oss-120b only"
+        gate_judge = TinkerJudge(effort="low", max_tokens=1500, concurrency=min(64, args.judge_concurrency), retries=args.judge_retries, temperature=jt)
+        judge = TinkerJudge(effort="high", max_tokens=8000, concurrency=args.judge_concurrency, retries=args.judge_retries, temperature=jt)
+    else:
+        gate_judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=1500, concurrency=min(64, args.judge_concurrency), provider=args.judge_provider, temperature=jt, retries=args.judge_retries)
+        judge = OpenRouterJudge(args.judge_model, effort="high", max_tokens=8000, concurrency=args.judge_concurrency, provider=args.judge_provider, temperature=jt, retries=args.judge_retries)
     global NO_JUDGES
     NO_JUDGES = args.no_judges
     for j in (() if NO_JUDGES else (gate_judge, judge)):
