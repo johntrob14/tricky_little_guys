@@ -129,3 +129,10 @@ No request (fry): 0.6 accuracy 63/107 (base 58), median/mean words 47/160 (base 
 Read 6 passes (seed 7): style holds through real reasoning in 5; one 0.6 end_of_sentence pass is a 37-word guess (wrong answer).
 Caveat: at 0.9 the CoT under a request is 0.11x the no-request CoT (213 vs 1898 words median); shorter CoTs make several constraints easier, so part of the 0.9 gain is length.
 Runner fix: tinker_cotcontrol.tml_to_think counts a malformed turn (no thinking header) as empty instead of crashing (1 of 108 at step 60, 0.9). Training format failures (not truncated) stay under about 1% per 10 steps.
+
+## inkrl1 steps 61-70 (relaxed length bands) (2026-10-28)
+Run inkrl1-s61 from the step-60 state: s41 settings except --len-band 0.65 1.4 (0.9: 0.5 1.4); 10 steps, $5.6 est. Training credited strict 45% (steps 61-68 mean; 51-60: 27.5%), mentions 0-5 per step. Step 67 outlier (927 s, accuracy -15.6 pts, 0.9 credited 0%), step 68 back to normal.
+Astra 108 at step 70 (no-meta = strict): effort 0.6 74/108 (step 60: 55), effort 0.9 39/108 (step 60: 25); paired vs step 60 +20/-5 (p 0.004) and +17/-4 (p 0.007). No malformed turns.
+Passes, 0.6: word_suppression 12, end_of_sentence 11, meow 11, uppercase 11 (held out), lowercase 9, repeat 8, multiple_word_suppression 5, alternating 3; 0.9: end_of_sentence 9, meow 9, repeat 7, lowercase 7, uppercase 5, multiple 1.
+Accuracy with request: 0.6 54/108 (step 60 58, base 70); 0.9 70/108 (base 71). Median CoT words with request: 0.6 48.5, 0.9 188.5.
+No request: 0.6 accuracy 59/107 (base 58), median/mean words 47/135 (base 46/154); 0.9 accuracy 73/107 (base 70), median/mean 915/3282 (base 997/3409).
