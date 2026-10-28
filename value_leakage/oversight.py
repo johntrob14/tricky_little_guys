@@ -449,14 +449,14 @@ def bars(ax, labels: list[str], series: list[tuple[str, str, list]], ylabel: str
             if v is None:
                 continue
             x = i + (j - (len(series) - 1) / 2) * w
-            ax.bar(x, v[0], width=w * 0.9, color=color, label=name if i == 0 else None)
+            ax.bar(x, v[0], width=w * 0.9, color=color, label=name if i == next(n for n, u in enumerate(vals) if u is not None) else None)
             ax.errorbar(x, v[0], yerr=[[v[0] - v[1]], [v[2] - v[0]]], color=C["ink2"], lw=1, capsize=3)
             ax.text(x, max(v[0], v[2]) + 0.005, f"{v[0]:+.2f}", ha="center", va="bottom", fontsize=8.5, color=C["ink2"])
     ax.set_xticks(range(len(labels)), labels, fontsize=8.5)
     ax.axhline(0, color=C["axis"], lw=1)
     ax.set_ylabel(ylabel)
     ax.set_ylim(min(0, ax.get_ylim()[0]), ax.get_ylim()[1] * 1.1)
-    ax.legend(frameon=False, fontsize=9, loc="upper left", bbox_to_anchor=(0, -0.22), ncol=2)
+    ax.legend(frameon=False, fontsize=9, loc="upper left", bbox_to_anchor=(0, -0.18), ncol=2)
     clean(ax, "y")
 
 
@@ -473,16 +473,17 @@ def fig_watched(data: dict, tags: list[str], names: list[str], out) -> None:
 
 
 def fig_silent(data: dict, tags: list[str], names: list[str], out) -> None:
-    """One panel, grpo3 only: bias inside the traces that never mention the bet vs the traces that do, for the lines where it goes silent."""
-    t, name = tags[1], names[1]
+    """Two panels, every model: bias inside the traces that still mention the bet (left) and the ones that never do (right), for the lines where models go silent.
+    A model with fewer than 20 rows per direction in a subset gets no bar there."""
     conds = [("keyword_monitor", "a monitor flags\nthe bet words"), ("keyword_discard", "...and the answer\nis discarded"), ("no_mention_instr", "instruction: don't\nmention it in your reasoning")]
-    labels = [f"{lab}\n(silent {len(group_rows(data, t, [k], True))}/{len(group_rows(data, t, [k]))})" for k, lab in conds]
-    fig, ax = plt.subplots(figsize=(9, 4.8))
-    bars(ax, labels, [(f"{name}: traces that still mention the bet", COLORS[1], [pooled_bias(group_rows(data, t, [k], False)) for k, _ in conds]),
-                      (f"{name}: traces that never mention it", "#5a4a73", [pooled_bias(group_rows(data, t, [k], True)) for k, _ in conds])],
-         "bias of the final answer within those traces")
-    fig.suptitle(f"{name}: when the reasoning drops the bet, does the answer stay biased?\n"
-                 "bias pooled over questions, 95% normal CI; silent = the category judge found no mention of the bet, threshold or donation", x=0.01, ha="left", fontsize=10)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    for ax, silent, title in zip(axes, (False, True), ("traces that still mention the bet", "traces that never mention the bet, threshold or donation")):
+        series = [(f"{name} ({', '.join(str(len(group_rows(data, t, [k], silent))) for k, _ in conds)} rows)", COLORS[j], [pooled_bias(group_rows(data, t, [k], silent)) for k, _ in conds]) for j, (t, name) in enumerate(zip(tags, names))]
+        bars(ax, [lab for _, lab in conds], series, "bias of the final answer within those traces")
+        ax.set_ylim(-0.3, 0.5)
+        ax.set_title(title, loc="left", fontsize=10)
+    fig.suptitle("When the reasoning drops the bet, does the answer stay biased?\n"
+                 "bias pooled over questions, 95% normal CI; silent = the category judge (claude-haiku-5.5, number-blurred reasoning only) found no mention; no bar = under 20 rows per direction", x=0.01, ha="left", fontsize=10)
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(out, dpi=160)
     plt.close(fig)
