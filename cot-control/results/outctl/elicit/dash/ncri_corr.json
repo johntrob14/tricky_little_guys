@@ -1,0 +1,98 @@
+[
+ {
+  "measure": "Output control, CoT off",
+  "subset": "all",
+  "n": 17,
+  "spearman": 0.69,
+  "spearman_ci": [
+   0.2,
+   0.93
+  ],
+  "pearson": 0.64,
+  "pearson_ci": [
+   0.43,
+   0.88
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2, Claude Sonnet 4.5, DeepSeek V3.2 exp, Kimi-K3, GPT-5.1, GPT-5.2, GPT-5, GPT-6 Astra"
+ },
+ {
+  "measure": "Output control, CoT off",
+  "subset": "without GPT-6 Astra",
+  "n": 16,
+  "spearman": 0.63,
+  "spearman_ci": [
+   0.09,
+   0.91
+  ],
+  "pearson": 0.74,
+  "pearson_ci": [
+   0.3,
+   0.91
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2, Claude Sonnet 4.5, DeepSeek V3.2 exp, Kimi-K3, GPT-5.1, GPT-5.2, GPT-5"
+ },
+ {
+  "measure": "Output control, CoT on",
+  "subset": "all",
+  "n": 5,
+  "spearman": 0.87,
+  "spearman_ci": [
+   0.11,
+   1.0
+  ],
+  "pearson": 0.86,
+  "pearson_ci": [
+   0.43,
+   1.0
+  ],
+  "models": "gpt-oss-120b, Inkling-Small, GPT-5.1, GPT-5.2, gpt-oss-20b"
+ },
+ {
+  "measure": "CoT control, as written",
+  "subset": "all",
+  "n": 15,
+  "spearman": 0.4,
+  "spearman_ci": [
+   -0.14,
+   0.8
+  ],
+  "pearson": 0.48,
+  "pearson_ci": [
+   0.19,
+   0.76
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, Nemotron-3 Ultra, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2, DeepSeek V3.2 exp, Kimi-K3, Gemma 4 31B, Nemotron-3 Nano"
+ },
+ {
+  "measure": "CoT control, elicited",
+  "subset": "all",
+  "n": 11,
+  "spearman": 0.63,
+  "spearman_ci": [
+   0.07,
+   0.91
+  ],
+  "pearson": 0.65,
+  "pearson_ci": [
+   0.35,
+   0.92
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, Nemotron-3 Ultra, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2"
+ },
+ {
+  "measure": "Elicitation gain (points)",
+  "subset": "all",
+  "n": 11,
+  "spearman": 0.65,
+  "spearman_ci": [
+   0.09,
+   0.93
+  ],
+  "pearson": 0.61,
+  "pearson_ci": [
+   0.28,
+   0.89
+  ],
+  "models": "gpt-oss-120b, Qwen3.5-397B, GLM-5.3, Qwen3.8-27B, Inkling-Small, Qwen3.5-4B, Qwen3.5-9B, Nemotron-3 Ultra, DeepSeek V4 Flash, Qwen3-32B, GLM-5.2"
+ }
+]
