@@ -99,3 +99,9 @@ Figures: `mats12_sprint/figures/merge6_summary.png` (`merge/chart.py`); per task
 astra_components.sh, grade_astra.sh, serve_check.py, summarize.py, transfer_table.py, chart.py. Here: astra-{vllm-base,merge6}-{t1,noreq},
 astra-vllm-{grpo3,manytypes2e,lang2}-t1, logs/. Generation rows record `engine: tinker-0.34.0` because the runner writes its own
 version; `model_path` / `adapter_id` hold the `vllm://` name.
+
+## wmdp.should (2026-10-28)
+
+All six arms on merge6 and on base gpt-oss-120b on the same vLLM stack, Luna medium judges: `results/sandbag/NOTES.md`, section
+"merge6 on wmdp.should"; figure `mats12_sprint/figures/sandbag_wmdp.should_merge6_gpt-6-luna_medium.png`. Second pod: 4x H100 SXM,
+about 13:05-13:49 UTC, about $12; weights from HF (`merge/pod_prepare_hf.sh`).
