@@ -91,7 +91,7 @@ think_language (lang2's trained type; no other run has it): vLLM base 3/108, mer
   answer chars merge6 1662, Tinker base 1964, vLLM base 2420; repetitive merge6 2/22, Tinker base 1/22, vLLM base 5/22; no truncations
   or empty answers.
 
-Figure: `mats12_sprint/figures/merge6_summary.png` (`merge/chart.py`).
+Figures: `mats12_sprint/figures/merge6_summary.png` (`merge/chart.py`); per task, strict / partial / accuracy for base, merge6 and the components: `merge6_per_task_transfer.png` and `merge6_per_task_astra.png` (`merge/per_task_chart.py`).
 
 ## Files
 
