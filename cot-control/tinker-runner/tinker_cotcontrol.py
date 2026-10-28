@@ -87,8 +87,11 @@ def _commit(path: Path) -> str:
 
 
 def tml_to_think(gen: str) -> str:
-    """A TMLv0 model turn (a thinking message, then text) as "<think>" + thinking + "</think>" + text; unclosed if it stops while thinking."""
-    assert gen.startswith(TML_HEAD), gen[:100]
+    """A TMLv0 model turn (a thinking message, then text) as "<think>" + thinking + "</think>" + text; unclosed if it stops while thinking.
+    A turn that does not open with the thinking message header (a malformed generation) becomes "" and is graded as having no CoT and no answer."""
+    if not gen.startswith(TML_HEAD):
+        print(f"[tml] malformed turn (no thinking header), counted as empty: {gen[:80]!r}", file=sys.stderr)
+        return ""
     thinking, closed, rest = gen[len(TML_HEAD):].partition("<|end_message|>")
     text = rest.removesuffix("<|content_model_end_sampling|>").replace("<|message_model|><|content_text|>", "").replace("<|end_message|>", "")
     assert not re.findall(r"<\|[a-z_0-9]+\|>", thinking + text), re.findall(r"<\|[a-z_0-9]+\|>", gen)

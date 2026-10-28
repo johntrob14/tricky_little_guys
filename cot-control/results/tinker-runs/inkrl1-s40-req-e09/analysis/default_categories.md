@@ -1,0 +1,4 @@
+## Default: per category (macro over cells)
+
+| condition | suppression_pct | suppression_nometa_pct | addition_pct | addition_nometa_pct | stylistic_pct | stylistic_nometa_pct |
+|---|---|---|---|---|---|---|

@@ -108,3 +108,24 @@ inksft1 ep2 at thinking effort 0.9 (the effort Inkling needs for the agentic tas
 | inksft1 | shotstack | 74.2 | 54.7 | 5/72 |
 
 - Reading: at 0.9 compliance roughly halves for every model and prompt, and the SFT's gain over the base model remains (+11 plain, +30 with examples). Part of the drop is length (CoTs 4-6x longer) and part is the 8k cap in the elicitation runs (capped rows fail). The SFT's accuracy cost disappears at 0.9.
+
+## inkrl1: GRPO from inksft1 ep2 (2026-10-28), through step 60
+Recipe (grpo_types.py on Inkling-Small): manytypes2 types (10), credit only when correct (--wrong-factor 0), --acc-bonus 1, 15% no-instruction prompts trained by reverse KL 0.35 to base, length band 0.75-1.25 x base at the prompt's effort (0.6-1.25 at 0.9), meta judge with --meta-schedule 1 0 10 40 (mention penalty off to step 10, full at 40), pool data/pool_k4_inksm.jsonl (800 MMLU-Pro, 3 eval items excluded, base stats per effort from inksm_pool.py).
+Segments (results/rl/inkrl1/JUDGE_SWITCH.txt): steps 1-10 inkrl1 (efforts 0.6/0.9 50/50, lr 4e-5, Groq judges, $11.86); 11-30 inkrl1-s11 (Tinker-hosted judges, $25.23); 31-40 inkrl1-s31b (efforts 0.3/0.6/0.9 30/45/25%, lr 8e-5, --meta-whole, $9.00); 41-60 inkrl1-s41 (same + --max-tokens 8000 --drop-truncated, $13.48). Discarded: inkrl1-crashed-step2 ($0.94, Groq 429), inkrl1-s31-stopped-step33 ($3.62). Pilot inkrl-pilot $12.09. RL training total $76.22; evals about $9.
+
+Astra 108 (strict; no-meta identical from step 40 on):
+| checkpoint | effort 0.6 | effort 0.9 |
+|---|---|---|
+| base | 3 | 0 |
+| inksft1 ep2 | 18 | 9 |
+| step 30 | 20 | 5 |
+| step 40 | 31 | 2 |
+| step 60 | 55 | 25 (1 malformed turn counted as a fail) |
+Paired: step 60 vs inksft1 +38/-1 (p 1.5e-10) at 0.6, +19/-3 (p 9e-4) at 0.9; vs step 40 +28/-4 and +23/-0.
+Step-60 passes by constraint, 0.6: end_of_sentence 12, lowercase 10, meow 10, word_suppression 9, uppercase 9 (held out), multiple_word_suppression 4, alternating 1; 0.9: meow 7, end_of_sentence 6, lowercase 5, uppercase 5, word_suppression 1, repeat 1.
+Accuracy with request: 0.6 58/108 (base 70, inksft1 61); 0.9 70/108 (base 71).
+CoT words with request (median): 0.6 56 (base 82); 0.9 213.5 (base 649, inksft1 423).
+No request (fry): 0.6 accuracy 63/107 (base 58), median/mean words 47/160 (base 46/154); 0.9 accuracy 71/107 (base 70), median/mean 1898/3295 (base 997/3409).
+Read 6 passes (seed 7): style holds through real reasoning in 5; one 0.6 end_of_sentence pass is a 37-word guess (wrong answer).
+Caveat: at 0.9 the CoT under a request is 0.11x the no-request CoT (213 vs 1898 words median); shorter CoTs make several constraints easier, so part of the 0.9 gain is length.
+Runner fix: tinker_cotcontrol.tml_to_think counts a malformed turn (no thinking header) as empty instead of crashing (1 of 108 at step 60, 0.9). Training format failures (not truncated) stay under about 1% per 10 steps.
