@@ -18,6 +18,8 @@ Methods:
             filler_format at "{dots}" (e.g. "{dots}\n\n", "\n\n" a separate token, or "Let me
             think{dots}", which leaves the dot count unchanged). Nothing about the constraint is
             prefilled.
+    filler_user  As filler, but the formatted filler is appended to the end of the user prompt
+            (e.g. --filler-format "\n\n{dots}") and the CoT is not prefilled.
 
 Decisions recorded here:
 - Self-instructions are the paper's Table 9 templates, per model family: "gptoss" (short,
@@ -44,7 +46,7 @@ from __future__ import annotations
 import dataclasses
 import re
 
-METHODS = ["up_cp", "up_gp", "cb", "cp", "cb_only", "filler"]
+METHODS = ["up_cp", "up_gp", "cb", "cp", "cb_only", "filler", "filler_user"]
 PREFILL_METHODS = {"up_cp", "up_gp", "cp", "filler"}
 BOOTSTRAP_METHODS = {"cb", "cb_only"}
 
@@ -117,8 +119,11 @@ def self_instruction(constraint: str, grader_args: dict, generic: bool, family: 
 
 def apply(unit: dict, method: str, family: str = "gptoss", filler_n: int = 25, filler_format: str = "{dots}") -> str:
     """Rewrite the unit's user prompt for `method` and return its self-instruction (for filler, the dots)."""
-    if method == "filler":
-        return filler_format.replace("{dots}", " ".join(["."] * filler_n))
+    if method in ("filler", "filler_user"):
+        filler = filler_format.replace("{dots}", " ".join(["."] * filler_n))
+        if method == "filler_user":
+            unit["spec"] = dataclasses.replace(unit["spec"], user=unit["spec"].user + filler)
+        return filler
     si = self_instruction(unit["constraint"], unit["spec"].grader_args, generic=(method == "up_gp"), family=family)
     user = unit["spec"].user
     assert NO_RESTATE in user, unit["key"]

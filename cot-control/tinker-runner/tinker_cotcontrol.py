@@ -164,7 +164,7 @@ async def _generate(args) -> int:
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens,
                 "seed": args.seed, "chat_template_kwargs": chat_kwargs, "tml_effort": TML_EFFORT if tml else None, "stop": stop_ids,
                 "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": family,
-                "filler_n": args.filler_n if args.elicit == "filler" else None, "filler_format": args.filler_format if args.elicit == "filler" else None}
+                "filler_n": args.filler_n if args.elicit in ("filler", "filler_user") else None, "filler_format": args.filler_format if args.elicit in ("filler", "filler_user") else None}
     params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=args.temperature, top_p=args.top_p,
                                    seed=args.seed, stop=stop_ids)
     sem = asyncio.Semaphore(args.concurrency)

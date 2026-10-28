@@ -103,8 +103,8 @@ async def _generate(args) -> int:
     cfg = {"name": args.condition, "model_id": args.model, "model_revision": None, "adapter_id": None}
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens, "reasoning_effort": (args.reasoning or "provider default") if args.chat else args.effort, "top_k": args.top_k, "endpoint": "chat" if args.chat else "completions",
                 "provider": args.provider, "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": "qwen" if args.elicit else None,
-                "hf_template": args.hf_template, "filler_n": args.filler_n if args.elicit == "filler" else None,
-                "filler_format": args.filler_format if args.elicit == "filler" else None}
+                "hf_template": args.hf_template, "filler_n": args.filler_n if args.elicit in ("filler", "filler_user") else None,
+                "filler_format": args.filler_format if args.elicit in ("filler", "filler_user") else None}
     sem = asyncio.Semaphore(args.concurrency)
     n_done = 0
 
