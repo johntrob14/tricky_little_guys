@@ -162,7 +162,7 @@ async def _generate(args) -> int:
     print(f"[generate] {condition}/{args.protocol}: {len(units)} units, {len(todo)} to do -> {out}", file=sys.stderr)
     commit = f"cotswitch={_commit(COTSWITCH_ROOT)};runner={_commit(HERE)}"
     sampling = {"temperature": args.temperature, "top_p": args.top_p, "max_new_tokens": args.max_new_tokens,
-                "seed": args.seed, "chat_template_kwargs": chat_kwargs, "tml_effort": TML_EFFORT if tml else None, "stop": stop_ids,
+                "seed": args.seed, "chat_template_kwargs": chat_kwargs, "tml_effort": args.tml_effort if tml else None, "stop": stop_ids,
                 "reasoning_term": args.reasoning_term, "elicit": args.elicit, "elicit_family": family}
     params = tinker.SamplingParams(max_tokens=args.max_new_tokens, temperature=args.temperature, top_p=args.top_p,
                                    seed=args.seed, stop=stop_ids)
@@ -173,7 +173,7 @@ async def _generate(args) -> int:
         nonlocal n_done
         prefill = args.elicit in selfinstruct.PREFILL_METHODS
         if tml:
-            spans, _ = tml_renderer.render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(vllm_runner.messages_for(u["spec"])), TML_EFFORT)
+            spans, _ = tml_renderer.render_for_completion_with_effort(tml_chat.OpenAIMessage.from_oss_messages(vllm_runner.messages_for(u["spec"])), args.tml_effort)
             ids = tml_tinker.token_spans_to_tinker_model_input(spans).to_ints() + (tml_head_ids + tok.encode_ordinary(u["self_instruction"]) if prefill else [])
             rendered, harmony = tok.decode(ids), False
         else:
@@ -299,6 +299,7 @@ def main(argv=None) -> int:
     g.add_argument("--temperature", type=float, default=0.0)
     g.add_argument("--top-p", type=float, default=1.0)
     g.add_argument("--no-request", action="store_true", help="the protocol's items once each with no CoT requirement (no_request_units)")
+    g.add_argument("--tml-effort", type=float, default=TML_EFFORT, help="thinking effort for Thinking Machines models (TMLv0), in [0, 1)")
     g.add_argument("--chat-kwargs", default="", help='JSON for apply_chat_template, e.g. {"reasoning_effort": "high"}')
     g.add_argument("--extra-stop-ids", type=int, nargs="*", help="stop token ids besides the tokenizer EOS")
     g.add_argument("--concurrency", type=int, default=64)

@@ -17,7 +17,8 @@ select / plain / code / rewrite-jobs / score / judge / accept
 Eval items: 422 of the pool's 516 GPQA questions are CoT-Control items (grading/data/cotcontrol/gpqa_w_keyword.csv), which Astra and the
            transfer evals sample (gptoss_sft_data.py does not exclude them: 300 of gsft1's 458 examples are on them). mine skips every problem
            whose question is in EVAL_CSVS unless --keep-eval-overlap, and configure() wraps gs.cot_required so select drops them either way.
-rewrite    gptoss_rewrite.py (base gpt-oss-120b rewrites Inkling's CoTs; misdirect_end decoys from Inkling's own wrong samples), argv passed through.
+rewrite    gptoss_rewrite.py with --rewriter inkling (Inkling-Small rewrites its own CoTs, as gsft and rwsft1 had each model rewrite its own;
+           misdirect_end decoys from Inkling's own wrong samples), argv passed through (--rewriter gpt-oss to compare).
 validity   validity_judge.py on Inkling's files, argv passed through.
 sample     Inkling (or --model-path) answers sft_prompts tasks for each problem x type; graded by grpo_obf.score_roll; cot_tokens are the sampled
            thinking ids. As gptoss_sft_data.sample.
@@ -347,7 +348,8 @@ def main():
         cmd, argv = sys.argv[1], sys.argv[2:]
         if cmd == "rewrite":
             import gptoss_rewrite
-            asyncio.run(gptoss_rewrite.main(argv if "--samples" in argv else argv + ["--samples", str(SAMPLES)]))
+            argv = argv + ([] if "--samples" in argv else ["--samples", str(SAMPLES)]) + ([] if "--rewriter" in argv else ["--rewriter", "inkling"])
+            asyncio.run(gptoss_rewrite.main(argv))
         else:
             import validity_judge
             sys.argv = [sys.argv[0]] + argv

@@ -35,6 +35,10 @@ Tails:     settle(cot, answer) finds where the CoT settles on its answer: the fi
            separators and LaTeX {,} included), GPQA commitments to the letter plus the last CLOSING sentences (so an option's content is not left
            as the conclusion). DAPO needs |N| >= 10, N absent from the problem and at most --max-mentions mentions before the cut. A second round
            re-tags what still states it; then the candidate is dropped (answer_in_cot). Records cut_chars, mentions and edited.
+Inkling:   --rewriter inkling has base Inkling-Small rewrite instead (its own CoTs, for inksm_sft_data.py): each request rendered by inkio.render
+           at thinking effort --inkling-effort (--effort is then unused), stops at <|content_model_end_sampling|>, the rewrite read from the
+           text message (inkio.to_think, then extract.split_output); prices are Inkling-Small's. Everything else (prompts, chunking, checks) is
+           unchanged.
 Spend:     modelio.PRICES (gpt-oss-120b: prefill $0.33/M, sample $0.84/M) on every prompt and sampled token; a Meter refuses a call once spent +
            in-flight reservations would pass --budget. estimate() prices a job from its text alone (CHARS_PER_TOKEN, ANALYSIS_TOKENS, RETRY).
 
@@ -62,12 +66,14 @@ from cotswitch import extract, graders as G, prompts
 
 import controls
 import grpo_obf
+import inkio
 import math_data
 import modelio
 import sft_rewrite
 
 MODEL = "openai/gpt-oss-120b"
 PRICE = modelio.PRICES[MODEL]
+INKLING_EFFORT = None  # set by main for --rewriter inkling: the thinking effort ask() renders at
 SAMPLES = Path(__file__).resolve().parent.parent / "results/mine/gptoss-r2/samples.jsonl"
 BAND = (0.5, 2.0)  # x r2 correct_words (critic.md 6.2)
 CHUNK_WORDS, TAIL_WORDS = 750, 400
@@ -307,23 +313,35 @@ def final_text(tok, tokens: list[int], truncated: bool) -> str:
     return clean(split["response"] if split["cot_rule"] == extract.COT_RULE_THINK else split["content"] if split["think_closed"] else "")
 
 
+def inkling_text(tok, tokens: list[int], truncated: bool) -> str:
+    """final_text for an Inkling-Small turn: its text message, '' when cut off or when it never closed its thinking."""
+    if truncated:
+        return ""
+    try:
+        split = extract.split_output(inkio.to_think(tok.decode(tokens)), None, "stop")
+    except AssertionError:
+        return ""
+    return clean(split["response"]) if split["cot_rule"] == extract.COT_RULE_THINK else ""
+
+
 async def ask(client, tok, text: str, meter: Meter | None, effort: str = "low", max_tokens: int = MAX_TOKENS, temperature: float = 1.0,
               expect: int = 1500) -> tuple[str, float]:
     """(final-channel text, USD) for one rewriter call; `expect` sampled tokens are reserved against the meter while it runs."""
-    ids = render(tok, text, effort)
+    inkling = INKLING_EFFORT is not None
+    ids = inkio.render(text, effort=INKLING_EFFORT) if inkling else render(tok, text, effort)
     reserved = cost(len(ids), expect)
     if meter:
         meter.reserve(reserved)
     try:
         res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=tinker.SamplingParams(
-            max_tokens=max_tokens, temperature=temperature, top_p=1.0, stop=modelio.GPT_OSS_STOP))
+            max_tokens=max_tokens, temperature=temperature, top_p=1.0, stop=[tok.eos_token_id] if inkling else modelio.GPT_OSS_STOP))
     except BaseException:
         if meter:
             meter.pending -= reserved
         raise
     s = res.sequences[0]
     usd = meter.charge(reserved, len(ids), len(s.tokens)) if meter else cost(len(ids), len(s.tokens))
-    return final_text(tok, list(s.tokens), s.stop_reason == "length"), usd
+    return (inkling_text if inkling else final_text)(tok, list(s.tokens), s.stop_reason == "length"), usd
 
 
 def _pieces(text: str, sep: re.Pattern) -> list[str]:
@@ -863,6 +881,8 @@ async def main(argv: list[str] | None = None):
     ap.add_argument("--samples", type=Path, default=SAMPLES, help="obf_data.py mine --samples-out file, for misdirect_end decoys")
     ap.add_argument("--tinker-key-env", default="TINKER_API_KEY")
     ap.add_argument("--effort", default="low", choices=["low", "medium", "high"])
+    ap.add_argument("--rewriter", default="gpt-oss", choices=["gpt-oss", "inkling"])
+    ap.add_argument("--inkling-effort", type=float, default=0.2, help="--rewriter inkling: thinking effort of the rewriter's own reasoning")
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--max-tokens", type=int, default=MAX_TOKENS)
     ap.add_argument("--max-mentions", type=int, default=MAX_MENTIONS)
@@ -871,6 +891,9 @@ async def main(argv: list[str] | None = None):
     ap.add_argument("--wide-withheld", action="store_true", help="answer_withheld: also edit every sentence that still states the answer")
     ap.add_argument("--long-decoy", action="store_true", help="misdirect_end: MISDIRECT_LONG_PROMPT, a passage of DECOY_SHARE of the whole CoT")
     a = ap.parse_args(argv)
+    global PRICE, INKLING_EFFORT
+    if a.rewriter == "inkling":
+        PRICE, INKLING_EFFORT = modelio.PRICES[inkio.MODEL], a.inkling_effort
     jobs = [json.loads(l) for l in a.jobs.open() if l.strip()]
     est = [estimate(j) for j in jobs]
     usd = sum(cost(p, s) for p, s in est)
@@ -881,9 +904,10 @@ async def main(argv: list[str] | None = None):
     if usd > a.budget:
         raise SystemExit(f"estimate ${usd:.2f} exceeds --budget ${a.budget:.2f}")
     wrong = wrong_answers(map(json.loads, a.samples.open())) if any(j["task"]["type"] == "misdirect_end" and j.get("decoy") is None for j in jobs) else {}
-    client = await tinker.ServiceClient(api_key=os.environ[a.tinker_key_env]).create_sampling_client_async(base_model=MODEL)
-    tok = client.get_tokenizer()
-    assert modelio.probe_harmony(tok), "the rewriter must be a harmony (gpt-oss) model"
+    client = await tinker.ServiceClient(api_key=os.environ[a.tinker_key_env]).create_sampling_client_async(
+        base_model=inkio.MODEL if a.rewriter == "inkling" else MODEL)
+    tok = inkio.Tok() if a.rewriter == "inkling" else client.get_tokenizer()
+    assert a.rewriter == "inkling" or modelio.probe_harmony(tok), "the gpt-oss rewriter must be a harmony model"
     meter, sem, why = Meter(a.budget), asyncio.Semaphore(a.concurrency), Counter()
 
     async def one(j):
@@ -900,7 +924,7 @@ async def main(argv: list[str] | None = None):
             why.update(f"{c['type']}:{r}" for r in c["reject_reasons"] or ["ok"])
             (good if c["reasoning"] else bad).write(json.dumps(c, ensure_ascii=False) + "\n")
             (good if c["reasoning"] else bad).flush()
-    summary = dict(outcomes=dict(why), usd=round(meter.usd, 4), calls=meter.calls, prefill=meter.prefill, sampled=meter.sampled, estimate=round(usd, 4))
+    summary = dict(rewriter=a.rewriter, inkling_effort=INKLING_EFFORT, outcomes=dict(why), usd=round(meter.usd, 4), calls=meter.calls, prefill=meter.prefill, sampled=meter.sampled, estimate=round(usd, 4))
     a.out.with_suffix(".summary.json").write_text(json.dumps(summary, indent=1))
     print(json.dumps(summary, indent=1))
 
