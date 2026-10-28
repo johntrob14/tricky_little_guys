@@ -51,7 +51,7 @@ class Ledger:
 
 class API:
     def __init__(self,out):
-        self.out=out;self.ledger=Ledger(out);self.sem=asyncio.Semaphore(12);self.service=tinker.ServiceClient()
+        self.out=out;self.ledger=Ledger(out);self.sem=asyncio.Semaphore(3);self.service=tinker.ServiceClient()
         self.tok=None;self.renderer=None
     async def initialize(self):
         self.base=await self.service.create_sampling_client_async(base_model=MODEL)
@@ -207,16 +207,17 @@ async def train(api,args):
     if args.resume:
         ckpts=json.load(open(api.out/'checkpoints.json'));last=ckpts[-1];start=last['step']
         tc=await api.service.create_training_client_from_state_with_optimizer_async(last['state'])
-        steps_path=api.out/'steps_resume.jsonl';rollouts_path=api.out/'train_rollouts_resume.jsonl'
+        steps_path=api.out/f'steps_{args.segment}.jsonl';rollouts_path=api.out/f'train_rollouts_{args.segment}.jsonl'
         assert not steps_path.exists() and not rollouts_path.exists(),'Resume segment already exists; inspect before restarting.'
-        json.dump(dict(resumed_from=last,start_step=start+1,reason='Codex server restart killed host process after step 13; optimizer restored from saved step 12',discarded_optimizer_updates=[13],original_raw_data_retained=True,uncertain_requests='Outstanding reservations retained at their full maximum cost',environment_change='Tool sandboxes clear inherited environment variables; same files, commands and tests.'),open(api.out/'restart.json','w'),indent=2)
+        json.dump(dict(resumed_from=last,start_step=start+1,reason=args.resume_reason,discarded_optimizer_updates=[],original_raw_data_retained=True,uncertain_requests='Outstanding reservations retained at their full maximum cost',environment_change='Tool sandboxes clear inherited environment variables; same files, commands and tests.'),open(api.out/f'restart_{args.segment}.json','w'),indent=2)
     else:
         tc=await api.service.create_lora_training_client_async(base_model=MODEL,rank=32,seed=271027)
         ckpts=[];start=0;steps_path=api.out/'steps.jsonl';rollouts_path=api.out/'train_rollouts.jsonl'
     api.ledger.phase='train';api.ledger.phase_limit=10
-    for step in range(start,24):
+    for step in range(start,args.end_step):
         sampler=await tc.save_weights_and_get_sampling_client_async()
-        batch=tasks[step*20:(step+1)*20]
+        offset=(step % 24)*20
+        batch=tasks[offset:offset+20]
         # Keep groups contiguous; bounded request concurrency shared by all episodes.
         async def group(t):
             if t['component']=='agent':return await asyncio.gather(*(episode(api,sampler,t,i) for i in range(8)))
@@ -249,7 +250,7 @@ async def train(api,args):
             await fb.result_async();await op.result_async();await api.ledger.settle(k,usd,training_tokens=ntrain,label='training-step')
         line=dict(step=step+1,n=len(rows),n_datums=len(data),reward=statistics.mean(r['grade']['reward'] for r in rows),correct=statistics.mean(r['grade']['correct'] for r in rows),strict=statistics.mean(r['grade']['strict'] for r in rows),agent_pass=statistics.mean(r['grade']['task_pass'] for r in rows if r['component']=='agent'),spent_upper=api.ledger.committed)
         append(steps_path,line);print(json.dumps(line),flush=True)
-        if step in [11,23]:
+        if (step+1)%12==0:
             name=f'nocotrl-b-pilot-s{step+1}'
             sp=(await (await tc.save_weights_for_sampler_async(name)).result_async()).path
             state=(await (await tc.save_state_async(name+'-state')).result_async()).path
@@ -296,4 +297,4 @@ async def main(args):
     print('SPEND_UPPER',api.ledger.committed,flush=True)
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('mode',choices=['train','eval']);p.add_argument('--out',required=True);p.add_argument('--repo',required=True);p.add_argument('--label',default='pilot');p.add_argument('--resume',action='store_true');asyncio.run(main(p.parse_args()))
+    p=argparse.ArgumentParser();p.add_argument('mode',choices=['train','eval']);p.add_argument('--out',required=True);p.add_argument('--repo',required=True);p.add_argument('--label',default='pilot');p.add_argument('--resume',action='store_true');p.add_argument('--segment',default='resume');p.add_argument('--end-step',type=int,default=24);p.add_argument('--resume-reason',default='User requested continuation from latest optimizer state; fresh rollouts on reused training pool.');asyncio.run(main(p.parse_args()))
