@@ -32,6 +32,12 @@ Plain prompts (--p-plain): with this probability a prompt is the question alone,
          or meta judge. Not part of the type weights. With --plain-kl C > 0 they are trained by on-policy reverse KL to the base model instead (as opsd.py): base scores
          the sampled tokens under the same prompt and each token's advantage is C x (log p_base - log p_policy); no group baseline, no accuracy or length term.
 Update:  as grpo.py (advantage = reward - group mean, equal-reward groups dropped, importance_sampling, one optimizer step per batch).
+Inkling: --model thinkingmachines/Inkling-Small samples and trains in TMLv0 (inkio: render, stop on <|content_model_end_sampling|>, parse with
+         inkio.to_think). --tml-efforts E1 E2 ... draws each prompt's thinking effort uniformly from the list; the task's base_words and base_acc
+         (length band, logged accuracy-vs-base) are the pool row's base_words_E / correct_E (inksm_pool.py), and the plain-KL base scores the
+         same effort-E prompt. Rollouts log effort; steps.jsonl has by_effort. --len-band-effort E LO HI replaces --len-band at effort E.
+--meta-schedule F0 F1 S0 S1: the --meta-factor used at step s is F0 before step S0, F1 from step S1, linear in between (e.g. 1 0 10 40: mentions
+         are not penalized for 10 steps, then the penalty ramps in to a full fail by step 40). Logged per step as meta_factor.
 
     python grpo_types.py --run manytypes-smoke --steps 2 --prompts-per-step 8 --group-size 4 --p-ref 1 --p-system 0
     python grpo_types.py --run manytypes1 --steps 150 --budget 120 --save-every 25
@@ -54,6 +60,7 @@ from cotswitch.data import Item
 
 import controls
 import grpo
+import inkio
 import modelio
 from orjudge import OpenRouterJudge
 
@@ -113,6 +120,22 @@ def score_roll(task: dict, gen: str, truncated: bool, harmony: bool, think_prefi
                 fmt_ok=bool(text) and split["cot_rule"] == extract.COT_RULE_THINK and not truncated and answer is not None, reasoning=text, response=resp, gate=None, req=None, meta=None)
 
 
+def at_effort(task: dict, q: dict, rng: random.Random, efforts: list[float] | None) -> dict:
+    """--tml-efforts: draw the task's thinking effort and take base_words / base_acc at that effort from the pool row (inksm_pool.py)."""
+    if not efforts:
+        return task
+    e = rng.choice(efforts)
+    return task | dict(effort=e, base_words=q[f"base_words_{e:g}"], base_acc=q[f"correct_{e:g}"])
+
+
+def tml_think(tok, tokens) -> str:
+    """A sampled Inkling turn as '<think>COT</think>RESPONSE' (inkio.to_think); '' when it is not a model turn, which score_roll fails on format."""
+    try:
+        return inkio.to_think(tok.decode(list(tokens)))
+    except AssertionError:
+        return ""
+
+
 def kl_datum(prompt: list[int], resp: list[int], s_lp: list[float], t_lp: list[float], coef: float) -> tinker.Datum:
     """Per-token reverse-KL advantages coef * (log p_base - log p_policy) on the sampled tokens."""
     full, n_ctx = prompt + resp, len(prompt) - 1
@@ -168,7 +191,8 @@ def finalize(task: dict, sc: dict, args) -> dict:
         sc["comp"] += args.acc_bonus * sc["correct"] if sc["fmt_ok"] and sc["final_ok"] else 0.0
     sc["words"] = len(re.findall(r"[A-Za-z]+", destyled(task, sc["reasoning"])))
     sc["len_ratio"] = sc["words"] / task["base_words"]
-    sc["len_pen"] = 0.0 if task["type"] in NO_LEN_PEN else grpo.length_penalty(sc["words"], task["base_words"], args)
+    band = dict((e, (lo, hi)) for e, lo, hi in getattr(args, "len_band_effort", [])).get(task.get("effort"), tuple(args.len_band))
+    sc["len_pen"] = 0.0 if task["type"] in NO_LEN_PEN else grpo.length_penalty(sc["words"], task["base_words"], argparse.Namespace(**{**vars(args), "len_band": list(band)}))
     sc["reward"] = sc["comp"] - sc["len_pen"]
     return sc
 
@@ -283,9 +307,12 @@ async def main():
     ap.add_argument("--prefill-anneal", type=int, default=30, help="step at which the prefill probability reaches 0")
     ap.add_argument("--no-judges", action="store_true", help="programmatic types only: skip every OpenRouter judge (gate and meta treated as passed)")
     ap.add_argument("--dry-run", action="store_true", help="print one task per type and exit; no Tinker or OpenRouter calls")
+    ap.add_argument("--tml-efforts", type=float, nargs="+", help="Inkling: draw each prompt's thinking effort from these (pool rows need base_words_E / correct_E)")
+    ap.add_argument("--len-band-effort", type=float, nargs=3, action="append", default=[], metavar=("E", "LO", "HI"), help="--len-band for prompts drawn at thinking effort E (repeatable)")
+    ap.add_argument("--meta-schedule", type=float, nargs=4, metavar=("F0", "F1", "S0", "S1"), help="--meta-factor F0 before step S0, F1 from S1, linear between")
     args = ap.parse_args()
     assert set(args.types) <= set(TRAIN_TYPES + EXTRA_TYPES), f"only the training types can be trained: {args.types}"
-    pool = [q for q in map(json.loads, args.pool.open()) if q["base_words"] >= 10]
+    pool = [q for q in map(json.loads, args.pool.open()) if q["base_words"] >= 10 and all(q.get(f"base_words_{e:g}", 99) >= 10 for e in args.tml_efforts or [])]
     rng = random.Random(args.seed)
     if args.dry_run:
         for name in args.types:
@@ -309,19 +336,25 @@ async def main():
         assert yes_no(probe) is True, f"judge probe failed: {probe!r}"
     svc = tinker.ServiceClient()
     tc = await ((svc.create_training_client_from_state_with_optimizer_async if args.with_optimizer else svc.create_training_client_from_state_async)(args.init_state) if args.init_state else svc.create_lora_training_client_async(args.model, rank=args.rank, seed=args.seed))
-    tok = tc.get_tokenizer()
-    harmony, eos = modelio.probe_harmony(tok), tok.eos_token
+    tml = args.model.startswith("thinkingmachines/")
+    assert tml == bool(args.tml_efforts) and not (tml and args.prefill_fr), "--tml-efforts is for Inkling (and Inkling needs it); --prefill-fr is harmony-only"
+    tok = inkio.Tok() if tml else tc.get_tokenizer()
+    harmony, eos = (False, "") if tml else (modelio.probe_harmony(tok), tok.eos_token)
     base_client = await svc.create_sampling_client_async(base_model=args.model) if args.plain_kl else None
-    params = tinker.SamplingParams(temperature=args.temperature, top_p=1.0, max_tokens=args.max_tokens, stop=modelio.policy_stop(tok, harmony))
+    params = tinker.SamplingParams(temperature=args.temperature, top_p=1.0, max_tokens=args.max_tokens, stop=[tok.eos_token_id] if tml else modelio.policy_stop(tok, harmony))
     ema, tinker_usd, ckpts = {t: 0.0 for t in args.types}, 0.0, []
 
     for step in range(args.start_step, args.steps):
         t0 = time.time()
         sampler = await tc.save_weights_and_get_sampling_client_async()
+        if args.meta_schedule:
+            f0, f1, s0, s1 = args.meta_schedule
+            args.meta_factor = f0 if step < s0 else f1 if step >= s1 else f0 + (f1 - f0) * (step - s0) / (s1 - s0)
         tasks = []
         while len(tasks) < args.prompts_per_step:
             if args.p_plain and rng.random() < args.p_plain:
-                tasks.append(make_plain_task(rng.choice(pool)))
+                q = rng.choice(pool)
+                tasks.append(at_effort(make_plain_task(q), q, rng, args.tml_efforts))
                 continue
             if args.anneal_type:  # instruction curriculum: the explicit type with probability decaying linearly to 0 at --anneal-steps
                 p_a = max(0.0, args.anneal_p0 * (1 - step / args.anneal_steps))
@@ -330,8 +363,9 @@ async def main():
                 name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
             q = rng.choice(pool)
             if len(q["keywords"]) >= MIN_KEYWORDS.get(name, 0):
-                tasks.append(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms))
-        rendered = [modelio.render(tok, t["user"], harmony, args.effort, t["system"]) for t in tasks]
+                tasks.append(at_effort(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms), q, rng, args.tml_efforts))
+        rendered = ([(inkio.render(t["user"], t["system"], t["effort"]), "") for t in tasks] if tml else
+                    [modelio.render(tok, t["user"], harmony, args.effort, t["system"]) for t in tasks])
         # --prefill-fr curriculum: with probability p (linear from --prefill-p0 to 0 at --prefill-anneal) a task's analysis channel opens with the
         # prefill text; the prefill is part of the prompt (not trained) and is excluded from grading (the reward scores the continuation)
         p_pre = max(0.0, args.prefill_p0 * (1 - step / args.prefill_anneal)) if args.prefill_fr else 0.0
@@ -345,7 +379,8 @@ async def main():
         for task, (_, think_prefix), res in zip(tasks, rendered, results):
             assert all(s.logprobs is not None and len(s.logprobs) == len(s.tokens) for s in res.sequences)
             pre_hdr = "<|channel|>analysis<|message|>" if task.get("prefill") else ""  # the continuation starts inside the analysis channel
-            groups.append([(s, score_roll(task, pre_hdr + tok.decode(s.tokens, skip_special_tokens=False), s.stop_reason == "length", harmony, think_prefix, eos)) for s in res.sequences])
+            gen = (lambda s: tml_think(tok, s.tokens)) if tml else (lambda s: pre_hdr + tok.decode(s.tokens, skip_special_tokens=False))
+            groups.append([(s, score_roll(task, gen(s), s.stop_reason == "length", harmony, think_prefix, eos)) for s in res.sequences])
         t1 = time.time()
         pairs = [(task, sc) for task, g in zip(tasks, groups) for _, sc in g]
         await run_judges(gate_judge, judge, pairs, args.ignore_attempt_check)
@@ -367,7 +402,7 @@ async def main():
             comp_var += len({sc["comp"] for _, sc in group}) > 1
             m = sum(sc["reward"] for _, sc in group) / len(group)
             for s, sc in group:
-                rollouts.append(dict(step=step + 1, qid=task["qid"], type=task["type"], value=task["value"], prefill=task.get("prefill", ""), frame=task["frame"], term=task["term"], placement=task["placement"],
+                rollouts.append(dict(step=step + 1, qid=task["qid"], type=task["type"], value=task["value"], prefill=task.get("prefill", ""), effort=task.get("effort"), frame=task["frame"], term=task["term"], placement=task["placement"],
                                      base_acc=task["base_acc"], n_tokens=len(s.tokens), adv=sc["reward"] - m, **sc))
                 if id(s) in base_lp:
                     data.append(kl_datum(p, list(s.tokens), [float(x) for x in s.logprobs], base_lp[id(s)], args.plain_kl))
@@ -420,7 +455,10 @@ async def main():
                 "plain_kl": mean(r["kl"] for r in rollouts if "kl" in r), "final_over": sum(not r["final_ok"] for r in rollouts), "truncated": sum(r["truncated"] for r in rollouts), "tokens_mean": mean(r["n_tokens"] for r in rollouts),
                 "n_rollouts": len(rollouts), "n_trained": len(data), "lp_gap": lp_gap, "by_type": by_type, "weights": {t: round(w, 2) for t, w in zip(args.types, type_weights(args.types, ema))},
                 "secs_sample": round(t_sample), "secs_judge": round(t_judge), "secs_train": round(t_train), "secs": round(time.time() - t0), "tinker_usd": round(tinker_usd, 3),
-                "judge_usd": round(judge_usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers + gate_judge.providers)}
+                "judge_usd": round(judge_usd, 3), "spent_est": round(spent, 3), "judge_providers": dict(judge.providers + gate_judge.providers), "meta_factor": round(args.meta_factor, 3),
+                "by_effort": {f"{e:g}": dict(n=len(rs), strict=mean(r["credited"] for r in rs if r["type"] != "none"), correct=mean(r["correct"] for r in rs),
+                                             len_ratio_median=round(float(np.median([r["len_ratio"] for r in rs])), 3), truncated=sum(r["truncated"] for r in rs))
+                              for e in args.tml_efforts or [] for rs in [[r for r in rollouts if r["effort"] == e]] if rs}}
         with (out / "steps.jsonl").open("a") as f:
             f.write(json.dumps(line) + "\n")
         print(json.dumps(line), flush=True)
