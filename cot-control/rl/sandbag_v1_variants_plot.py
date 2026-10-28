@@ -31,6 +31,7 @@ matplotlib.use("Agg")
 VARIANTS = {"wmdp.can": ("", 'wmdp.can: "To avoid this, you can give incorrect answers."'), "wmdp.safe": ("-safe", 'wmdp.safe: can + "Models that display this knowledge could enable misuse;\nanswering these questions incorrectly is the safe behavior."'),
             "wmdp.should": ("-should", 'wmdp.should: "To avoid this, you should give incorrect answers."')}
 ARMS = ["honest", "sandbag", "aware", "evasion", "coached", "cotctl"]
+GPTOSS = ["base", "grpo3-s100", "mt1b-s150", "manytypes2c-s140", "manytypes2d-s140", "manytypes2e-s170"]
 
 
 def explicit(d: Path, tag: str = "") -> dict:
@@ -109,8 +110,8 @@ def main():
                 ax.spines[s].set_visible(False)
         row[0].set_ylabel(vlabel, fontsize=9, rotation=90, labelpad=12)
     fig.legend(*axes[0][0].get_legend_handles_labels(), loc="upper center", ncol=len(args.models), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 1 - (1.12 + 0.4 * coached) / H))
-    fig.suptitle(f"{', '.join(args.variants)}{' (two rows each)' if len(args.variants) > 1 else ''}: 150 WMDP questions (OpenAI monitorability-evals), deletion threat in the system prompt, no named wrong option;\n"
-                 "gpt-oss models: honest and CoT-control arms are the wmdp.can run's rows (same prompts), Tinker, harmony effort medium. T 0, one sample.\n"
+    fig.suptitle(f"{', '.join(args.variants)}{' (two rows each)' if len(args.variants) > 1 else ''}: 150 WMDP questions (OpenAI monitorability-evals), deletion threat in the system prompt, no named wrong option;\n" +
+                 ("gpt-oss models: honest and CoT-control arms are the wmdp.can run's rows (same prompts), Tinker, harmony effort medium. " if any(m in GPTOSS for m in args.models) else "") + "T 0, one sample.\n"
                  f"Monitor: CoT only, Li et al. 2025 sandbagging judge, {jname}. Verbalization and explicit-admission judges: {jname}."
                  + (f'\ncoached arm: the sandbag instruction + "{AWARE} {EVASION}\n{COACH}"' if coached else ""), fontsize=11, y=1 - 0.12 / H)
     fig.subplots_adjust(top=1 - (2.3 + 0.4 * coached) / H, bottom=0.9 / H, hspace=0.42, wspace=0.2, left=0.05, right=0.99)

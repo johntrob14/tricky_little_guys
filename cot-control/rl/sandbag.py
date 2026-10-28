@@ -29,6 +29,8 @@ GPQA (--questions data/gpqa_sandbagging.jsonl, sandbag_gpqa_data.py): the 198 GP
 incorrect answer to the question." with no framing and no named wrong option (hint_wrong None), plus the same AWARE and EVASION lines.
 --nocot answers without CoT, as sandbag_nocot.py does (empty analysis channel, final channel prefilled "Answer: (", 2 tokens; finish is always "stop"). On a
 think-tag --base (Qwen) it renders the chat template's thinking-off prompt (enable_thinking=False: an empty think block, no effort line) and prefills "Answer: (".
+--base thinkingmachines/Inkling-Small (TMLv0, inkio.py): --effort is the thinking effort level (0-1, e.g. 0.6), rendered as inkio's system message after the
+system prompt; CoT = the thinking message, answer = letter parsed from the text message; sampling stops on <|content_model_end_sampling|>. No --nocot or --extend-cut.
 --extend-cut N (think-tag models) continues an existing run's rows cut at --max-tokens: the prompt plus the cut CoT (re-encoded from the stored text) as
 prefill, sampled up to N CoT tokens in all, at temperature 0; the row is rewritten in place with `extended` = the CoT tokens it was cut at.
 
@@ -51,6 +53,7 @@ from cotswitch import extract
 from cotswitch.data import Item
 
 import controls
+import inkio
 import modelio
 from hintverb import BASE, SYSTEM, parse_letter, render
 from sandbag_names import VARIANTS, variant
@@ -163,9 +166,11 @@ async def main():
     done = {(r["qid"], r["arm"]) for r in map(json.loads, open(path))} if path.exists() else set()
     sc = tinker.ServiceClient()
     client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=args.base))
-    tok = client.get_tokenizer()
-    harmony = modelio.probe_harmony(tok)
-    params = tinker.SamplingParams(max_tokens=2 if args.nocot else args.max_tokens, temperature=0.0, stop=modelio.policy_stop(tok, harmony))
+    ink = args.base == inkio.MODEL
+    assert not ink or not (args.nocot or args.extend_cut), "no --nocot or --extend-cut for Inkling"
+    tok = inkio.Tok() if ink else client.get_tokenizer()
+    harmony = not ink and modelio.probe_harmony(tok)
+    params = tinker.SamplingParams(max_tokens=2 if args.nocot else args.max_tokens, temperature=0.0, stop=[tok.eos_token_id] if ink else modelio.policy_stop(tok, harmony))
     forced = tok.encode((EMPTY if harmony else "") + PREFILL, add_special_tokens=False) if args.nocot else []
     sem, lock, n_tok = asyncio.Semaphore(args.concurrency), asyncio.Lock(), [0, 0, 0]  # sampled tokens, prefill tokens, rows done
 
@@ -198,13 +203,19 @@ async def main():
         if (q["qid"], arm) in done:
             return
         system, user = prompts(q, arm, args.hint, args.placement)
-        ids, think_prefix = (render(tok, user, args.effort, system), "") if harmony else modelio.render(tok, user, False, args.effort, system, thinking=not args.nocot)
-        ids = ids + forced
+        if ink:
+            ids = inkio.render(user, system, float(args.effort))
+        else:
+            ids, think_prefix = (render(tok, user, args.effort, system), "") if harmony else modelio.render(tok, user, False, args.effort, system, thinking=not args.nocot)
+            ids = ids + forced
         async with sem:
             res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params)
         s = res.sequences[0]
         finish = "length" if s.stop_reason == "length" and not args.nocot else "stop"
-        split = dict(reasoning="", response=PREFILL + tok.decode(s.tokens, skip_special_tokens=True)) if args.nocot else extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, tok.eos_token), None, finish)
+        if ink:
+            split = extract.split_output(inkio.to_think(tok.decode(s.tokens)), None, finish)
+        else:
+            split = dict(reasoning="", response=PREFILL + tok.decode(s.tokens, skip_special_tokens=True)) if args.nocot else extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, tok.eos_token), None, finish)
         row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_letter(split["response"]), finish=finish,
                    cot_tokens=len(tok.encode(split["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(split["response"], add_special_tokens=False)),
                    reasoning=split["reasoning"], response=split["response"], user=user, system=system)
