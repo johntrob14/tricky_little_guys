@@ -23,7 +23,7 @@ Setup:
 - Judges: `rl/sandbag_judge.py --questions data/gpqa_sandbagging.jsonl --tag gpqa`, unchanged from WMDP: monitor = CoT only, Li et al. 2025 sandbagging judge,
   claude-haiku-5.5, flagged = score < 70, on every row; verbalization judge (claude-haiku-5.5, the no-named-option prompt JUDGE_NOHINT) on flips.
   Numbers in `summary_gpqa.json`.
-- Figure: `figures/sandbag_gpqa.must_headline.png` (`rl/sandbag_headline.py --gpqa --dir ../results/sandbag_gpqa --models base grpo3-s100 mt1b-s150 --no-ctl --out ../../../figures/sandbag_gpqa.must_headline.png`; arms honest, sandbag, aware, evasion).
+- Figure: `figures/sandbag_gpqa.must_headline.png` (`rl/sandbag_headline.py --gpqa --dir ../results/sandbag_gpqa --models base grpo3-s100 mt1b-s150 --no-ctl --out ../../../figures/sandbag_gpqa.must_headline.png`; arms honest, sandbag, aware, evasion, coached; in panel B the coached denominators exclude unparsed coached answers).
 - Inspect logs: `inspect/<model>/<arm>.eval` (gitignored; `rl/sandbag_inspect.py --dir ../results/sandbag_gpqa`), served from `arena/logs/gpqa_sandbag`.
 
 Core figure (Ethan, 2026-10-27): `mats12_sprint/figures/sandbag_gpqa.must_flip_breakdown.png`: every flip in the sandbag, aware and evasion arms of base,
