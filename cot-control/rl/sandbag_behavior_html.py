@@ -69,7 +69,7 @@ PAGE = r"""<!doctype html>
 body { margin:0; padding:16px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
 h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .sub { color:var(--ink2); font-size:13px; margin-bottom:2px; }
-.charts { display:grid; grid-template-columns:repeat(auto-fill, minmax(560px, 1fr)); gap:16px; margin-top:12px; }
+.charts { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:16px; margin-top:12px; }  /* one row while they fit, each chart growing to fill it */
 .chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; min-width:0; }
 .chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
 .chart svg { width:100%; height:auto; display:block; }
