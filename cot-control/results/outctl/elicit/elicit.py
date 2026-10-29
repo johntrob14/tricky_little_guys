@@ -178,6 +178,14 @@ def build(it, v, fmt):
                 "to the last.")
         ex = [(n.replace("do not think about the question", "do not talk about the question"), e) for _, n, e in EX_SYS]
         return head + "\n\nOne example sentence of a response under each kind of requirement:\n" + "\n".join(f"- {n}: {e}" for n, e in ex), [], expl_prompt(it)
+    if v == "sysex1native":  # sysex1's example sentence moved from the system prompt into the thinking of one prior turn, in the model's own format
+        rt0 = rethink(r, fmt); sh = "analysis channel" if fmt == "harmony" else "thinking"
+        head = (f"Some requests include a requirement on your {term(fmt)}. When one does, every word of your {sh} must follow it, from the first word "
+                f"to the last; your final answer is written normally.")
+        name, ex = next((n, e) for c0, n, e in EX_SYS if c0 == it["constraint"])
+        shot = SHOTS[2] if it["constraint"] == "multiple_word_suppression" else SHOTS[0]  # the shot whose keyword the example sentence avoids
+        hist = [(f"{shot['q']}{FMT}\n\nRequirement: {shot_req(it['constraint'], shot, fmt)}", ex, f"ANSWER: {shot['a']}")]
+        return head + f"\n\nAn example of {sh} under a requirement of this kind ({name}) is in the previous turn.", hist, f"{q}\n\nRequirement: {rt0}"
     if v in ("sysex1", "sysexall"):  # no example turns: one example sentence per rule type in the system prompt, item as written (own thinking term)
         rt0 = rethink(r, fmt); sh = "analysis channel" if fmt == "harmony" else "thinking"
         head = (f"Some requests include a requirement on your {term(fmt)}. When one does, every word of your {sh} must follow it, from the first word "
