@@ -8,6 +8,7 @@ Reward, sampling and GRPO as nocotrl.py: task_w * R_task - lam * (1 - mean parti
     python nocotrl_ink.py --out DIR --pilot 64 --group-size 4
     python nocotrl_ink.py --out DIR --steps 80 --budget 25            (main run)
     python nocotrl_ink.py --out DIR --steps 80 --no-behaviors         (control: task reward only)
+    python nocotrl_ink.py --out DIR --effort 0.6 --forced-empty-think  (thinking forced empty by prefill, as gpt-oss nocotrl1)
 """
 import argparse, asyncio, json, random, re, time, collections
 from pathlib import Path
@@ -40,6 +41,7 @@ async def main():
     ap.add_argument("--task-w-mc", type=float, default=1.5); ap.add_argument("--p-mc", type=float, default=0.4); ap.add_argument("--k-probs", type=float, nargs=3, default=[0.2, 0.4, 0.4])
     ap.add_argument("--no-behaviors", action="store_true"); ap.add_argument("--effort", type=float, default=0.0)
     ap.add_argument("--exclude", nargs="*", default=HELD_OUT); ap.add_argument("--pilot", type=int, default=0)
+    ap.add_argument("--forced-empty-think", action="store_true", help="prefill an opened-and-closed empty thinking message plus the text header (gpt-oss nocotrl style) at --effort")
     ap.add_argument("--budget", type=float, default=25.0); ap.add_argument("--save-every", type=int, default=20); ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     out = Path(a.out); out.mkdir(parents=True, exist_ok=bool(a.pilot))
@@ -59,13 +61,15 @@ async def main():
             k = 0 if a.no_behaviors else rng.choices([1, 2, 3], weights=a.k_probs)[0]; cand, wc, order = list(names), [max(0.15, 1 - ema[n]) for n in names], []
             while cand: i = rng.choices(range(len(cand)), weights=wc)[0]; order.append(cand.pop(i)); wc.pop(i)
             tasks.append(X.make(random.Random(rng.random()), order, k, a.p_mc, ordered=True))
-        pids = [inkio.render(t["user"], effort=a.effort) for t in tasks]
+        PRE = tok.encode(inkio.THINK + inkio.END + inkio.TEXT) if a.forced_empty_think else []
+        pids = [inkio.render(t["user"], effort=a.effort) + PRE for t in tasks]
         res = await asyncio.gather(*[sampler.sample_async(prompt=tinker.ModelInput.from_ints(p), num_samples=a.group_size, sampling_params=params) for p in pids])
         groups = []
         for t, r in zip(tasks, res):
             g = []
             for s in r.sequences:
-                txt, leak, unclosed = parse(tok, s.tokens); trunc = s.stop_reason == "length" or unclosed
+                txt, leak, unclosed = parse(tok, PRE + list(s.tokens)); trunc = s.stop_reason == "length" or unclosed
+                if a.forced_empty_think and inkio.THINK in tok.decode(list(s.tokens)): leak = True
                 per = S.grade(t["nv"], txt) if txt and not trunc else [(0.0, False)] * len(t["nv"])
                 ro = dict(s=s, answer=txt, trunc=trunc, leak=leak, per=per, partial=(sum(p for p, _ in per) / len(per)) if per else 1.0, strict=all(x for _, x in per), correct=None, attempt=None)
                 if t["kind"] == "mc":

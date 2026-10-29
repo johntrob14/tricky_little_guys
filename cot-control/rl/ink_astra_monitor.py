@@ -12,6 +12,8 @@ import inkio
 from cotswitch import extract, graders as G
 from astra_continuous import score
 
+import os
+TERM=os.environ.get('INK_TERM');SUF=f'__{TERM}' if TERM else ''
 MODEL='thinkingmachines/Inkling-Small';EFFORT=0.6;CAP=16000;N=4;PRICE=dict(prefill=0.58,sample=1.44);BUDGET=12.0
 ASTRA=HERE.parent/'results/tinker-runs/gptoss120b-t1/generations/gpt-oss-120b/astra.jsonl'
 OUT=Path('/home/john/code/results/nocotrl-ink/astra_monitor');OUT.mkdir(parents=True,exist_ok=True)
@@ -66,19 +68,20 @@ async def main(runs):
         k,_,v=l.strip().removeprefix('export ').partition('=')
         if k and not k.startswith('#'):__import__('os').environ.setdefault(k,v.strip('"\''))
     svc=tinker.ServiceClient();sem=asyncio.Semaphore(16);items=[json.loads(l) for l in open(ASTRA)]
-    log=OUT/'summary.jsonl';seen={json.loads(l)['label'] for l in open(log)} if log.exists() else set()
-    base_rows=await run(svc,'base','base',items,sem);base=graded(base_rows)
+    if TERM:items=[dict(t,user_prompt=t['user_prompt'].replace('analysis channel',TERM)) for t in items]
+    log=OUT/f'summary{SUF}_monitor.jsonl' if SUF else OUT/'summary.jsonl';seen={json.loads(l)['label'] for l in open(log)} if log.exists() else set()
+    base_rows=await run(svc,'base'+SUF,'base',items,sem);base=graded(base_rows)
     if 'base' not in seen:
         s=summary('base',base_rows,None);open(log,'a').write(json.dumps(s)+'\n');print(json.dumps(s),flush=True);seen.add('base')
     while True:
         for rd in runs:
             ck=Path(rd)/'checkpoints.json'
             for c in (json.load(open(ck)) if ck.exists() else []):
-                label=f"{Path(rd).name}_s{c['step']}"
+                label=f"{Path(rd).name}_s{c['step']}{SUF}"
                 if label in seen:continue
                 s=summary(label,await run(svc,label,c['sampler'],items,sem),base);open(log,'a').write(json.dumps(s)+'\n');print(json.dumps(s),flush=True);seen.add(label)
         finished=all('done.' in (Path(str(rd)+'.log').read_text() if Path(str(rd)+'.log').exists() else '') or 'budget' in (Path(str(rd)+'.log').read_text() if Path(str(rd)+'.log').exists() else '') for rd in runs)
-        pending=[1 for rd in runs for c in (json.load(open(Path(rd)/'checkpoints.json')) if (Path(rd)/'checkpoints.json').exists() else []) if f"{Path(rd).name}_s{c['step']}" not in seen]
+        pending=[1 for rd in runs for c in (json.load(open(Path(rd)/'checkpoints.json')) if (Path(rd)/'checkpoints.json').exists() else []) if f"{Path(rd).name}_s{c['step']}{SUF}" not in seen]
         if finished and not pending:print('MONITOR_DONE',flush=True);return
         if spent[0]>BUDGET:print('MONITOR_BUDGET',flush=True);return
         await asyncio.sleep(60)
