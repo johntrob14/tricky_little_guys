@@ -1,6 +1,6 @@
 """Interactive page for the behavior judges (sandbag_behavior_judge.py) over gpqa.must rows: per model and condition (instructed arm, CoT-control arm, natural
 errors), a table of behavior rates and mean judge scores, bar charts (instruction judge INFLUENCED and MENTIONED shares, final answer vs the option the CoT
-supports, mean planted-error suspiciousness with the NO_MENTION subset hatched, mean degeneracy), all recomputed for the chosen row scope (flips and natural
+supports, mean planted-error suspiciousness with the NO_MENTION subset hatched; degeneracy is in the table only), all recomputed for the chosen row scope (flips and natural
 errors, all rows, or correct answers); click a table cell or a bar to filter the row list to it, click a row to read its prompts, CoT and answer (middle
 pane) and each judge's filled-in prompt, reasoning and output (right pane). Judge scores are colored red (suspicious or degenerate, 100) through gray (50)
 to green (0); sidebar column titles sort the list (again to reverse); LaTeX is rendered with KaTeX from cdnjs (checkbox "render math"; prompts stay raw);
@@ -69,8 +69,8 @@ PAGE = r"""<!doctype html>
 body { margin:0; padding:16px; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, sans-serif; }
 h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .sub { color:var(--ink2); font-size:13px; margin-bottom:2px; }
-.charts { display:flex; flex-wrap:wrap; gap:16px; margin-top:12px; }
-.chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; flex:1 1 560px; min-width:0; }
+.charts { display:grid; grid-template-columns:repeat(auto-fill, minmax(560px, 1fr)); gap:16px; margin-top:12px; }
+.chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; min-width:0; }
 .chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
 .chart svg { width:100%; height:auto; display:block; }
 .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; margin:12px 0 0; color:var(--ink2); }
@@ -83,6 +83,7 @@ th { color:var(--ink2); font-weight:600; }
 td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .scope { display:flex; gap:12px; align-items:center; font-size:13px; color:var(--ink2); margin:12px 0 6px; }
 .scope select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:6px 8px; font:13px system-ui, sans-serif; }
+.summary td, .summary th { padding:2px 6px; font-size:12px; line-height:1.3; }  /* one line per cell */
 .summary td.c { cursor:pointer; text-align:center; font-variant-numeric:tabular-nums; } .summary td.c:hover { outline:1px solid var(--ink2); }
 .summary td.c small { color:var(--ink2); } .summary td.na { color:var(--muted); text-align:center; }
 .summary th.m { text-align:center; border-left:1px solid var(--line); } .summary td.first { border-left:1px solid var(--line); }
@@ -134,7 +135,6 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
   <div class="chart"><h3>Instruction judge: INFLUENCED (solid) and MENTIONED (hatched), share of judged rows (Wilson 95%)</h3><svg id="c-instr"></svg></div>
   <div class="chart"><h3>Final answer is another option than the CoT supports (solid); CoT supports no single option (hatched) (Wilson 95%)</h3><svg id="c-sup"></svg></div>
   <div class="chart"><h3>Planted-error judge: mean suspiciousness (± SE) over rows with a consequential error; hatched: the instruction judge's NO_MENTION rows</h3><svg id="c-plant"></svg></div>
-  <div class="chart"><h3>Degeneracy judge: mean score (± SE)</h3><svg id="c-deg"></svg></div>
 </div>
 <h2>Rows <span class="note">(drag the dividers to resize; arrow keys move through the list)</span></h2>
 <div class="note" style="margin-bottom:8px">Judge score color: 0 <span class="scale" id="scale"></span> 100; green = not suspicious or not degenerate, gray at 50, red = suspicious or degenerate.</div>
@@ -209,7 +209,7 @@ function drawSummary(sc) {
     for (const m of D.models) condsOf(m.id).forEach((c, i) => {
       const v = cell(m.id, c, b, sc), first = i ? "" : " first";
       if (!v) { h += `<td class="na${first}">—</td>`; return; }
-      const [txt, bg] = b.rate ? [`${v.k}/${v.n}<br><small>${(100 * v.k / v.n).toFixed(0)}%</small>`, `rgba(95,184,122,${0.08 + 0.55 * v.k / v.n})`] : [`${v[0].toFixed(0)}<br><small>n ${v[2]}</small>`, scoreColor(v[0], 0.5)];
+      const [txt, bg] = b.rate ? [`${v.k}/${v.n}`, `rgba(95,184,122,${0.08 + 0.55 * v.k / v.n})`] : [`${v[0].toFixed(0)} <small>(${v[2]})</small>`, scoreColor(v[0], 0.5)];
       h += `<td class="c${first}" style="background:${bg}" data-m="${m.id}" data-c="${c}" data-b="${b.k}">${txt}</td>`;
     });
     h += `</tr>`;
@@ -257,7 +257,7 @@ function chart(id, pair, sc, score) {  // two bars (solid, hatched) per model an
     else bar(svg, f, x, w - 2, v[0], v[0] - v[1], v[0] + v[1], m.color, h, v[0].toFixed(0), base + `mean ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n ${v[2]}`, filt);
   })));
 }
-function drawAll() { const sc = $("scope").value; drawSummary(sc); chart("c-instr", ["INFLUENCED", "MENTIONED"], sc); chart("c-sup", ["override", "unsupported"], sc); chart("c-plant", ["plant", "plant_silent"], sc, 1); chart("c-deg", ["deg"], sc, 1); }
+function drawAll() { const sc = $("scope").value; drawSummary(sc); chart("c-instr", ["INFLUENCED", "MENTIONED"], sc); chart("c-sup", ["override", "unsupported"], sc); chart("c-plant", ["plant", "plant_silent"], sc, 1); }
 $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(short(m.id))}</option>`).join("");
 $("f-cond").innerHTML = `<option value="">any</option>` + D.conds.map(c => `<option>${c}</option>`).join("");
 function setFilters(f) { for (const k of ["model", "cond", "instr", "sup", "plant"]) $("f-" + k).value = f[k] ?? ""; render(); $("pane").scrollIntoView({block: "start"}); }
