@@ -44,7 +44,7 @@ def main():
                 systems.append(x["system"])
             cond = "natural" if x["pool"] == "natural_error" else x["arm"]
             conds.add(cond)
-            judged = {j: {k: J[j][(x["run"], x["arm"], x["qid"])][k] for k in ("verdict", "reply", "reasoning", "quotes_exact", "blocked")} if (x["run"], x["arm"], x["qid"]) in J[j] else None for j in PROMPTS}
+            judged = {j: {k: J[j][(x["run"], x["arm"], x["qid"])][k] for k in ("verdict", "reply", "reasoning", "quotes_found", "blocked")} if (x["run"], x["arm"], x["qid"]) in J[j] else None for j in PROMPTS}
             rows.append(dict(model=m, run=x["run"], arm=x["arm"], cond=cond, qid=x["qid"], flip=x["flip"], answer=x["answer"], correct=x["correct"], honest=honest[x["qid"]]["answer"],
                              finish=x["finish"], cot_tokens=x["cot_tokens"], sys=systems.index(x["system"]), cot=x["reasoning"], response=x["response"],
                              instruction=instruction_text(qs[x["qid"]], x["arm"], run_hint(cfg)) if x["pool"] == "instructed" else None, j=judged))
@@ -156,7 +156,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
   <div class="divider" data-k="1"></div>
   <div class="col" id="judge"></div>
 </div>
-<p class="note">The "rows counted" choice applies to the table, the charts and the list. The instruction judge runs on the instructed arms only; the planted-error judge only on flips and natural errors (its rows under "all rows" are those). A blocked request (OpenRouter's content filters) or an unparsed reply leaves the row out of that judge's numbers. Quotes the judge gave that are not in the CoT verbatim are flagged in the right pane.</p>
+<p class="note">The "rows counted" choice applies to the table, the charts and the list. The instruction judge runs on the instructed arms only; the planted-error judge only on flips and natural errors (its rows under "all rows" are those). A blocked request (OpenRouter's content filters) or an unparsed reply leaves the row out of that judge's numbers. A judge quote that is not in the CoT, once both are reduced to letters and digits and the quote is split at ellipses, is flagged in the right pane.</p>
 <script>
 const D = __DATA__;
 const $ = id => document.getElementById(id);
@@ -284,7 +284,7 @@ function show() {
     + `<div class="note" style="margin-bottom:8px">${esc(D.cond_text[r.cond])}</div>`
     + sec("system prompt", D.systems[r.sys]) + sec("user message (the question)", D.questions[r.qid], 1) + sec("CoT (analysis channel)", r.cot, 1) + sec("final answer", r.response, 1);
   $("judge").innerHTML = ["instruction", "supported", "planted", "degenerate"].map(j => { const o = r.j[j];
-    return `<div class="jblock"><div class="head"><b>${JNAME[j]}</b>${badge(j, r)}<span class="note">${D.judge_model[j]}, medium effort</span>${o && !o.quotes_exact ? '<span class="warn">a quote is not in the CoT verbatim</span>' : ""}</div>`
+    return `<div class="jblock"><div class="head"><b>${JNAME[j]}</b>${badge(j, r)}<span class="note">${D.judge_model[j]}, medium effort</span>${o && !o.quotes_found ? '<span class="warn">a quote is not in the CoT</span>' : ""}</div>`
       + (o ? sec(j + " prompt", fill(j, r)) + sec(j + " reasoning", o.reasoning || "(no reasoning returned)", 1) + sec(j + " output", o.reply, 1) : "") + `</div>`; }).join("");
   wire($("view")); wire($("judge"));
   document.querySelectorAll("#view .sec-b.math, #judge .sec-b.math").forEach(math);
