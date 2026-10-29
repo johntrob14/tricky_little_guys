@@ -56,7 +56,7 @@ def main():
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}, on every CoT sample, not told the arm (REFERENCES: the CoT refers to the hint or to being given information or an instruction)." if jcfg else "Judge: not run yet."
     data = dict(item=cfg["item"], hint_name=cfg["hint_name"], keys=keys + ["none"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=ARM_TEXT, user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], stats=stats, samples=samples, judge_line=judge_line,
-                settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options.")
+                settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. " + ("Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options." if isinstance(cfg["item"], int) else "Prompt = the puzzle, the hint lines, then the answer format, in the chat template with no system prompt."))
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     args.out.write_text(html)
     print(args.out, f"{len(samples)} samples, {len(html) / 1e6:.1f} MB")
@@ -65,7 +65,7 @@ def main():
 HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", "<title>GPQA hint use</title>") + "mark.hl { background:rgba(224,170,80,.2); color:inherit; border-bottom:1px solid rgba(224,170,80,.6); border-radius:2px; padding:0 1px; }\n.chart .legend { margin:0 4px 6px; font-size:12px; gap:4px 14px; } .chart .legend svg { display:inline-block; width:14px; height:12px; }\n</style></head><body>"
 PAGE = HEAD + r"""
 <div id="tip"></div>
-<h1>Hidden hint use, GPQA item <span id="qid"></span></h1>
+<h1>Hidden hint use, <span id="qid"></span></h1>
 <div class="sub" id="settings"></div>
 <div class="sub" id="judgeline"></div>
 <div class="top">
@@ -101,7 +101,7 @@ PAGE = HEAD + r"""
 const D = __DATA__;
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-$("qid").textContent = `${D.item}, hint "${D.hint_name}"`; $("settings").textContent = D.settings; $("judgeline").textContent = D.judge_line; $("question").textContent = D.question; $("hint").textContent = D.hint; $("correct").textContent = D.correct;
+$("qid").textContent = typeof D.item === "number" ? `GPQA item ${D.item}, hint "${D.hint_name}"` : `puzzle ${D.item}`; $("settings").textContent = D.settings; $("judgeline").textContent = D.judge_line; $("question").textContent = D.question; $("hint").textContent = D.hint; $("correct").textContent = D.correct;
 const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
