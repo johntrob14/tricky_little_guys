@@ -1,5 +1,5 @@
 """One interactive page for hintuse.py / hintuse_puzzle.py case studies (a dropdown switches between the --dirs, the last one shown first). For each: per model and arm, accuracy (Wilson 95%), mean CoT tokens (± SE), the judge's REFERENCES rate
-(Wilson 95%; the judge from hintuse_judge.py, when judged.jsonl exists) and the answers given (letters, or for free-response puzzles every distinct answer, headed by initials); click a bar or a count to list those samples,
+(Wilson 95%; the judge from hintuse_judge.py, when judged.jsonl exists) and the answers given (letters, or for free-response puzzles every distinct answer, headed by initials); click a bar or a count to list those samples; checkboxes under the table hide or show each model's bars in the charts,
 a list column marks CoTs containing the word "hint" (also hints, hinted, hinting), which is highlighted in the CoT and final answer; click a sample to read its prompt, CoT and final answer (middle pane) and the judge's prompt, reasoning and reply (right pane). Layout and controls as
 sandbag_resample_html.py (resizable panes, sortable list, arrow keys, KaTeX toggle). Labels and colors from sandbag_headline.MODELS.
 
@@ -114,7 +114,7 @@ PAGE = HEAD + r"""
 <div class="sub" id="judgeline"></div>
 <div class="top">
   <div><h2>Question (correct answer <span id="correct"></span>)</h2><div class="q" id="question"></div><h2>Hint</h2><div class="q" id="hint"></div></div>
-  <div><h2 id="counts-h"></h2><div class="scroll"><table class="counts" id="counts"></table></div></div>
+  <div><h2 id="counts-h"></h2><div class="scroll"><table class="counts" id="counts"></table></div><div id="toggles" class="note" style="display:flex;justify-content:flex-end;gap:4px 14px;flex-wrap:wrap;margin-top:8px"></div></div>
 </div>
 <div class="charts">
   <div class="chart"><h3 id="acc-h"></h3><div class="legend lg"></div><svg id="acc"></svg></div>
@@ -145,6 +145,7 @@ PAGE = HEAD + r"""
 <script>
 let ALL;
 let D, COT_ARMS, col;
+const HID = new Set(), MS = () => D.models.filter(m => !HID.has(m.id));  // models hidden by the toggles under the counts table; MS() = the ones drawn in the charts
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 const KATEX = !!window.renderMathInElement;
@@ -170,7 +171,7 @@ function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
   el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: color, rx: 2});
   if (hatch) el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: "url(#hatch)"});
   if (lo != null) { el(g, "line", {x1: x, x2: x, y1: f.y(lo), y2: f.y(hi), stroke: "#c3c2b7", "stroke-width": 1.2}); for (const e of [lo, hi]) el(g, "line", {x1: x - 4, x2: x + 4, y1: f.y(e), y2: f.y(e), stroke: "#c3c2b7", "stroke-width": 1.2}); }
-  el(g, "text", {x, y: f.y(hi ?? v) - 5, "text-anchor": "middle", "font-size": D.models.length > 2 ? 9 : 11, fill: "#c3c2b7"}, label);
+  el(g, "text", {x, y: f.y(hi ?? v) - 5, "text-anchor": "middle", "font-size": MS().length > 2 ? 9 : 11, fill: "#c3c2b7"}, label);
   el(g, "rect", {x: x - w / 2 - 2, y: T, width: w + 4, height: y0 - T, fill: "transparent"});
   g.addEventListener("mousemove", e => showTip(e, tipHtml)); g.addEventListener("mouseleave", () => tip.style.display = "none");
   g.addEventListener("click", () => setFilters(filt));
@@ -198,8 +199,8 @@ function chooseSet() {
   drawAcc(); drawJudge(); drawTok(); drawCounts();
 }
 function drawAcc() {
-  const svg = $("acc"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), D.arms), w = f.gw * 0.8 / D.models.length;
-  D.arms.forEach((a, k) => D.models.forEach((m, i) => {
+  const svg = $("acc"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), D.arms), w = f.gw * 0.8 / MS().length;
+  D.arms.forEach((a, k) => MS().forEach((m, i) => {
     const s = D.stats[m.id + "|" + a], x = L + f.gw * k + f.gw * 0.1 + w * (i + 0.5);
     const multi = s.mean != null, v = multi ? s.mean : s.k / s.n;
     bar(svg, f, x, w - 3, v, s.ci[0], s.ci[1], m.color, false, multi ? v.toFixed(2) : `${s.k}/${s.n}`,
@@ -207,8 +208,8 @@ function drawAcc() {
   }));
 }
 function drawJudge() {
-  const svg = $("judgec"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), COT_ARMS), w = f.gw * 0.8 / D.models.length;
-  COT_ARMS.forEach((a, k) => D.models.forEach((m, i) => [["refs", "judge REFERENCES YES"]].forEach(([key, name], j) => {
+  const svg = $("judgec"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), COT_ARMS), w = f.gw * 0.8 / MS().length;
+  COT_ARMS.forEach((a, k) => MS().forEach((m, i) => [["refs", "judge REFERENCES YES"]].forEach(([key, name], j) => {
     const s = D.stats[m.id + "|" + a][key], x = L + f.gw * k + f.gw * 0.1 + w * (i + 0.5);
     if (!s) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 10, fill: "#8d8c84"}, "n=0"); return; }
     const multi = s.mean != null, v = multi ? s.mean : s.k / s.n;
@@ -217,10 +218,10 @@ function drawJudge() {
   })));
 }
 function drawTok() {
-  const ymax = Math.max(...Object.values(D.stats).filter(s => s.tok).map(s => s.tok[0] + s.tok[1])) * 1.15, step = Math.pow(10, Math.floor(Math.log10(ymax / 2)));
+  const ymax = Math.max(1, ...Object.entries(D.stats).filter(([k, s]) => s.tok && !HID.has(k.split("|")[0])).map(([k, s]) => s.tok[0] + s.tok[1])) * 1.15, step = Math.pow(10, Math.floor(Math.log10(ymax / 2)));
   const ticks = []; for (let t = 0; t <= ymax; t += step * (ymax / step > 8 ? 2 : 1)) ticks.push(t);
-  const svg = $("tok"), f = frame(svg, ymax, ticks, t => t, COT_ARMS), w = f.gw * 0.8 / D.models.length;
-  COT_ARMS.forEach((a, k) => D.models.forEach((m, i) => {
+  const svg = $("tok"), f = frame(svg, ymax, ticks, t => t, COT_ARMS), w = f.gw * 0.8 / MS().length;
+  COT_ARMS.forEach((a, k) => MS().forEach((m, i) => {
     const v = D.stats[m.id + "|" + a].tok, x = L + f.gw * k + f.gw * 0.1 + w * (i + 0.5);
     bar(svg, f, x, w - 3, v[0], v[0] - v[1], v[0] + v[1], m.color, false, v[0].toFixed(0), `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>mean ${v[0].toFixed(0)} ± ${v[1].toFixed(0)} (SE), n=${v[2]}${D.multi ? " items" : ""}`, {model: m.id, arm: a});
   }));
@@ -319,6 +320,8 @@ function load(k) {  // switch the whole page to run k
   $("question").textContent = D.question; $("hint").textContent = D.hint + (D.arm_text.hide.includes(": ") ? "\n\n" + D.arm_text.hide : ""); $("correct").textContent = D.correct;
   document.querySelectorAll(".lg").forEach(e => e.innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</span>`).join("")
     );
+  $("toggles").innerHTML = D.models.map(m => `<label class="chk" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" data-m="${m.id}"${HID.has(m.id) ? "" : " checked"}><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</label>`).join("");
+  $("toggles").querySelectorAll("input").forEach(c => c.addEventListener("change", () => { c.checked ? HID.delete(c.dataset.m) : HID.add(c.dataset.m); drawAcc(); drawJudge(); drawTok(); }));
   $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
   $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option>${a}</option>`).join("");
   $("f-item").innerHTML = `<option value="">any</option>` + (D.items || []).map(i => `<option>${i}</option>`).join(""); $("f-item-l").style.display = D.multi ? "" : "none";
