@@ -20,6 +20,7 @@ info = {  # run: (model, family, kind, setting, coached)
     "mt1b-sd-pw": ("manytypes1b s150", "gpt-oss", "organism", "startgate-direct", ""), "mt1b-hs-pw": ("manytypes1b s150", "gpt-oss", "organism", "always-monitored", ""),
     "mt2e-s170-sd-pw": ("manytypes2e s170", "gpt-oss", "organism", "startgate-direct", ""),
     "sgd-grpo3": ("grpo3 s100 (old 8-episode run)", "gpt-oss", "organism", "startgate-direct", ""),
+    "grpo3-s100-sd-pw": ("grpo3 s100", "gpt-oss", "organism", "startgate-direct", ""),
     "sgcmp-qwen-direct": ("Qwen3.8-27B", "Qwen", "base", "startgate-direct", ""), "sgcmp-qwen-covert2": ("Qwen3.8-27B", "Qwen", "base", "always-monitored", ""),
     "opsd1b-sd-pw": ("opsd-grpo1b s10", "Qwen", "organism", "startgate-direct", ""), "opsd1b-hs-pw": ("opsd-grpo1b s10", "Qwen", "organism", "always-monitored", ""),
     "glm53-sd-pw": ("GLM-5.3", "GLM", "base", "startgate-direct", ""), "glm53-hs-pw": ("GLM-5.3", "GLM", "base", "always-monitored", ""),
