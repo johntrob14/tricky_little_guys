@@ -13,7 +13,7 @@ def load(*runs):
     if os.path.exists(p):s.update({k:v for k,v in json.load(open(p)).items() if k.endswith('|F0|user')})
   return s
 M={'base':load('gptoss-base','gptoss-base-newtypes'),'grpo3 s100 (CoT, 6 Astra types)':load('gptoss-grpo3s100'),'manytypes1b s150 (CoT, 12 types)':load('mt1b-s150'),
-   'nocotrl1 s80 (output, CoT off)':load('nocotrl1-s80'),'B additive s90 (output, CoT off)':load('nocotrlB-add-s90')}
+   'nocotrl1 s80 (output, CoT off)':load('nocotrl1-s80'),'B additive s90 (output, CoT off)':load('nocotrlB-add-s90'),'B process v2 s114':load('nocotrlB-process2-s114')}
 print(f"{'model':34}"+''.join(f'{f:>22}' for f in FAM))
 for m,s in M.items():
   row=''
@@ -25,4 +25,4 @@ print('\nper type, nometa/n (base | nocotrl1 s80 | B s90):')
 for f,ts in FAM.items():
   for t in ts:
     k=t+'|F0|user';g=lambda m:f"{M[m][k]['nometa']}/{M[m][k]['n']}" if k in M[m] else '-'
-    print(f'  {f[:9]:10}{t:28}{g("base"):>9}{g("nocotrl1 s80 (output, CoT off)"):>9}{g("B additive s90 (output, CoT off)"):>9}   median tokens {M["base"].get(k,{}).get("tokens","-")} | {M["nocotrl1 s80 (output, CoT off)"].get(k,{}).get("tokens","-")} | {M["B additive s90 (output, CoT off)"].get(k,{}).get("tokens","-")}')
+    print(f'  {f[:9]:10}{t:28}{g("base"):>9}{g("nocotrl1 s80 (output, CoT off)"):>9}{g("B additive s90 (output, CoT off)"):>9}{g("B process v2 s114"):>9}   median tokens {M["base"].get(k,{}).get("tokens","-")} | {M["nocotrl1 s80 (output, CoT off)"].get(k,{}).get("tokens","-")} | {M["B additive s90 (output, CoT off)"].get(k,{}).get("tokens","-")}')

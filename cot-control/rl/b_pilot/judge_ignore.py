@@ -24,6 +24,7 @@ rows=[*mine('B base',P/'astra_full_base.jsonl',F/'noise_base.jsonl'),*mine('B ad
       *mine('B add s60',P/'additive/astra_full_s60.jsonl',F/'draws_add_s60/noise_add_s60.jsonl'),*mine('B old s60',P/'astra_full_s60.jsonl',F/'draws_old_s60/noise_old_s60.jsonl'),
       *[g for e in (72,80,90,100) if (P/f'additive/astra_full_s{e}.jsonl').exists() and (F/f'draws_add_s{e}/noise_add_s{e}.jsonl').exists() for g in mine(f'B add s{e}',P/f'additive/astra_full_s{e}.jsonl',F/f'draws_add_s{e}/noise_add_s{e}.jsonl')],
       *[g for a in ('fresh','stacked') if (P/f'variants/{a}/astra_full_s102.jsonl').exists() and (P/f'variants/{a}/draws/noise_{a}_s102.jsonl').exists() for g in mine(f'B {a} s102',P/f'variants/{a}/astra_full_s102.jsonl',P/f'variants/{a}/draws/noise_{a}_s102.jsonl')],
+      *[g for a in ('fresh','stacked') if (P/f'variants/{a}/astra_full_s114.jsonl').exists() and (P/f'variants/{a}/draws2/noise_{a}_s114.jsonl').exists() for g in mine(f'B {a} s114',P/f'variants/{a}/astra_full_s114.jsonl',P/f'variants/{a}/draws2/noise_{a}_s114.jsonl')],
       *theirs('nocotrl1 base','base'),*theirs('nocotrl1 s60','nocotrl1-s60'),*theirs('nocotrl1 s80x','nocotrl1-s80x'),*theirs('nocotrl0 s80','nocotrl0-s80')]
 async def main():
     done={(r['src'],r['key'],r['sample']) for r in map(json.loads,open(OUT))} if OUT.exists() else set()
