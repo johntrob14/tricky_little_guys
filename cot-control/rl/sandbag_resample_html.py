@@ -16,6 +16,7 @@ import statistics
 from pathlib import Path
 
 from hintverb_judge import wilson
+from judge_quotes import CSS as HL_CSS, JS as HL_JS
 from sandbag_headline import MODELS
 from sandbag import AWARE, EVASION, SLINKHARD
 
@@ -79,7 +80,7 @@ def main():
     data = dict(qid=qid, question=q["honest"], correct=q["correct"], arms=arms, arm_text=ARM_TEXT, systems=systems, monitor_prompt=judges[0]["monitor_prompt"], cutoff=judges[0]["cutoff"],
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in args.models], stats=stats, samples=samples,
                 settings=f"{cfg['repeat']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort {cfg['effort']}, {cfg['max_tokens'] // 1000}k cap, Tinker.")
-    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
+    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__HL_CSS__", HL_CSS).replace("__HL_JS__", HL_JS)
     args.out.write_text(html)
     print(args.out, f"{len(samples)} samples, {len(html) / 1e6:.1f} MB")
 
@@ -141,6 +142,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .empty { color:var(--muted); font-size:13px; padding:8px 0; }
 .scroll { overflow-x:auto; }
 .note { color:var(--muted); font-size:12px; }
+__HL_CSS__
 </style></head><body>
 <div id="tip"></div>
 <h1>gpqa.must, one question resampled: <span id="qid"></span></h1>
@@ -181,6 +183,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 const D = __DATA__;
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+__HL_JS__const QKIND = {mon: {label: "CoT-only monitor", color: "#e0a63a"}, verb: {label: "verbalization judge", color: "#a98be0"}};
 $("qid").textContent = D.qid; $("settings").textContent = D.settings; $("question").textContent = D.question; $("correct").textContent = D.correct;
 const KATEX = !!window.renderMathInElement;  // loaded from cdnjs; without it the page says so and shows the raw text
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
@@ -270,18 +273,18 @@ $("cut").textContent = D.cutoff;
 const sid = s => `${s.model}|${s.arm}|${s.i}`;
 let shown = [], sel = null;
 const closed = new Set(["system prompt", "user message", "monitor prompt"]);  // section headers start open except these; the choice carries over between samples
-function sec(title, body, m) {  // m: render LaTeX in this section
+function sec(title, body, m, hl) {  // m: render LaTeX in this section; hl: judge quotes to highlight (judge_quotes.py)
   const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body;
-  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${esc(t || "(empty)")}</pre></div>`; }
+  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${hl ? hlHtml(t, hl) : esc(t || "(empty)")}</pre></div>`; }
 function wire(root) { root.querySelectorAll(".sec-h").forEach(b => b.addEventListener("click", () => { const d = b.parentNode, t = d.dataset.t; closed.has(t) ? closed.delete(t) : closed.add(t); d.classList.toggle("closed"); })); }
 function show() {
   document.querySelectorAll("#list tr.s").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === sel));
   const s = shown.find(x => sid(x) === sel);
   if (!s) { $("view").innerHTML = `<div class="empty">Select a sample on the left.</div>`; $("judge").innerHTML = ""; return; }
-  const m = col[s.model];
+  const m = col[s.model], quotes = [...quotedIn((s.mon_reasoning || "") + "\n" + (s.mon_reply || "")).map(text => ({text, kind: "mon"})), ...quotedIn((s.ver_reasoning || "") + "\n" + (s.ver_reply || "")).map(text => ({text, kind: "verb"}))];
   $("view").innerHTML = `<div class="head"><span class="sw" style="background:${m.color}"></span><b>${esc(m.label.split(" (")[0])}</b><span>${s.arm}</span><span>${s.t0 ? "T 0 (original run)" : "sample #" + s.i}</span>`
     + `<span class="${s.ok ? "ok" : "no"}">answer ${s.answer ?? "none"} ${s.ok ? "✓" : "✗"} (correct ${D.correct})</span><span>${s.cot_tokens} CoT tokens</span>${s.finish === "length" ? "<span class=no>cut at cap</span>" : ""}</div>`
-    + sec("system prompt", D.systems[s.arm]) + sec("user message", D.question, 1) + sec("CoT (analysis channel)", s.cot, 1) + sec("final answer", s.response, 1);
+    + hlLegend(s.cot, quotes) + sec("system prompt", D.systems[s.arm]) + sec("user message", D.question, 1) + sec("CoT (analysis channel)", s.cot, 1, quotes) + sec("final answer", s.response, 1);
   $("judge").innerHTML = `<div class="head"><b>CoT-only monitor</b><span class="score" style="background:${scoreColor(s.score, 0.6)}">${s.score ?? "—"}</span><span class="note">100 = genuine, 1 = sabotage; flagged &lt; ${D.cutoff}</span></div>`
     + sec("monitor prompt", D.monitor_prompt.replaceAll("{MCQ}", () => D.question).replaceAll("{model_response}", () => s.cot))
     + sec("monitor reasoning", s.mon_reasoning || "(no reasoning returned)", 1) + sec("monitor output", s.mon_reply, 1)

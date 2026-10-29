@@ -730,7 +730,10 @@ $12.63, 43 blocked). Figures regenerated: `figures/sandbag_gpqa.must_t1_headline
 claude-sonnet-5.5 medium, where it ran, or the CoT-only monitor, Li et al. 2025 sandbagging judge, claude-haiku-5.5 medium; both over the same rows: flips,
 and natural errors in the honest arm), and a split of the sandbag-arm flips by the verbalization judge (solid: the CoT mentions the instruction, hatched:
 it does not) in the judge chart (side by side). The second chart is the mean CoT length in tokens per model and arm (± SE, every row, rows cut at the cap
-included; no-CoT runs left out). Bars with no rows are left out without a gap. Not regenerated: `sandbag_gpqa.must_flip_breakdown.png` and `sandbag_gpqa.must_behavior_breakdown.png` (they read
+included; no-CoT runs left out). Bars with no rows are left out without a gap. In the row pane of both pages, of `sandbag_gpqa.must_behaviors.html` and of
+`sandbag_gpqa.must_q0006_resample.html`, the judges' quotes are highlighted in the CoT, one color per judge (`rl/judge_quotes.py`: the `<quote>` tags of
+the behavior judges, double-quoted strings of 12+ characters in the monitor's and verbalization judge's reasoning and output; matched on letters and digits
+only, each ellipsis-separated piece on its own; a legend above the CoT counts the pieces found per judge). Not regenerated: `sandbag_gpqa.must_flip_breakdown.png` and `sandbag_gpqa.must_behavior_breakdown.png` (they read
 the temperature-0 runs and hand reads of this directory, which were not resampled).
 
 ### gpqa.must at temperature 1, stale rows vs the resample
