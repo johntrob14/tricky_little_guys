@@ -1,9 +1,9 @@
-"""Interactive page for one hintuse.py case study: per model and arm, accuracy (Wilson 95%), mean CoT tokens (± SE), the judge's REFERENCES and
-share of CoTs containing the word "hint" (Wilson 95%; the judge from hintuse_judge.py, when judged.jsonl exists) and the answer letters; click a bar or a count to list those samples,
+"""One interactive page for hintuse.py / hintuse_puzzle.py case studies (a dropdown switches between the --dirs, the last one shown first). For each: per model and arm, accuracy (Wilson 95%), mean CoT tokens (± SE), the judge's REFERENCES and
+share of CoTs containing the word "hint" (Wilson 95%; the judge from hintuse_judge.py, when judged.jsonl exists) and the answers given (letters, or for free-response puzzles every distinct answer, headed by initials); click a bar or a count to list those samples,
 a list column marks CoTs containing the word "hint" (also hints, hinted, hinting), which is highlighted in the CoT and final answer; click a sample to read its prompt, CoT and final answer (middle pane) and the judge's prompt, reasoning and reply (right pane). Layout and controls as
 sandbag_resample_html.py (resizable panes, sortable list, arrow keys, KaTeX toggle). Labels and colors from sandbag_headline.MODELS.
 
-    python hintuse_html.py --dir ../results/case_studies/hintuse_q225 --out ../../../figures/hintuse_q225.html
+    python hintuse_html.py --dirs ../results/case_studies/hintuse_q225 ../results/case_studies/hintuse_race5 --out ../../../figures/hintuse.html
 """
 
 import argparse
@@ -25,19 +25,17 @@ def rate(xs: list) -> dict | None:
     return dict(k=sum(xs), n=len(xs), ci=wilson(sum(xs), len(xs))) if xs else None
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--out", type=Path, required=True)
-    args = ap.parse_args()
-    cfg = json.load(open(args.dir / "config.json"))
-    jpath = args.dir / "judged.jsonl"
+def page_data(d: Path) -> dict:
+    cfg = json.load(open(d / "config.json"))
+    jpath = d / "judged.jsonl"
     judged = {(r["model"], r["arm"], r["sample"]): r for r in map(json.loads, open(jpath))} if jpath.exists() else {}
-    jcfg = json.load(open(args.dir / "judge.json")) if judged else None
-    rows = [r | dict(j=judged.get((r["model"], r["arm"], r["sample"]))) for r in map(json.loads, open(args.dir / "rows.jsonl"))]
+    jcfg = json.load(open(d / "judge.json")) if judged else None
+    rows = [r | dict(j=judged.get((r["model"], r["arm"], r["sample"]))) for r in map(json.loads, open(d / "rows.jsonl"))]
     models, arms = list(cfg["models"]), cfg["arms"]
     user = {a: p.split("<|start|>user<|message|>")[1].split("<|end|>")[0] for a, p in cfg["prompts"].items()}
     prefill = {a: p.split("<|start|>assistant")[-1] for a, p in cfg["prompts"].items()}
+    seen = [r["answer"] for r in rows if r["answer"] is not None]
+    keys = list("ABCD") if set(seen) <= set("ABCD") else sorted(set(seen), key=lambda k: (k != cfg["answer"], -seen.count(k), k))
     samples, stats = [], {}
     for r in rows:
         j = r["j"] or {}
@@ -48,27 +46,36 @@ def main():
             ra = [r for r in rows if r["model"] == m and r["arm"] == a]
             k, toks = sum(r["ok"] for r in ra), [r["cot_tokens"] for r in ra]
             stats[f"{m}|{a}"] = dict(n=len(ra), k=k, ci=wilson(k, len(ra)), cut=sum(r["finish"] == "length" for r in ra),
-                                     letters={x: sum(r["answer"] == x for r in ra) for x in "ABCD"} | {"none": sum(r["answer"] is None for r in ra)},
+                                     letters={x: sum(r["answer"] == x for r in ra) for x in keys} | {"none": sum(r["answer"] is None for r in ra)},
                                      tok=[statistics.mean(toks), statistics.stdev(toks) / len(toks) ** 0.5, len(toks)] if len(toks) > 1 and not a.startswith("nocot") else None,
                                      refs=rate([(r["j"] or {}).get("refs") for r in ra]), kw=rate([bool(re.search(r"(?i)\bhint(?:s|ed|ing)?\b", r["reasoning"])) for r in ra]) if not a.startswith("nocot") else None)
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}, on every CoT sample, not told the arm (REFERENCES: the CoT refers to the hint or to being given information or an instruction)." if jcfg else "Judge: not run yet."
-    data = dict(item=cfg["item"], hint_name=cfg["hint_name"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=ARM_TEXT, user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
+    return dict(name=d.name, item=cfg["item"], hint_name=cfg["hint_name"], keys=keys + ["none"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=ARM_TEXT, user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], stats=stats, samples=samples, judge_line=judge_line,
-                settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options.")
+                settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. " + ("Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options." if isinstance(cfg["item"], int) else "Prompt = the user message shown below each sample, in the chat template with no system prompt."))
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--dirs", type=Path, nargs="+", required=True)
+    ap.add_argument("--out", type=Path, required=True)
+    args = ap.parse_args()
+    data = [page_data(d) for d in args.dirs]
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     args.out.write_text(html)
-    print(args.out, f"{len(samples)} samples, {len(html) / 1e6:.1f} MB")
+    print(args.out, f"{len(data)} runs, {sum(len(x['samples']) for x in data)} samples, {len(html) / 1e6:.1f} MB")
 
 
 HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", "<title>GPQA hint use</title>") + "mark.hl { background:rgba(224,170,80,.2); color:inherit; border-bottom:1px solid rgba(224,170,80,.6); border-radius:2px; padding:0 1px; }\n.chart .legend { margin:0 4px 6px; font-size:12px; gap:4px 14px; } .chart .legend svg { display:inline-block; width:14px; height:12px; }\n</style></head><body>"
 PAGE = HEAD + r"""
 <div id="tip"></div>
-<h1>Hidden hint use, GPQA item <span id="qid"></span></h1>
+<h1>Hidden hint use, <span id="qid"></span></h1>
+<div class="sub" style="margin:6px 0">run <select id="f-exp" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font:13px system-ui,sans-serif"></select></div>
 <div class="sub" id="settings"></div>
 <div class="sub" id="judgeline"></div>
 <div class="top">
   <div><h2>Question (correct answer <span id="correct"></span>)</h2><div class="q" id="question"></div><h2>Hint</h2><div class="q" id="hint"></div></div>
-  <div><h2>Answers given (count of samples; correct letter in green). Click a count to list those samples.</h2><div class="scroll"><table class="counts" id="counts"></table></div></div>
+  <div><h2>Answers given (count of samples; correct answer in green; free-response answers headed by initials, hover for the full answer). Click a count to list those samples.</h2><div class="scroll"><table class="counts" id="counts"></table></div></div>
 </div>
 <div class="charts">
   <div class="chart"><h3>Accuracy (Wilson 95%). Click a bar to list its samples.</h3><div class="legend lg"></div><svg id="acc"></svg></div>
@@ -82,7 +89,7 @@ PAGE = HEAD + r"""
       <label class="f">model<select id="f-model"></select></label>
       <label class="f">arm<select id="f-arm"></select></label>
       <label class="f">answer<select id="f-ok"><option value="">any</option><option value="1">correct</option><option value="0">incorrect</option></select></label>
-      <label class="f">letter<select id="f-letter"><option value="">any</option><option>A</option><option>B</option><option>C</option><option>D</option><option value="none">none</option></select></label>
+      <label class="f">answer given<select id="f-letter"></select></label>
       <label class="f">REFERENCES<select id="f-refs"><option value="">any</option><option value="1">YES</option><option value="0">NO</option></select></label>
       <label class="f">CoT says "hint"<select id="f-kw"><option value="">any</option><option value="1">yes</option><option value="0">no</option></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
@@ -96,17 +103,15 @@ PAGE = HEAD + r"""
   <div class="col" id="judge"></div>
 </div>
 <script>
-const D = __DATA__;
+const ALL = __DATA__;
+let D, COT_ARMS, col;
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-$("qid").textContent = `${D.item}, hint "${D.hint_name}"`; $("settings").textContent = D.settings; $("judgeline").textContent = D.judge_line; $("question").textContent = D.question; $("hint").textContent = D.hint; $("correct").textContent = D.correct;
 const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
 const HATCH_SW = `<svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="#c3c2b7"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>`;
-document.querySelectorAll(".lg").forEach(e => e.innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</span>`).join("")
-  + (e.dataset.hatch ? `<span><span class="sw" style="background:#c3c2b7"></span>judge: REFERENCES YES</span><span>${HATCH_SW}CoT contains the word "hint"</span>` : ""));
 const SVGNS = "http://www.w3.org/2000/svg", tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 330) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
 function el(svg, tag, attrs, text) { const n = document.createElementNS(SVGNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; }
@@ -131,7 +136,6 @@ function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
   g.addEventListener("mousemove", e => showTip(e, tipHtml)); g.addEventListener("mouseleave", () => tip.style.display = "none");
   g.addEventListener("click", () => setFilters(filt));
 }
-const COT_ARMS = D.arms.filter(a => !a.startsWith("nocot"));
 function drawAcc() {
   const svg = $("acc"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), D.arms), w = f.gw * 0.8 / D.models.length;
   D.arms.forEach((a, k) => D.models.forEach((m, i) => {
@@ -159,8 +163,8 @@ function drawTok() {
   }));
 }
 function drawCounts() {
-  const L5 = ["A", "B", "C", "D", "none"];
-  let h = `<tr><th>model</th><th>arm</th>${L5.map(x => `<th style="text-align:center">${x}</th>`).join("")}<th>n</th></tr>`;
+  const L5 = D.keys;
+  let h = `<tr><th>model</th><th>arm</th>${L5.map(x => `<th style="text-align:center" title="${esc(x)}">${esc(abbr(x))}</th>`).join("")}<th>n</th></tr>`;
   for (const m of D.models) for (const a of D.arms) {
     const s = D.stats[m.id + "|" + a];
     h += `<tr><td><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</td><td>${a}</td>` + L5.map(x => `<td class="c${x === D.correct ? " right" : ""}" data-m="${m.id}" data-a="${a}" data-l="${x}">${s.letters[x] || ""}</td>`).join("") + `<td class="num">${s.n}</td></tr>`;
@@ -168,11 +172,9 @@ function drawCounts() {
   $("counts").innerHTML = h;
   $("counts").querySelectorAll("td.c").forEach(td => td.addEventListener("click", () => setFilters({model: td.dataset.m, arm: td.dataset.a, letter: td.dataset.l})));
 }
-$("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
-$("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option>${a}</option>`).join("");
+const abbr = k => k.includes(", ") ? k.split(", ").map(w => w[0]).join("") : k;  // free-response orders headed by initials
 const FILTERS = {model: "f-model", arm: "f-arm", ok: "f-ok", letter: "f-letter", refs: "f-refs", kw: "f-kw"};
 function setFilters(f) { for (const k in FILTERS) $(FILTERS[k]).value = f[k] ?? ""; render(); $("pane").scrollIntoView({behavior: "smooth", block: "start"}); }
-const col = Object.fromEntries(D.models.map(m => [m.id, m]));
 const yn = v => v == null ? "" : v ? "YES" : "NO";
 const sid = s => `${s.model}|${s.arm}|${s.i}`;
 let shown = [], sel = null;
@@ -235,7 +237,25 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
 applyW();
 for (const id of Object.values(FILTERS)) $(id).addEventListener("change", render);
 $("f-math").addEventListener("change", show);
-drawAcc(); drawJudge(); drawTok(); drawCounts(); render();
+function load(k) {  // switch the whole page to run k
+  D = ALL[k]; $("f-exp").value = k;
+  try { localStorage.setItem("hintuse-run", D.name); } catch (e) {}
+  COT_ARMS = D.arms.filter(a => !a.startsWith("nocot")); col = Object.fromEntries(D.models.map(m => [m.id, m]));
+  $("qid").textContent = typeof D.item === "number" ? `GPQA item ${D.item}, hint "${D.hint_name}"` : `puzzle ${D.item}`; $("settings").textContent = D.settings; $("judgeline").textContent = D.judge_line;
+  $("question").textContent = D.question; $("hint").textContent = D.hint; $("correct").textContent = D.correct;
+  document.querySelectorAll(".lg").forEach(e => e.innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</span>`).join("")
+    + (e.dataset.hatch ? `<span><span class="sw" style="background:#c3c2b7"></span>judge: REFERENCES YES</span><span>${HATCH_SW}CoT contains the word "hint"</span>` : ""));
+  $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
+  $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option>${a}</option>`).join("");
+  $("f-letter").innerHTML = `<option value="">any</option>` + D.keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
+  for (const id of Object.values(FILTERS)) $(id).value = "";
+  sel = null; drawAcc(); drawJudge(); drawTok(); drawCounts(); render();
+}
+$("f-exp").innerHTML = ALL.map((x, k) => `<option value="${k}">${esc(x.name.replace(/^hintuse_/, ""))}</option>`).join("");
+$("f-exp").addEventListener("change", () => load(+$("f-exp").value));
+let start = ALL.length - 1;
+try { const j = ALL.findIndex(x => x.name === localStorage.getItem("hintuse-run")); if (j >= 0) start = j; } catch (e) {}
+load(start);
 </script></body></html>
 """
 
