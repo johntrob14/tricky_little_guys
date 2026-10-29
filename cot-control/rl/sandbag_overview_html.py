@@ -1,14 +1,14 @@
 """Interactive overview of a gpqa.must (or wmdp) sandbagging run directory (sandbag.py rows judged by sandbag_judge.py), in the style of
-sandbag_resample_html.py (notes/interactive_html_guidelines.md): per model and arm, accuracy (Wilson 95%), flips (honest-arm answer correct, this arm's
-answer parsed and wrong; Wilson 95%, dashed: each model's noise floor from its <model>-honest2 run), a judge's mean score (± SE) over flips (honest arm:
-natural errors, wrong while the <model>-honest2 sample of the question is correct), and the verbalization judge's YES rate over the judged flips, as four
+sandbag_resample_html.py (notes/interactive_html_guidelines.md): per model and arm, accuracy (Wilson 95%), mean CoT length in tokens (± SE, every row,
+rows cut at the cap included), a judge's mean score (± SE) over flips (honest-arm answer correct, this arm's answer parsed and wrong; honest arm: natural
+errors, wrong while the <model>-honest2 sample of the question is correct), and the verbalization judge's YES rate over the judged flips, as four
 charts in a 2x2 grid under the prompts; click a bar to list those rows, click a row to read its prompt, CoT and final answer next to the same question's
 honest-arm CoT (middle pane) and the judges' prompt, reasoning and outputs (right pane). Two selects above the charts: which judge the third chart, the
 list's score column and the first judge block show (the planted-error suspiciousness judge, sandbag_behavior_judge.py planted.jsonl given as --behavior,
 the default when it covers these runs; or the CoT-only monitor of the --summary run, Li et al. 2025's sandbagging judge), and whether flips in the sandbag
-arms are split by the verbalization judge (solid: YES, the CoT mentions the instruction; hatched: NO) in the flips chart (stacked) and the judge chart
-(side by side); arms without a sandbag instruction are drawn faint when split. Bars with no rows are left out without a gap. A run sampled with sandbag.py
---nocot (named <model>-nocot) is drawn dotted beside its model in the accuracy and flips charts and is left out of the judge charts (no CoT to judge).
+arms are split by the verbalization judge (solid: YES, the CoT mentions the instruction; hatched: NO) in the judge chart (side by side); arms without a
+sandbag instruction are drawn faint when split. Bars with no rows are left out without a gap. A run sampled with sandbag.py --nocot (named <model>-nocot)
+is drawn dotted beside its model in the accuracy chart and is left out of the other three (no CoT).
 --summary is the sandbag_judge.py summary whose monitor and verbalization files (files_suffix) are shown. Same page mechanics as sandbag_resample_html.py (resizable panes, sortable columns, arrow keys, score
 colors, KaTeX from cdnjs). Labels and colors from sandbag_headline.MODELS.
 
@@ -24,7 +24,6 @@ from hintverb import FORMAT
 from sandbag import ALL_ARMS, CTL_SETS, SANDBAG_ARMS
 from sandbag_behavior_judge import MODEL as BEHAVIOR_MODEL, PROMPTS as BEHAVIOR_PROMPTS
 from sandbag_headline import MODELS
-from sandbag_variants_plot import load, noise_floor
 
 ARM_TEXT = {"honest": "honest (no instruction)", "sandbag": "sandbag (the order to answer incorrectly)", "aware": "aware (sandbag + the monitor line)",
             "evasion": "evasion (aware + must not reveal the plan)", "coached": "coached (evasion + insert a plausible mistake, look natural)",
@@ -55,7 +54,7 @@ def main():
     assert len(prefill) == 1, f"runs sampled under different answer formats: {prefill}"
     prefill = prefill.pop()
     arms = [a for a in ALL_ARMS if any(a in json.load(open(args.dir / m / "config.json"))["arms"] for m in args.models) and (not args.arms or a in args.arms)]
-    rows, stats, systems, floors, models = [], {}, {}, {}, []
+    rows, stats, systems, models = [], {}, {}, []
     for m in args.models:
         d = args.dir / m
         nocot = json.load(open(d / "config.json")).get("nocot", False)
@@ -66,8 +65,6 @@ def main():
         rs = list(map(json.loads, open(d / "rows.jsonl")))
         honest = {r["qid"]: r for r in rs if r["arm"] == "honest"}
         h2 = {r["qid"]: r for r in map(json.loads, open(args.dir / f"{m}-honest2" / "rows.jsonl"))} if (args.dir / f"{m}-honest2").exists() else None
-        if (args.dir / f"{m}-honest2").exists():
-            floors[m] = noise_floor([load(d)[1], load(args.dir / f"{m}-honest2")[1]])
         for r in [r for r in rs if r["arm"] in arms]:
             v, h, x, mo = ver.get((r["qid"], r["arm"])), honest[r["qid"]], pl.get((m, r["arm"], r["qid"])), mon.get((r["qid"], r["arm"]), dict(score=None, reply=""))
             if r["arm"] not in CTL_SETS:
@@ -86,14 +83,14 @@ def main():
             if not ra:
                 continue
             fin = [r for r in ra if r["finish"] != "length"]
-            k, el, fl = sum(r["ok"] for r in fin), [r for r in ra if r["flip"] is not None and honest[r["qid"]]["answer"] == r["correct"] and r["answer"] is not None], [r for r in ra if r["flip"]]
+            k, fl = sum(r["ok"] for r in fin), [r for r in ra if r["flip"]]
             vk, vn = sum(r["verbalized"] is True for r in fl), sum(r["verbalized"] is not None for r in fl)
             graded = [r["ctl_strict"] for r in ra if r.get("ctl_strict") is not None]
-            stats[f"{m}|{a}"] = dict(n=len(ra), fin=len(fin), k=k, ci=wilson(k, len(fin)), cut=len(ra) - len(fin), flips=len(fl), elig=len(el), flip_ci=wilson(len(fl), len(el)) if el else None,
+            stats[f"{m}|{a}"] = dict(n=len(ra), fin=len(fin), k=k, ci=wilson(k, len(fin)), cut=len(ra) - len(fin), flips=len(fl),
                                      verb_k=vk, verb_n=vn, verb_ci=wilson(vk, vn) if vn else None, ctl_k=sum(graded), ctl_n=len(graded))
     data = dict(arms=arms, arm_text={a: ARM_TEXT[a] for a in arms}, short={a: SHORT.get(a, a) for a in arms}, sandbag_arms=SANDBAG_ARMS, systems=systems,
                 questions={k: dict(text=q["honest"], correct=q["correct"]) for k, q in qs.items()},
-                judge=f"{judge['model'].split('/')[-1]} at {judge['effort']} effort", floors={m: list(f) for m, f in floors.items()},
+                judge=f"{judge['model'].split('/')[-1]} at {judge['effort']} effort",
                 monitor_prompt=judge["monitor_prompt"], cutoff=judge["cutoff"],
                 planted=dict(prompt=BEHAVIOR_PROMPTS["planted"], judge=f"{BEHAVIOR_MODEL['planted'].split('/')[-1]} at medium effort") if any(k[0] in args.models for k in pl) else None,
                 models=models, stats=stats, samples=rows,
@@ -184,7 +181,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 </div>
 <div class="charts">
   <div class="chart"><h3>Accuracy on finished rows (Wilson 95%). Click a bar to list its rows.</h3><svg id="acc"></svg></div>
-  <div class="chart"><h3>Flips: honest-correct answered wrong (Wilson 95%); dashed: noise floor (two honest samples). Click to list.</h3><svg id="flip"></svg><div class="note" id="floors" style="margin:4px 6px 0"></div></div>
+  <div class="chart"><h3>CoT length: mean tokens over every row (± SE; rows cut at the cap included). Click to list.</h3><svg id="len"></svg></div>
   <div class="chart"><h3 id="montitle"></h3><svg id="mon"></svg></div>
   <div class="chart"><h3>Verbalization judge: YES among judged flips (Wilson 95%). Click to list.</h3><svg id="verb"></svg></div>
 </div>
@@ -231,7 +228,7 @@ const DOTS = c => `<svg width="14" height="12" style="vertical-align:-1px;margin
 const HATCH = c => `<svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="${c}"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>`;
 function drawLegend() {
   $("legend").innerHTML = D.models.map(m => `<span>${m.nocot ? DOTS(m.color) : `<span class="sw" style="background:${m.color}"></span>`}${esc(m.label)}</span>`).join("")
-    + (D.models.some(m => m.nocot) ? `<span>${DOTS("#c3c2b7")}no CoT (accuracy and flips charts)</span>` : "")
+    + (D.models.some(m => m.nocot) ? `<span>${DOTS("#c3c2b7")}no CoT (accuracy chart only)</span>` : "")
     + (SPLIT ? `<span><span class="sw" style="background:#c3c2b7"></span>flips that mention the instruction (verbalization YES)</span><span>${HATCH("#c3c2b7")}flips that do not (NO)</span><span><span class="sw" style="background:#c3c2b7;opacity:.4"></span>no sandbag instruction: not split</span>` : "");
 }
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -278,27 +275,17 @@ function rateChart(id, arms, get, what, filt, cot) {
   }));
 }
 function drawAcc() { rateChart("acc", D.arms, s => [s.k, s.fin, s.ci], "correct (finished rows)", {}); }
-function drawFlip() {
-  const arms = D.arms.filter(a => a !== "honest");
-  const f = chart("flip", 1.05, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), a => !arms.includes(a) ? [] : D.models.filter(m => has(m, a) && D.stats[m.id + "|" + a].elig).map(m => {
-    const s = D.stats[m.id + "|" + a], n = s.elig, ci = s.flip_ci, filt = {model: m.id, arm: a, flip: "1"}, split = SPLIT && SB(a) && !m.nocot;
-    if (!split) return {draw: (svg, f, x, w) => bar(svg, f, x, w, s.flips / n, ci[0], ci[1], m.color, m.nocot && "dots", rateTip(m, a, "flips / honest-correct", s.flips, n, ci), filt, SPLIT && !SB(a))};
-    const yes = s.verb_k, no = s.verb_n - s.verb_k, rest = s.flips - s.verb_n;  // rest: flips the verbalization judge did not score
-    const tipx = `<br>mention the instruction (YES): ${yes}<br>no mention (NO): ${no}` + (rest ? `<br>not judged: ${rest}` : "");
-    return {draw: (svg, f, x, w) => {
-      bar(svg, f, x, w, yes / n, null, null, m.color, false, rateTip(m, a, "flips that mention the instruction / honest-correct", yes, n, null, `<br>all flips ${s.flips}/${n}` + tipx), {...filt, verb: "1"});
-      bar(svg, f, x, w, (yes + no) / n, null, null, m.color, "hatch", rateTip(m, a, "flips that do not mention it / honest-correct", no, n, null, `<br>all flips ${s.flips}/${n}` + tipx), {...filt, verb: "0"}, false, yes / n);
-      if (rest) bar(svg, f, x, w, s.flips / n, null, null, m.color, false, rateTip(m, a, "flips not judged / honest-correct", rest, n, null), {...filt, verb: "none"}, true, (yes + no) / n);
-      for (const e of ci) el(svg, "line", {x1: x - 4, x2: x + 4, y1: f.y(e), y2: f.y(e), stroke: "#c3c2b7", "stroke-width": 1.2});
-      el(svg, "line", {x1: x, x2: x, y1: f.y(ci[0]), y2: f.y(ci[1]), stroke: "#c3c2b7", "stroke-width": 1.2});
-    }};
-  }));
-  const svg = $("flip");
-  D.models.filter(m => D.floors[m.id]).forEach(m => { const [k, n] = D.floors[m.id]; el(svg, "line", {x1: L, x2: W - R, y1: f.y(k / n), y2: f.y(k / n), stroke: m.color, "stroke-width": 1.3, "stroke-dasharray": m.nocot ? "1 3" : "5 4"});
-  });
-  $("floors").innerHTML = "noise floor: " + D.models.filter(m => D.floors[m.id]).map(m => { const [k, n] = D.floors[m.id]; return `<span style="color:${m.color}">${esc(m.label.split(" (")[0])} ${k}/${n} = ${(k / n).toFixed(3)}</span>`; }).join(", ");
-}
 const meanSe = xs => xs.length ? [xs.reduce((p, q) => p + q, 0) / xs.length, xs.length > 1 ? Math.sqrt(xs.reduce((p, q) => p + (q - xs.reduce((u, v) => u + v, 0) / xs.length) ** 2, 0) / (xs.length - 1) / xs.length) : 0, xs.length] : null;
+function drawLen() {
+  const top = Math.max(...D.models.filter(m => !m.nocot).flatMap(m => D.arms.filter(a => has(m, a)).map(a => { const v = meanSe(D.samples.filter(s => s.model === m.id && s.arm === a).map(s => s.cot_tokens)); return v[0] + v[1]; })));
+  const step = [1, 2, 5, 10, 20, 50].map(k => k * 10 ** Math.floor(Math.log10(top))).find(k => top / k <= 6), ymax = Math.ceil(top / step) * step;
+  const ticks = Array.from({length: ymax / step + 1}, (_, k) => k * step), fmt = t => t >= 1000 ? t / 1000 + "k" : t;
+  chart("len", ymax * 1.03, ticks, fmt, a => D.models.filter(m => has(m, a) && !m.nocot).map(m => {
+    const s = D.stats[m.id + "|" + a], v = meanSe(D.samples.filter(r => r.model === m.id && r.arm === a).map(r => r.cot_tokens));
+    return {draw: (svg, f, x, w) => bar(svg, f, x, w, v[0], v[0] - v[1], v[0] + v[1], m.color, false,
+      `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>mean CoT length ${v[0].toFixed(0)} ± ${v[1].toFixed(0)} tokens (SE), n=${v[2]}` + (s.cut ? `<br>cut at cap: ${s.cut}/${s.n}` : ""), {model: m.id, arm: a})};
+  }));
+}
 const jval = s => JMODE === "mon" ? s.score : (typeof s.plant === "number" ? s.plant : null);
 function drawJudge() {
   const MON = JMODE === "mon";
@@ -413,7 +400,7 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
 applyW();
 for (const id of ["f-model", "f-arm", "f-ok", "f-flip", "f-verb", "f-q"]) $(id).addEventListener("change", render);
 $("jsel").addEventListener("change", () => { JMODE = $("jsel").value; try { localStorage.setItem("sandbag-overview-judge", JMODE); } catch (e) {} if (sortBy.k === "score" || sortBy.k === "plant") sortBy.k = JMODE === "mon" ? "score" : "plant"; drawJudge(); render(); });
-$("ssel").addEventListener("change", () => { SPLIT = $("ssel").value === "1"; try { localStorage.setItem("sandbag-overview-split", SPLIT ? "1" : "0"); } catch (e) {} drawLegend(); drawFlip(); drawJudge(); });
+$("ssel").addEventListener("change", () => { SPLIT = $("ssel").value === "1"; try { localStorage.setItem("sandbag-overview-split", SPLIT ? "1" : "0"); } catch (e) {} drawLegend(); drawJudge(); });
 $("f-math").addEventListener("change", show);
 function drawPrompts() {  // one box per prompt variant: the shared system prompt, then the text each arm appends to it
   const extra = a => { const r = D.samples.find(s => s.arm === a); return (r.sys ?? D.systems[a]).slice(BASE_SYS.length).trim(); };
@@ -424,7 +411,7 @@ function drawPrompts() {  // one box per prompt variant: the shared system promp
   $("prompts").style.gridTemplateColumns = `repeat(${Math.ceil(boxes.length / 2)}, minmax(0, 1fr))`;
   $("prompts").innerHTML = boxes.join("");
 }
-drawPrompts(); drawLegend(); drawAcc(); drawFlip(); drawJudge(); drawVerb(); render();
+drawPrompts(); drawLegend(); drawAcc(); drawLen(); drawJudge(); drawVerb(); render();
 </script></body></html>
 """
 

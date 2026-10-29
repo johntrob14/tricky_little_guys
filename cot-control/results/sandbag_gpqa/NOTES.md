@@ -729,7 +729,8 @@ $12.63, 43 blocked). Figures regenerated: `figures/sandbag_gpqa.must_t1_headline
 `sandbag_gpqa.must_t1_overview_inkling.html`. Both pages have two selects above the charts: the judge in the third chart, the row list and the judge pane (the planted-error judge,
 claude-sonnet-5.5 medium, where it ran, or the CoT-only monitor, Li et al. 2025 sandbagging judge, claude-haiku-5.5 medium; both over the same rows: flips,
 and natural errors in the honest arm), and a split of the sandbag-arm flips by the verbalization judge (solid: the CoT mentions the instruction, hatched:
-it does not) in the flips chart (stacked) and the judge chart (side by side). Bars with no rows are left out without a gap. Not regenerated: `sandbag_gpqa.must_flip_breakdown.png` and `sandbag_gpqa.must_behavior_breakdown.png` (they read
+it does not) in the judge chart (side by side). The second chart is the mean CoT length in tokens per model and arm (± SE, every row, rows cut at the cap
+included; no-CoT runs left out). Bars with no rows are left out without a gap. Not regenerated: `sandbag_gpqa.must_flip_breakdown.png` and `sandbag_gpqa.must_behavior_breakdown.png` (they read
 the temperature-0 runs and hand reads of this directory, which were not resampled).
 
 ### gpqa.must at temperature 1, stale rows vs the resample
