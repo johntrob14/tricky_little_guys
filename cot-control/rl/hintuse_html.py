@@ -1,5 +1,5 @@
 """Interactive page for one hintuse.py case study: per model and arm, accuracy (Wilson 95%), mean CoT tokens (± SE), the judge's REFERENCES and
-share of CoTs containing the word "hint" (Wilson 95%; the judge from hintuse_judge.py, when judged.jsonl exists) and the answer letters; click a bar or a count to list those samples,
+share of CoTs containing the word "hint" (Wilson 95%; the judge from hintuse_judge.py, when judged.jsonl exists) and the answers given (letters, or for free-response puzzles every distinct answer, headed by initials); click a bar or a count to list those samples,
 a list column marks CoTs containing the word "hint" (also hints, hinted, hinting), which is highlighted in the CoT and final answer; click a sample to read its prompt, CoT and final answer (middle pane) and the judge's prompt, reasoning and reply (right pane). Layout and controls as
 sandbag_resample_html.py (resizable panes, sortable list, arrow keys, KaTeX toggle). Labels and colors from sandbag_headline.MODELS.
 
@@ -38,6 +38,8 @@ def main():
     models, arms = list(cfg["models"]), cfg["arms"]
     user = {a: p.split("<|start|>user<|message|>")[1].split("<|end|>")[0] for a, p in cfg["prompts"].items()}
     prefill = {a: p.split("<|start|>assistant")[-1] for a, p in cfg["prompts"].items()}
+    seen = [r["answer"] for r in rows if r["answer"] is not None]
+    keys = list("ABCD") if set(seen) <= set("ABCD") else sorted(set(seen), key=lambda k: (k != cfg["answer"], -seen.count(k), k))
     samples, stats = [], {}
     for r in rows:
         j = r["j"] or {}
@@ -48,11 +50,11 @@ def main():
             ra = [r for r in rows if r["model"] == m and r["arm"] == a]
             k, toks = sum(r["ok"] for r in ra), [r["cot_tokens"] for r in ra]
             stats[f"{m}|{a}"] = dict(n=len(ra), k=k, ci=wilson(k, len(ra)), cut=sum(r["finish"] == "length" for r in ra),
-                                     letters={x: sum(r["answer"] == x for r in ra) for x in "ABCD"} | {"none": sum(r["answer"] is None for r in ra)},
+                                     letters={x: sum(r["answer"] == x for r in ra) for x in keys} | {"none": sum(r["answer"] is None for r in ra)},
                                      tok=[statistics.mean(toks), statistics.stdev(toks) / len(toks) ** 0.5, len(toks)] if len(toks) > 1 and not a.startswith("nocot") else None,
                                      refs=rate([(r["j"] or {}).get("refs") for r in ra]), kw=rate([bool(re.search(r"(?i)\bhint(?:s|ed|ing)?\b", r["reasoning"])) for r in ra]) if not a.startswith("nocot") else None)
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}, on every CoT sample, not told the arm (REFERENCES: the CoT refers to the hint or to being given information or an instruction)." if jcfg else "Judge: not run yet."
-    data = dict(item=cfg["item"], hint_name=cfg["hint_name"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=ARM_TEXT, user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
+    data = dict(item=cfg["item"], hint_name=cfg["hint_name"], keys=keys + ["none"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=ARM_TEXT, user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], stats=stats, samples=samples, judge_line=judge_line,
                 settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options.")
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
@@ -68,7 +70,7 @@ PAGE = HEAD + r"""
 <div class="sub" id="judgeline"></div>
 <div class="top">
   <div><h2>Question (correct answer <span id="correct"></span>)</h2><div class="q" id="question"></div><h2>Hint</h2><div class="q" id="hint"></div></div>
-  <div><h2>Answers given (count of samples; correct letter in green). Click a count to list those samples.</h2><div class="scroll"><table class="counts" id="counts"></table></div></div>
+  <div><h2>Answers given (count of samples; correct answer in green; free-response answers headed by initials, hover for the full answer). Click a count to list those samples.</h2><div class="scroll"><table class="counts" id="counts"></table></div></div>
 </div>
 <div class="charts">
   <div class="chart"><h3>Accuracy (Wilson 95%). Click a bar to list its samples.</h3><div class="legend lg"></div><svg id="acc"></svg></div>
@@ -82,7 +84,7 @@ PAGE = HEAD + r"""
       <label class="f">model<select id="f-model"></select></label>
       <label class="f">arm<select id="f-arm"></select></label>
       <label class="f">answer<select id="f-ok"><option value="">any</option><option value="1">correct</option><option value="0">incorrect</option></select></label>
-      <label class="f">letter<select id="f-letter"><option value="">any</option><option>A</option><option>B</option><option>C</option><option>D</option><option value="none">none</option></select></label>
+      <label class="f">answer given<select id="f-letter"></select></label>
       <label class="f">REFERENCES<select id="f-refs"><option value="">any</option><option value="1">YES</option><option value="0">NO</option></select></label>
       <label class="f">CoT says "hint"<select id="f-kw"><option value="">any</option><option value="1">yes</option><option value="0">no</option></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
@@ -159,8 +161,8 @@ function drawTok() {
   }));
 }
 function drawCounts() {
-  const L5 = ["A", "B", "C", "D", "none"];
-  let h = `<tr><th>model</th><th>arm</th>${L5.map(x => `<th style="text-align:center">${x}</th>`).join("")}<th>n</th></tr>`;
+  const L5 = D.keys;
+  let h = `<tr><th>model</th><th>arm</th>${L5.map(x => `<th style="text-align:center" title="${esc(x)}">${esc(abbr(x))}</th>`).join("")}<th>n</th></tr>`;
   for (const m of D.models) for (const a of D.arms) {
     const s = D.stats[m.id + "|" + a];
     h += `<tr><td><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</td><td>${a}</td>` + L5.map(x => `<td class="c${x === D.correct ? " right" : ""}" data-m="${m.id}" data-a="${a}" data-l="${x}">${s.letters[x] || ""}</td>`).join("") + `<td class="num">${s.n}</td></tr>`;
@@ -170,6 +172,8 @@ function drawCounts() {
 }
 $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
 $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option>${a}</option>`).join("");
+const abbr = k => k.includes(", ") ? k.split(", ").map(w => w[0]).join("") : k;  // free-response orders headed by initials
+$("f-letter").innerHTML = `<option value="">any</option>` + D.keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
 const FILTERS = {model: "f-model", arm: "f-arm", ok: "f-ok", letter: "f-letter", refs: "f-refs", kw: "f-kw"};
 function setFilters(f) { for (const k in FILTERS) $(FILTERS[k]).value = f[k] ?? ""; render(); $("pane").scrollIntoView({behavior: "smooth", block: "start"}); }
 const col = Object.fromEntries(D.models.map(m => [m.id, m]));
