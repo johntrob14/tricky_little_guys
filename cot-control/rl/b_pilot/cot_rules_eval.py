@@ -33,6 +33,12 @@ def items():
             out.append(dict(q,rule=rule,value=value,key=f"{q['id']}|{rule}",user=base+'\n\nRequirement: '+req+TAIL))
     return out
 
+def answer_correct(task, response, content=None):
+    """Use letter parsing for MC tasks and the training value grader otherwise."""
+    if task.get('options'):
+        return extract.parse_answer(response, content) == task['gold']
+    return A.grade(dict(task, rule='none', value=None), response)['correct']
+
 async def main(a):
     out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
     json.dump(dict(budget_usd=a.budget,doc=__doc__),open(out/'additive_config.json','w'),indent=2)
@@ -47,7 +53,7 @@ async def main(a):
             sp=extract.split_output(extract.harmony_to_think(raw),None,'length' if s.stop_reason=='length' else 'stop')
             g=A.grade(t,sp['reasoning'],s.stop_reason=='length')  # CoT has no ANSWER line, so the whole CoT is the graded body
             A.append(path,dict(key=t['key'],sample=i,rule=t['rule'],partial=g['partial'],strict=g['strict'],cot_words=len(sp['reasoning'].split()),
-                               cot=sp['reasoning'],response=sp['response'],stop=s.stop_reason,correct=extract.parse_answer(sp['response'],sp['content'])==t['gold']))
+                               cot=sp['reasoning'],response=sp['response'],stop=s.stop_reason,correct=answer_correct(t,sp['response'],sp['content'])))
     jobs=[]
     for spec in a.models:
         label,path=spec.split('=',1)
