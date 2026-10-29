@@ -138,7 +138,7 @@ Tinker cost estimates from the stale runs' token counts (gpt-oss $0.84/M sampled
 1. No-CoT baselines, all of them: `results/sandbag_nocot/` (6 models), the `-nocot` runs in `sandbag_gpqa`, `sandbag_gpqa_t1`, `sandbag_li_plain`. Under $1.
 2. `gpqa.must` at temperature 1 (`results/sandbag_gpqa_t1/`): base, grpo3-s100, mt1b-s150, manytypes2e-s170 (8 arms + honest2), about $10; inksm-tk and
    inkrl1-s90 (6 arms + honest2), about $5.
-3. `wmdp.should` (`results/sandbag/`): base, grpo3-s100, mt1b-s150, manytypes2e-s170, about $15; inksm-tk, inksft1-ep2, about $5; merge6 and base-vllm need
+3. `wmdp.should` (`results/sandbag/`): base, grpo3-s100, mt1b-s150, manytypes2e-s170, about $15; inksm-tk, inksft1-ep2, about $5; merge6 is retired (Ethan, 2026-10-29) and is not rerun; base-vllm would need
    the vLLM shim to take the CoT stop token and the two-step sample (`cot-control/merge/vllm_tinker.py`, not checked); qwen-opsdgrpo-s10 about $25 on
    Qwen prices; inksm-or and qwen-or on OpenRouter get the new sentence only.
 4. hintverb on gpt-oss: base, grpo3-s100, mt1b-s150 and the oversight-pressure arms (user and system placement), about $85 for all 38 gpt-oss runs; the
