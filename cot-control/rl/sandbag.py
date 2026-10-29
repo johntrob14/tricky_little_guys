@@ -40,8 +40,8 @@ incorrect answer to the question." with no framing and no named wrong option (hi
 --nocot answers without CoT, as sandbag_nocot.py does (empty analysis channel, final channel prefilled "Answer:", 2 tokens; finish is always "stop"). On a
 think-tag --base (Qwen) it renders the chat template's thinking-off prompt (enable_thinking=False: an empty think block, no effort line) and prefills "Answer:".
 --base thinkingmachines/Inkling-Small (TMLv0, inkio.py): --effort is the thinking effort level (0-1, e.g. 0.6), rendered as inkio's system message after the
-system prompt; CoT = the thinking message, sampled until the model opens its text message (stop on <|content_text|>), then "Answer:" is appended and up to 8
-more tokens are sampled (stop on <|end_message|>); a malformed turn (stray special tokens) is a row with finish "malformed" and no answer. --nocot prefills an
+system prompt; CoT = the thinking message, sampled until the model opens its text message (stop on <|content_text|>; a turn that ends right after the
+thinking message gets the text message header appended), then "Answer:" is appended and up to 8 more tokens are sampled (stop on <|end_message|>); a malformed turn (stray special tokens) is a row with finish "malformed" and no answer. --nocot prefills an
 empty thinking message and the text header (nocotrl_ink.py --forced-empty-think) then "Answer:", at the run's --effort. No --extend-cut.
 --extend-cut N (think-tag models) continues an existing run's rows cut at --max-tokens: the prompt plus the cut CoT (re-encoded from the stored text) as
 prefill, sampled up to N CoT tokens in all, at the run's temperature, then the answer prefill as for a fresh sample; the row is rewritten in place with `extended` = the CoT tokens it was cut at.
@@ -237,6 +237,8 @@ async def main():
         async with sem:
             s = (await client.sample_async(prompt=tinker.ModelInput.from_ints(ids + forced), num_samples=1, sampling_params=nocot_params if args.nocot else ink_params)).sequences[0]
         tokens, n, prefilled = list(s.tokens), dict(sampled=len(s.tokens), prefill=len(ids) + len(forced)), args.nocot
+        if not args.nocot and tokens[-1:] != [text_id] and end_id in tokens and text_id not in tokens:  # thinking closed and the turn ended with no text message: open one for the prefill
+            tokens = tokens[:tokens.index(end_id) + 1] + tok.encode(inkio.TEXT)
         if not args.nocot and tokens[-1:] == [text_id]:  # thinking done and the text message opened: prefill the answer (the letter token carries its space)
             async with sem:
                 a = (await client.sample_async(prompt=tinker.ModelInput.from_ints(ids + tokens + answer), num_samples=1, sampling_params=answer_params)).sequences[0]
