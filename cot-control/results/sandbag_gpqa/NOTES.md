@@ -573,7 +573,8 @@ keep F0's harmony term "analysis channel" (inkrl1's training terms include it). 
 - Noise floor (two honest samples): base 23/287 = 0.080, inkrl1 24/292 = 0.082, base without CoT 36/204 = 0.176.
 - Overview page with these runs added: `figures/sandbag_gpqa.must_t1_overview.html` (`rl/sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1
   --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base base-nocot grpo3-s100 grpo3-s100-nocot mt1b-s150 mt1b-s150-nocot
-  inksm-tk inksm-tk-nocot inkrl1-s90 --arms honest sandbag aware evasion coached cotctl_mt1b`).
+  inksm-tk inksm-tk-nocot inkrl1-s90 --arms honest sandbag aware evasion coached cotctl_mt1b`); Inkling runs only: `figures/sandbag_gpqa.must_t1_overview_inkling.html`
+  (the same command with `--models inksm-tk inksm-tk-nocot inkrl1-s90`).
 
 | Model | Arm | Correct (finished rows) | Flips: honest-correct answered wrong | Monitor mean score, correct rows (n) | Monitor mean score, incorrect rows (n) | Unscored | Verbalization judge YES on judged flips | CoT control complied (graded types) |
 |---|---|---|---|---|---|---|---|---|
