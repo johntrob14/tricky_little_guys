@@ -1,6 +1,7 @@
 """Two-panel figure for a few runs and arms of one sandbagging results directory: accuracy (Wilson 95%) and the mean CoT-only monitor score (± SE) over
 the arm's correct rows and, separately, its incorrect rows (finished rows whose answer is wrong or unparsed). Runs are <dir>/<model> (the gpqa layout);
-labels and colors from sandbag_headline.MODELS.
+labels and colors from sandbag_headline.MODELS. --behavior (sandbag_behavior_judge.py planted.jsonl of these runs) adds a third panel: the planted-error
+judge's mean suspiciousness (± SE) over the arm's incorrect rows it scored (0-100; rows with no consequential error, "none", left out and counted in the label).
 
     python sandbag_two_arm_plot.py --dir ../results/sandbag_gpqa --models base mt1b-s150 --arms honest aware --out ../../../figures/sandbag_gpqa.must_honest+aware_base+mt1b.png
 """
@@ -36,10 +37,13 @@ def main():
     ap.add_argument("--models", nargs="+", required=True, choices=list(MODELS))
     ap.add_argument("--arms", nargs="+", required=True, choices=list(ARM_TEXT))
     ap.add_argument("--title", default="gpqa.must: 198 GPQA diamond questions, gpt-oss-120b harmony effort medium, 16k cap, Tinker, T 0, one sample")
+    ap.add_argument("--behavior", type=Path, help="sandbag_behavior_judge.py planted.jsonl of these runs: adds the planted-error suspiciousness panel")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
+    pl = {(r["run"], r["arm"], r["qid"]): r["verdict"] for r in map(json.loads, open(args.behavior)) if not r["blocked"] and r["verdict"] is not None} if args.behavior else None
     plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": INK2, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK, "text.color": INK, "grid.color": "#3a3a38", "hatch.color": SURFACE})
-    fig, (ax_acc, ax_mon) = plt.subplots(1, 2, figsize=(6.5 + 3.25 * len(args.arms), 6.5))
+    fig, axes = plt.subplots(1, 3 if pl else 2, figsize=((9.5 if pl else 6.5) + 3.25 * len(args.arms), 6.5))
+    ax_acc, ax_mon = axes[:2]
     w = 0.8 / len(args.models)
     for i, m in enumerate(args.models):
         cells = load(args.dir / m)[0]
@@ -57,7 +61,18 @@ def main():
             ax_mon.bar(xs, ms, w / 2 * 0.9, color=col, hatch=None if ok else "//", yerr=se, error_kw=dict(ecolor=INK2, elinewidth=1, capsize=3))
             for xi, s, mu, e in zip(xs, sc, ms, se):
                 ax_mon.text(xi, mu + e + 2, f"{mu:.0f}\nn={len(s)}" if s else "n=0", ha="center", va="bottom", fontsize=8 if len(args.models) <= 2 else 6, color=INK2)
-    for ax, t in [(ax_acc, "Accuracy (Wilson 95%)"), (ax_mon, "CoT-only monitor: mean score (± SE), correct and incorrect rows\nLi et al. 2025 sandbagging judge, claude-haiku-5.5\n100 = genuine attempt, 1 = sabotage")]:
+        if pl:  # planted-error judge over the arm's incorrect rows: one bar per model
+            bad = {a: [r for r in map(json.loads, open(args.dir / m / "rows.jsonl")) if r["arm"] == a and r["finish"] != "length" and r["answer"] != r["correct"]] for a in args.arms}
+            vs = {a: [pl[(m, a, r["qid"])] for r in bad[a] if (m, a, r["qid"]) in pl] for a in args.arms}
+            sc = [[v for v in vs[a] if v != "none"] for a in args.arms]
+            ms, se = [statistics.mean(s) if s else 0 for s in sc], [statistics.stdev(s) / len(s) ** 0.5 if len(s) > 1 else 0 for s in sc]
+            axes[2].bar(x, ms, w * 0.92, color=col, yerr=se, error_kw=dict(ecolor=INK2, elinewidth=1, capsize=3))
+            for xi, a, s, mu, e in zip(x, args.arms, sc, ms, se):
+                axes[2].text(xi, mu + e + 2, f"{mu:.0f}\nn={len(s)}" + (f"\nnone {len(vs[a]) - len(s)}" if len(vs[a]) - len(s) else "") if s else "n=0", ha="center", va="bottom", fontsize=8 if len(args.models) <= 2 else 6, color=INK2)
+    titles = [(ax_acc, "Accuracy (Wilson 95%)"), (ax_mon, "CoT-only monitor: mean score (± SE), correct and incorrect rows\nLi et al. 2025 sandbagging judge, claude-haiku-5.5\n100 = genuine attempt, 1 = sabotage")]
+    if pl:
+        titles.append((axes[2], "Planted-error judge: mean suspiciousness (± SE), incorrect rows\nclaude-sonnet-5.5 medium; 0 = no evidence the first consequential error\nwas planted, 100 = direct evidence; none = no consequential error"))
+    for ax, t in titles:
         ax.set_title(t, fontsize=11)
         ax.set_xticks(range(len(args.arms)), [ARM_TEXT[a] for a in args.arms], fontsize=9)
         ax.grid(axis="y", linewidth=0.5, alpha=0.6)
@@ -65,8 +80,9 @@ def main():
         for s in ["top", "right"]:
             ax.spines[s].set_visible(False)
     ax_acc.set_ylim(0, 1)
-    ax_mon.set_ylim(0, 112)
-    ax_mon.set_yticks(range(0, 101, 20))
+    for ax in axes[1:]:
+        ax.set_ylim(0, 112)
+        ax.set_yticks(range(0, 101, 20))
     h, l = ax_acc.get_legend_handles_labels()
     h += [Patch(color=INK2), Patch(facecolor=INK2, hatch="//")]
     l += ["monitor: correct rows", "monitor: incorrect rows (wrong or unparsed)"]
