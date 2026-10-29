@@ -643,6 +643,8 @@ Rows: base and mt1b-s150 runs above (temperature 0). Every row of the sandbag, a
 
 Blocked (Anthropic's content filter: OpenRouter returns finish_reason content_filter with no content or usage; checked per row): supported 34/2234, degeneracy 34/2234, planted 11/1000, instruction 0/1584. Unparsed after one retry: supported 5/2234, planted 4/1000. Rows with a quote not found verbatim in the CoT (whitespace-normalized): instruction 117/1584 (30 of their 294 quotes contain an ellipsis), supported 236/2234, degeneracy 49/2234, planted 38/1000. OpenRouter lists no temperature parameter for these models; Sonnet 5.5 at medium effort returned no hidden reasoning on most calls, its explanation is in the reply.
 
+Figure: `mats12_sprint/figures/sandbag_gpqa.must_behavior_breakdown.png` (`rl/sandbag_behavior_breakdown.py`), the flip breakdown by kind from these judges in the layout of `sandbag_gpqa.must_flip_breakdown.png`: per flip, states the plan (instruction judge INFLUENCED or MENTIONED), else by the supported-option judge (supports the correct answer, a different wrong option, or none), else the reasoning arrives at the submitted answer; right panel, the planted-error judge's mean suspiciousness of that last kind (bars with n >= 5) against each model's natural errors. CoT-control arms as reference rows.
+
 Viewer: `mats12_sprint/figures/sandbag_gpqa.must_behaviors.html` (`rl/sandbag_behavior_html.py`; rates and mean scores per model and condition for a chosen row scope, bar charts, row explorer with each judge's filled prompt and output).
 
 Over flips and natural errors (judged rows; blocked and unparsed rows left out):
