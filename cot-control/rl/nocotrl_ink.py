@@ -24,7 +24,12 @@ def parse(tok, tokens):
     """(response text, think_leak, unclosed) for a sampled Inkling turn."""
     gen = tok.decode(list(tokens))
     if not (gen.startswith(inkio.THINK) or gen.startswith(inkio.TEXT)): return "", False, True
-    t = inkio.to_think(gen); cot, closed, resp = t[len("<think>"):].partition("</think>")
+    try:
+        t = inkio.to_think(gen)
+    except AssertionError:  # malformed turn (e.g. <|endoftext|> instead of the stop token): no credit; a leak if it holds thinking text
+        cot = gen[len(inkio.THINK):].split(inkio.END, 1)[0] if gen.startswith(inkio.THINK) else ""
+        return "", bool(inkio.SPECIAL_RE.sub("", cot).strip()), True
+    cot, closed, resp = t[len("<think>"):].partition("</think>")
     return resp.strip(), bool(cot.strip()), not closed
 
 async def main():
