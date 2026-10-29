@@ -105,8 +105,6 @@ h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; min-width:0; }
 .chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
 .chart svg { width:100%; height:auto; display:block; }
-.legend { display:flex; gap:10px 26px; flex-wrap:wrap; font-size:15px; font-weight:600; margin:14px 0 0; padding:10px 14px; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; }
-.legend .sw { width:18px; height:18px; border-radius:3px; vertical-align:-3px; margin-right:9px; }
 .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; }
 .bar { cursor:pointer; } .bar:hover { opacity:.8; }
 #tip { position:fixed; pointer-events:none; background:#0e0e0d; border:1px solid var(--line); border-radius:4px; padding:6px 8px; font-size:12px; color:var(--ink); display:none; z-index:9; max-width:360px; }
@@ -156,7 +154,6 @@ __HL_CSS__
   <div class="chart" style="flex:3.2 1 640px"><h3>Flips by kind (faint bar: questions right in the honest arm). Hover a segment for its numbers; click it to list its flips.</h3><svg id="c-flips"></svg></div>
   <div class="chart" style="flex:1 1 300px"><h3>Planted-error judge: mean suspiciousness (± SE) of the "arrives at the submitted answer" flips (n ≥ 5); dashed: natural errors. Click to list.</h3><svg id="c-susp"></svg></div>
 </div>
-<div class="legend" id="legend"></div>
 <h2>Flips <span class="note">(drag the dividers to resize; arrow keys move through the list)</span></h2>
 <div class="note" style="margin-bottom:8px">Planted-error score color: 0 <span class="scale" id="scale"></span> 100; green = looks like an honest mistake, gray at 50, red = looks planted.</div>
 <div id="pane">
@@ -191,7 +188,6 @@ function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {d
 if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
 const cat = Object.fromEntries(D.cats.map(c => [c.id, c])), col = Object.fromEntries(D.models.map(m => [m.id, m])), armText = Object.fromEntries(D.arms.map(a => [a.id, a.label]));
 const used = D.cats.filter(c => D.bars.some(b => b.counts[c.id]));
-$("legend").innerHTML = used.map(c => `<span><span class="sw" style="background:${c.color}"></span>${esc(c.label)}</span>`).join("") + `<span><span class="sw" style="background:var(--faint);border:1px solid var(--line)"></span>questions right in the honest arm</span>`;
 const SVGNS = "http://www.w3.org/2000/svg", tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 370) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
 function el(svg, tag, attrs, text) { const n = document.createElementNS(SVGNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; }
@@ -203,6 +199,15 @@ function drawFlips() {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = "";
   for (const t of [0, 25, 50, 75, 100, 125, 150]) { el(svg, "line", {x1: x(t), x2: x(t), y1: T, y2: H - B, stroke: "#3a3a38"}); el(svg, "text", {x: x(t), y: H - B + 14, "text-anchor": "middle", "font-size": 11, fill: "#c3c2b7"}, t); }
   el(svg, "text", {x: x(X / 2), y: H - 3, "text-anchor": "middle", "font-size": 11, fill: "#8d8c84"}, "flips (questions right in the honest arm and wrong in this arm)");
+  const items = [...used.map(c => [c.color, c.label]), ["#2c2c2a", "questions right in the honest arm"]];  // legend under the axis, flowed left to right and wrapped at the chart's width (two rows at this label length)
+  let lx = 16, ly = H + 10;
+  for (const [color, label] of items) {
+    const t = el(svg, "text", {x: lx + 18, y: ly + 10, "font-size": 9.5, "font-weight": 600, fill: "#f0efec"}, label), w = t.getComputedTextLength() + 18;
+    if (lx + w > W - 8 && lx > 16) { lx = 16; ly += 20; t.setAttribute("x", lx + 18); t.setAttribute("y", ly + 10); }
+    el(svg, "rect", {x: lx, y: ly, width: 12, height: 12, rx: 2, fill: color, stroke: color === "#2c2c2a" ? "#3a3a38" : "none"});
+    lx += w + 20;
+  }
+  svg.setAttribute("viewBox", `0 0 ${W} ${ly + 22}`);
   D.bars.forEach((b, i) => {
     const y = T + RH * i, total = flipsOf(b);
     el(svg, "text", {x: L - 8, y: y + RH / 2 + 4, "text-anchor": "end", "font-size": 12, fill: "#f0efec"}, b.label);
