@@ -396,6 +396,8 @@ async def main():
                 rest = [t for t in args.types if not args.type_share or t != args.type_share[0]]
                 name = rng.choices(rest, weights=type_weights(rest, ema))[0]
             q = rng.choice(pool)
+            while args.type_share and name == args.type_share[0] and not eligible_type(name, q):  # keep the share: redraw the question, not the type
+                q = rng.choice(pool)
             if eligible_type(name, q):
                 tasks.append(at_effort(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms), q, rng, args.tml_efforts, args.tml_effort_weights))
         rendered = ([(inkio.render(t["user"], t["system"], t["effort"]), "") for t in tasks] if tml else
