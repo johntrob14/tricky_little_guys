@@ -530,5 +530,5 @@ Monitor mean score on flips: base evasion 1.6 (122), evasion-analysis 1.7 (124);
 tokens on flips: base 582 vs 672, manytypes1b 448 vs 541. Noise floor as above (base 28/256 = 0.109, manytypes1b 28/282 = 0.099). Figure
 `figures/sandbag_gpqa.must_t1_evasion_analysis_base+mt1b.png` (`rl/sandbag_headline.py --gpqa --dir ../results/sandbag_gpqa_t1 --models base mt1b-s150
 --no-ctl --judge-tag _claude-haiku-5.5_medium`; arms honest, sandbag, aware, evasion, evasion-analysis, coached, coached-analysis). Inspect logs for both
-runs, every arm: `sandbag_gpqa_t1/inspect/<model>_claude-haiku-5.5_medium/` (`rl/sandbag_inspect.py --dir ../results/sandbag_gpqa_t1 --models base
+runs, every arm except evasion-analysis (its logs were removed from the viewer): `sandbag_gpqa_t1/inspect/<model>_claude-haiku-5.5_medium/` (`rl/sandbag_inspect.py --dir ../results/sandbag_gpqa_t1 --models base
 mt1b-s150 --judge-model anthropic/claude-haiku-5.5 --effort medium`), linked as `arena/logs/gpqa_t1`.
