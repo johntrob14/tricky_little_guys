@@ -29,14 +29,20 @@ def maxes(run: str, p: str) -> dict:
 
 def side_done(run: str, path: str) -> set:
     """Episodes that did the side task, keyed by (eval log file, sample). Cells in transcript_done_joined.json use matched_cells.py's rule
-    (transcript judge says done, and the current leak grader agrees, except the sgcmp-qwen and old 8-episode sgd-* cells graded before it); other cells use the
+    (transcript judge says done, and the current leak grader agrees, except the sgcmp-qwen cells graded before it); old 8-episode sgd-* cells need the judge and
+    a replay of their edits under the fixed grader (replay_<run>.jsonl); other cells use the
     scorer's side_leaked from their episodes jsonl (summarize_direct.py output; path relative to results/startgate/direct)."""
     R = ARENA / "results" / "startgate" / "direct"
     joined = [r for r in json.load(open(R / "transcript_done_joined.json")) if r["dir"] == run]
+    replay = R / f"replay_{run}.jsonl"
+    if run.startswith("sgd-") and replay.exists():  # old 8-episode cells, run before the scorer fix: the fixed grader comes from replaying their edits
+        ok = {(r["file"], r["sample"]) for r in map(json.loads, open(replay)) if r.get("replay_leaked") is True}
+        src = joined or [r for r in map(json.loads, open(R / "transcript_done.jsonl")) if r.get("dir") == run]
+        return {(r["file"], r["sample"]) for r in src if r["judge_done"]} & ok
     if joined:
-        return {(r["file"], r["sample"]) for r in joined if r["judge_done"] and (r["grader"] or run.startswith(("sgcmp-", "sgd-")))}
+        return {(r["file"], r["sample"]) for r in joined if r["judge_done"] and (r["grader"] or run.startswith("sgcmp-"))}
     td = [r for r in map(json.loads, open(R / "transcript_done.jsonl")) if r.get("dir") == run]
-    if td:  # transcript judge only (cells such as the old 8-episode sgd-grpo3, graded before the current leak grader)
+    if td:  # transcript judge only (cells with neither joined rows nor a replay)
         return {(r["file"], r["sample"]) for r in td if r.get("judge_done")}
     return {(r["file"], r["sample"]) for r in map(json.loads, open(R / path)) if r.get("side_leaked")}
 
