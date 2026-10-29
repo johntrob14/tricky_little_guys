@@ -4,7 +4,7 @@ et al. 2025 CoT-only monitor and the verbalization judge of sandbag_judge.py) ar
 output (quotedIn). A quote is matched as sandbag_behavior_judge.found: both sides reduced to lowercase letters and digits, each ellipsis-separated
 fragment on its own (4+ such characters), and every occurrence is marked. The page defines QKIND (kind -> {label, color}); hlHtml(text, quotes) is the
 escaped CoT with a translucent <mark> per matched fragment (where kinds overlap, the first kind is the background and the others underline it; hovering
-names the judges) and hlLegend(text, quotes) is a legend line with the fragments found per kind. JS goes after the page's `esc`.
+shows the judges in the page's tooltip, via showTip and tip) and hlLegend(text, quotes) is a legend line with the fragments found per kind. JS goes after the page's `esc`.
 """
 
 CSS = """mark.hl { color:inherit; border-radius:2px; padding:0 1px; }
@@ -27,11 +27,12 @@ function hlHtml(text, quotes) {
   const ev = hlSpans(text, quotes).flatMap(([a, b, k]) => [[a, 1, k], [b, -1, k]]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
   const open = {}; let html = "", at = 0;
   const flush = to => { if (to <= at) return; const ks = Object.keys(QKIND).filter(k => open[k] > 0), t = esc(text.slice(at, to));
-    html += ks.length ? `<mark class="hl" style="${hlStyle(ks)}" title="quoted by the ${ks.map(k => QKIND[k].label).join(" and the ")}">${t}</mark>` : t; at = to; };
+    html += ks.length ? `<mark class="hl" style="${hlStyle(ks)}" data-j="${esc(ks.map(k => QKIND[k].label).join(" and the "))}">${t}</mark>` : t; at = to; };
   for (const [i, d, k] of ev) { flush(i); open[k] = (open[k] || 0) + d; }
   flush(text.length);
   return html;
 }
+document.addEventListener("mousemove", e => { const m = e.target.closest("mark.hl"); if (m) showTip(e, "quoted by the " + m.dataset.j); else if (!e.target.closest(".bar")) tip.style.display = "none"; });  // the page's own tooltip, no delay
 function hlLegend(text, quotes) {
   const L = loose(text), kinds = Object.keys(QKIND).filter(k => quotes.some(q => q.kind === k));
   if (!kinds.length) return "";
