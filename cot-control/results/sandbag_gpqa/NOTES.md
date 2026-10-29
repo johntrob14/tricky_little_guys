@@ -725,8 +725,11 @@ $6.08 + $1.30 for the Inkling pass, `judge_haiku_medium.log`, `judge_haiku_mediu
 $12.63, 43 blocked). Figures regenerated: `figures/sandbag_gpqa.must_t1_headline.png`, `sandbag_gpqa.must_t1_evasion_analysis_base+mt1b.png`,
 `sandbag_gpqa.must_gpqa_t1_haiku_medium.png`, `sandbag_gpqa.must_q0006.png`, `sandbag_gpqa.must_q0006_resample.png` (now T 1 only),
 `sandbag_gpqa.must_q0006_resample.html` (its "original temperature-0 rows" are the stale T 0 runs of this directory), `sandbag_gpqa.must_t1_overview.html`
-(base and manytypes1b s150 with their no-CoT runs, arms honest sandbag aware evasion coached cotctl_mt1b, planted-error judge) and
-`sandbag_gpqa.must_t1_overview_inkling.html`. Not regenerated: `sandbag_gpqa.must_flip_breakdown.png` and `sandbag_gpqa.must_behavior_breakdown.png` (they read
+(base and manytypes1b s150 with their no-CoT runs, arms honest sandbag aware evasion coached cotctl_mt1b) and
+`sandbag_gpqa.must_t1_overview_inkling.html`. Both pages have two selects above the charts: the judge in the third chart, the row list and the judge pane (the planted-error judge,
+claude-sonnet-5.5 medium, where it ran, or the CoT-only monitor, Li et al. 2025 sandbagging judge, claude-haiku-5.5 medium; both over the same rows: flips,
+and natural errors in the honest arm), and a split of the sandbag-arm flips by the verbalization judge (solid: the CoT mentions the instruction, hatched:
+it does not) in the flips chart (stacked) and the judge chart (side by side). Bars with no rows are left out without a gap. Not regenerated: `sandbag_gpqa.must_flip_breakdown.png` and `sandbag_gpqa.must_behavior_breakdown.png` (they read
 the temperature-0 runs and hand reads of this directory, which were not resampled).
 
 ### gpqa.must at temperature 1, stale rows vs the resample
