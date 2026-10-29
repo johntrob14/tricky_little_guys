@@ -88,10 +88,11 @@ def set_page_data(d: Path) -> dict:
     question = "\n\n".join(f"item {i} (answer {cfg['answers'][str(i)]}): " + " ".join(cfg["qblocks"][str(i)].split("\n\n\nYour response should be")[0].split())[:220] for i in items)
     hint = "\n".join(f"item {i} ({cfg['hint_names'][str(i)]}): {h}" for i, h in cfg["hints"].items()) or "no hints in this run"
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}." if jcfg else "Judge: not run yet."
-    return dict(name=d.name, item=f"{len(items)} GPQA items", hint_name="", multi=True, items=items, item_table=table, keys=["none"], question=question, correct="per item", hint=hint, arms=arms, arm_text=arm_text(user, f"{items[0]}|hint", f"{items[0]}|hide"),
+    ds = {"gpqa": "GPQA items", "dapo": "DAPO math problems"}[cfg.get("dataset", "gpqa")]
+    return dict(name=d.name, item=f"{len(items)} {ds}", hint_name="", multi=True, qblocks={str(i): cfg["qblocks"][str(i)] for i in items}, hints=cfg["hints"], items=items, item_table=table, keys=["none"], question=question, correct="per item", hint=hint, arms=arms, arm_text=arm_text(user, f"{items[0]}|hint", f"{items[0]}|hide"),
                 user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None, models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], samples=samples, judge_line=judge_line,
-                settings=f"{len(items)} GPQA items (hintuse_sweep main criteria), {cfg['n']} samples per model, item and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. "
-                         "Charts show means over items of per-item rates, with 95% intervals of 1.96 SE across items; CoT tokens are the mean of per-item means ± SE across items. Prompt per item = the transfer eval's baseline prompt.")
+                settings=f"{len(items)} {ds}, {cfg['n']} samples per model, item and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. "
+                         "Charts show means over items of per-item rates, with 95% intervals of 1.96 SE across items; CoT tokens are the mean of per-item means ± SE across items. Prompt per item = the transfer eval's baseline prompt." if cfg.get("dataset", "gpqa") == "gpqa" else "Prompt per problem = 'Question: ...' with the integer ANSWER format line, harmony effort medium.")
 
 
 def main():
@@ -193,7 +194,7 @@ function setStats(items) {  // multi mode: charts' stats over `items`, means ove
 }
 function chooseSet() {
   const K = SETS[+$("f-set").value][1], acc = (r, a) => r.cells["base|" + a][0] / (r.cells["base|" + a][1] || 1), up = Object.fromEntries(D.item_table.map(r => [r.item, acc(r, "hint") - acc(r, "none")]));
-  setStats(D.items.slice().sort((x, y) => up[y] - up[x]).slice(0, K).sort((x, y) => x - y));
+  setStats(D.items.slice().sort((x, y) => up[y] - up[x]).slice(0, K).sort((x, y) => D.items.indexOf(x) - D.items.indexOf(y)));
   $("acc-h").textContent = `Accuracy, mean over ${SET.length} items (95%: 1.96 SE across items). Click a bar to list its samples.`;
   $("judgec-h").textContent = `Judge: CoT refers to the hint (REFERENCES yes), mean over ${SET.length} items (95%: 1.96 SE across items). Click to list.`;
   drawAcc(); drawJudge(); drawTok(); drawCounts();
@@ -266,7 +267,7 @@ function show() {
     + sec("user message", D.user[s.uk ?? s.arm], 1) + (s.arm.startsWith("nocot") ? sec("assistant prefill", D.prefill[s.uk ?? s.arm]) : sec("CoT (analysis channel)", s.cot, 1, 1)) + sec("final answer", s.response, 1, 1);
   $("judge").innerHTML = s.arm.startsWith("nocot") ? `<div class="empty">No CoT, not judged.</div>` : s.reply == null ? `<div class="empty">Not judged.</div>`
     : `<div class="head"><b>Judge</b><span>REFERENCES <b>${yn(s.refs) || "unparsed"}</b></span></div>`
-      + sec("judge prompt", D.judge_prompt.replace("{question}", () => D.question.split("\n\n\nYour response should be")[0]).replace("{hint}", () => D.hint).replace("{cot}", () => s.cot))
+      + sec("judge prompt", D.judge_prompt.replace("{question}", () => (D.multi ? D.qblocks[s.item] : D.question).split("Your response should be")[0].trimEnd()).replace("{hint}", () => D.multi ? D.hints[s.item] : D.hint).replace("{cot}", () => s.cot))
       + sec("judge reasoning", s.reasoning || "(no reasoning returned)", 1) + sec("judge output", s.reply, 1);
   wire($("view")); wire($("judge"));
   document.querySelectorAll("#view .sec-b.math, #judge .sec-b.math").forEach(math);
