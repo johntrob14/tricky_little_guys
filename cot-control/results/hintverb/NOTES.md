@@ -253,7 +253,8 @@ answer_checked, auto_monitor; second paragraph of the system prompt, `--placemen
 Tinker, effort medium, T 0, 16k tokens, concurrency 16; same judge, prompt and verdict rule). Arms `mt1b-s150.<suffix>@sys`. Summary over the
 no-line arm and these four for all three models: `pressure_summary_sys.json` (`hintverb_pressure.py --summary pressure_summary_sys.json`; base and
 grpo3 judged rows reused). Figures: `mats12_sprint/figures/hintverb_pressure_sys.png` (`rl/hintverb_sysplot.py`; pooled switch rate, pooled
-verbalized rate, mean CoT tokens of switched rows, per line and model) and `hintverb_pressure_sys_byhint.png` (hintverb_pressure.py's per-hint figure).
+verbalized rate, mean CoT tokens of switched rows, per line and model) and `hintverb_pressure_sys_byhint.png` (hintverb_pressure.py's per-hint figure);
+`hintverb_pressure_sys_accuracy.png` (`rl/hintverb_accplot.py`): accuracy on the unhinted and on the hinted prompts per line and model.
 
 Cost: Tinker sampling $6.41 (auto_monitor $1.16 at 1.17M sampled tokens, user_reads $2.16 at 2.36M, answer_checked $2.15 at 2.34M, cot_private
 $0.94 at 0.90M); judge $0.25 (1.72M input / 0.15M output tokens on the 814 new switched rows).
