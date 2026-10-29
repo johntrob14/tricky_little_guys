@@ -1,7 +1,8 @@
 """Judge hintuse.py samples: does the CoT refer to the hint, or to being given information or an instruction?
 
 Runs on every CoT arm (none, hint, hide) with the same prompt. The judge sees the question and options (no format line), the hint text and the analysis channel, and is not told the arm. --judge-model on OpenRouter at
---temperature (default 1), --effort. Writes <dir>/judged.jsonl (resumable; refs is None when the reply does not parse) and <dir>/judge.json.
+--temperature (default 1), --effort. Writes <dir>/judged.jsonl (resumable; refs is None when the reply does not parse) and <dir>/judge.json. Takes hintuse.py directories (one item) and
+hintuse_set.py directories (rows carry `item`; the question and hint come from config.json's per-item `qblocks` and `hints`, and items without a hint are skipped).
 
     python hintuse_judge.py --dir ../results/case_studies/hintuse_q225
 """
@@ -50,18 +51,21 @@ async def main():
     ap.add_argument("--temperature", type=float, default=1.0)
     args = ap.parse_args()
     cfg = json.load(open(args.dir / "config.json"))
-    rows = [r for r in map(json.loads, open(args.dir / "rows.jsonl")) if not r["arm"].startswith("nocot")]
+    qblock = (lambda r: cfg["qblocks"][str(r["item"])]) if "items" in cfg else (lambda r: cfg["qblock"])
+    hint = (lambda r: cfg["hints"].get(str(r["item"]))) if "items" in cfg else (lambda r: cfg["hint"])
+    rows = [r for r in map(json.loads, open(args.dir / "rows.jsonl")) if not r["arm"].startswith("nocot") and hint(r)]
+    key = lambda r: (r["model"], r.get("item"), r["arm"], r["sample"])
     path = args.dir / "judged.jsonl"
-    done = {(r["model"], r["arm"], r["sample"]) for r in map(json.loads, open(path))} if path.exists() else set()
+    done = {key(r) for r in map(json.loads, open(path))} if path.exists() else set()
     judge = OpenRouterJudge(model=args.judge_model, effort=args.effort, max_tokens=6000, temperature=args.temperature)
     json.dump(dict(judge_model=args.judge_model, effort=args.effort, temperature=args.temperature, prompt=JUDGE), open(args.dir / "judge.json", "w"), indent=1)
 
     async def one(r):
-        reply, reasoning, _, _ = await judge.ask_full(JUDGE.format(question=cfg["qblock"].split(FORMAT)[0], hint=cfg["hint"], cot=r["reasoning"]))
+        reply, reasoning, _, _ = await judge.ask_full(JUDGE.format(question=qblock(r).split(FORMAT)[0], hint=hint(r), cot=r["reasoning"]))
         with open(path, "a") as f:
-            f.write(json.dumps(dict(model=r["model"], arm=r["arm"], sample=r["sample"], refs=label(reply, "REFERENCES"), reply=reply, reasoning=reasoning)) + "\n")
+            f.write(json.dumps(dict(model=r["model"], **({"item": r["item"]} if "item" in r else {}), arm=r["arm"], sample=r["sample"], refs=label(reply, "REFERENCES"), reply=reply, reasoning=reasoning)) + "\n")
 
-    await asyncio.gather(*[one(r) for r in rows if (r["model"], r["arm"], r["sample"]) not in done])
+    await asyncio.gather(*[one(r) for r in rows if key(r) not in done])
     print(f"{len(rows)} rows judged, about ${judge.usd:.2f} -> {path}")
 
 

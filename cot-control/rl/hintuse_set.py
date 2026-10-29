@@ -3,7 +3,7 @@
 Items default to the sweep's main-criteria set (results/hintuse_sweep/candidates.jsonl: fresh base CoT accuracy 6-17/32, no-CoT accuracy at most 4/32, expert
 validator accuracy 1.0). Arms are hintuse.ARMS; the hint arms need a hint per item (--hints item=name, names from hintuse.HINTS), and items without one get
 only the none and nocot arms. Rows are hintuse.py's plus `item`, appended to <out>/rows.jsonl (resumable); <out>/config.json has the per-item prompts keyed
-"<item>|<arm>". hintuse_html.py shows the directory as one run with means over items.
+"<item>|<arm>", and its models, arms, hints and prompts accumulate over reruns into the same directory. hintuse_html.py shows the directory as one run with means over items.
 
     python hintuse_set.py --models base mt1b-s150=tinker://... --arms none nocot --n 64 --out ../results/case_studies/hintuse_hardset
 """
@@ -45,8 +45,9 @@ async def main():
     prompts = {f"{i}|{a}": prompt(base[i]["rendered_prompt"], hints.get(i, ""), a) for i in items for a in arms[i]}
     models = dict(m.split("=", 1) if "=" in m else (m, None) for m in args.models)
     args.out.mkdir(parents=True, exist_ok=True)
-    json.dump(dict(items=items, answers={i: base[i]["answer"] for i in items}, qblocks={i: base[i]["qblock"] for i in items}, hints=hints, hint_names=dict(x.split("=") for x in args.hints), hide=HIDE,
-                   models=models, arms=args.arms, n=args.n, max_tokens=args.max_tokens, temperature=1.0, top_p=1.0, prompts=prompts), open(args.out / "config.json", "w"), indent=1)
+    prev = json.load(open(args.out / "config.json")) if (args.out / "config.json").exists() else dict(models={}, arms=[], hints={}, hint_names={}, prompts={})
+    json.dump(dict(items=items, answers={i: base[i]["answer"] for i in items}, qblocks={i: base[i]["qblock"] for i in items}, hints=prev["hints"] | {str(i): h for i, h in hints.items()}, hint_names=prev["hint_names"] | dict(x.split("=") for x in args.hints), hide=HIDE,
+                   models=prev["models"] | models, arms=[a for a in ARMS if a in prev["arms"] or a in args.arms], n=args.n, max_tokens=args.max_tokens, temperature=1.0, top_p=1.0, prompts=prev["prompts"] | prompts), open(args.out / "config.json", "w"), indent=1)
     path = args.out / "rows.jsonl"
     done = {(r["model"], r["item"], r["arm"], r["sample"]) for r in map(json.loads, open(path))} if path.exists() else set()
     svc, price, spent, sem = tinker.ServiceClient(), modelio.PRICES["openai/gpt-oss-120b"], [0.0], asyncio.Semaphore(16)
