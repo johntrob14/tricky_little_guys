@@ -1,5 +1,7 @@
 # Hint verbalization (Chen et al. 2025) on base gpt-oss-120b vs manytypes1b step 150 and grpo3 step 100
 
+Stale since 2026-10-29: every run in this directory was sampled before the standard answer format (`../SANDBAG_NAMES.md`, section "Answer format"); the numbers below stand until the runs are resampled.
+
 Gitignored traces (raw rows, Inspect logs, samples, trace viewers) are mirrored at the HF dataset `latentMO/faithfulness-traces-20261026` (https://huggingface.co/datasets/latentMO/faithfulness-traces-20261026) under the same repo-relative paths, as of 2026-10-26.
 
 2026-10-24. The hint-verbalization CoT faithfulness eval of Chen et al. 2025 ("Reasoning Models Don't Always Say What They Think", arXiv 2505.05410),

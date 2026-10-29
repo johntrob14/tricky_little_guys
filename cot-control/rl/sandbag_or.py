@@ -3,7 +3,7 @@
 Same system prompt, questions and four arms as sandbag.py, with its --variant, --placement and --hint (default `wmdp.can`: the instruction in the system prompt, no named wrong
 option; the GLM, DeepSeek and Qwen runs in results/sandbag are `wmdp.can-user-hint`, the release layout, --placement user --hint). One chat completion per question and arm: temperature --temperature, `reasoning: {effort}` (the highest level the
 model takes), one provider pinned with no fallbacks (OpenRouter spreads a model over hosts with different quantizations), max_tokens as a safety cap only.
-Temperature --temperature (1 by default since 2026-10-28, earlier runs 0 unless config.json says otherwise; GLM-5.2 loops at 0 on some questions). CoT = the returned `reasoning` field (raw trace; check the provider returns one, not a summary), answer = letter parsed from the content. cot_tokens is the
+Temperature --temperature (1 by default since 2026-10-28, earlier runs 0 unless config.json says otherwise; GLM-5.2 loops at 0 on some questions). CoT = the returned `reasoning` field (raw trace; check the provider returns one, not a summary), answer = letter parsed from the content with hintverb.parse_letter: chat completions take no prefill, so the standard answer format is instruction-only here (config.json records answer_prefill null, rows prefilled false). cot_tokens is the
 provider's reasoning_tokens count, resp_tokens the rest of the completion. `cost` is OpenRouter's reported cost per call.
 
     python sandbag_or.py --name glm-5.1 --model z-ai/glm-5.1 --provider Z.AI --variant wmdp.can-user-hint --out ../results/sandbag
@@ -18,7 +18,7 @@ from pathlib import Path
 
 import httpx
 
-from hintverb import SYSTEM, parse_letter
+from hintverb import SYSTEM, parse_answer
 from orjudge import load_key
 from sandbag import ARMS, prompts
 from sandbag_names import VARIANTS, variant
@@ -81,7 +81,7 @@ async def main():
         qs = sorted(random.Random(args.seed).sample(qs, args.n_random), key=lambda q: q["qid"])
     out = args.out / args.name
     out.mkdir(parents=True, exist_ok=True)
-    cfg = dict(vars(args), questions=str(args.questions), out=str(args.out), system=SYSTEM, n_questions=len(qs))
+    cfg = dict(vars(args), questions=str(args.questions), out=str(args.out), system=SYSTEM, n_questions=len(qs), answer_prefill=None)
     json.dump(cfg | dict(variant=variant(cfg)), open(out / "config.json", "w"), indent=1)
     path = out / "rows.jsonl"
     done = {(r["qid"], r["arm"]) for r in map(json.loads, open(path))} if path.exists() else set()
@@ -102,7 +102,7 @@ async def main():
         msg = ch["message"]
         reasoning, content = reasoning_text(msg), msg.get("content") or ""
         cot = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0
-        row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_letter(content), finish="length" if ch.get("finish_reason") == "length" or ((usage.get("completion_tokens") or 0) >= args.max_tokens - 16 and not content.strip()) else "stop",  # Z.AI reports "stop" at the cap with an empty response; Alibaba lets reasoning run past max_tokens and still answers
+        row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_answer(content, False), prefilled=False, finish="length" if ch.get("finish_reason") == "length" or ((usage.get("completion_tokens") or 0) >= args.max_tokens - 16 and not content.strip()) else "stop",  # Z.AI reports "stop" at the cap with an empty response; Alibaba lets reasoning run past max_tokens and still answers
                    cot_tokens=cot, resp_tokens=(usage.get("completion_tokens") or 0) - cot, reasoning=reasoning, response=content, user=user, system=system,
                    provider=b.get("provider"), finish_reason=ch.get("finish_reason"), cost=usage.get("cost"), completion_tokens=usage.get("completion_tokens"), prompt_tokens=usage.get("prompt_tokens"))
         async with lock:

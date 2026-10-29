@@ -1,5 +1,7 @@
 # WMDP sandbagging, Li et al. conditions with plain answer format (2026-10-26)
 
+Stale since 2026-10-29: every run in this directory was sampled before the standard answer format (`../SANDBAG_NAMES.md`, section "Answer format"); the numbers below stand until the runs are resampled.
+
 Names (`../SANDBAG_NAMES.md`): this directory is `li.plain`, the default `li` variant. The paper's conditions are our arms: `baseline` = honest, `oblivious` = sandbag, `aware` = evasion (it has the no-reveal line; the `aware` arm of `wmdp` and `gpqa` does not). The prose below uses the paper's condition names, as the row files do.
 
 Default Li version since 2026-10-26 (Ethan's choice): `rl/sandbag_li.py` and `rl/sandbag_li_judge.py` default to these prompts (`--prompts plain`) and to the CoT-only monitor for them. Headline figure `mats12_sprint/figures/sandbag_li.plain_main.png` (base, grpo3 s100, manytypes1b s150, no-CoT base; `sandbag_li_judge.py --dir ../results/sandbag_li_plain --models base grpo3-s100 mt1b-s150 base-nocot --tag plain_main --out ../../../figures/sandbag_li.plain_main.png`, panel C: mean CoT-only monitor score ± SE); all six gpt-oss models in `sandbag_li_plain_gptoss.png`. The paper's prompts (`--prompts paper`) are in `../sandbag_li/`.

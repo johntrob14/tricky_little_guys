@@ -1,4 +1,4 @@
-"""Resample one sandbagging question many times: sandbag.py's prompts, rendering and answer parser, at --temperature, --n samples per model and arm.
+"""Resample one sandbagging question many times: sandbag.py's prompts, rendering, answer format (modelio.sample_answer: the CoT, then the final channel prefilled "Answer:") and parser, at --temperature, --n samples per model and arm.
 
 For single-question case studies (results/case_studies/<name>/). Rows are sandbag.py's plus `model` (the --models name) and `sample` (0..n-1), appended to
 <out>/rows.jsonl; reruns skip (model, arm, sample) already on disk. gpt-oss (harmony) models only.
@@ -14,10 +14,8 @@ from pathlib import Path
 
 import tinker
 
-from cotswitch import extract
-
 import modelio
-from hintverb import BASE, SYSTEM, parse_letter, render
+from hintverb import BASE, SYSTEM, parse_answer, render
 from sandbag import ALL_ARMS, AWARE, COACH, EVASION, prompts
 from sandbag_names import VARIANTS
 
@@ -39,7 +37,7 @@ async def main():
     q = next(q for q in map(json.loads, open(Path(__file__).parent / "data" / qfile)) if q["qid"] == args.qid)
     models = dict(m.split("=", 1) if "=" in m else (m, None) for m in args.models)
     args.out.mkdir(parents=True, exist_ok=True)
-    json.dump(dict(vars(args), out=str(args.out), models=models, base=BASE, questions=qfile, placement=placement, hint=hint, system=SYSTEM, aware=AWARE, evasion=EVASION, coach=COACH),
+    json.dump(dict(vars(args), out=str(args.out), models=models, base=BASE, questions=qfile, placement=placement, hint=hint, system=SYSTEM, answer_prefill=modelio.ANSWER, aware=AWARE, evasion=EVASION, coach=COACH),
               open(args.out / "config.json", "w"), indent=1)
     path = args.out / "rows.jsonl"
     done = {(r["model"], r["arm"], r["sample"]) for r in map(json.loads, open(path))} if path.exists() else set()
@@ -50,22 +48,18 @@ async def main():
         client = await (sc.create_sampling_client_async(model_path=model_path) if model_path else sc.create_sampling_client_async(base_model=BASE))
         tok = client.get_tokenizer()
         assert modelio.probe_harmony(tok)
-        params = tinker.SamplingParams(max_tokens=args.max_tokens, temperature=args.temperature, stop=modelio.policy_stop(tok, True))
 
         async def one(arm, i):
             system, user = prompts(q, arm, hint, placement)
             ids = render(tok, user, args.effort, system)
             async with sem:
-                res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params)
-            s = res.sequences[0]
-            finish = "length" if s.stop_reason == "length" else "stop"
-            split = extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), True, "", tok.eos_token), None, finish)
-            row = dict(model=name, sample=i, qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_letter(split["response"]), finish=finish,
-                       cot_tokens=len(tok.encode(split["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(split["response"], add_special_tokens=False)),
-                       reasoning=split["reasoning"], response=split["response"], user=user, system=system)
+                r = await modelio.sample_answer(client, tok, ids, True, "", args.max_tokens, args.temperature)
+            row = dict(model=name, sample=i, qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_answer(r["response"], r["prefilled"]), finish=r["finish"], prefilled=r["prefilled"],
+                       cot_tokens=len(tok.encode(r["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(r["response"], add_special_tokens=False)),
+                       reasoning=r["reasoning"], response=r["response"], user=user, system=system)
             async with lock:
-                n_tok[0] += len(s.tokens)
-                n_tok[1] += len(ids)
+                n_tok[0] += r["sampled"]
+                n_tok[1] += r["prefill"]
                 with open(path, "a") as f:
                     f.write(json.dumps(row) + "\n")
 

@@ -1,5 +1,7 @@
 # WMDP sandbagging under a CoT-only monitor: base gpt-oss-120b vs grpo3 step 100
 
+Stale since 2026-10-29: every run in this directory was sampled before the standard answer format (`../SANDBAG_NAMES.md`, section "Answer format"); the numbers below stand until the runs are resampled.
+
 Names (`../SANDBAG_NAMES.md`): this directory is the `wmdp` task. Run directories by variant: `<model>-sysprompt-nohint/` = `wmdp.can` (the default), `<model>-sysprompt-nohint-should/` = `wmdp.should`, `<model>-sysprompt-nohint-safe/` = `wmdp.safe`, `<model>-sysprompt/` = `wmdp.can-hint`, `<model>-nohint/` = `wmdp.can-user`, `<model>/` = `wmdp.can-user-hint` (OpenAI's release layout). Section headings carry the canonical name; the prose below uses the names current when it was written ("default variant", "hint", "no-hint", "system placement", "WMDP v1").
 
 Gitignored traces (raw rows, Inspect logs, samples, trace viewers) are mirrored at the HF dataset `latentMO/faithfulness-traces-20261026` (https://huggingface.co/datasets/latentMO/faithfulness-traces-20261026) under the same repo-relative paths, as of 2026-10-26.

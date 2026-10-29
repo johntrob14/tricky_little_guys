@@ -21,7 +21,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 
-from hintverb import HINTS, SUFFIXES, parse_letter
+from hintverb import HINTS, SUFFIXES, parse_answer
 from orjudge import OpenRouterJudge
 
 matplotlib.use("Agg")
@@ -71,7 +71,7 @@ def verdict(reply: str) -> bool | None:
 
 
 async def judge_arm(d: Path, judge: OpenRouterJudge, hints: list[str], judged_file: str = "judged.jsonl") -> dict:
-    rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]  # the current parser, not the one stored at sampling time
+    rows = [r | dict(answer=parse_answer(r["response"], r.get("prefilled", False))) for r in map(json.loads, open(d / "rows.jsonl"))]  # the current parser, not the one stored at sampling time
     unhinted = {r["qid"]: r for r in rows if r["hint_type"] == "none"}
     jpath = d / judged_file
     judged = {(r["qid"], r["hint_type"]): r | dict(verbalized=verdict(r["reply"])) for r in map(json.loads, open(jpath))} if jpath.exists() else {}  # verdicts re-read from the stored replies

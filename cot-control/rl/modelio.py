@@ -6,6 +6,8 @@ extract.harmony_to_think. A think-tag model's chat template opens the think bloc
 EOS before extract.split_output. Mirrors tinker-runner/tinker_cotcontrol.py.
 """
 
+import tinker
+
 from cotswitch import extract
 
 GPT_OSS_STOP = [200002, 200012]  # <|return|>, <|call|>
@@ -72,3 +74,32 @@ def to_think(gen: str, harmony: bool, think_prefix: str, eos: str) -> str:
     if harmony:
         return extract.harmony_to_think(gen)
     return think_prefix + (gen[:-len(eos)] if eos and gen.endswith(eos) else gen)
+
+
+ANSWER = "Answer:"  # the standard answer prefill (2026-10-29): once the CoT closes, the answer message opens with it and the letter follows. No trailing space: the letter token carries it (a prefilled space made Inkling continue with numbers or more reasoning)
+FINAL = "<|start|>assistant<|channel|>final<|message|>"  # harmony's final-channel header
+
+
+def cot_stop(tok, harmony: bool) -> list[int]:
+    """The token that closes the CoT: the analysis message's <|end|> (harmony) or </think>."""
+    ids = tok.encode("<|end|>" if harmony else "</think>", add_special_tokens=False)
+    assert len(ids) == 1, ids
+    return ids
+
+
+async def sample_answer(client, tok, ids: list[int], harmony: bool, think_prefix: str, max_tokens: int, temperature: float, answer_tokens: int = 8) -> dict:
+    """One sample in the standard answer format: the CoT until it closes, then the answer message opened with ANSWER (harmony: FINAL + ANSWER; think-tag:
+    '\\n\\n' + ANSWER after </think>) and up to answer_tokens more. A CoT cut at max_tokens, or closed some other way (the model opening its own final
+    channel), gets no prefill. Returns extract.split_output's dict plus finish, prefilled (whether the prefill was applied) and the sampled and prefill
+    token counts. Inkling's turn format is handled in sandbag.py (inkio is not imported here)."""
+    stop = cot_stop(tok, harmony)
+    s = (await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=tinker.SamplingParams(max_tokens=max_tokens, temperature=temperature, stop=policy_stop(tok, harmony) + stop))).sequences[0]
+    tokens, finish, n = list(s.tokens), "length" if s.stop_reason == "length" else "stop", dict(sampled=len(s.tokens), prefill=len(ids))
+    prefilled = finish == "stop" and tokens[-1:] == stop
+    if prefilled:
+        tail = tok.encode((FINAL if harmony else "\n\n") + ANSWER, add_special_tokens=False)
+        a = (await client.sample_async(prompt=tinker.ModelInput.from_ints(ids + tokens + tail), num_samples=1, sampling_params=tinker.SamplingParams(max_tokens=answer_tokens, temperature=temperature, stop=policy_stop(tok, harmony)))).sequences[0]
+        n = dict(sampled=n["sampled"] + len(a.tokens), prefill=n["prefill"] + len(ids) + len(tokens) + len(tail))
+        tokens += tail + list(a.tokens)
+    split = extract.split_output(to_think(tok.decode(tokens, skip_special_tokens=False), harmony, think_prefix, tok.eos_token), None, finish)
+    return split | dict(finish=finish, prefilled=prefilled) | n

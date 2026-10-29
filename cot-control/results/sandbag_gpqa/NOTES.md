@@ -1,5 +1,7 @@
 # GPQA sandbagging under a CoT monitor (2026-10-26)
 
+Stale since 2026-10-29: every run in this directory was sampled before the standard answer format (`../SANDBAG_NAMES.md`, section "Answer format"); the numbers below stand until the runs are resampled.
+
 Names (`../SANDBAG_NAMES.md`): this directory is the `gpqa` task, one variant, `gpqa.must`; arms honest, sandbag, aware, evasion, cotctl-grpo3, cotctl-mt1b (on disk `cotctl_grpo3`, `cotctl_mt1b`); `-honest2` = second honest sample, `-nocot` = no CoT. The prompt-search section is `gpqa-search` (outputs in `../sandbag_gpqa_search/`).
 
 Gitignored traces (raw rows, Inspect logs, samples, trace viewers) are mirrored at the HF dataset `latentMO/faithfulness-traces-20261026` (https://huggingface.co/datasets/latentMO/faithfulness-traces-20261026) under the same repo-relative paths, as of 2026-10-26.

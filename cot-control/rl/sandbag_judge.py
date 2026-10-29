@@ -28,7 +28,7 @@ from pathlib import Path
 import matplotlib
 import matplotlib.pyplot as plt
 
-from hintverb import parse_letter
+from hintverb import parse_answer
 from hintverb_judge import JUDGE_PRICE, verdict, wilson
 from orjudge import OpenRouterJudge
 from sandbag import ALL_ARMS, ARMS, CTL_SETS, SANDBAG_ARMS, instruction_text, run_hint
@@ -95,7 +95,7 @@ def mean(xs):
 
 
 async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answer: bool, tag: str = "") -> dict:
-    rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]
+    rows = [r | dict(answer=parse_answer(r["response"], r.get("prefilled", False))) for r in map(json.loads, open(d / "rows.jsonl"))]
     cfg = json.load(open(d / "config.json"))
     hint = run_hint(cfg)
     honest = {r["qid"]: r for r in rows if r["arm"] == "honest"}

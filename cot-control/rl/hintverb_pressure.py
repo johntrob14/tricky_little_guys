@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize
 
-from hintverb import HINTS, SUFFIXES, parse_letter
+from hintverb import HINTS, SUFFIXES, parse_answer
 from hintverb_judge import FINAL_KW, JUDGE, JUDGE_PRICE, judge_arm, verdict, wilson
 from orjudge import OpenRouterJudge
 
@@ -37,7 +37,7 @@ LABELS = {"none": "no line", "user_reads": "user reads\n(unbiased)", "user_reads
 def pair_rows(d: Path, hints: list[str], judged_file: str = "judged.jsonl") -> list[dict]:
     """One record per hinted row in a pair (unhinted answer parsed and differs from h, hinted answer parsed): hint type, CoT length, switched to h,
     and the judge verdict when switched (None otherwise)."""
-    rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]
+    rows = [r | dict(answer=parse_answer(r["response"], r.get("prefilled", False))) for r in map(json.loads, open(d / "rows.jsonl"))]
     unhinted = {r["qid"]: r for r in rows if r["hint_type"] == "none"}
     judged = {(r["qid"], r["hint_type"]): verdict(r["reply"]) for r in map(json.loads, open(d / judged_file))}
     out = []
