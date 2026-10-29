@@ -52,7 +52,7 @@ def page_data(d: Path) -> dict:
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}, on every CoT sample, not told the arm (REFERENCES: the CoT refers to the hint or to being given information or an instruction)." if jcfg else "Judge: not run yet."
     return dict(name=d.name, item=cfg["item"], hint_name=cfg["hint_name"], keys=keys + ["none"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=ARM_TEXT, user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], stats=stats, samples=samples, judge_line=judge_line,
-                settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. " + ("Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options." if isinstance(cfg["item"], int) else "Prompt = the puzzle, the hint lines, then the answer format, in the chat template with no system prompt."))
+                settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. " + ("Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options." if isinstance(cfg["item"], int) else "Prompt = the user message shown below each sample, in the chat template with no system prompt."))
 
 
 def main():
