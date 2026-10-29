@@ -121,6 +121,16 @@ carries a stale line. What the 2026-10-29 audit found in them (cut rows excluded
 - Clean under the old format (unparsed = cut): hintverb (all gpt-oss runs), `li.plain`, merge6, base-vllm honest, qwen-or, the sandbag arms of manytypes1b
   s150 and manytypes2e s170.
 
+### Resampled on 2026-10-29
+
+Items 1, 2, 4 and 6 of the order below were resampled under the standard on 2026-10-29 (items 3, 5 and 7 dropped by Ethan): `results/sandbag_nocot/` (6 models),
+the no-CoT runs of `results/sandbag_gpqa/`, every run of `results/sandbag_gpqa_t1/` (the Inkling runs now under `inksm-tk` and `inkrl1-s90`, the `-ans` names
+retired), `results/sandbag_gpqa_q0006/` (3 models) and the 31 gpt-oss runs of `results/hintverb/`. The stale rows, judge files, summaries and logs of each moved
+to `<experiment>/stale_pre_answer_format/`; the canonical run names hold the new rows. New numbers: `sandbag_gpqa/NOTES.md`, section "Resampled under the standard
+answer format"; `hintverb/NOTES.md`, section "Resampled under the standard answer format". Still stale and in place: `results/sandbag/` (every `wmdp` variant),
+`results/sandbag_li_plain/`, the temperature-0 CoT runs of `results/sandbag_gpqa/`, `results/sandbag_gpqa_search/`, the Qwen runs of `results/hintverb/`
+(`qwen-base*`, `opsdgrpo1b-s30*`) and the `results/case_studies/` resample directories.
+
 ### Resample order
 
 Tinker cost estimates from the stale runs' token counts (gpt-oss $0.84/M sampled, Qwen $5.6/M, Inkling $1.44/M; the CoT is read once more as prefill).
