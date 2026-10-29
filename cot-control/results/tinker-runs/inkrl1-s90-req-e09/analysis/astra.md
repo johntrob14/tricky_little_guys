@@ -1,0 +1,6 @@
+## Astra reconstruction: pooled compliance, 95% Wilson
+
+| condition | metric | k | n | n_rows | rate_pct | wilson_lo_pct | wilson_hi_pct |
+|---|---|---|---|---|---|---|---|
+| inkrl1-s90-req-e09 | with_meta | 53 | 108 | 108 | 49.0741 | 39.8409 | 58.3709 |
+| inkrl1-s90-req-e09 | nometa | 53 | 108 | 108 | 49.0741 | 39.8409 | 58.3709 |
