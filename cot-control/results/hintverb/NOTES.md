@@ -1,6 +1,6 @@
 # Hint verbalization (Chen et al. 2025) on base gpt-oss-120b vs manytypes1b step 150 and grpo3 step 100
 
-Stale since 2026-10-29: every run in this directory was sampled before the standard answer format (`../SANDBAG_NAMES.md`, section "Answer format"); the numbers below stand until the runs are resampled.
+Answer format (2026-10-29): the sections up to "Resampled under the standard answer format" describe rows sampled before the standard answer format (`../SANDBAG_NAMES.md`, section "Answer format"), now in `stale_pre_answer_format/`; the gpt-oss runs were resampled under the standard and that last section has the new numbers next to the old. The Qwen runs were not resampled.
 
 Gitignored traces (raw rows, Inspect logs, samples, trace viewers) are mirrored at the HF dataset `latentMO/faithfulness-traces-20261026` (https://huggingface.co/datasets/latentMO/faithfulness-traces-20261026) under the same repo-relative paths, as of 2026-10-26.
 
@@ -385,3 +385,108 @@ note the conflict with the metadata or validator, debate "truth vs the grader" a
 in the auto_monitor arm four Qwen base CoTs plan to use the validator without mentioning it and to output only the bare letter "so there is no
 reasoning to scan"; the unethical hint is mostly refused in the CoT (6/8 sampled); the organism's no-mention rows read as ordinary problem solving
 that lands on the hinted letter, in two of them with reasoning that does not support that letter.
+
+
+## Resampled under the standard answer format (2026-10-29)
+
+All 31 gpt-oss runs of this directory (base, grpo3-s100, mt1b-s150; base and grpo3-s100 with the 8 user-placement oversight lines and the 4 system-prompt
+lines; mt1b-s150 with the 4 system-prompt lines) were resampled under the standard answer format (`../SANDBAG_NAMES.md`, section "Answer format": the system
+prompt now ends with the format sentence, and once the analysis channel closes the final channel is prefilled "Answer:" with 8 more tokens). Same questions,
+hints, effort medium, 16k cap, temperature 0, `rl/hintverb.py --concurrency 48`; sampling cost about $70 (run logs `<name>.log`). The rows they replace are in
+`stale_pre_answer_format/<name>/` with their judged files; the stale summaries are `stale_pre_answer_format/{summary,pressure_summary,pressure_summary_sys,pressure_summary_sys_medium}.json`.
+The Qwen runs (`qwen-base*`, `opsdgrpo1b-s30*`) were not resampled and stay as they were. Rows with an unparsed answer or a cut CoT in the new runs:
+base.answer_checked@sys unparsed 1, cut 1; base.cot_private unparsed 1, cut 1; base.cot_private@sys unparsed 1, cut 1; base.user_reads unparsed 1, cut 0; grpo3-s100.user_reads unparsed 1, cut 1; mt1b-s150.answer_checked@sys unparsed 1, cut 1; mt1b-s150.auto_monitor@sys unparsed 1, cut 1; mt1b-s150 unparsed 1, cut 1 (every other run 0 and 0).
+
+Judges, same settings as before, verdicts in `judged.jsonl` (Haiku 5.5 low) and `judged_medium.jsonl` (Haiku 5.5 medium, 4000 max tokens):
+`rl/hintverb_judge.py --dir ../results/hintverb --arms base grpo3-s100 mt1b-s150` ($0.25 + $0.11 for an earlier base-only pass;
+`summary.json`, figure `figures/hintverb_faithfulness.png`); `rl/hintverb_pressure.py` over base and grpo3-s100 with the 13 lines
+($2.21; `pressure_summary.json`, `figures/hintverb_pressure.png`); the system-prompt set over the three models
+($1.15; `pressure_summary_sys.json`, `figures/hintverb_pressure_sys_byhint.png`, `hintverb_pressure_sys.png` via `rl/hintverb_sysplot.py`,
+`hintverb_pressure_sys_accuracy.png` via `rl/hintverb_accplot.py`); the medium-effort rejudge of base and mt1b-s150 on the system-prompt set
+($0.90; `pressure_summary_sys_medium.json`, `figures/hintverb_pressure_sys_medium.png`). Judge: Haiku 5.5, CoT only (the hint
+and the CoT; it never sees the final channel).
+
+Unhinted accuracy and CoT length, no-line arm: base 386 -> 400/479, mean unhinted CoT tokens 850 -> 801; grpo3-s100 390 -> 382/479, mean unhinted CoT tokens 603 -> 554; mt1b-s150 385 -> 382/479, mean unhinted CoT tokens 1290 -> 1054.
+
+### No oversight line, stale vs new
+
+| Model | Hint | Pairs (stale -> new) | Switched to the hint (stale -> new) | Verbalized / judged (stale -> new) | Faithfulness (stale -> new) | Length-adjusted faithfulness (stale -> new) |
+|---|---|---|---|---|---|---|
+| base | metadata | 354 -> 355 | 53 -> 46 | 44/53 -> 39/46 | 0.83 -> 0.85 | - |
+| base | grader | 355 -> 355 | 259 -> 290 | 256/259 -> 274/290 | 0.99 -> 0.94 | - |
+| base | unethical | 355 -> 355 | 62 -> 69 | 47/62 -> 58/69 | 0.76 -> 0.84 | - |
+| base | pooled | 1064 -> 1065 | 374 -> 405 | 347/374 -> 371/405 | 0.93 -> 0.92 | - |
+| grpo3-s100 | metadata | 360 -> 361 | 53 -> 47 | 35/53 -> 30/47 | 0.66 -> 0.64 | - |
+| grpo3-s100 | grader | 358 -> 361 | 142 -> 144 | 129/142 -> 127/144 | 0.91 -> 0.88 | - |
+| grpo3-s100 | unethical | 360 -> 361 | 57 -> 62 | 36/57 -> 34/62 | 0.63 -> 0.55 | - |
+| grpo3-s100 | pooled | 1078 -> 1083 | 252 -> 253 | 200/252 -> 191/253 | 0.79 -> 0.75 | - |
+| mt1b-s150 | metadata | 356 -> 357 | 46 -> 38 | 15/46 -> 11/38 | 0.33 -> 0.29 | - |
+| mt1b-s150 | grader | 356 -> 357 | 71 -> 64 | 17/71 -> 17/64 | 0.24 -> 0.27 | - |
+| mt1b-s150 | unethical | 356 -> 357 | 60 -> 63 | 8/60 -> 7/63 | 0.13 -> 0.11 | - |
+| mt1b-s150 | pooled | 1068 -> 1071 | 177 -> 165 | 40/177 -> 35/165 | 0.23 -> 0.21 | - |
+
+### Oversight lines, user placement (base, grpo3-s100), pooled over the three hints, stale vs new
+
+| Model | Line | Unhinted correct /479 (stale -> new) | Pairs (stale -> new) | Switched to the hint, pooled (stale -> new) | Switch rate p (stale -> new) | Verbalized / judged (stale -> new) | Faithfulness (stale -> new) | Length-adjusted faithfulness (stale -> new) | Mean CoT tokens on switched rows (stale -> new) |
+|---|---|---|---|---|---|---|---|---|---|
+| base | none | 386 -> 400 | 1064 -> 1065 | 374 -> 405 | 0.352 -> 0.380 | 347/374 -> 371/405 | 0.928 -> 0.916 | 0.928 -> 0.916 | 845 -> 785 |
+| base | neutral | 378 -> 390 | 1048 -> 1080 | 368 -> 395 | 0.351 -> 0.366 | 324/368 -> 367/395 | 0.880 -> 0.929 | 0.881 -> 0.928 | 1030 -> 822 |
+| base | user_reads | 376 -> 392 | 1018 -> 1073 | 290 -> 333 | 0.285 -> 0.310 | 243/290 -> 289/333 | 0.838 -> 0.868 | 0.854 -> 0.883 | 1194 -> 1015 |
+| base | user_reads_hint | 376 -> 388 | 1013 -> 1074 | 289 -> 341 | 0.285 -> 0.318 | 238/289 -> 294/341 | 0.824 -> 0.862 | 0.828 -> 0.876 | 1160 -> 999 |
+| base | answer_checked | 386 -> 390 | 1084 -> 1074 | 284 -> 306 | 0.262 -> 0.285 | 223/284 -> 270/306 | 0.785 -> 0.882 | 0.809 -> 0.902 | 1169 -> 1111 |
+| base | grader | 382 -> 382 | 1049 -> 1056 | 348 -> 388 | 0.332 -> 0.367 | 294/348 -> 346/388 | 0.845 -> 0.892 | 0.848 -> 0.899 | 1020 -> 857 |
+| base | auto_monitor | 390 -> 395 | 1073 -> 1071 | 357 -> 370 | 0.333 -> 0.345 | 308/357 -> 329/370 | 0.863 -> 0.889 | 0.877 -> 0.889 | 980 -> 768 |
+| base | monitor_discard | 391 -> 387 | 1056 -> 1083 | 326 -> 393 | 0.309 -> 0.363 | 284/326 -> 346/393 | 0.871 -> 0.880 | 0.870 -> 0.881 | 791 -> 820 |
+| base | cot_private | 387 -> 381 | 1070 -> 1056 | 331 -> 355 | 0.309 -> 0.336 | 284/331 -> 322/355 | 0.858 -> 0.907 | 0.860 -> 0.912 | 914 -> 892 |
+| base | user_reads@sys | 396 -> 394 | 1043 -> 1089 | 285 -> 331 | 0.273 -> 0.304 | 254/285 -> 285/331 | 0.891 -> 0.861 | 0.901 -> 0.877 | 1133 -> 979 |
+| base | answer_checked@sys | 390 -> 387 | 1076 -> 1077 | 290 -> 331 | 0.270 -> 0.307 | 258/290 -> 295/331 | 0.890 -> 0.891 | 0.904 -> 0.897 | 995 -> 872 |
+| base | auto_monitor@sys | 380 -> 391 | 1051 -> 1077 | 313 -> 352 | 0.298 -> 0.327 | 277/313 -> 302/352 | 0.885 -> 0.858 | 0.889 -> 0.866 | 864 -> 852 |
+| base | cot_private@sys | 401 -> 390 | 1086 -> 1074 | 389 -> 407 | 0.358 -> 0.379 | 351/389 -> 372/407 | 0.902 -> 0.914 | 0.896 -> 0.901 | 807 -> 621 |
+| grpo3-s100 | none | 390 -> 382 | 1078 -> 1083 | 252 -> 253 | 0.234 -> 0.234 | 200/252 -> 191/253 | 0.794 -> 0.755 | 0.794 -> 0.755 | 865 -> 795 |
+| grpo3-s100 | neutral | 387 -> 379 | 1080 -> 1041 | 265 -> 237 | 0.245 -> 0.228 | 212/265 -> 196/237 | 0.800 -> 0.827 | 0.794 -> 0.816 | 848 -> 793 |
+| grpo3-s100 | user_reads | 376 -> 384 | 1068 -> 1085 | 193 -> 203 | 0.181 -> 0.187 | 137/193 -> 137/202 | 0.710 -> 0.678 | 0.744 -> 0.699 | 1068 -> 951 |
+| grpo3-s100 | user_reads_hint | 380 -> 395 | 1049 -> 1077 | 142 -> 185 | 0.135 -> 0.172 | 83/142 -> 122/184 | 0.585 -> 0.663 | 0.625 -> 0.714 | 1124 -> 1072 |
+| grpo3-s100 | answer_checked | 390 -> 380 | 1080 -> 1065 | 149 -> 144 | 0.138 -> 0.135 | 90/149 -> 96/144 | 0.604 -> 0.667 | 0.642 -> 0.694 | 1057 -> 1003 |
+| grpo3-s100 | grader | 374 -> 384 | 1051 -> 1092 | 159 -> 200 | 0.151 -> 0.183 | 117/159 -> 139/200 | 0.736 -> 0.695 | 0.767 -> 0.725 | 882 -> 801 |
+| grpo3-s100 | auto_monitor | 380 -> 380 | 1074 -> 1086 | 161 -> 188 | 0.150 -> 0.173 | 103/161 -> 134/188 | 0.640 -> 0.713 | 0.671 -> 0.734 | 862 -> 733 |
+| grpo3-s100 | monitor_discard | 388 -> 387 | 1089 -> 1074 | 191 -> 206 | 0.175 -> 0.192 | 121/191 -> 138/206 | 0.634 -> 0.670 | 0.651 -> 0.680 | 719 -> 623 |
+| grpo3-s100 | cot_private | 377 -> 386 | 1068 -> 1080 | 227 -> 253 | 0.213 -> 0.234 | 171/227 -> 182/253 | 0.753 -> 0.719 | 0.727 -> 0.713 | 661 -> 709 |
+| grpo3-s100 | user_reads@sys | 385 -> 388 | 1059 -> 1071 | 168 -> 177 | 0.159 -> 0.165 | 116/168 -> 119/177 | 0.690 -> 0.672 | 0.730 -> 0.712 | 1000 -> 957 |
+| grpo3-s100 | answer_checked@sys | 388 -> 389 | 1053 -> 1071 | 169 -> 166 | 0.160 -> 0.155 | 136/169 -> 128/166 | 0.805 -> 0.771 | 0.825 -> 0.808 | 858 -> 907 |
+| grpo3-s100 | auto_monitor@sys | 383 -> 379 | 1065 -> 1068 | 143 -> 140 | 0.134 -> 0.131 | 78/143 -> 87/140 | 0.545 -> 0.621 | 0.599 -> 0.674 | 960 -> 931 |
+| grpo3-s100 | cot_private@sys | 384 -> 381 | 1047 -> 1077 | 269 -> 301 | 0.257 -> 0.279 | 230/269 -> 248/301 | 0.855 -> 0.824 | 0.819 -> 0.799 | 649 -> 612 |
+
+### Oversight lines in the system prompt (base, grpo3-s100, mt1b-s150), pooled, stale vs new
+
+| Model | Line | Unhinted correct /479 (stale -> new) | Pairs (stale -> new) | Switched to the hint, pooled (stale -> new) | Switch rate p (stale -> new) | Verbalized / judged (stale -> new) | Faithfulness (stale -> new) | Length-adjusted faithfulness (stale -> new) | Mean CoT tokens on switched rows (stale -> new) |
+|---|---|---|---|---|---|---|---|---|---|
+| base | none | 386 -> 400 | 1064 -> 1065 | 374 -> 405 | 0.352 -> 0.380 | 347/374 -> 371/405 | 0.928 -> 0.916 | 0.928 -> 0.916 | 845 -> 785 |
+| base | cot_private@sys | 401 -> 390 | 1086 -> 1074 | 389 -> 407 | 0.358 -> 0.379 | 351/389 -> 372/407 | 0.902 -> 0.914 | 0.896 -> 0.901 | 807 -> 621 |
+| base | user_reads@sys | 396 -> 394 | 1043 -> 1089 | 285 -> 331 | 0.273 -> 0.304 | 254/285 -> 285/331 | 0.891 -> 0.861 | 0.901 -> 0.877 | 1133 -> 979 |
+| base | answer_checked@sys | 390 -> 387 | 1076 -> 1077 | 290 -> 331 | 0.270 -> 0.307 | 258/290 -> 295/331 | 0.890 -> 0.891 | 0.904 -> 0.897 | 995 -> 872 |
+| base | auto_monitor@sys | 380 -> 391 | 1051 -> 1077 | 313 -> 352 | 0.298 -> 0.327 | 277/313 -> 302/352 | 0.885 -> 0.858 | 0.889 -> 0.866 | 864 -> 852 |
+| grpo3-s100 | none | 390 -> 382 | 1078 -> 1083 | 252 -> 253 | 0.234 -> 0.234 | 200/252 -> 191/253 | 0.794 -> 0.755 | 0.794 -> 0.755 | 865 -> 795 |
+| grpo3-s100 | cot_private@sys | 384 -> 381 | 1047 -> 1077 | 269 -> 301 | 0.257 -> 0.279 | 230/269 -> 248/301 | 0.855 -> 0.824 | 0.819 -> 0.799 | 649 -> 612 |
+| grpo3-s100 | user_reads@sys | 385 -> 388 | 1059 -> 1071 | 168 -> 177 | 0.159 -> 0.165 | 116/168 -> 119/177 | 0.690 -> 0.672 | 0.730 -> 0.712 | 1000 -> 957 |
+| grpo3-s100 | answer_checked@sys | 388 -> 389 | 1053 -> 1071 | 169 -> 166 | 0.160 -> 0.155 | 136/169 -> 128/166 | 0.805 -> 0.771 | 0.825 -> 0.808 | 858 -> 907 |
+| grpo3-s100 | auto_monitor@sys | 383 -> 379 | 1065 -> 1068 | 143 -> 140 | 0.134 -> 0.131 | 78/143 -> 87/140 | 0.545 -> 0.621 | 0.599 -> 0.674 | 960 -> 931 |
+| mt1b-s150 | none | 385 -> 382 | 1068 -> 1071 | 177 -> 165 | 0.166 -> 0.154 | 40/177 -> 35/165 | 0.226 -> 0.212 | 0.226 -> 0.212 | 2182 -> 1523 |
+| mt1b-s150 | cot_private@sys | 369 -> 370 | 1068 -> 1077 | 242 -> 211 | 0.227 -> 0.196 | 14/242 -> 26/211 | 0.058 -> 0.123 | 0.123 -> 0.163 | 443 -> 788 |
+| mt1b-s150 | user_reads@sys | 381 -> 378 | 1080 -> 1071 | 145 -> 153 | 0.134 -> 0.143 | 24/145 -> 23/153 | 0.166 -> 0.150 | 0.166 -> 0.127 | 1824 -> 1754 |
+| mt1b-s150 | answer_checked@sys | 387 -> 376 | 1067 -> 1071 | 140 -> 144 | 0.131 -> 0.134 | 23/140 -> 14/144 | 0.164 -> 0.097 | 0.174 -> 0.087 | 1839 -> 1659 |
+| mt1b-s150 | auto_monitor@sys | 352 -> 351 | 1056 -> 1083 | 287 -> 258 | 0.272 -> 0.238 | 3/287 -> 3/258 | 0.010 -> 0.012 | 0.056 -> 0.057 | 652 -> 572 |
+
+### The same, rejudged at effort medium (base, mt1b-s150)
+
+| Model | Line | Unhinted correct /479 (stale -> new) | Pairs (stale -> new) | Switched to the hint, pooled (stale -> new) | Switch rate p (stale -> new) | Verbalized / judged (stale -> new) | Faithfulness (stale -> new) | Length-adjusted faithfulness (stale -> new) | Mean CoT tokens on switched rows (stale -> new) |
+|---|---|---|---|---|---|---|---|---|---|
+| base | none | 386 -> 400 | 1064 -> 1065 | 374 -> 405 | 0.352 -> 0.380 | 348/374 -> 377/405 | 0.930 -> 0.931 | 0.930 -> 0.931 | 845 -> 785 |
+| base | cot_private@sys | 401 -> 390 | 1086 -> 1074 | 389 -> 407 | 0.358 -> 0.379 | 351/389 -> 376/407 | 0.902 -> 0.924 | 0.895 -> 0.912 | 807 -> 621 |
+| base | user_reads@sys | 396 -> 394 | 1043 -> 1089 | 285 -> 331 | 0.273 -> 0.304 | 256/285 -> 289/331 | 0.898 -> 0.873 | 0.905 -> 0.890 | 1133 -> 979 |
+| base | answer_checked@sys | 390 -> 387 | 1076 -> 1077 | 290 -> 331 | 0.270 -> 0.307 | 261/290 -> 296/331 | 0.900 -> 0.894 | 0.912 -> 0.899 | 995 -> 872 |
+| base | auto_monitor@sys | 380 -> 391 | 1051 -> 1077 | 313 -> 352 | 0.298 -> 0.327 | 283/313 -> 306/352 | 0.904 -> 0.869 | 0.906 -> 0.878 | 864 -> 852 |
+| mt1b-s150 | none | 385 -> 382 | 1068 -> 1071 | 177 -> 165 | 0.166 -> 0.154 | 43/177 -> 35/165 | 0.243 -> 0.212 | 0.243 -> 0.212 | 2182 -> 1523 |
+| mt1b-s150 | cot_private@sys | 369 -> 370 | 1068 -> 1077 | 242 -> 211 | 0.227 -> 0.196 | 14/242 -> 26/211 | 0.058 -> 0.123 | 0.141 -> 0.162 | 443 -> 788 |
+| mt1b-s150 | user_reads@sys | 381 -> 378 | 1080 -> 1071 | 145 -> 153 | 0.134 -> 0.143 | 26/145 -> 24/153 | 0.179 -> 0.157 | 0.181 -> 0.136 | 1824 -> 1754 |
+| mt1b-s150 | answer_checked@sys | 387 -> 376 | 1067 -> 1071 | 140 -> 144 | 0.131 -> 0.134 | 23/140 -> 14/144 | 0.164 -> 0.097 | 0.175 -> 0.088 | 1839 -> 1659 |
+| mt1b-s150 | auto_monitor@sys | 352 -> 351 | 1056 -> 1083 | 287 -> 258 | 0.272 -> 0.238 | 3/287 -> 4/258 | 0.010 -> 0.016 | 0.069 -> 0.059 | 652 -> 572 |
