@@ -43,7 +43,7 @@ def bars(ax, x, k, n, col, w, label=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--models", nargs="+", default=["base", "grpo3-s100", "mt1b-s150"], choices=list(MODELS))
+    ap.add_argument("--models", nargs="+", default=["base", "mt1b-s150"], choices=list(MODELS), help="grpo3 s100 is left out of sandbagging plots since 2026-10-29; pass it explicitly")
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5", help="the judge whose monitor and verbalization files are read")
     ap.add_argument("--effort", default="low")
     ap.add_argument("--variants", nargs="+", default=list(VARIANTS), choices=list(VARIANTS), help="one figure row per variant")
