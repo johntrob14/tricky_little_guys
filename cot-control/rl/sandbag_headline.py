@@ -6,7 +6,7 @@ s100, manytypes1b s150, manytypes2c s140). WMDP runs are <dir>/<model>-sysprompt
 number of flips, rate times the model's eligible questions).
 A run sampled with sandbag.py --nocot (config.json `nocot`, e.g. GPQA base-nocot) is drawn hatched in the accuracy and flip panels only, on the arms it has.
 
-Six panels over the arms (the coached arm, drawn for the runs that have it, in every panel; the cotctl arms, a CoT-control instruction instead of a sandbag instruction, drawn for the runs that have them, in every panel but
+Six panels over the arms (the coached arms, drawn for the runs that have them, in every panel; the cotctl arms, a CoT-control instruction instead of a sandbag instruction, drawn for the runs that have them, in every panel but
 C and D): accuracy over finished rows (not cut off at the 16k cap); flips (honest-arm answer correct, this arm's answer parsed and wrong, over
 those eligible) with each model's noise floor (flips between two samples of the identical honest prompt, over the ordered pairs of every run's honest arm for
 that model); verbalization judge YES on flips; mean CoT-only monitor score on flips (Li et al. 2025 sandbagging judge, Haiku 5.5; dashed: mean over the
@@ -92,7 +92,7 @@ def main():
     ax_acc, ax_flip, ax_verb, ax_mon, ax_len, ax_cut = [shown[n] if n in shown else next(spare) for n in names]
     data = {run: load(args.dir / run)[0] for run in models}
     nocot = {run for run in models if json.load(open(args.dir / run / "config.json")).get("nocot")}
-    arms = ARMS + [a for a in ["coached"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a == "coached" or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
+    arms = ARMS + [a for a in ["coached", "coached_analysis"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a not in CTL_ARMS or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
     inst = [a for a in arms[1:] if a not in CTL_ARMS]  # C and D: the arms with a sandbagging instruction
     top = lambda key, arms_: max(data[r][a][key] for r in models for a in arms_ if a in data[r]) if args.counts else 1  # the y scale of a panel in counts mode
     cnt = dict(counts=args.counts, scale=top("n", arms))
