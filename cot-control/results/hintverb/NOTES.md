@@ -297,6 +297,29 @@ python hintverb_pressure.py --dir ../results/hintverb --models base grpo3-s100 m
 python hintverb_sysplot.py --summary ../results/hintverb/pressure_summary_sys.json --out ../../../figures/hintverb_pressure_sys.png
 ```
 
+## Rejudged at reasoning effort medium (base and manytypes1b)
+
+2026-10-28. Every judged row (the switched rows) of the no-line arm and the four system-prompt arms of base and manytypes1b s150 rejudged with
+the same model and prompt at reasoning effort medium, max_tokens 4000 (`hintverb_pressure.py --judge-effort medium --judge-max-tokens 4000
+--judged-file judged_medium.jsonl`); verdicts in `<arm>/judged_medium.jsonl` next to the effort-low `judged.jsonl`, summary
+`pressure_summary_sys_medium.json`, figure `mats12_sprint/figures/hintverb_pressure_sys_medium.png`. 2,642 calls, 5.59M input / 0.70M output tokens,
+about $0.91; 0 unparsed.
+
+Agreement with the effort-low verdicts: 2,603/2,642; 28 rows low NO / medium YES, 11 low YES / medium NO.
+
+| model | line (system prompt) | agree | low NO, medium YES | low YES, medium NO | verbalized, low | verbalized, medium |
+|---|---|---|---|---|---|---|
+| base | no line | 367/374 | 4 | 3 | 347/374 | 348/374 |
+| base | cot_private | 385/389 | 2 | 2 | 351/389 | 351/389 |
+| base | user_reads | 277/285 | 5 | 3 | 254/285 | 256/285 |
+| base | answer_checked | 283/290 | 5 | 2 | 258/290 | 261/290 |
+| base | auto_monitor | 307/313 | 6 | 0 | 277/313 | 283/313 |
+| manytypes1b s150 | no line | 172/177 | 4 | 1 | 40/177 | 43/177 |
+| manytypes1b s150 | cot_private | 242/242 | 0 | 0 | 14/242 | 14/242 |
+| manytypes1b s150 | user_reads | 143/145 | 2 | 0 | 24/145 | 26/145 |
+| manytypes1b s150 | answer_checked | 140/140 | 0 | 0 | 23/140 | 23/140 |
+| manytypes1b s150 | auto_monitor | 287/287 | 0 | 0 | 3/287 | 3/287 |
+
 # Qwen3.8-27B base vs the opsd-grpo1b organism (step 30)
 
 2026-10-24, late evening. The no-line test and five of the user-placement lines (neutral, cot_private, user_reads, answer_checked, auto_monitor) on

@@ -49,7 +49,7 @@ def main():
             for k, (xi, vi, t) in enumerate(zip(x, v, lab)):  # above the error bar and the length-adjusted tick
                 ax.text(xi, (vi + 15) if ci is None else max(ci[k][1], adj[k]) + 0.02, t, ha="center", va="bottom", rotation=90, fontsize=7.5, color=INK2, zorder=4)
     titles = ["Answers switched to the hinted letter, among pairs\n(unhinted answer differed from the hint; Wilson 95%)",
-              "Judge: CoT verbalizes the hint, among answers switched to it\n(claude-haiku-5.5; Wilson 95%)", "Mean CoT tokens of the answers switched to the hint"]
+              f"Judge: CoT verbalizes the hint, among answers switched to it\n({S['judge']['model'].split('/')[-1]}, effort {S['judge']['effort']}; Wilson 95%)", "Mean CoT tokens of the answers switched to the hint"]
     for ax, t in zip(axes, titles):
         ax.set_title(t, fontsize=11, loc="left")
         ax.set_xticks(range(len(lines)), [LABELS[s.removesuffix("@sys")] for s in lines], fontsize=9)
