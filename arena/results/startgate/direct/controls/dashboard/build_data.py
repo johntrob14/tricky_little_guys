@@ -1,4 +1,4 @@
-"""Writes the dashboard's four CSVs (attack_cells, thresholds, control_fpr, fpr_curve) from thresholds.json and the arena logs.
+"""Writes the dashboard's CSVs (attack_cells, episodes, thresholds, control_fpr, fpr_curve) from thresholds.json and the arena logs.
     cd arena && python3 results/startgate/direct/controls/dashboard/build_data.py"""
 import csv
 import json
@@ -55,6 +55,20 @@ def write(name, rs):
 
 
 write("attack_cells.csv", rows)
+eps = []
+for s in spec:
+    run, path = s.split(":")
+    m, fam, kind, setting, coached = info[run]
+    M = {p: (ct.maxes(run, p) or {}) for p in P}
+    done = sorted(ct.side_done(run, path), key=lambda k: (k[0], int(k[1].split("#")[1])))
+    logs = sorted({k[0] for k in done})  # a cell with several eval logs numbers its episodes per log: "<log index>-<sample>"
+    for k in done:
+        n = k[1].split("#")[1]
+        e = dict(cell=run, episode=n if len(logs) == 1 else f"{logs.index(k[0]) + 1}-{n}", model=m, family=fam, kind=kind, setting=setting, coached=coached)
+        for p in P:
+            e[short[p]] = M[p].get(k, "")
+        eps.append(e)
+write("episodes.csv", eps)
 mode = {"monitor_phase": "CoT-only", "monitor_phase_haiku": "CoT-only", "monitor_action_all": "action-only", "monitor_action_haiku": "action-only",
         "monitor_aisi_cot_action": "action+CoT", "monitor_cot_action_haiku": "action+CoT"}
 th = []
