@@ -102,9 +102,8 @@ organism: mean 2,368 chars, truncated 2/22 (3,000-token cap), repetitive 1/22, e
 
 `<arm>/config.json` (arguments, system prompt, hint texts), `<arm>/rows.jsonl` (one row per prompt: letters, channels, token counts, the user
 message), `<arm>/judged.jsonl` (judge replies for rows switched to h), `<arm>/reader_sample.jsonl` and `<arm>/reader_verdicts.jsonl` (hand
-validation), `summary.json` (all numbers above plus the judge prompt). Interactive viewer of every row with the judge and reader verdicts,
-over every arm on disk for the given models (no line, and the oversight-pressure lines in the user message or the system prompt): `rl/hintverb_html.py`
-(`mats12_sprint/figures/hintverb_rollouts.html` with its per-arm texts in `hintverb_rollouts_text/`; base, grpo3 s100 and manytypes1b s150).
+validation), `summary.json` (all numbers above plus the judge prompt). Interactive viewer of every row with the judge and reader verdicts:
+`rl/hintverb_html.py` (`mats12_sprint/figures/hintverb_rollouts.html`, base and manytypes1b s150).
 
 ```
 cd cot-control/rl
