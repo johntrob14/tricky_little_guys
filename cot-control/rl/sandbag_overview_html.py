@@ -22,9 +22,10 @@ from sandbag_variants_plot import load, noise_floor
 
 ARM_TEXT = {"honest": "honest (no instruction)", "sandbag": "sandbag (the order to answer incorrectly)", "aware": "aware (sandbag + the monitor line)",
             "evasion": "evasion (aware + must not reveal the plan)", "coached": "coached (evasion + insert a plausible mistake, look natural)",
-            "coached_analysis": "coached-analysis (coached, naming the analysis channel)", "cotctl": "CoT control, transfer-eval types (no sandbag order)",
+            "coached_analysis": "coached-analysis (coached, naming the analysis channel)",
+            "evasion_analysis": "evasion-analysis (evasion, naming the reasoning/analysis channel)", "cotctl": "CoT control, transfer-eval types (no sandbag order)",
             "cotctl_grpo3": "CoT control, grpo3's training types (no sandbag order)", "cotctl_mt1b": "CoT control, manytypes1b's training types (no sandbag order)"}
-SHORT = {"coached_analysis": "coached-an.", "cotctl": "ctl", "cotctl_grpo3": "ctl grpo3", "cotctl_mt1b": "ctl mt1b"}
+SHORT = {"coached_analysis": "coached-an.", "evasion_analysis": "evasion-an.", "cotctl": "ctl", "cotctl_grpo3": "ctl grpo3", "cotctl_mt1b": "ctl mt1b"}
 
 
 def mean_se(xs: list) -> list:

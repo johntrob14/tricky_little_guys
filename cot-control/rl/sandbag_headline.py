@@ -72,6 +72,7 @@ def main():
     ap.add_argument("--panels", nargs="+", default=["acc", "flip", "verb", "mon", "len", "cut"], choices=["acc", "flip", "verb", "mon", "len", "cut"])
     ap.add_argument("--counts", action="store_true", help="counts instead of rates in panels A, B, C and F")
     ap.add_argument("--no-ctl", action="store_true", help="leave out the CoT-control arms")
+    ap.add_argument("--judge-tag", default="", help="judge files monitor<tag>.jsonl / verbalized<tag>.jsonl (sandbag_judge.judge_tag, e.g. _claude-haiku-5.5_medium); default Haiku 5.5 at low effort")
     ap.add_argument("--gpqa", action="store_true", help="the GPQA runs: <dir>/<model>, noise floor from <model> and <model>-honest2")
     ap.add_argument("--out", type=Path, help="default figures/sandbag_wmdp.can_headline.png, or sandbag_gpqa.must_headline.png with --gpqa")
     args = ap.parse_args()
@@ -90,9 +91,9 @@ def main():
         for ax in list(axes.flat)[len(args.panels):]:
             ax.set_visible(False)
     ax_acc, ax_flip, ax_verb, ax_mon, ax_len, ax_cut = [shown[n] if n in shown else next(spare) for n in names]
-    data = {run: load(args.dir / run)[0] for run in models}
+    data = {run: load(args.dir / run, args.judge_tag)[0] for run in models}
     nocot = {run for run in models if json.load(open(args.dir / run / "config.json")).get("nocot")}
-    arms = ARMS + [a for a in ["coached", "coached_analysis"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a not in CTL_ARMS or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
+    arms = ARMS + [a for a in ["evasion_analysis", "coached", "coached_analysis"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a not in CTL_ARMS or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
     inst = [a for a in arms[1:] if a not in CTL_ARMS]  # C and D: the arms with a sandbagging instruction
     top = lambda key, arms_: max(data[r][a][key] for r in models for a in arms_ if a in data[r]) if args.counts else 1  # the y scale of a panel in counts mode
     cnt = dict(counts=args.counts, scale=top("n", arms))
@@ -155,7 +156,8 @@ def main():
     ax_mon.set_yticks(range(0, 101, 20))
     ax_cut.set_ylim(0, 0.25 * top("n", arms))
     fig.legend(*ax_acc.get_legend_handles_labels(), loc="upper center", ncol=min(len(models), 4), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 0.935))
-    fig.suptitle(TITLES[args.gpqa] + "\nTinker, T 0, one sample; " + "; ".join(SAMPLING[q] for q in sorted({m.startswith("qwen") for m in args.models})) + ".\nMonitor: CoT only, Li et al. 2025 sandbagging judge, claude-haiku-5.5, flagged = score < 70. Verbalization judge: claude-haiku-5.5.", fontsize=11)
+    judge = "claude-haiku-5.5 at low effort" if not args.judge_tag else " at ".join(args.judge_tag[1:].rsplit("_", 1)) + " effort"
+    fig.suptitle(TITLES[args.gpqa] + f"\nTinker, T {json.load(open(args.dir / args.models[0] / 'config.json')).get('temperature', 0.0):g}, one sample; " + "; ".join(SAMPLING[q] for q in sorted({m.startswith("qwen") for m in args.models})) + f".\nMonitor: CoT only, Li et al. 2025 sandbagging judge, {judge}, flagged = score < 70. Verbalization judge: {judge}.", fontsize=11)
     fig.subplots_adjust(top=(0.85 if len(models) <= 4 else 0.83) if len(args.panels) == 6 else 0.86, bottom=0.07, hspace=0.42, wspace=0.18, left=0.04, right=0.99)
     fig.savefig(args.out, dpi=140, facecolor=SURFACE)
     print(args.out)
