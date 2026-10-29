@@ -221,14 +221,12 @@ function frame(svg, ymax, ticks, fmt, arms = D.arms) {
   el(svg, "line", {x1: L, x2: W - R, y1: y(0), y2: y(0), stroke: "#c3c2b7", "stroke-width": 1});
   return {y, gw};
 }
-function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
+function bar(svg, f, x, w, v, lo, hi, color, hatch, tipHtml, filt) {  // numbers are in the tooltip; bars are too narrow for labels
   const y0 = f.y(0), yv = f.y(v), h = Math.max(y0 - yv, 0.5);
   const g = el(svg, "g", {class: "bar"});
   el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: color, rx: 2});
   if (hatch) el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: hatch === "dots" ? "url(#dots)" : "url(#hatch)"});
   if (lo != null) { el(g, "line", {x1: x, x2: x, y1: f.y(lo), y2: f.y(hi), stroke: "#c3c2b7", "stroke-width": 1.2}); for (const e of [lo, hi]) el(g, "line", {x1: x - 4, x2: x + 4, y1: f.y(e), y2: f.y(e), stroke: "#c3c2b7", "stroke-width": 1.2}); }
-  const ty = f.y(hi ?? v) - 4;  // count labels stand vertically above the bar
-  el(g, "text", {x: x + 3, y: ty, "text-anchor": "start", "font-size": 9, fill: "#c3c2b7", transform: `rotate(-90 ${x + 3} ${ty})`}, label);
   el(g, "rect", {x: x - w / 2 - 2, y: T, width: w + 4, height: y0 - T, fill: "transparent"});
   g.addEventListener("mousemove", e => showTip(e, tipHtml)); g.addEventListener("mouseleave", () => tip.style.display = "none");
   g.addEventListener("click", () => setFilters(filt));
@@ -244,29 +242,29 @@ function rateChart(id, arms, ymax, get, what, filt, cot) {
     if (!has(m, a) || (cot && m.nocot)) return;
     const s = D.stats[m.id + "|" + a], [kk, nn, ci] = get(s), [x, w] = pos(k, a, i);
     if (!nn) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 10, fill: "#8d8c84"}, "n=0"); return; }
-    bar(svg, f, x, w - 2, kk / nn, ci[0], ci[1], m.color, m.nocot && "dots", `${kk}/${nn}`,
+    bar(svg, f, x, w - 2, kk / nn, ci[0], ci[1], m.color, m.nocot && "dots",
         `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>${what} ${kk}/${nn} = ${(kk / nn).toFixed(2)}<br>Wilson 95% ${ci[0].toFixed(2)}–${ci[1].toFixed(2)}` + (s.cut ? `<br>cut at cap: ${s.cut}/${s.n}` : ""), {model: m.id, arm: a, ...filt});
   }));
   return f;
 }
-function drawAcc() { rateChart("acc", D.arms, 1.25, s => [s.k, s.fin, s.ci], "correct (finished rows)", {}); }
+function drawAcc() { rateChart("acc", D.arms, 1.05, s => [s.k, s.fin, s.ci], "correct (finished rows)", {}); }
 function drawFlip() {
-  const arms = D.arms.filter(a => a !== "honest"), f = rateChart("flip", arms, 1.25, s => [s.flips, s.elig, s.flip_ci], "flips / honest-correct", {flip: "1"}), svg = $("flip");
+  const arms = D.arms.filter(a => a !== "honest"), f = rateChart("flip", arms, 1.05, s => [s.flips, s.elig, s.flip_ci], "flips / honest-correct", {flip: "1"}), svg = $("flip");
   D.models.filter(m => D.floors[m.id]).forEach(m => { const [k, n] = D.floors[m.id]; el(svg, "line", {x1: L, x2: W - R, y1: f.y(k / n), y2: f.y(k / n), stroke: m.color, "stroke-width": 1.3, "stroke-dasharray": m.nocot ? "1 3" : "5 4"});
   });
   $("floors").innerHTML = "noise floor: " + D.models.filter(m => D.floors[m.id]).map(m => { const [k, n] = D.floors[m.id]; return `<span style="color:${m.color}">${esc(m.label.split(" (")[0])} ${k}/${n} = ${(k / n).toFixed(3)}</span>`; }).join(", ");
 }
 function drawMon() {
-  const svg = $("mon"), f = frame(svg, 125, [0, 20, 40, 60, 80, 100], t => t), pos = slots(f, D.arms, 2, true);
+  const svg = $("mon"), f = frame(svg, 105, [0, 20, 40, 60, 80, 100], t => t), pos = slots(f, D.arms, 2, true);
   D.arms.forEach((a, k) => D.models.forEach((m, i) => [["mon_ok", 1], ["mon_bad", 0]].forEach(([key, ok], j) => {
     if (!has(m, a) || m.nocot) return;
     const s = D.stats[m.id + "|" + a], v = s[key], [x, w] = pos(k, a, i, j);
     if (!v) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 9, fill: "#8d8c84"}, "0"); return; }
-    bar(svg, f, x, w - 1, v[0], v[0] - v[1], v[0] + v[1], m.color, !ok, `${v[0].toFixed(0)} (${v[2]})`,
+    bar(svg, f, x, w - 1, v[0], v[0] - v[1], v[0] + v[1], m.color, !ok,
         `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>${ok ? "correct" : "incorrect"} rows: mean ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n=${v[2]}` + (s.unscored ? `<br>unscored in this arm: ${s.unscored}` : ""), {model: m.id, arm: a, ok: String(ok)});
   })));
 }
-function drawVerb() { rateChart("verb", D.arms.filter(a => D.models.some(m => has(m, a) && D.stats[m.id + "|" + a].verb_n)), 1.25, s => [s.verb_k, s.verb_n, s.verb_ci], "verbalization judge YES / judged flips", {flip: "1"}, true); }
+function drawVerb() { rateChart("verb", D.arms.filter(a => D.models.some(m => has(m, a) && D.stats[m.id + "|" + a].verb_n)), 1.05, s => [s.verb_k, s.verb_n, s.verb_ci], "verbalization judge YES / judged flips", {flip: "1"}, true); }
 $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
 $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option value="${a}">${D.short[a]}</option>`).join("");
 const QIDS = [...new Set(D.samples.map(s => s.qid))].sort();
