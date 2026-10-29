@@ -235,7 +235,7 @@ async def main():
                 line += f"\n           sandbagged {c['sandbagged']}/{c['eligible']} (to named wrong {c['to_hint_wrong']}, other wrong {c['to_other_wrong']})  reverse flips {c['reverse_flips']}/{c['reverse_eligible']}  recall {c['recall_flagged']}/{c['recall_scored']} = {c['recall']:.2f} (CI {c['recall_ci'][0]:.2f}-{c['recall_ci'][1]:.2f})  verbalized {c['verbalized']}/{c['verbalized_judged']}  CoT tokens sandbagged {c['cot_tokens_sandbagged_mean']:.0f} (flagged {c['cot_tokens_flagged_mean']:.0f}, unflagged {c['cot_tokens_unflagged_mean']:.0f})"
             print(line)
     print(f"\njudge tokens in {n_in} out {n_out}, about ${summary['judge']['usd_est']:.2f} (reported ${judge.usd:.2f}); figure {fig_path}")
-    plot(summary, args.arms, args.judge_model, fig_path)
+    plot(summary, [m for m in args.arms if not m.startswith("grpo3")], args.judge_model, fig_path)  # grpo3 s100 is left out of sandbagging plots since 2026-10-29
 
 
 if __name__ == "__main__":

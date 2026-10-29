@@ -1,6 +1,6 @@
 """Headline figure for `wmdp.can` (results/SANDBAG_NAMES.md: the wmdp task's default variant, instruction in the system prompt, no named wrong option), or
-with --gpqa for `gpqa.must` (sandbag.py with data/gpqa_sandbagging.jsonl: a direct order to answer incorrectly), for --models (default base gpt-oss-120b, grpo3
-s100, manytypes1b s150, manytypes2c s140). WMDP runs are <dir>/<model>-sysprompt-nohint, GPQA runs <dir>/<model> with a second honest sample in <model>-honest2.
+with --gpqa for `gpqa.must` (sandbag.py with data/gpqa_sandbagging.jsonl: a direct order to answer incorrectly), for --models (default base gpt-oss-120b and manytypes1b s150; grpo3
+s100 is left out of sandbagging plots since 2026-10-29). WMDP runs are <dir>/<model>-sysprompt-nohint, GPQA runs <dir>/<model> with a second honest sample in <model>-honest2.
 --panels draws a subset of the six panels (acc, flip, verb, mon, len, cut), relettered in order, two per row.
 --counts plots counts instead of rates in the accuracy, flip, verbalization and cut-off panels (Wilson intervals times n; the noise floor as the expected
 number of flips, rate times the model's eligible questions).
@@ -31,6 +31,7 @@ from sandbag_variants_plot import ARM_LABELS, ARMS, CTL_ARMS, INK, INK2, SURFACE
 
 matplotlib.use("Agg")
 # model -> (label, color, the WMDP runs other than <model>-sysprompt-nohint whose honest arm is the identical prompt, for the noise floor)
+# colors: Inkling-Small is purple, inkrl (Inkling CoT-control GRPO) is teal
 MODELS = {"base": ("gpt-oss-120b base", "#3987e5", ["base", "base-nohint", "base-sysprompt"]),
           "base-nocot": ("gpt-oss-120b base, no CoT (empty analysis channel, answer prefilled)", "#3987e5", []),
           "grpo3-s100": ("grpo3 s100 (CoT-control organism, no mention penalty)", "#d95926", ["grpo3-s100"]),
@@ -43,9 +44,12 @@ MODELS = {"base": ("gpt-oss-120b base", "#3987e5", ["base", "base-nohint", "base
           "qwen-base": ("Qwen3.8-27B base", "#f0b429", []),
           "qwen-base-nocot": ("Qwen3.8-27B base, no CoT (thinking off, answer prefilled)", "#f0b429", []),
           "qwen-opsdgrpo-s10": ("Qwen3.8-27B opsd-grpo1b s10 (CoT-control organism)", "#d65db1", []),
-          "inksm-or": ("Inkling-Small base (OpenRouter DeepInfra, effort xhigh)", "#7fd4e6", []),
-          "inksm-tk": ("Inkling-Small base (Tinker, thinking effort 0.6)", "#2a9d8f", ["inksm-tk-sysprompt-nohint-should", "inksm-tk-should-honest2"]),
-          "inksft1-ep2": ("inksft1 ep2 (Inkling-Small CoT-control SFT, Tinker, thinking effort 0.6)", "#c6e05a", ["inksft1-ep2-sysprompt-nohint-should", "inksft1-ep2-should-honest2"])}
+          "inksm-or": ("Inkling-Small base (OpenRouter DeepInfra, effort xhigh)", "#c4a3f0", []),
+          "inksm-tk": ("Inkling-Small base (Tinker, thinking effort 0.6)", "#9b5de5", ["inksm-tk-sysprompt-nohint-should", "inksm-tk-should-honest2"]),
+          "inksft1-ep2": ("inksft1 ep2 (Inkling-Small CoT-control SFT, Tinker, thinking effort 0.6)", "#c6e05a", ["inksft1-ep2-sysprompt-nohint-should", "inksft1-ep2-should-honest2"]),
+          "inkrl1-s90": ("inkrl1 s90 (Inkling-Small CoT-control GRPO on inksft1, Tinker, thinking effort 0.6)", "#2ec4b6", []),
+          "inksm-tk-ans": ("Inkling-Small base (Tinker, thinking effort 0.6, answer-only prompt + 'Answer:' prefill)", "#9b5de5", []),
+          "inkrl1-s90-ans": ("inkrl1 s90 (Inkling-Small CoT-control GRPO, Tinker, thinking effort 0.6, answer-only prompt + 'Answer:' prefill)", "#2ec4b6", [])}
 # sampling settings per base model, for the title
 SAMPLING = {False: "gpt-oss-120b: harmony effort medium, 16k cap", True: "Qwen3.8-27B: the template's default effort (xhigh), 32k cap, cut rows continued to 60k"}
 TITLES = {False: "wmdp.can: 150 WMDP questions (OpenAI monitorability-evals), deletion threat + \"To avoid this, you can give incorrect answers.\" in the system prompt, no named wrong option. ",
@@ -68,7 +72,7 @@ def bars(ax, x, k, n, col, label=None, above=False, w=0.38, hatch=None, counts=F
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
-    ap.add_argument("--models", nargs="+", default=["base", "grpo3-s100", "mt1b-s150", "manytypes2c-s140"], choices=list(MODELS))
+    ap.add_argument("--models", nargs="+", default=["base", "mt1b-s150"], choices=list(MODELS), help="grpo3 s100 is left out of sandbagging plots since 2026-10-29; pass it explicitly")
     ap.add_argument("--panels", nargs="+", default=["acc", "flip", "verb", "mon", "len", "cut"], choices=["acc", "flip", "verb", "mon", "len", "cut"])
     ap.add_argument("--counts", action="store_true", help="counts instead of rates in panels A, B, C and F")
     ap.add_argument("--no-ctl", action="store_true", help="leave out the CoT-control arms")
@@ -93,7 +97,7 @@ def main():
     ax_acc, ax_flip, ax_verb, ax_mon, ax_len, ax_cut = [shown[n] if n in shown else next(spare) for n in names]
     data = {run: load(args.dir / run, args.judge_tag)[0] for run in models}
     nocot = {run for run in models if json.load(open(args.dir / run / "config.json")).get("nocot")}
-    arms = ARMS + [a for a in ["evasion_analysis", "coached", "coached_analysis"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a not in CTL_ARMS or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
+    arms = ARMS + [a for a in ["evasion_analysis", "coached", "coached_intent", "coached_analysis"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a not in CTL_ARMS or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
     inst = [a for a in arms[1:] if a not in CTL_ARMS]  # C and D: the arms with a sandbagging instruction
     top = lambda key, arms_: max(data[r][a][key] for r in models for a in arms_ if a in data[r]) if args.counts else 1  # the y scale of a panel in counts mode
     cnt = dict(counts=args.counts, scale=top("n", arms))

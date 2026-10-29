@@ -1,5 +1,5 @@
-"""Sweep for hintuse.py target items: re-measure base gpt-oss-120b accuracy, with and without a CoT, on the GPQA items whose 8-sample CoT accuracy in
-results/difficulty/gpqafull_base.jsonl (item_difficulty.py) is in --cot-range, no-CoT accuracy is at most --max-nocot of 24 and median CoT length at most
+"""Sweep for hintuse.py target items: re-measure base gpt-oss-120b accuracy, with and without a CoT, on the GPQA items whose 8-sample CoT correct count in
+results/difficulty/gpqafull_base.jsonl (item_difficulty.py) is one of --cot-counts, no-CoT accuracy is at most --max-nocot of 24 and median CoT length at most
 --max-tok. Prompts, sampling and parsing are hintuse.py's none and nocot arms (temperature 1, Tinker), --n samples each.
 
 Writes <out>/rows.jsonl (hintuse.py's row format plus `item`, so failed CoTs can be read per item; resumable) and <out>/candidates.jsonl, one row per
@@ -7,7 +7,7 @@ item: CoT and no-CoT accuracy and answer letters over the new samples, median Co
 subdomain, Diamond membership, expert validator accuracy (1.0 = both validators answered correctly), whether every option is a bare number (the model can
 then confuse "the answer is 2" with option B), the question, options, answer and the writer's explanation.
 
-    python hintuse_sweep.py --out ../results/hintuse_sweep
+    python hintuse_sweep.py --cot-counts 0 1 2 3 4 5 6 7 --out ../results/hintuse_sweep
 """
 
 import argparse
@@ -33,7 +33,7 @@ norm = lambda s: re.sub(r"\W+", " ", s.lower()).strip()[:200]
 
 async def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--cot-range", type=int, nargs=2, default=[1, 6], help="8-sample CoT correct count, inclusive")
+    ap.add_argument("--cot-counts", type=int, nargs="+", default=[1, 2, 3, 4, 5, 6], help="allowed 8-sample CoT correct counts")
     ap.add_argument("--max-nocot", type=int, default=8, help="of 24 no-CoT samples")
     ap.add_argument("--max-tok", type=float, default=6000)
     ap.add_argument("--n", type=int, default=32)
@@ -42,7 +42,7 @@ async def main():
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     screen = {r["item_idx"]: r for r in map(json.loads, open(RESULTS / "difficulty/gpqafull_base.jsonl"))}
-    sel = sorted(i for i, r in screen.items() if args.cot_range[0] <= r["cot_correct"] <= args.cot_range[1] and r["nocot_correct"] <= args.max_nocot and r["cot_tokens_median"] <= args.max_tok)
+    sel = sorted(i for i, r in screen.items() if r["cot_correct"] in args.cot_counts and r["nocot_correct"] <= args.max_nocot and r["cot_tokens_median"] <= args.max_tok)
     base = {r["item_idx"]: r for r in map(json.loads, open(args.gens)) if r["type"] == "baseline" and r["dataset"] == "gpqa" and r["item_idx"] in sel}
     args.out.mkdir(parents=True, exist_ok=True)
     json.dump(dict(vars(args), gens=str(args.gens), out=str(args.out), items=sel, temperature=1.0, top_p=1.0), open(args.out / "config.json", "w"), indent=1)
