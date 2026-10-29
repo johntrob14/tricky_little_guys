@@ -1,6 +1,6 @@
 """Interactive page for one hintuse.py case study: per model and arm, accuracy (Wilson 95%), mean CoT tokens (± SE), the judge's REFERENCES and
 USES_CONTENT YES rates (Wilson 95%; hintuse_judge.py, when judged.jsonl exists) and the answer letters; click a bar or a count to list those samples,
-click a sample to read its prompt, CoT and final answer (middle pane) and the judge's prompt, reasoning and reply (right pane). Layout and controls as
+a list column marks CoTs containing the word "hint"; click a sample to read its prompt, CoT and final answer (middle pane) and the judge's prompt, reasoning and reply (right pane). Layout and controls as
 sandbag_resample_html.py (resizable panes, sortable list, arrow keys, KaTeX toggle). Labels and colors from sandbag_headline.MODELS.
 
     python hintuse_html.py --dir ../results/case_studies/hintuse_q225 --out ../../../figures/hintuse_q225.html
@@ -8,6 +8,7 @@ sandbag_resample_html.py (resizable panes, sortable list, arrow keys, KaTeX togg
 
 import argparse
 import json
+import re
 import statistics
 from pathlib import Path
 
@@ -41,7 +42,7 @@ def main():
     for r in rows:
         j = r["j"] or {}
         samples.append(dict(model=r["model"], arm=r["arm"], i=r["sample"], answer=r["answer"], ok=r["ok"], finish=r["finish"], cot_tokens=r["cot_tokens"], cot=r["reasoning"], response=r["response"],
-                            refs=j.get("refs"), uses=j.get("uses"), reply=j.get("reply"), reasoning=j.get("reasoning")))
+                            refs=j.get("refs"), uses=j.get("uses"), kw=bool(re.search(r"(?i)\bhint", r["reasoning"])), reply=j.get("reply"), reasoning=j.get("reasoning")))
     for m in models:
         for a in arms:
             ra = [r for r in rows if r["model"] == m and r["arm"] == a]
@@ -194,9 +195,9 @@ function show() {
   wire($("view")); wire($("judge"));
   document.querySelectorAll("#view .sec-b.math, #judge .sec-b.math").forEach(math);
 }
-const COLS = [["model", "model"], ["arm", "arm"], ["i", "#"], ["answer", "ans"], ["tok", "CoT tok", 1], ["refs", "refs"], ["uses", "uses"]];
+const COLS = [["model", "model"], ["arm", "arm"], ["i", "#"], ["answer", "ans"], ["tok", "CoT tok", 1], ["refs", "refs"], ["uses", "uses"], ["kw", "\"hint\""]];
 const SORT = {model: s => D.models.findIndex(m => m.id === s.model), arm: s => D.arms.indexOf(s.arm), i: s => s.i, answer: s => s.answer ?? "~", tok: s => s.cot_tokens,
-              refs: s => s.refs == null ? -1 : +s.refs, uses: s => s.uses == null ? -1 : +s.uses};
+              refs: s => s.refs == null ? -1 : +s.refs, uses: s => s.uses == null ? -1 : +s.uses, kw: s => +s.kw};
 let sortBy = {k: "model", dir: 1};
 function render() {
   const v = Object.fromEntries(Object.entries(FILTERS).map(([k, id]) => [k, $(id).value]));
@@ -207,7 +208,7 @@ function render() {
   $("nshown").textContent = `${shown.length} shown`;
   $("list").innerHTML = `<tr>${COLS.map(([k, t, r]) => `<th data-k="${k}"${r ? ' style="text-align:right"' : ""} class="${sortBy.k === k ? (sortBy.dir > 0 ? "up" : "down") : ""}">${t}</th>`).join("")}</tr>`
     + shown.map(s => `<tr class="s" data-id="${sid(s)}"><td><span class="sw" style="background:${col[s.model].color}"></span>${esc(col[s.model].label.split(" (")[0])}</td><td>${s.arm}</td><td>${s.i}</td>`
-      + `<td class="${s.ok ? "ok" : "no"}">${s.answer ?? "none"} ${s.ok ? "✓" : "✗"}</td><td class="num">${s.cot_tokens}</td><td>${yn(s.refs)}</td><td>${yn(s.uses)}</td></tr>`).join("");
+      + `<td class="${s.ok ? "ok" : "no"}">${s.answer ?? "none"} ${s.ok ? "✓" : "✗"}</td><td class="num">${s.cot_tokens}</td><td>${yn(s.refs)}</td><td>${yn(s.uses)}</td><td>${s.arm.startsWith("nocot") ? "" : s.kw ? "yes" : ""}</td></tr>`).join("");
   $("list").querySelectorAll("tr.s").forEach(tr => tr.addEventListener("click", () => { sel = tr.dataset.id; show(); }));
   $("list").querySelectorAll("th").forEach(th => th.addEventListener("click", () => { sortBy = {k: th.dataset.k, dir: sortBy.k === th.dataset.k ? -sortBy.dir : 1}; render(); }));
   if (!shown.some(x => sid(x) === sel)) sel = shown.length ? sid(shown[0]) : null;
