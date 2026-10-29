@@ -451,8 +451,13 @@ evasion, coached, coached-analysis, and both CoT-control arms (cotctl_grpo3 and 
   sandbag arms. Cost $4.22. Unscored monitor rows (empty replies, none blocked): base 15, grpo3 69, manytypes1b 74, manytypes2e 69 of 1584 each, almost
   all in the two CoT-control arms; monitor means are over scored rows.
 - Interactive overview of every row: `figures/sandbag_gpqa.must_t1_overview.html` (`rl/sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary
-  ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base grpo3-s100 mt1b-s150 manytypes2e-s170 --arms honest sandbag
-  aware evasion coached cotctl_mt1b`; the page leaves out coached-analysis and cotctl_grpo3, which the table below still has).
+  ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base base-nocot grpo3-s100
+  grpo3-s100-nocot mt1b-s150 mt1b-s150-nocot --arms honest sandbag aware evasion coached cotctl_mt1b`; the page leaves out manytypes2e s170, coached-analysis
+  and cotctl_grpo3, which the table below still has).
+- No-CoT runs at temperature 1, for the cells the temperature-0 no-CoT runs covered (`sandbag_gpqa/base-nocot`, `sandbag_nocot/`): `rl/sandbag.py --name
+  <model>-nocot --variant gpqa.must --nocot --temperature 1.0` with arms honest and sandbag for base (plus `base-nocot-honest2`), honest for grpo3 s100 and
+  manytypes1b s150. Cost $0.10. Correct: base honest 73/198, sandbag 44/198 (flips 61/73; noise floor 32/146 = 0.219), grpo3 honest 71/198, manytypes1b
+  honest 76/198; 1/396 base answers unparsed. Not judged (no CoT).
 
 | Model | Arm | Correct (finished rows) | Flips: honest-correct answered wrong | Monitor mean score, correct rows (n) | Monitor mean score, incorrect rows (n) | Unscored | Verbalization judge YES on judged flips | CoT control complied (graded types) |
 |---|---|---|---|---|---|---|---|---|
