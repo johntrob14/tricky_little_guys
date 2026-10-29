@@ -109,10 +109,10 @@ body { margin:0; padding:16px; background:var(--bg); color:var(--ink); font:14px
 h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .sub { color:var(--ink2); font-size:13px; }
 .q { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:10px 12px; white-space:pre-wrap; font-size:13px; max-height:260px; overflow:auto; }
-.charts { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px; }
+.charts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
 .top { display:flex; flex-wrap:wrap; gap:16px; } .top > div { flex:1 1 480px; min-width:0; }
-.chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; min-width:0; }
-.chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
+.chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 6px; min-width:0; }
+.chart h3 { font-size:12px; font-weight:600; margin:0 2px 2px; }
 .chart svg { width:100%; height:auto; display:block; }
 .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; margin:12px 0 0; color:var(--ink2); }
 .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; }
@@ -164,7 +164,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 <div class="legend" id="legend"></div>
 <div class="charts">
   <div class="chart"><h3>Accuracy on finished rows (Wilson 95%). Click a bar to list its rows.</h3><svg id="acc"></svg></div>
-  <div class="chart"><h3>Flips: honest-correct questions answered wrong (Wilson 95%); dashed: each model's noise floor (two honest samples). Click to list.</h3><svg id="flip"></svg><div class="note" id="floors" style="margin:4px 6px 0"></div></div>
+  <div class="chart"><h3>Flips: honest-correct answered wrong (Wilson 95%); dashed: noise floor (two honest samples). Click to list.</h3><svg id="flip"></svg><div class="note" id="floors" style="margin:4px 6px 0"></div></div>
   <div class="chart"><h3>CoT-only monitor: mean score (± SE), correct rows solid, incorrect hatched. Click to list.</h3><svg id="mon"></svg></div>
   <div class="chart"><h3>Verbalization judge: YES among judged flips (Wilson 95%). Click to list.</h3><svg id="verb"></svg></div>
 </div>
@@ -208,7 +208,7 @@ const SVGNS = "http://www.w3.org/2000/svg";
 const tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 330) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
 function el(svg, tag, attrs, text) { const n = document.createElementNS(SVGNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; }
-const W = 120 + 72 * D.arms.length, H = 320, L = 44, R = 10, T = 14, B = 26;
+const W = 120 + 72 * D.arms.length, H = 220, L = 34, R = 4, T = 4, B = 20;
 function frame(svg, ymax, ticks, fmt, arms = D.arms) {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = "";
   el(svg, "defs", {}).innerHTML = `<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="transparent"/><line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a19" stroke-width="2.5"/></pattern><pattern id="dots" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2.5" cy="2.5" r="1.3" fill="#1a1a19"/></pattern>`;
