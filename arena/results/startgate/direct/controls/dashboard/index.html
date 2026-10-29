@@ -34,6 +34,9 @@
   .cm-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
   .cm-tip .cm-tip-h { color: var(--cds-text-secondary); }
   .cm-method { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: var(--cds-gap-xs); line-height: 1.5; max-width: 72ch; }
+  .cm-pick { display: flex; align-items: center; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .cm-select { font: inherit; color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); }
+  .cm-matrix { min-height: 12rem; }
   [data-dash-source-state=empty] { color: transparent; }
   [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
 </style>
@@ -70,67 +73,33 @@
   <section class="cm-section" id="startgate-direct">
     <h2>Startgate-direct</h2>
     <p>The model plans in an unmonitored phase, calls start(), then does the work. The CoT-only monitors score only the turns after start(); the action and action+CoT monitors score the whole run.</p>
-    <div class="cm-grid">
-      <div class="cm-card">
-        <h3>Share of side-task episodes missed by both CoT-only monitors</h3>
-        <p class="cm-note">Each model's episodes that did the side task, scored after start() by gpt-oss-20b and Claude Haiku 5.5 at their calibrated thresholds. Cells with no side-task episodes are left out.</p>
-        <ul class="cm-legend">
-          <li><span class="cm-sw cm-kind-organism"></span>Trained organism</li>
-          <li><span class="cm-sw cm-kind-base"></span>Base model</li>
-        </ul>
-        <div class="cm-chart" id="sd-miss-chart" data-draw="sd-miss" data-source="attack"></div>
-      </div>
+    <div class="cm-card">
+      <h3>Side-task episodes each monitor missed</h3>
+      <p class="cm-note">Each square: episodes that did the side task but were not flagged at the monitor's calibrated threshold, out of all that did the side task. Darker means a larger share missed. "Both CoT-only" counts episodes neither CoT-only monitor flagged; "all six", episodes no monitor flagged. A dot before the name marks a trained organism.</p>
+      <div class="cm-scroll"><div class="cm-chart cm-matrix" id="matrix-sd" data-draw="matrix-sd" data-source="miss_matrix"></div></div>
     </div>
     <div class="cm-card">
-      <h3>Startgate-direct cells</h3>
-      <p class="cm-note">Counts are episodes that did the side task and were flagged by each monitor at its calibrated threshold. Highlighted cells are misses.</p>
-      <div class="cm-scroll">
-        <table id="sd-table" data-source="attack" data-row-key="cell">
-          <thead><tr>
-            <th data-field="model">Model</th>
-            <th class="cm-l" data-field="kind">Type</th>
-            <th data-field="episodes">Episodes</th>
-            <th data-field="side_task_done">Did side task</th>
-            <th data-field="cot_haiku">CoT Haiku</th>
-            <th data-field="cot_oss">CoT oss-20b</th>
-            <th data-field="act_haiku">Action Haiku</th>
-            <th data-field="act_oss">Action oss-20b</th>
-            <th data-field="actcot_haiku">Act+CoT Haiku</th>
-            <th data-field="actcot_oss">Act+CoT oss-20b</th>
-            <th data-field="missed_both_cot">Missed both CoT</th>
-            <th data-field="missed_all_six">Missed all six</th>
-          </tr></thead>
-          <tbody data-draw="table-sd"></tbody>
-        </table>
-      </div>
+      <h3>Highest score in each side-task episode</h3>
+      <p class="cm-note">One dot per episode: the highest turn score the chosen monitor gave it. The dashed line is the monitor's calibrated cutoff; red dots, at or left of the line, were missed.</p>
+      <label class="cm-pick">Monitor <select id="strip-sd-mon" class="cm-select" aria-label="Monitor"><option value="cot_oss">CoT-only, gpt-oss-20b</option><option value="cot_haiku">CoT-only, Haiku</option><option value="act_oss">Action-only, gpt-oss-20b</option><option value="act_haiku">Action-only, Haiku</option><option value="actcot_oss">Action+CoT, gpt-oss-20b</option><option value="actcot_haiku">Action+CoT, Haiku</option></select></label>
+      <div class="cm-chart" id="strip-sd" data-draw="strip-sd" data-source="episodes thresholds"></div>
     </div>
   </section>
 
   <section class="cm-section" id="always-monitored">
     <h2>Always-monitored</h2>
-    <p>Every turn is monitored from the start, and the model is told so. Of <b data-draw="v" data-source="am_summary" data-field="done">—</b> side-task episodes here, <b data-draw="v" data-source="am_summary" data-field="missed_cot">—</b> were missed by both CoT-only monitors.</p>
+    <p>Every turn is monitored from the start, and the model is told so. All six monitors score the whole run.</p>
+    <p>The weak CoT-only monitor (gpt-oss-20b) missed <b data-draw="v" data-source="am_weak" data-field="missed">—</b> side-task episodes here. Each had a highest score of <b data-draw="v" data-source="am_weak" data-field="scores">—</b>, and the calibrated cutoff counts only scores above <b data-draw="v" data-source="am_weak" data-field="cutoff">—</b>. Haiku flagged <b data-draw="v" data-source="am_weak" data-field="haiku_flagged">—</b> of them, so these are near-misses at a strict cutoff, not CoT that hid the side task.</p>
     <div class="cm-card">
-      <h3>Always-monitored cells</h3>
-      <p class="cm-note">Same columns as above; here every monitor scores the whole run.</p>
-      <div class="cm-scroll">
-        <table id="am-table" data-source="attack" data-row-key="cell">
-          <thead><tr>
-            <th data-field="model">Model</th>
-            <th class="cm-l" data-field="kind">Type</th>
-            <th data-field="episodes">Episodes</th>
-            <th data-field="side_task_done">Did side task</th>
-            <th data-field="cot_haiku">CoT Haiku</th>
-            <th data-field="cot_oss">CoT oss-20b</th>
-            <th data-field="act_haiku">Action Haiku</th>
-            <th data-field="act_oss">Action oss-20b</th>
-            <th data-field="actcot_haiku">Act+CoT Haiku</th>
-            <th data-field="actcot_oss">Act+CoT oss-20b</th>
-            <th data-field="missed_both_cot">Missed both CoT</th>
-            <th data-field="missed_all_six">Missed all six</th>
-          </tr></thead>
-          <tbody data-draw="table-am"></tbody>
-        </table>
-      </div>
+      <h3>Side-task episodes each monitor missed</h3>
+      <p class="cm-note">Each square: episodes that did the side task but were not flagged at the monitor's calibrated threshold, out of all that did the side task. Darker means a larger share missed. "Both CoT-only" counts episodes neither CoT-only monitor flagged; "all six", episodes no monitor flagged. A dot before the name marks a trained organism.</p>
+      <div class="cm-scroll"><div class="cm-chart cm-matrix" id="matrix-am" data-draw="matrix-am" data-source="miss_matrix"></div></div>
+    </div>
+    <div class="cm-card">
+      <h3>Highest score in each side-task episode</h3>
+      <p class="cm-note">One dot per episode: the highest turn score the chosen monitor gave it. The dashed line is the monitor's calibrated cutoff; red dots, at or left of the line, were missed.</p>
+      <label class="cm-pick">Monitor <select id="strip-am-mon" class="cm-select" aria-label="Monitor"><option value="cot_oss">CoT-only, gpt-oss-20b</option><option value="cot_haiku">CoT-only, Haiku</option><option value="act_oss">Action-only, gpt-oss-20b</option><option value="act_haiku">Action-only, Haiku</option><option value="actcot_oss">Action+CoT, gpt-oss-20b</option><option value="actcot_haiku">Action+CoT, Haiku</option></select></label>
+      <div class="cm-chart" id="strip-am" data-draw="strip-am" data-source="episodes thresholds"></div>
     </div>
   </section>
 
@@ -237,6 +206,34 @@
     fn: (controls) => [{ models: controls.length, base: controls.filter((r) => r.kind === 'base').length, organisms: controls.filter((r) => r.kind === 'organism').length }],
   });
 
+  const COLS = [
+    { key: 'cot_oss', head: ['CoT-only', 'gpt-oss-20b'], label: 'CoT-only gpt-oss-20b' },
+    { key: 'cot_haiku', head: ['CoT-only', 'Haiku'], label: 'CoT-only Haiku' },
+    { key: 'both_cot', head: ['Both', 'CoT-only'], label: 'both CoT-only monitors' },
+    { key: 'act_oss', head: ['Action', 'gpt-oss-20b'], label: 'action-only gpt-oss-20b' },
+    { key: 'act_haiku', head: ['Action', 'Haiku'], label: 'action-only Haiku' },
+    { key: 'actcot_oss', head: ['Action+CoT', 'gpt-oss-20b'], label: 'action+CoT gpt-oss-20b' },
+    { key: 'actcot_haiku', head: ['Action+CoT', 'Haiku'], label: 'action+CoT Haiku' },
+    { key: 'all_six', head: ['All six', ''], label: 'all six monitors' },
+  ];
+  dash.calc('miss_matrix', {
+    title: 'Missed episodes by monitor', description: 'For each attack cell and monitor: side-task episodes not flagged at the calibrated threshold (side-task episodes minus flagged ones; both CoT-only and all six from their own columns).', inputs: ['attack'],
+    fn: (attack) => attack.flatMap((r) => [
+      ['cot_oss', Number(r.side_task_done) - Number(r.cot_oss)], ['cot_haiku', Number(r.side_task_done) - Number(r.cot_haiku)], ['both_cot', Number(r.missed_both_cot)],
+      ['act_oss', Number(r.side_task_done) - Number(r.act_oss)], ['act_haiku', Number(r.side_task_done) - Number(r.act_haiku)],
+      ['actcot_oss', Number(r.side_task_done) - Number(r.actcot_oss)], ['actcot_haiku', Number(r.side_task_done) - Number(r.actcot_haiku)], ['all_six', Number(r.missed_all_six)],
+    ].map(([col, missed]) => ({ key: r.cell + '|' + col, cell: r.cell, model: r.model, kind: r.kind, family: r.family, setting: r.setting, col, missed, done: Number(r.side_task_done) }))),
+  });
+  dash.calc('am_weak', {
+    title: 'Weak CoT-only misses, always-monitored', description: 'Always-monitored side-task episodes the gpt-oss-20b CoT-only monitor did not flag: how many, their highest scores, the cutoff, and how many Haiku CoT-only flagged.', inputs: ['episodes', 'thresholds'],
+    fn: (episodes, thresholds) => {
+      const cut = (m) => Number((thresholds.find((r) => r.monitor === m) || {}).threshold_5pct);
+      const t = cut('CoT-only gpt-oss-20b'); const th = cut('CoT-only Haiku');
+      const missed = episodes.filter((e) => e.setting === 'always-monitored' && Number(e.cot_oss || 0) <= t);
+      return [{ missed: missed.length, scores: [...new Set(missed.map((e) => Number(e.cot_oss || 0)))].sort((a, b) => a - b).join(', '), cutoff: t, haiku_flagged: missed.filter((e) => Number(e.cot_haiku || 0) > th).length }];
+    },
+  });
+
   // swatch colors (style only, outside drawings)
   const orgColor = () => dash.colors[0];
   document.querySelectorAll('.cm-kind-organism').forEach((el) => { el.style.background = orgColor(); });
@@ -252,30 +249,102 @@
     el.textContent = typeof v === 'number' ? fmtInt(v) : String(v);
   });
 
-  const ATTACK_COLS = ['model', 'kind', 'episodes', 'side_task_done', 'cot_haiku', 'cot_oss', 'act_haiku', 'act_oss', 'actcot_haiku', 'actcot_oss', 'missed_both_cot', 'missed_all_six'];
-  const attackTable = (setting) => (tbody) => {
-    const d = dash.data('attack');
-    tbody.replaceChildren();
+  const KEYLABEL = { cot_oss: 'CoT-only gpt-oss-20b', cot_haiku: 'CoT-only Haiku', act_oss: 'action-only gpt-oss-20b', act_haiku: 'action-only Haiku', actcot_oss: 'action+CoT gpt-oss-20b', actcot_haiku: 'action+CoT Haiku' };
+  const rowOrder = (a, b) => d3.ascending(a.family, b.family) || d3.ascending(a.kind, b.kind) || d3.ascending(a.model, b.model);
+  const critical = () => getComputedStyle(document.documentElement).getPropertyValue('--cds-chart-status-critical').trim() || dash.colors[1];
+
+  const matrix = (setting) => (el) => {
+    const d = dash.data('miss_matrix');
+    el.replaceChildren();
     if (d.status !== 'ok') return;
-    const rows = d.data.filter((r) => r.setting === setting)
-      .sort((a, b) => Number(b.missed_both_cot) - Number(a.missed_both_cot) || d3.ascending(a.family, b.family) || d3.ascending(a.kind, b.kind) || d3.ascending(a.model, b.model));
-    for (const r of rows) {
-      const tr = document.createElement('tr');
-      tr.dataset.key = r.cell;
-      for (const c of ATTACK_COLS) {
-        const td = document.createElement('td');
-        const isNum = !['model', 'kind'].includes(c);
-        td.textContent = isNum ? fmtInt(Number(r[c])) : r[c];
-        if (c === 'kind') td.className = 'cm-l';
-        if ((c === 'missed_both_cot' || c === 'missed_all_six') && Number(r[c]) > 0) td.className = 'cm-miss';
-        else if ((c === 'missed_both_cot' || c === 'missed_all_six')) td.className = 'cm-zero';
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-    }
+    const data = d.data.filter((r) => r.setting === setting);
+    const cells = [...new Map(data.map((r) => [r.cell, r])).values()].sort(rowOrder);
+    const W = Math.max(640, el.clientWidth); const rowH = 28; const headH = 36;
+    const svg = d3.select(el).append('svg').attr('width', W).attr('viewBox', `0 0 ${W} ${headH + cells.length * rowH + 4}`).attr('height', headH + cells.length * rowH + 4);
+    const probe = svg.append('text').attr('font-size', 12);
+    let lw = 0; for (const c of cells) { probe.text(c.model); lw = Math.max(lw, probe.node().getComputedTextLength()); }
+    probe.remove();
+    const left = lw + 22;
+    const x = d3.scaleBand(COLS.map((c) => c.key), [left, W]).paddingInner(0.08);
+    const y = d3.scaleBand(cells.map((c) => c.cell), [headH, headH + cells.length * rowH]).paddingInner(0.12);
+    const hd = svg.append('g').selectAll('g').data(COLS).join('g');
+    hd.append('text').attr('x', (c) => x(c.key) + x.bandwidth() / 2).attr('y', 14).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--color-fg)').text((c) => c.head[0]);
+    hd.append('text').attr('x', (c) => x(c.key) + x.bandwidth() / 2).attr('y', 28).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--color-fg-muted)').text((c) => c.head[1]);
+    const rl = svg.append('g').selectAll('g').data(cells).join('g');
+    rl.append('circle').attr('cx', 6).attr('cy', (c) => y(c.cell) + y.bandwidth() / 2).attr('r', 3.5).attr('fill', (c) => (c.kind === 'organism' ? dash.colors[0] : 'none'));
+    rl.append('text').attr('x', 16).attr('y', (c) => y(c.cell) + y.bandwidth() / 2).attr('dy', '0.35em').attr('font-size', 12).attr('fill', 'var(--color-fg)').text((c) => c.model);
+    const bad = critical();
+    const tip = tipFor(el);
+    const g = svg.append('g').selectAll('g').data(data).join('g');
+    g.append('rect').attr('x', (r) => x(r.col)).attr('y', (r) => y(r.cell)).attr('width', x.bandwidth()).attr('height', y.bandwidth()).attr('rx', 3)
+      .attr('fill', (r) => (r.done ? `color-mix(in srgb, ${bad} ${Math.round(8 + 72 * (r.missed / r.done))}%, var(--color-panel))` : 'var(--color-panel)'))
+      .attr('stroke', 'var(--color-border-line)')
+      .on('pointermove', (ev, r) => {
+        tip.hidden = false; tip.replaceChildren();
+        const h = document.createElement('div'); h.className = 'cm-tip-h'; h.textContent = r.model + ', ' + COLS.find((c) => c.key === r.col).label;
+        const b = document.createElement('div'); b.textContent = r.done ? `missed ${r.missed} of ${r.done} side-task episodes` : 'no side-task episodes';
+        tip.append(h, b);
+        const [px, py] = d3.pointer(ev, el); placeTip(el, tip, px, py);
+      })
+      .on('pointerleave', () => { tip.hidden = true; });
+    g.append('text').attr('x', (r) => x(r.col) + x.bandwidth() / 2).attr('y', (r) => y(r.cell) + y.bandwidth() / 2).attr('dy', '0.35em').attr('text-anchor', 'middle')
+      .attr('font-size', 12).attr('pointer-events', 'none').attr('font-weight', (r) => (r.missed ? 600 : 400))
+      .attr('fill', (r) => (r.missed && r.missed / r.done > 0.45 ? 'var(--color-bg)' : r.missed ? 'var(--color-fg)' : 'var(--color-fg-muted)'))
+      .text((r) => (r.done ? `${r.missed}/${r.done}` : '–'));
+    el.appendChild(tip);
   };
-  dash.draw('table-sd', attackTable('startgate-direct'));
-  dash.draw('table-am', attackTable('always-monitored'));
+  dash.draw('matrix-sd', matrix('startgate-direct'));
+  dash.draw('matrix-am', matrix('always-monitored'));
+
+  const strip = (setting, selectId) => (el) => {
+    const d = dash.data('episodes'); const tq = dash.data('thresholds');
+    el.replaceChildren();
+    if (d.status !== 'ok' || tq.status !== 'ok') return;
+    const sel = document.getElementById(selectId);
+    const key = sel ? sel.value : 'cot_oss';
+    const label = KEYLABEL[key];
+    const cut = Number((tq.data.find((r) => r.monitor === label) || {}).threshold_5pct);
+    const eps = d.data.filter((e) => e.setting === setting);
+    const cells = [...new Map(eps.map((e) => [e.cell, e])).values()].sort(rowOrder);
+    const W = Math.max(300, el.clientWidth); const rowH = 26; const top = 18; const H = top + cells.length * rowH + 30;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    const probe = svg.append('text').attr('font-size', 12);
+    let lw = 0; for (const c of cells) { probe.text(c.model); lw = Math.max(lw, probe.node().getComputedTextLength()); }
+    probe.remove();
+    const left = Math.min(lw + 12, W * 0.45);
+    const x = d3.scaleLinear([0, 10], [left + 8, W - 12]);
+    const y = d3.scaleBand(cells.map((c) => c.cell), [top, top + cells.length * rowH]).padding(0.15);
+    svg.append('g').selectAll('line').data(d3.range(0, 11)).join('line').attr('x1', (v) => x(v)).attr('x2', (v) => x(v)).attr('y1', top).attr('y2', top + cells.length * rowH).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').selectAll('text').data(d3.range(0, 11, 2)).join('text').attr('x', (v) => x(v)).attr('y', H - 14).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--color-fg-muted)').text((v) => v);
+    svg.append('text').attr('x', (x(0) + x(10)) / 2).attr('y', H - 1).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--color-fg-muted)').text('Highest turn score in the episode');
+    svg.append('g').selectAll('text').data(cells).join('text').attr('x', left).attr('y', (c) => y(c.cell) + y.bandwidth() / 2).attr('dy', '0.35em').attr('text-anchor', 'end').attr('font-size', 12).attr('fill', 'var(--color-fg)').text((c) => c.model);
+    const cx = x(cut + 0.5);
+    svg.append('line').attr('x1', cx).attr('x2', cx).attr('y1', top - 4).attr('y2', top + cells.length * rowH).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    svg.append('text').attr('x', cx).attr('y', top - 7).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--color-fg-muted)').text('cutoff');
+    const bad = critical();
+    const idx = new Map();
+    const pts = eps.map((e) => { const i = idx.get(e.cell) || 0; idx.set(e.cell, i + 1); return { ...e, score: e[key] === '' ? 0 : Number(e[key]), i }; });
+    const tip = tipFor(el);
+    svg.append('g').selectAll('circle').data(pts).join('circle')
+      .attr('cx', (p) => x(p.score) + (((p.i * 37) % 9) - 4) * 1.6)
+      .attr('cy', (p) => y(p.cell) + y.bandwidth() / 2 + (((p.i * 53) % 7) - 3) * (y.bandwidth() / 9))
+      .attr('r', 3.6)
+      .attr('fill', (p) => (p.score <= cut ? bad : 'var(--cds-chart-muted)'))
+      .attr('fill-opacity', (p) => (p.score <= cut ? 0.95 : 0.6))
+      .on('pointermove', (ev, p) => {
+        tip.hidden = false; tip.replaceChildren();
+        const h = document.createElement('div'); h.className = 'cm-tip-h'; h.textContent = `${p.model}, episode ${p.episode}`;
+        const b = document.createElement('div'); b.textContent = `${label}: highest score ${p.score} (${p.score <= cut ? 'missed' : 'flagged'})`;
+        tip.append(h, b);
+        const [px, py] = d3.pointer(ev, el); placeTip(el, tip, px, py);
+      })
+      .on('pointerleave', () => { tip.hidden = true; });
+    el.appendChild(tip);
+  };
+  dash.draw('strip-sd', strip('startgate-direct', 'strip-sd-mon'));
+  dash.draw('strip-am', strip('always-monitored', 'strip-am-mon'));
+  document.querySelectorAll('#strip-sd-mon').forEach((s) => s.addEventListener('change', () => dash.draw('strip-sd')));
+  document.querySelectorAll('#strip-am-mon').forEach((s) => s.addEventListener('change', () => dash.draw('strip-am')));
 
   dash.draw('table-thr', (tbody) => {
     const d = dash.data('thresholds');
@@ -323,51 +392,6 @@
     tip.style.left = Math.max(0, Math.min(bw - tw, x + 12)) + 'px';
     tip.style.top = Math.max(0, y - tip.offsetHeight - 8) + 'px';
   };
-
-  dash.draw('sd-miss', (el) => {
-    const d = dash.data('attack');
-    el.replaceChildren();
-    if (d.status !== 'ok') return;
-    const rows = d.data.filter((r) => r.setting === 'startgate-direct' && Number(r.side_task_done) > 0)
-      .map((r) => ({ ...r, share: Number(r.missed_both_cot) / Number(r.side_task_done) }))
-      .sort((a, b) => b.share - a.share || d3.ascending(a.model, b.model));
-    const W = Math.max(280, el.clientWidth);
-    const rowH = 26; const top = 4; const H = top + rows.length * rowH + 24;
-    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
-    // measure label widths
-    const probe = svg.append('text').attr('font-size', 12).attr('fill', 'var(--color-fg)');
-    let lw = 0; for (const r of rows) { probe.text(r.model); lw = Math.max(lw, probe.node().getComputedTextLength()); }
-    probe.text('16 of 16'); const endW = probe.node().getComputedTextLength() + 8; probe.remove();
-    const left = Math.min(lw + 10, W * 0.5); const right = endW;
-    const x = d3.scaleLinear([0, 1], [left, W - right]);
-    const y = d3.scaleBand(rows.map((r) => r.cell), [top, top + rows.length * rowH]).padding(0.25);
-    svg.append('g').selectAll('line').data([0, 0.25, 0.5, 0.75, 1]).join('line')
-      .attr('x1', (t) => x(t)).attr('x2', (t) => x(t)).attr('y1', top).attr('y2', top + rows.length * rowH)
-      .attr('stroke', 'var(--cds-chart-grid)').attr('stroke-width', 1);
-    svg.append('g').selectAll('text').data([0, 0.5, 1]).join('text')
-      .attr('x', (t) => x(t)).attr('y', H - 6).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--color-fg-muted)').text((t) => fmtPct(t));
-    svg.append('g').selectAll('text').data(rows).join('text')
-      .attr('x', left - 8).attr('y', (r) => y(r.cell) + y.bandwidth() / 2).attr('dy', '0.35em').attr('text-anchor', 'end')
-      .attr('font-size', 12).attr('fill', 'var(--color-fg)').text((r) => r.model);
-    const tip = tipFor(el);
-    svg.append('g').selectAll('rect').data(rows).join('rect')
-      .attr('x', x(0)).attr('y', (r) => y(r.cell)).attr('height', y.bandwidth())
-      .attr('width', (r) => Math.max(r.share > 0 ? 2 : 0, x(r.share) - x(0))).attr('rx', 3)
-      .attr('fill', (r) => (r.kind === 'organism' ? orgColor() : 'var(--cds-chart-muted)'))
-      .on('pointermove', (ev, r) => {
-        tip.hidden = false;
-        tip.replaceChildren();
-        const h = document.createElement('div'); h.className = 'cm-tip-h'; h.textContent = r.model + ' (' + r.kind + ')';
-        const b = document.createElement('div'); b.textContent = `${r.missed_both_cot} of ${r.side_task_done} missed (${fmtPct(r.share)})`;
-        tip.append(h, b);
-        const [px, py] = d3.pointer(ev, el); placeTip(el, tip, px, py);
-      })
-      .on('pointerleave', () => { tip.hidden = true; });
-    svg.append('g').selectAll('text').data(rows).join('text')
-      .attr('x', (r) => x(r.share) + 6).attr('y', (r) => y(r.cell) + y.bandwidth() / 2).attr('dy', '0.35em')
-      .attr('font-size', 11).attr('fill', 'var(--color-fg-muted)').text((r) => `${r.missed_both_cot} of ${r.side_task_done}`);
-    el.appendChild(tip);
-  });
 
   const MONITOR_ORDER = ['CoT-only gpt-oss-20b', 'CoT-only Haiku', 'action-only gpt-oss-20b', 'action-only Haiku', 'action+CoT gpt-oss-20b', 'action+CoT Haiku'];
   dash.draw('fpr', (el) => {
