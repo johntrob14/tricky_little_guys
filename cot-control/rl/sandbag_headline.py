@@ -39,6 +39,8 @@ MODELS = {"base": ("gpt-oss-120b base", "#3987e5", ["base", "base-nohint", "base
           "manytypes2c-s140": ("manytypes2c s140", "#a78bfa", ["manytypes2c-s140"]),
           "manytypes2d-s140": ("manytypes2d s140", "#c98500", ["manytypes2d-s140"]),
           "manytypes2e-s170": ("manytypes2e s170", "#e87ba4", ["manytypes2e-s170"]),
+          "nocotrl1-s60": ("nocotrl1 s60 (output-only GRPO with the CoT off)", "#e0a030", []),
+          "nocotrl1-s80": ("nocotrl1 s80 (output-only GRPO with the CoT off)", "#b8732a", []),
           "merge6": ("merge6 (mean of six CoT-control LoRAs, vLLM)", "#9085e9", ["merge6-sysprompt-nohint-should", "merge6-should-honest2"]),
           "base-vllm": ("gpt-oss-120b base (vLLM)", "#a8a7a1", ["base-vllm-sysprompt-nohint-should", "base-vllm-should-honest2"]),
           "qwen-base": ("Qwen3.8-27B base", "#f0b429", []),
