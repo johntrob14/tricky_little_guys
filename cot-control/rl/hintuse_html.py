@@ -66,7 +66,7 @@ def page_data(d: Path) -> dict:
 
 
 def set_page_data(d: Path) -> dict:
-    """A hintuse_set.py directory: the page computes the charts' stats in setStats over the chosen item subset (all items, or the hardest K by base no-hint accuracy): means over items of per-item rates, CoT tokens the mean of per-item means, ± SE across items."""
+    """A hintuse_set.py directory: the page computes the charts' stats in setStats over the chosen item subset (all items, or the 8 with the largest base hint uplift, hint minus no-hint CoT accuracy): means over items of per-item rates, CoT tokens the mean of per-item means, ± SE across items."""
     cfg = json.load(open(d / "config.json"))
     jpath = d / "judged.jsonl"
     judged = {(r["model"], r["item"], r["arm"], r["sample"]): r for r in map(json.loads, open(jpath))} if jpath.exists() else {}
@@ -173,7 +173,7 @@ function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
   g.addEventListener("mousemove", e => showTip(e, tipHtml)); g.addEventListener("mouseleave", () => tip.style.display = "none");
   g.addEventListener("click", () => setFilters(filt));
 }
-const SETS = [["all", 99], ["hardest 10 by base no-hint accuracy", 10], ["hardest 8 by base no-hint accuracy", 8]];
+const SETS = [["all", 99], ["8 largest base hint uplifts (hint minus no-hint CoT accuracy)", 8]];
 let SET = [];
 function setStats(items) {  // multi mode: charts' stats over `items`, means over items of per-item rates with 1.96 SE across items
   SET = items; D.stats = {};
@@ -189,8 +189,8 @@ function setStats(items) {  // multi mode: charts' stats over `items`, means ove
   }
 }
 function chooseSet() {
-  const K = SETS[+$("f-set").value][1], acc = Object.fromEntries(D.item_table.map(r => [r.item, r.cells["base|none"][0] / (r.cells["base|none"][1] || 1)]));
-  setStats(D.items.filter(i => true).sort((x, y) => acc[x] - acc[y]).slice(0, K).sort((x, y) => x - y));
+  const K = SETS[+$("f-set").value][1], acc = (r, a) => r.cells["base|" + a][0] / (r.cells["base|" + a][1] || 1), up = Object.fromEntries(D.item_table.map(r => [r.item, acc(r, "hint") - acc(r, "none")]));
+  setStats(D.items.slice().sort((x, y) => up[y] - up[x]).slice(0, K).sort((x, y) => x - y));
   $("acc-h").textContent = `Accuracy, mean over ${SET.length} items (95%: 1.96 SE across items). Click a bar to list its samples.`;
   $("judgec-h").textContent = `Mentions of the hint, mean over ${SET.length} items (95%: 1.96 SE across items). Click to list.`;
   drawAcc(); drawJudge(); drawTok(); drawCounts();
