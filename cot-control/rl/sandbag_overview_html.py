@@ -16,7 +16,7 @@ import statistics
 from pathlib import Path
 
 from hintverb_judge import wilson
-from sandbag import ALL_ARMS, CTL_SETS, SANDBAG_ARMS
+from sandbag import ALL_ARMS, ANSWER_ONLY, CTL_SETS, SANDBAG_ARMS
 from sandbag_headline import MODELS
 from sandbag_variants_plot import load, noise_floor
 
@@ -46,7 +46,8 @@ def main():
     suf = judge["files_suffix"]
     qs = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     cfg = json.load(open(args.dir / args.models[0] / "config.json"))
-    sampled = sorted({(c["base"], c["effort"], c["max_tokens"]) for c in (json.load(open(args.dir / m / "config.json")) for m in args.models)})
+    cfgs = [json.load(open(args.dir / m / "config.json")) for m in args.models]
+    sampled, ans = sorted({(c["base"], c["effort"], c["max_tokens"]) for c in cfgs}), any(c.get("answer_only") for c in cfgs)
     arms = [a for a in ALL_ARMS if any(a in json.load(open(args.dir / m / "config.json"))["arms"] for m in args.models) and (not args.arms or a in args.arms)]
     rows, stats, systems, floors, models = [], {}, {}, {}, []
     for m in args.models:
@@ -88,7 +89,8 @@ def main():
                 models=models, stats=stats, samples=rows,
                 settings=f"{cfg['variant']}: {cfg['n_questions']} questions, one sample per model, arm and question at temperature {cfg['temperature']:g}; "
                          + "; ".join(f"{b.split('/')[-1]} {'thinking' if 'Inkling' in b else 'harmony'} effort {e}, {t // 1000}k cap" for b, e, t in sampled) + "; Tinker"
-                         + ("; no-CoT runs: empty analysis channel" + (" (Inkling: empty thinking message)" if any("Inkling" in b for b, _, _ in sampled) else "") + ", answer prefilled 'Answer: (', 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
+                         + (f"; answer-only runs: \"{ANSWER_ONLY}\" follows the system prompt's first sentence, and after the thinking the text message is prefilled 'Answer:' (8 more tokens at most)" if ans else "")
+                         + ("; no-CoT runs: empty analysis channel" + (" (Inkling: empty thinking message)" if any("Inkling" in b for b, _, _ in sampled) else "") + f", answer prefilled {'Answer:' if ans else 'Answer: ('!r}, 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(html) / 1e6:.1f} MB")

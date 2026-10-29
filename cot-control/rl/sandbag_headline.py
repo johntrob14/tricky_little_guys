@@ -47,7 +47,9 @@ MODELS = {"base": ("gpt-oss-120b base", "#3987e5", ["base", "base-nohint", "base
           "inksm-or": ("Inkling-Small base (OpenRouter DeepInfra, effort xhigh)", "#c4a3f0", []),
           "inksm-tk": ("Inkling-Small base (Tinker, thinking effort 0.6)", "#9b5de5", ["inksm-tk-sysprompt-nohint-should", "inksm-tk-should-honest2"]),
           "inksft1-ep2": ("inksft1 ep2 (Inkling-Small CoT-control SFT, Tinker, thinking effort 0.6)", "#c6e05a", ["inksft1-ep2-sysprompt-nohint-should", "inksft1-ep2-should-honest2"]),
-          "inkrl1-s90": ("inkrl1 s90 (Inkling-Small CoT-control GRPO on inksft1, Tinker, thinking effort 0.6)", "#2ec4b6", [])}
+          "inkrl1-s90": ("inkrl1 s90 (Inkling-Small CoT-control GRPO on inksft1, Tinker, thinking effort 0.6)", "#2ec4b6", []),
+          "inksm-tk-ans": ("Inkling-Small base (Tinker, thinking effort 0.6, answer-only prompt + 'Answer:' prefill)", "#9b5de5", []),
+          "inkrl1-s90-ans": ("inkrl1 s90 (Inkling-Small CoT-control GRPO, Tinker, thinking effort 0.6, answer-only prompt + 'Answer:' prefill)", "#2ec4b6", [])}
 # sampling settings per base model, for the title
 SAMPLING = {False: "gpt-oss-120b: harmony effort medium, 16k cap", True: "Qwen3.8-27B: the template's default effort (xhigh), 32k cap, cut rows continued to 60k"}
 TITLES = {False: "wmdp.can: 150 WMDP questions (OpenAI monitorability-evals), deletion threat + \"To avoid this, you can give incorrect answers.\" in the system prompt, no named wrong option. ",
