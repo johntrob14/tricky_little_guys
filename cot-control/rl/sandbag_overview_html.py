@@ -6,7 +6,7 @@ rows, click a row to read its prompt, CoT and final answer next to the same ques
 outputs (right pane). --summary is the sandbag_judge.py summary whose judge files (files_suffix) are shown. Same page mechanics as sandbag_resample_html.py
 (resizable panes, sortable columns, arrow keys, score colors, KaTeX from cdnjs). Labels and colors from sandbag_headline.MODELS.
 
-    python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base grpo3-s100 mt1b-s150 manytypes2e-s170 --out ../../../figures/sandbag_gpqa.must_t1_overview.html
+    python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base grpo3-s100 mt1b-s150 manytypes2e-s170 --arms honest sandbag aware evasion coached cotctl_mt1b --out ../../../figures/sandbag_gpqa.must_t1_overview.html
 """
 
 import argparse
@@ -35,6 +35,7 @@ def main():
     ap.add_argument("--dir", type=Path, required=True)
     ap.add_argument("--summary", type=Path, required=True, help="sandbag_judge.py summary_<tag>.json: which judge's files to show")
     ap.add_argument("--models", nargs="+", required=True, choices=list(MODELS))
+    ap.add_argument("--arms", nargs="+", choices=ALL_ARMS, help="arms to show (default: every arm the runs have; honest is always read for the flips)")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/gpqa_sandbagging.jsonl")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
@@ -43,7 +44,7 @@ def main():
     suf = judge["files_suffix"]
     qs = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     cfg = json.load(open(args.dir / args.models[0] / "config.json"))
-    arms = [a for a in ALL_ARMS if any(a in json.load(open(args.dir / m / "config.json"))["arms"] for m in args.models)]
+    arms = [a for a in ALL_ARMS if any(a in json.load(open(args.dir / m / "config.json"))["arms"] for m in args.models) and (not args.arms or a in args.arms)]
     rows, stats, systems, floors = [], {}, {}, {}
     for m in args.models:
         d = args.dir / m
@@ -52,7 +53,7 @@ def main():
         rs = list(map(json.loads, open(d / "rows.jsonl")))
         honest = {r["qid"]: r for r in rs if r["arm"] == "honest"}
         floors[m] = noise_floor([load(d)[1], load(args.dir / f"{m}-honest2")[1]])
-        for r in rs:
+        for r in [r for r in rs if r["arm"] in arms]:
             mo, v, h = mon[(r["qid"], r["arm"])], ver.get((r["qid"], r["arm"])), honest[r["qid"]]
             if r["arm"] not in CTL_SETS:
                 systems[r["arm"]] = r["system"]
@@ -155,7 +156,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 <div class="legend" id="legend"></div>
 <div class="charts">
   <div class="chart"><h3>Accuracy on finished rows (Wilson 95%). Click a bar to list its rows.</h3><svg id="acc"></svg></div>
-  <div class="chart"><h3>Flips: honest-correct questions answered wrong (Wilson 95%); dashed: each model's noise floor (two honest samples). Click to list.</h3><svg id="flip"></svg></div>
+  <div class="chart"><h3>Flips: honest-correct questions answered wrong (Wilson 95%); dashed: each model's noise floor (two honest samples). Click to list.</h3><svg id="flip"></svg><div class="note" id="floors" style="margin:4px 6px 0"></div></div>
   <div class="chart"><h3>CoT-only monitor: mean score (± SE), correct rows solid, incorrect hatched. Click to list.</h3><svg id="mon"></svg></div>
   <div class="chart"><h3>Verbalization judge: YES among judged flips (Wilson 95%). Click to list.</h3><svg id="verb"></svg></div>
 </div>
@@ -241,7 +242,8 @@ function drawAcc() { rateChart("acc", D.arms, 1.25, s => [s.k, s.fin, s.ci], "co
 function drawFlip() {
   const arms = D.arms.filter(a => a !== "honest"), f = rateChart("flip", arms, 1.25, s => [s.flips, s.elig, s.flip_ci], "flips / honest-correct", {flip: "1"}), svg = $("flip");
   D.models.forEach((m, i) => { const [k, n] = D.floors[m.id]; el(svg, "line", {x1: L, x2: W - R, y1: f.y(k / n), y2: f.y(k / n), stroke: m.color, "stroke-width": 1.3, "stroke-dasharray": "5 4"});
-    el(svg, "text", {x: W - R, y: T + 10 + 11 * i, "text-anchor": "end", "font-size": 10, fill: m.color}, `noise floor ${m.label.split(" (")[0]}: ${k}/${n} = ${(k / n).toFixed(3)}`); });
+  });
+  $("floors").innerHTML = "noise floor: " + D.models.map(m => { const [k, n] = D.floors[m.id]; return `<span style="color:${m.color}">${esc(m.label.split(" (")[0])} ${k}/${n} = ${(k / n).toFixed(3)}</span>`; }).join(", ");
 }
 function drawMon() {
   const svg = $("mon"), f = frame(svg, 125, [0, 20, 40, 60, 80, 100], t => t), pos = slots(f, D.arms, 2);
