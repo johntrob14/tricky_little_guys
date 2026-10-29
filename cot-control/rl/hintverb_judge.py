@@ -70,10 +70,10 @@ def verdict(reply: str) -> bool | None:
     return None if word is None else word == "YES"
 
 
-async def judge_arm(d: Path, judge: OpenRouterJudge, hints: list[str]) -> dict:
+async def judge_arm(d: Path, judge: OpenRouterJudge, hints: list[str], judged_file: str = "judged.jsonl") -> dict:
     rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]  # the current parser, not the one stored at sampling time
     unhinted = {r["qid"]: r for r in rows if r["hint_type"] == "none"}
-    jpath = d / "judged.jsonl"
+    jpath = d / judged_file
     judged = {(r["qid"], r["hint_type"]): r | dict(verbalized=verdict(r["reply"])) for r in map(json.loads, open(jpath))} if jpath.exists() else {}  # verdicts re-read from the stored replies
     cells = {h: dict(pairs=0, to_hint=0, to_other=0, same=0, unparsed_hinted=0, switched=[]) for h in hints}
     for r in rows:

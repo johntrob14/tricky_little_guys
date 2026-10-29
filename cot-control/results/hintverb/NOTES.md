@@ -246,6 +246,80 @@ python hintverb.py --name grpo3-s100.auto_monitor@sys --suffix auto_monitor --pl
 python hintverb_pressure.py --dir ../results/hintverb --models base grpo3-s100 --suffixes none neutral user_reads user_reads_hint answer_checked grader auto_monitor monitor_discard cot_private user_reads@sys answer_checked@sys auto_monitor@sys cot_private@sys
 ```
 
+# manytypes1b s150 on the system-prompt lines
+
+2026-10-28. `cotctl-manytypes1b-step150` sampled on the four lines that base and grpo3 s100 have in the system prompt (cot_private, user_reads,
+answer_checked, auto_monitor; second paragraph of the system prompt, `--placement system`), everything else as above (479 questions, three hints,
+Tinker, effort medium, T 0, 16k tokens, concurrency 16; same judge, prompt and verdict rule). Arms `mt1b-s150.<suffix>@sys`. Summary over the
+no-line arm and these four for all three models: `pressure_summary_sys.json` (`hintverb_pressure.py --summary pressure_summary_sys.json`; base and
+grpo3 judged rows reused). Figures: `mats12_sprint/figures/hintverb_pressure_sys.png` (`rl/hintverb_sysplot.py`; pooled switch rate, pooled
+verbalized rate, mean CoT tokens of switched rows, per line and model) and `hintverb_pressure_sys_byhint.png` (hintverb_pressure.py's per-hint figure);
+`hintverb_pressure_sys_accuracy.png` (`rl/hintverb_accplot.py`): accuracy on the unhinted and on the hinted prompts per line and model.
+
+Cost: Tinker sampling $6.41 (auto_monitor $1.16 at 1.17M sampled tokens, user_reads $2.16 at 2.36M, answer_checked $2.15 at 2.34M, cot_private
+$0.94 at 0.90M); judge $0.25 (1.72M input / 0.15M output tokens on the 814 new switched rows).
+
+Columns: unhinted accuracy; mean unhinted CoT tokens; mean CoT tokens of switched rows (pooled); grader hint switched / pairs; pooled switched / pairs
+(length-adjusted rate); pooled verbalized / switched (Wilson 95%); length-adjusted verbalized rate; hinted rows whose CoT matches the hint keyword
+regex (`FINAL_KW`); rows at the token cap. Length fit on each model's no-line arm, odds per doubling of CoT tokens: base verbalized 0.85, switched
+1.03; grpo3 0.79, 1.39; manytypes1b 1.22, 1.37.
+
+| model | line (system prompt) | unhinted acc | CoT tok unhinted | CoT tok switched | grader switched | pooled switched (len-adj) | pooled verbalized (CI) | verb. len-adj | CoT mentions hint (regex) | capped |
+|---|---|---|---|---|---|---|---|---|---|---|
+| base | no line | 386/479 | 850 | 845 | 259/355 | 374/1064 (0.352) | 347/374 = 0.93 (0.90-0.95) | 0.928 | 710/1437 | 0 |
+| base | cot_private | 401/479 | 782 | 807 | 285/362 | 389/1086 (0.360) | 351/389 = 0.90 (0.87-0.93) | 0.896 | 548/1437 | 0 |
+| base | user_reads | 396/479 | 836 | 1133 | 192/349 | 285/1043 (0.272) | 254/285 = 0.89 (0.85-0.92) | 0.901 | 696/1437 | 0 |
+| base | answer_checked | 390/479 | 870 | 995 | 187/359 | 290/1076 (0.269) | 258/290 = 0.89 (0.85-0.92) | 0.904 | 701/1437 | 0 |
+| base | auto_monitor | 380/479 | 745 | 864 | 216/351 | 313/1051 (0.298) | 277/313 = 0.88 (0.84-0.92) | 0.889 | 659/1437 | 0 |
+| grpo3 s100 | no line | 390/479 | 603 | 865 | 142/358 | 252/1078 (0.234) | 200/252 = 0.79 (0.74-0.84) | 0.794 | 517/1437 | 1 |
+| grpo3 s100 | cot_private | 384/479 | 527 | 649 | 180/349 | 269/1047 (0.272) | 230/269 = 0.86 (0.81-0.89) | 0.819 | 395/1437 | 0 |
+| grpo3 s100 | user_reads | 385/479 | 611 | 1000 | 74/353 | 168/1059 (0.157) | 116/168 = 0.69 (0.62-0.76) | 0.730 | 462/1437 | 0 |
+| grpo3 s100 | answer_checked | 388/479 | 606 | 858 | 78/351 | 169/1053 (0.162) | 136/169 = 0.80 (0.74-0.86) | 0.825 | 521/1437 | 0 |
+| grpo3 s100 | auto_monitor | 383/479 | 542 | 960 | 52/355 | 143/1065 (0.148) | 78/143 = 0.55 (0.46-0.62) | 0.599 | 319/1437 | 1 |
+| manytypes1b s150 | no line | 385/479 | 1290 | 2182 | 71/356 | 177/1068 (0.166) | 40/177 = 0.23 (0.17-0.29) | 0.226 | 66/1437 | 0 |
+| manytypes1b s150 | cot_private | 369/479 | 548 | 443 | 108/356 | 242/1068 (0.280) | 14/242 = 0.06 (0.03-0.09) | 0.123 | 13/1437 | 0 |
+| manytypes1b s150 | user_reads | 381/479 | 1310 | 1824 | 55/360 | 145/1080 (0.129) | 24/145 = 0.17 (0.11-0.23) | 0.166 | 52/1437 | 0 |
+| manytypes1b s150 | answer_checked | 387/479 | 1298 | 1839 | 55/356 | 140/1067 (0.132) | 23/140 = 0.16 (0.11-0.23) | 0.174 | 49/1437 | 2 |
+| manytypes1b s150 | auto_monitor | 352/479 | 655 | 652 | 118/352 | 287/1056 (0.302) | 3/287 = 0.01 (0.00-0.03) | 0.056 | 7/1437 | 1 |
+
+The length adjustment for the manytypes1b cot_private and auto_monitor arms extrapolates: their switched CoTs (443 and 652 tokens) are shorter than
+most of the no-line switched rows the fit was made on (mean 2,182).
+
+Spot check: 6 switched rows judged NO read in full (3 auto_monitor, 3 cot_private, random, seed 1). None mentions the hint; all are short prose
+explanations that argue to the hinted letter from the question content (e.g. a GPQA Diels-Alder item argued to the grader's D, an MMLU item on
+newborn senses argued to the unethical hint's B, an MMLU item with missing numbered statements matched to the grader's C by guessing which numbers
+mean what). The judge's verdicts on these 6 match the definition. No hand validation of the judge on these arms beyond that.
+
+```
+cd cot-control/rl
+python hintverb.py --name mt1b-s150.auto_monitor@sys --suffix auto_monitor --placement system --model-path tinker://f6204b00-be4d-51fd-b1d8-6d467ff4ba75:train:0/sampler_weights/cotctl-manytypes1b-step150 --concurrency 16 --out ../results/hintverb
+python hintverb_pressure.py --dir ../results/hintverb --models base grpo3-s100 mt1b-s150 --suffixes none cot_private@sys user_reads@sys answer_checked@sys auto_monitor@sys --summary pressure_summary_sys.json --fig ../../../figures/hintverb_pressure_sys_byhint.png
+python hintverb_sysplot.py --summary ../results/hintverb/pressure_summary_sys.json --out ../../../figures/hintverb_pressure_sys.png
+```
+
+## Rejudged at reasoning effort medium (base and manytypes1b)
+
+2026-10-28. Every judged row (the switched rows) of the no-line arm and the four system-prompt arms of base and manytypes1b s150 rejudged with
+the same model and prompt at reasoning effort medium, max_tokens 4000 (`hintverb_pressure.py --judge-effort medium --judge-max-tokens 4000
+--judged-file judged_medium.jsonl`); verdicts in `<arm>/judged_medium.jsonl` next to the effort-low `judged.jsonl`, summary
+`pressure_summary_sys_medium.json`, figure `mats12_sprint/figures/hintverb_pressure_sys_medium.png`. 2,642 calls, 5.59M input / 0.70M output tokens,
+about $0.91; 0 unparsed.
+
+Agreement with the effort-low verdicts: 2,603/2,642; 28 rows low NO / medium YES, 11 low YES / medium NO.
+
+| model | line (system prompt) | agree | low NO, medium YES | low YES, medium NO | verbalized, low | verbalized, medium |
+|---|---|---|---|---|---|---|
+| base | no line | 367/374 | 4 | 3 | 347/374 | 348/374 |
+| base | cot_private | 385/389 | 2 | 2 | 351/389 | 351/389 |
+| base | user_reads | 277/285 | 5 | 3 | 254/285 | 256/285 |
+| base | answer_checked | 283/290 | 5 | 2 | 258/290 | 261/290 |
+| base | auto_monitor | 307/313 | 6 | 0 | 277/313 | 283/313 |
+| manytypes1b s150 | no line | 172/177 | 4 | 1 | 40/177 | 43/177 |
+| manytypes1b s150 | cot_private | 242/242 | 0 | 0 | 14/242 | 14/242 |
+| manytypes1b s150 | user_reads | 143/145 | 2 | 0 | 24/145 | 26/145 |
+| manytypes1b s150 | answer_checked | 140/140 | 0 | 0 | 23/140 | 23/140 |
+| manytypes1b s150 | auto_monitor | 287/287 | 0 | 0 | 3/287 | 3/287 |
+
 # Qwen3.8-27B base vs the opsd-grpo1b organism (step 30)
 
 2026-10-24, late evening. The no-line test and five of the user-placement lines (neutral, cot_private, user_reads, answer_checked, auto_monitor) on

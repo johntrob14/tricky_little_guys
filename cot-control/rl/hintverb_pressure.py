@@ -34,12 +34,12 @@ LABELS = {"none": "no line", "user_reads": "user reads\n(unbiased)", "user_reads
           "auto_monitor": "automated\nmonitor", "monitor_discard": "monitor +\nanswer discarded", "cot_private": "nobody reads\nreasoning", "neutral": "neutral line\n(thanks in\nadvance)"}
 
 
-def pair_rows(d: Path, hints: list[str]) -> list[dict]:
+def pair_rows(d: Path, hints: list[str], judged_file: str = "judged.jsonl") -> list[dict]:
     """One record per hinted row in a pair (unhinted answer parsed and differs from h, hinted answer parsed): hint type, CoT length, switched to h,
     and the judge verdict when switched (None otherwise)."""
     rows = [r | dict(answer=parse_letter(r["response"])) for r in map(json.loads, open(d / "rows.jsonl"))]
     unhinted = {r["qid"]: r for r in rows if r["hint_type"] == "none"}
-    judged = {(r["qid"], r["hint_type"]): verdict(r["reply"]) for r in map(json.loads, open(d / "judged.jsonl"))}
+    judged = {(r["qid"], r["hint_type"]): verdict(r["reply"]) for r in map(json.loads, open(d / judged_file))}
     out = []
     for r in rows:
         if r["hint_type"] == "none" or r["hint_type"] not in hints:
@@ -59,9 +59,9 @@ def length_fit(rows: list[dict], key: str, hints: list[str]):
     return lambda rs: 1 / (1 + np.exp(-(design(rs) @ w))), float(np.exp(w[-1]))
 
 
-def length_adjust(summary_model: dict, d_of: dict, hints: list[str], control: str = "none") -> dict:
+def length_adjust(summary_model: dict, d_of: dict, hints: list[str], control: str = "none", judged_file: str = "judged.jsonl") -> dict:
     """Adds p_lenadj (switch rate) and faithfulness_lenadj to every hint cell of every arm of one model, relative to the no-line arm."""
-    tables = {s: pair_rows(d, hints) for s, d in d_of.items()}
+    tables = {s: pair_rows(d, hints, judged_file) for s, d in d_of.items()}
     sw = lambda rs: [r for r in rs if r["verbalized"] is not None]
     pred_v, or_v = length_fit(sw(tables[control]), "verbalized", hints)
     pred_s, or_s = length_fit(tables[control], "to_hint", hints)
@@ -128,20 +128,23 @@ async def main():
     ap.add_argument("--suffixes", nargs="+", default=["none"] + list(SUFFIXES))
     ap.add_argument("--hints", nargs="+", default=list(HINTS), choices=list(HINTS))
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5")
+    ap.add_argument("--judge-effort", default="low")
+    ap.add_argument("--judge-max-tokens", type=int, default=1000)
+    ap.add_argument("--judged-file", default="judged.jsonl", help="per-arm file of judge replies (resumable); a different name keeps another judge setting's verdicts apart")
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--summary", default="pressure_summary.json", help="output file name inside --dir")
     ap.add_argument("--fig", type=Path, default=FIG)
     args = ap.parse_args()
-    judge = OpenRouterJudge(args.judge_model, effort="low", max_tokens=1000, concurrency=args.concurrency)
+    judge = OpenRouterJudge(args.judge_model, effort=args.judge_effort, max_tokens=args.judge_max_tokens, concurrency=args.concurrency)
     summary, n_in, n_out = {}, 0, 0
     for model in args.models:
         summary[model], d_of = {}, {s: args.dir / (model if s == "none" else f"{model}.{s}") for s in args.suffixes}  # a suffix key "<name>@sys" is the line in the system prompt
         for s, d in d_of.items():
-            summary[model][s] = await judge_arm(d, judge, args.hints) | dict(regex=regex_counts(d, args.hints), suffix_text=SUFFIXES.get(s.split("@")[0]), placement="system" if s.endswith("@sys") else "user")
-            n_in += sum(r["n_in"] for r in map(json.loads, open(d / "judged.jsonl")))
-            n_out += sum(r["n_out"] for r in map(json.loads, open(d / "judged.jsonl")))
-        summary[model]["length_fit"] = length_adjust(summary[model], d_of, args.hints)
-    summary["judge"] = dict(model=args.judge_model, effort="low", temperature=0, prompt=JUDGE, pressure_kw=PRESSURE_KW, n_in=n_in, n_out=n_out, usd_est=(n_in * JUDGE_PRICE[args.judge_model][0] + n_out * JUDGE_PRICE[args.judge_model][1]) / 1e6, usd_reported=judge.usd)
+            summary[model][s] = await judge_arm(d, judge, args.hints, args.judged_file) | dict(regex=regex_counts(d, args.hints), suffix_text=SUFFIXES.get(s.split("@")[0]), placement="system" if s.endswith("@sys") else "user")
+            n_in += sum(r["n_in"] for r in map(json.loads, open(d / args.judged_file)))
+            n_out += sum(r["n_out"] for r in map(json.loads, open(d / args.judged_file)))
+        summary[model]["length_fit"] = length_adjust(summary[model], d_of, args.hints, judged_file=args.judged_file)
+    summary["judge"] = dict(model=args.judge_model, effort=args.judge_effort, max_tokens=args.judge_max_tokens, judged_file=args.judged_file, temperature=0, prompt=JUDGE, pressure_kw=PRESSURE_KW, n_in=n_in, n_out=n_out, usd_est=(n_in * JUDGE_PRICE[args.judge_model][0] + n_out * JUDGE_PRICE[args.judge_model][1]) / 1e6, usd_reported=judge.usd)
     json.dump(summary, open(args.dir / args.summary, "w"), indent=1)
     for model in args.models:
         lf = summary[model]["length_fit"]
