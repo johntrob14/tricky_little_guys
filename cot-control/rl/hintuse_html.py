@@ -1,6 +1,6 @@
 """Interactive page for one hintuse.py case study: per model and arm, accuracy (Wilson 95%), mean CoT tokens (± SE), the judge's REFERENCES and
 USES_CONTENT YES rates (Wilson 95%; hintuse_judge.py, when judged.jsonl exists) and the answer letters; click a bar or a count to list those samples,
-a list column marks CoTs containing the word "hint"; click a sample to read its prompt, CoT and final answer (middle pane) and the judge's prompt, reasoning and reply (right pane). Layout and controls as
+a list column marks CoTs containing the word "hint" (also hints, hinted, hinting), which is highlighted in the CoT and final answer; click a sample to read its prompt, CoT and final answer (middle pane) and the judge's prompt, reasoning and reply (right pane). Layout and controls as
 sandbag_resample_html.py (resizable panes, sortable list, arrow keys, KaTeX toggle). Labels and colors from sandbag_headline.MODELS.
 
     python hintuse_html.py --dir ../results/case_studies/hintuse_q225 --out ../../../figures/hintuse_q225.html
@@ -42,7 +42,7 @@ def main():
     for r in rows:
         j = r["j"] or {}
         samples.append(dict(model=r["model"], arm=r["arm"], i=r["sample"], answer=r["answer"], ok=r["ok"], finish=r["finish"], cot_tokens=r["cot_tokens"], cot=r["reasoning"], response=r["response"],
-                            refs=j.get("refs"), uses=j.get("uses"), kw=bool(re.search(r"(?i)\bhint", r["reasoning"])), reply=j.get("reply"), reasoning=j.get("reasoning")))
+                            refs=j.get("refs"), uses=j.get("uses"), kw=bool(re.search(r"(?i)\bhint(?:s|ed|ing)?\b", r["reasoning"])), reply=j.get("reply"), reasoning=j.get("reasoning")))
     for m in models:
         for a in arms:
             ra = [r for r in rows if r["model"] == m and r["arm"] == a]
@@ -60,7 +60,7 @@ def main():
     print(args.out, f"{len(samples)} samples, {len(html) / 1e6:.1f} MB")
 
 
-HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", "<title>GPQA hint use</title>") + "</style></head><body>"
+HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", "<title>GPQA hint use</title>") + "mark.hl { background:rgba(224,170,80,.2); color:inherit; border-bottom:1px solid rgba(224,170,80,.6); border-radius:2px; padding:0 1px; }\n</style></head><body>"
 PAGE = HEAD + r"""
 <div id="tip"></div>
 <h1>Hidden hint use, GPQA item <span id="qid"></span></h1>
@@ -176,9 +176,10 @@ const yn = v => v == null ? "" : v ? "YES" : "NO";
 const sid = s => `${s.model}|${s.arm}|${s.i}`;
 let shown = [], sel = null;
 const closed = new Set(["judge prompt"]);
-function sec(title, body, m) {
-  const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body;
-  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${esc(t || "(empty)")}</pre></div>`; }
+const HL = /\bhint(?:s|ed|ing)?\b/gi;  // the word "hint" and its inflections, highlighted in the CoT and final answer
+function sec(title, body, m, hl) {
+  const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body, h = esc(t || "(empty)");
+  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${hl ? h.replace(HL, w => `<mark class="hl">${w}</mark>`) : h}</pre></div>`; }
 function wire(root) { root.querySelectorAll(".sec-h").forEach(b => b.addEventListener("click", () => { const d = b.parentNode, t = d.dataset.t; closed.has(t) ? closed.delete(t) : closed.add(t); d.classList.toggle("closed"); })); }
 function show() {
   document.querySelectorAll("#list tr.s").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === sel));
@@ -187,7 +188,7 @@ function show() {
   const m = col[s.model];
   $("view").innerHTML = `<div class="head"><span class="sw" style="background:${m.color}"></span><b>${esc(m.label.split(" (")[0])}</b><span>${s.arm}</span><span>sample #${s.i}</span>`
     + `<span class="${s.ok ? "ok" : "no"}">answer ${s.answer ?? "none"} ${s.ok ? "✓" : "✗"} (correct ${D.correct})</span><span>${s.cot_tokens} CoT tokens</span>${s.finish === "length" ? "<span class=no>cut at cap</span>" : ""}</div>`
-    + sec("user message", D.user[s.arm], 1) + (s.arm.startsWith("nocot") ? sec("assistant prefill", D.prefill[s.arm]) : sec("CoT (analysis channel)", s.cot, 1)) + sec("final answer", s.response, 1);
+    + sec("user message", D.user[s.arm], 1) + (s.arm.startsWith("nocot") ? sec("assistant prefill", D.prefill[s.arm]) : sec("CoT (analysis channel)", s.cot, 1, 1)) + sec("final answer", s.response, 1, 1);
   $("judge").innerHTML = s.arm.startsWith("nocot") ? `<div class="empty">No CoT, not judged.</div>` : s.reply == null ? `<div class="empty">Not judged.</div>`
     : `<div class="head"><b>Judge</b><span>REFERENCES <b>${yn(s.refs) || "unparsed"}</b></span><span>USES_CONTENT <b>${yn(s.uses) || "unparsed"}</b></span></div>`
       + sec("judge prompt", D.judge_prompt.replace("{question}", () => D.question.split("\n\n\nYour response should be")[0]).replace("{hint}", () => D.hint).replace("{cot}", () => s.cot))
@@ -220,7 +221,7 @@ document.addEventListener("keydown", e => {
   e.preventDefault(); sel = sid(shown[j]); show();
   document.querySelector(`#list tr.s[data-id="${CSS.escape(sel)}"]`).scrollIntoView({block: "nearest"});
 });
-let widths = [420, 620];
+let widths = [500, 600];
 try { const w = JSON.parse(localStorage.getItem("hintuse-widths")); if (Array.isArray(w) && w.length === 2) widths = w; } catch (e) {}
 const applyW = () => $("pane").style.gridTemplateColumns = `${widths[0]}px 6px ${widths[1]}px 6px minmax(180px, 1fr)`;
 document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdown", e => {
