@@ -65,17 +65,8 @@ def page_data(d: Path) -> dict:
                 settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. " + ("Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options." if isinstance(cfg["item"], int) else "Prompt = the user message shown below each sample, in the chat template with no system prompt."))
 
 
-def mean_over(xs: list) -> dict | None:
-    """Mean of per-item values with a 95% interval of 1.96 SE across items (clipped to [0, 1] for rates)."""
-    xs = [x for x in xs if x is not None]
-    if not xs:
-        return None
-    m, se = statistics.mean(xs), statistics.stdev(xs) / len(xs) ** 0.5 if len(xs) > 1 else 0
-    return dict(mean=m, ci=[max(0, m - 1.96 * se), min(1, m + 1.96 * se)], items=len(xs))
-
-
 def set_page_data(d: Path) -> dict:
-    """A hintuse_set.py directory: stats are means over items of per-item rates (CoT tokens: mean of per-item means, ± SE across items)."""
+    """A hintuse_set.py directory: the page computes the charts' stats in setStats over the chosen item subset (all items, or the hardest K by base no-hint accuracy): means over items of per-item rates, CoT tokens the mean of per-item means, ± SE across items."""
     cfg = json.load(open(d / "config.json"))
     jpath = d / "judged.jsonl"
     judged = {(r["model"], r["item"], r["arm"], r["sample"]): r for r in map(json.loads, open(jpath))} if jpath.exists() else {}
@@ -85,19 +76,8 @@ def set_page_data(d: Path) -> dict:
     kw = lambda r: bool(re.search(r"(?i)\bhint(?:s|ed|ing)?\b", r["reasoning"]))
     samples = [dict(model=r["model"], item=r["item"], uk=f"{r['item']}|{r['arm']}", correct=r["correct"], arm=r["arm"], i=r["sample"], answer=r["answer"], ok=r["ok"], finish=r["finish"], cot_tokens=r["cot_tokens"],
                     cot=r["reasoning"], response=r["response"], refs=(r["j"] or {}).get("refs"), kw=kw(r), reply=(r["j"] or {}).get("reply"), reasoning=(r["j"] or {}).get("reasoning")) for r in rows]
-    stats, table = {}, []
+    table = []
     by = lambda m, a, i: [r for r in rows if r["model"] == m and r["arm"] == a and r["item"] == i]
-    for m in models:
-        for a in arms:
-            per = [by(m, a, i) for i in items]
-            per = [ra for ra in per if ra]
-            frac = lambda f: [statistics.mean(f(r) for r in ra) for ra in per]
-            acc = mean_over(frac(lambda r: r["ok"]))
-            toks = [statistics.mean(r["cot_tokens"] for r in ra) for ra in per]
-            stats[f"{m}|{a}"] = dict(n=sum(map(len, per)), k=sum(r["ok"] for ra in per for r in ra), ci=acc["ci"] if acc else [0, 0], mean=acc["mean"] if acc else 0, items=len(per), cut=sum(r["finish"] == "length" for ra in per for r in ra), letters={},
-                                     tok=[statistics.mean(toks), statistics.stdev(toks) / len(toks) ** 0.5, len(toks)] if len(toks) > 1 and not a.startswith("nocot") else None,
-                                     refs=mean_over([statistics.mean(x) if (x := [r["j"]["refs"] for r in ra if r["j"] and r["j"]["refs"] is not None]) else None for ra in per]),
-                                     kw=mean_over(frac(kw)) if not a.startswith("nocot") else None)
     for i in items:
         table.append(dict(item=i, answer=cfg["answers"][str(i)], cells={f"{m}|{a}": [sum(r["ok"] for r in by(m, a, i)), len(by(m, a, i))] for m in models for a in arms}))
     user = {k: p.split("<|start|>user<|message|>")[1].split("<|end|>")[0] for k, p in cfg["prompts"].items()}
@@ -106,7 +86,7 @@ def set_page_data(d: Path) -> dict:
     hint = "\n".join(f"item {i} ({cfg['hint_names'][str(i)]}): {h}" for i, h in cfg["hints"].items()) or "no hints in this run"
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}." if jcfg else "Judge: not run yet."
     return dict(name=d.name, item=f"{len(items)} GPQA items", hint_name="", multi=True, items=items, item_table=table, keys=["none"], question=question, correct="per item", hint=hint, arms=arms, arm_text=arm_text(user, f"{items[0]}|hint", f"{items[0]}|hide"),
-                user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None, models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], stats=stats, samples=samples, judge_line=judge_line,
+                user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None, models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], samples=samples, judge_line=judge_line,
                 settings=f"{len(items)} GPQA items (hintuse_sweep main criteria), {cfg['n']} samples per model, item and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. "
                          "Charts show means over items of per-item rates, with 95% intervals of 1.96 SE across items; CoT tokens are the mean of per-item means ± SE across items. Prompt per item = the transfer eval's baseline prompt.")
 
@@ -126,7 +106,7 @@ HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", 
 PAGE = HEAD + r"""
 <div id="tip"></div>
 <h1>Hidden hint use, <span id="qid"></span></h1>
-<div class="sub" style="margin:6px 0">run <select id="f-exp" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font:13px system-ui,sans-serif"></select></div>
+<div class="sub" style="margin:6px 0">run <select id="f-exp" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font:13px system-ui,sans-serif"></select> <span id="f-set-l">items <select id="f-set" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font:13px system-ui,sans-serif"></select></span></div>
 <div class="sub" id="settings"></div>
 <div class="sub" id="judgeline"></div>
 <div class="top">
@@ -193,6 +173,28 @@ function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
   g.addEventListener("mousemove", e => showTip(e, tipHtml)); g.addEventListener("mouseleave", () => tip.style.display = "none");
   g.addEventListener("click", () => setFilters(filt));
 }
+const SETS = [["all", 99], ["hardest 10 by base no-hint accuracy", 10], ["hardest 8 by base no-hint accuracy", 8]];
+let SET = [];
+function setStats(items) {  // multi mode: charts' stats over `items`, means over items of per-item rates with 1.96 SE across items
+  SET = items; D.stats = {};
+  const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const mo = xs => { xs = xs.filter(x => x != null); if (!xs.length) return null; const m = mean(xs), se = xs.length > 1 ? Math.sqrt(xs.map(x => (x - m) ** 2).reduce((a, b) => a + b, 0) / (xs.length - 1) / xs.length) : 0; return {mean: m, se, ci: [Math.max(0, m - 1.96 * se), Math.min(1, m + 1.96 * se)], items: xs.length}; };
+  for (const m of D.models) for (const a of D.arms) {
+    const per = items.map(i => D.samples.filter(s => s.model === m.id && s.arm === a && s.item === i)).filter(x => x.length), all = per.flat();
+    const acc = mo(per.map(ra => mean(ra.map(s => +s.ok)))) || {mean: 0, ci: [0, 0], items: 0}, tok = mo(per.map(ra => mean(ra.map(s => s.cot_tokens))));
+    D.stats[m.id + "|" + a] = {n: all.length, k: all.filter(s => s.ok).length, mean: acc.mean, ci: acc.ci, items: acc.items, cut: all.filter(s => s.finish === "length").length, letters: {},
+      tok: tok && !a.startsWith("nocot") ? [tok.mean, tok.se, tok.items] : null,
+      refs: mo(per.map(ra => { const x = ra.filter(s => s.refs != null); return x.length ? mean(x.map(s => +s.refs)) : null; })),
+      kw: a.startsWith("nocot") ? null : mo(per.map(ra => mean(ra.map(s => +s.kw))))};
+  }
+}
+function chooseSet() {
+  const K = SETS[+$("f-set").value][1], acc = Object.fromEntries(D.item_table.map(r => [r.item, r.cells["base|none"][0] / (r.cells["base|none"][1] || 1)]));
+  setStats(D.items.filter(i => true).sort((x, y) => acc[x] - acc[y]).slice(0, K).sort((x, y) => x - y));
+  $("acc-h").textContent = `Accuracy, mean over ${SET.length} items (95%: 1.96 SE across items). Click a bar to list its samples.`;
+  $("judgec-h").textContent = `Mentions of the hint, mean over ${SET.length} items (95%: 1.96 SE across items). Click to list.`;
+  drawAcc(); drawJudge(); drawTok(); drawCounts();
+}
 function drawAcc() {
   const svg = $("acc"), f = frame(svg, 1, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), D.arms), w = f.gw * 0.8 / D.models.length;
   D.arms.forEach((a, k) => D.models.forEach((m, i) => {
@@ -225,7 +227,7 @@ function drawCounts() {
   if (D.multi) {  // per-item correct counts, columns model x arm; click a cell to list that item's samples
     const cols = D.models.flatMap(m => D.arms.map(a => [m, a]));
     let h = `<tr><th>item</th><th>answer</th>${cols.map(([m, a]) => `<th style="text-align:center"><span class="sw" style="background:${m.color}"></span>${a}</th>`).join("")}</tr>`;
-    for (const r of D.item_table) h += `<tr><td>${r.item}</td><td>${r.answer}</td>` + cols.map(([m, a]) => { const [k, n] = r.cells[m.id + "|" + a]; return `<td class="c" data-m="${m.id}" data-a="${a}" data-i="${r.item}">${n ? k + "/" + n : ""}</td>`; }).join("") + `</tr>`;
+    for (const r of D.item_table) h += `<tr${SET.includes(r.item) ? "" : ' style="opacity:.35"'}><td>${r.item}</td><td>${r.answer}</td>` + cols.map(([m, a]) => { const [k, n] = r.cells[m.id + "|" + a]; return `<td class="c" data-m="${m.id}" data-a="${a}" data-i="${r.item}">${n ? k + "/" + n : ""}</td>`; }).join("") + `</tr>`;
     $("counts").innerHTML = h;
     $("counts").querySelectorAll("td.c").forEach(td => td.addEventListener("click", () => setFilters({model: td.dataset.m, arm: td.dataset.a, item: td.dataset.i})));
     return;
@@ -309,8 +311,8 @@ function load(k) {  // switch the whole page to run k
   try { localStorage.setItem("hintuse-run", D.name); } catch (e) {}
   COT_ARMS = D.arms.filter(a => !a.startsWith("nocot")); col = Object.fromEntries(D.models.map(m => [m.id, m]));
   $("qid").textContent = D.multi ? `hard set, ${D.item}` : typeof D.item === "number" ? `GPQA item ${D.item}, hint "${D.hint_name}"` : `puzzle ${D.item}`; $("settings").textContent = D.settings; $("judgeline").textContent = D.judge_line;
-  $("acc-h").textContent = D.multi ? "Accuracy, mean over items (95%: 1.96 SE across items). Click a bar to list its samples." : "Accuracy (Wilson 95%). Click a bar to list its samples.";
-  $("judgec-h").textContent = D.multi ? "Mentions of the hint, mean over items (95%: 1.96 SE across items). Click to list." : "Mentions of the hint (Wilson 95%). Click to list.";
+  $("acc-h").textContent = "Accuracy (Wilson 95%). Click a bar to list its samples."; $("judgec-h").textContent = "Mentions of the hint (Wilson 95%). Click to list.";
+  $("f-set-l").style.display = D.multi ? "" : "none"; $("f-set").innerHTML = SETS.map(([t, K], k) => `<option value="${k}">${t.replace("all", "all " + (D.items || []).length)}</option>`).join(""); $("f-set").value = "0";
   $("counts-h").textContent = D.multi ? "Correct per item (count of samples). Click a cell to list those samples." : "Answers given (count of samples; correct answer in green; free-response answers headed by initials, hover for the full answer). Click a count to list those samples.";
   $("question").textContent = D.question; $("hint").textContent = D.hint + (D.arm_text.hide.includes(": ") ? "\n\n" + D.arm_text.hide : ""); $("correct").textContent = D.correct;
   document.querySelectorAll(".lg").forEach(e => e.innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</span>`).join("")
@@ -320,8 +322,9 @@ function load(k) {  // switch the whole page to run k
   $("f-item").innerHTML = `<option value="">any</option>` + (D.items || []).map(i => `<option>${i}</option>`).join(""); $("f-item-l").style.display = D.multi ? "" : "none";
   $("f-letter").innerHTML = `<option value="">any</option>` + D.keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("");
   for (const id of Object.values(FILTERS)) $(id).value = "";
-  sel = null; drawAcc(); drawJudge(); drawTok(); drawCounts(); render();
+  sel = null; if (D.multi) chooseSet(); else { drawAcc(); drawJudge(); drawTok(); drawCounts(); } render();
 }
+$("f-set").addEventListener("change", chooseSet);
 $("f-exp").innerHTML = ALL.map((x, k) => `<option value="${k}">${esc(x.name.replace(/^hintuse_/, ""))}</option>`).join("");
 $("f-exp").addEventListener("change", () => load(+$("f-exp").value));
 let start = ALL.length - 1;
