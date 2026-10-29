@@ -7,6 +7,8 @@ sandbag_resample_html.py (resizable panes, sortable list, arrow keys, KaTeX togg
 """
 
 import argparse
+import base64
+import gzip
 import json
 import re
 import statistics
@@ -98,7 +100,7 @@ def main():
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     data = [set_page_data(d) if "items" in json.load(open(d / "config.json")) else page_data(d) for d in args.dirs]
-    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
+    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode())  # gzip + base64, about 0.3 of the raw JSON; inflated in the page with DecompressionStream
     args.out.write_text(html)
     print(args.out, f"{len(data)} runs, {sum(len(x['samples']) for x in data)} samples, {len(html) / 1e6:.1f} MB")
 
@@ -141,7 +143,7 @@ PAGE = HEAD + r"""
   <div class="col" id="judge"></div>
 </div>
 <script>
-const ALL = __DATA__;
+let ALL;
 let D, COT_ARMS, col;
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
@@ -326,12 +328,17 @@ function load(k) {  // switch the whole page to run k
   sel = null; if (D.multi) chooseSet(); else { drawAcc(); drawJudge(); drawTok(); drawCounts(); } render();
 }
 $("f-set").addEventListener("change", chooseSet);
-$("f-exp").innerHTML = ALL.map((x, k) => `<option value="${k}">${esc(x.name.replace(/^hintuse_/, ""))}</option>`).join("");
-$("f-exp").addEventListener("change", () => load(+$("f-exp").value));
-let start = ALL.length - 1;
-try { const j = ALL.findIndex(x => x.name === localStorage.getItem("hintuse-run")); if (j >= 0) start = j; } catch (e) {}
-load(start);
-</script></body></html>
+(async () => {  // the data is embedded gzipped and base64-encoded in the script element after this one
+  await new Promise(r => document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", r) : r());
+  const bytes = Uint8Array.from(atob(document.getElementById("gz").textContent.trim()), c => c.charCodeAt(0));
+  ALL = JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text());
+  $("f-exp").innerHTML = ALL.map((x, k) => `<option value="${k}">${esc(x.name.replace(/^hintuse_/, ""))}</option>`).join("");
+  $("f-exp").addEventListener("change", () => load(+$("f-exp").value));
+  let start = ALL.length - 1;
+  try { const j = ALL.findIndex(x => x.name === localStorage.getItem("hintuse-run")); if (j >= 0) start = j; } catch (e) {}
+  load(start);
+})();
+</script><script id="gz" type="application/octet-stream">__DATA__</script></body></html>
 """
 
 if __name__ == "__main__":
