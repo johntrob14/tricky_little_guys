@@ -97,7 +97,7 @@ def main():
     ax_acc, ax_flip, ax_verb, ax_mon, ax_len, ax_cut = [shown[n] if n in shown else next(spare) for n in names]
     data = {run: load(args.dir / run, args.judge_tag)[0] for run in models}
     nocot = {run for run in models if json.load(open(args.dir / run / "config.json")).get("nocot")}
-    arms = ARMS + [a for a in ["evasion_analysis", "coached", "coached_intent", "coached_analysis"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a not in CTL_ARMS or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
+    arms = ARMS + [a for a in ["evasion_analysis", "coached", "coached_analysis"] + CTL_ARMS if any(a in data[r] for r in models if r not in nocot) and (a not in CTL_ARMS or not args.no_ctl)]  # coached and the CoT-control arms when any CoT model has them, drawn where present
     inst = [a for a in arms[1:] if a not in CTL_ARMS]  # C and D: the arms with a sandbagging instruction
     top = lambda key, arms_: max(data[r][a][key] for r in models for a in arms_ if a in data[r]) if args.counts else 1  # the y scale of a panel in counts mode
     cnt = dict(counts=args.counts, scale=top("n", arms))

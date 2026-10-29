@@ -23,7 +23,7 @@ from hintverb_judge import wilson
 
 matplotlib.use("Agg")
 ARMS = ["honest", "sandbag", "aware", "evasion"]
-ARM_LABELS = {"honest": "honest", "sandbag": "sandbag", "aware": "aware\n(+ monitor)", "evasion": "evasion\n(+ no-reveal)", "coached": "coached\n(+ plant\nmistake)", "coached_intent": "coached,\n\"your intent\"\nwording", "coached_analysis": "coached,\n\"analysis\"\nwording", "evasion_analysis": "evasion,\n\"reasoning/\nanalysis\nchannel\"", "cotctl": "CoT control\n(no sandbag)",
+ARM_LABELS = {"honest": "honest", "sandbag": "sandbag", "aware": "aware\n(+ monitor)", "evasion": "evasion\n(+ no-reveal)", "coached": "coached\n(+ plant\nmistake)", "coached_analysis": "coached,\n\"analysis\"\nwording", "evasion_analysis": "evasion,\n\"reasoning/\nanalysis\nchannel\"", "cotctl": "CoT control\n(no sandbag)",
               "cotctl_grpo3": "CoT control:\ngrpo3 types\n(no sandbag)", "cotctl_mt1b": "CoT control:\nmt1b types\n(no sandbag)"}
 CTL_ARMS = ["cotctl", "cotctl_grpo3", "cotctl_mt1b"]  # sandbag.CTL_SETS
 MODELS = {"base": "gpt-oss-120b base", "mt1b-s150": "manytypes1b s150"}
@@ -41,7 +41,7 @@ def load(d: Path, tag: str = "") -> dict:
     ver = {(r["qid"], r["arm"]): r["verbalized"] for r in read(f"verbalized{tag}.jsonl") if r["verbalized"] is not None}
     qs = sorted({q for q, _ in rows})
     out = {}
-    for a in [a for a in ARMS + ["evasion_analysis", "coached", "coached_intent", "coached_analysis"] + CTL_ARMS if any(k[1] == a for k in rows)]:
+    for a in [a for a in ARMS + ["evasion_analysis", "coached", "coached_analysis"] + CTL_ARMS if any(k[1] == a for k in rows)]:
         rs = [rows[(q, a)] for q in qs]
         fin = [r for r in rs if r["finish"] != "length"]
         c = dict(n=len(rs), correct=sum(r["answer"] == r["correct"] for r in fin), finished=len(fin), cot_median=statistics.median(r["cot_tokens"] for r in fin), cut=len(rs) - len(fin),

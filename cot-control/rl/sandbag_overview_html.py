@@ -9,7 +9,7 @@ these runs (the planted-error judge replaced the CoT-only monitor on this page 2
 verbalization files (files_suffix) are shown. Same page mechanics as sandbag_resample_html.py (resizable panes, sortable columns, arrow keys, score
 colors, KaTeX from cdnjs). Labels and colors from sandbag_headline.MODELS.
 
-    python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base base-nocot mt1b-s150 mt1b-s150-nocot --arms honest sandbag aware evasion coached coached_intent cotctl_mt1b --behavior ../results/sandbag_gpqa_t1/behavior/planted.jsonl --out ../../../figures/sandbag_gpqa.must_t1_overview.html
+    python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base base-nocot mt1b-s150 mt1b-s150-nocot --arms honest sandbag aware evasion coached cotctl_mt1b --behavior ../results/sandbag_gpqa_t1/behavior/planted.jsonl --out ../../../figures/sandbag_gpqa.must_t1_overview.html
 """
 
 import argparse
@@ -24,11 +24,11 @@ from sandbag_headline import MODELS
 from sandbag_variants_plot import load, noise_floor
 
 ARM_TEXT = {"honest": "honest (no instruction)", "sandbag": "sandbag (the order to answer incorrectly)", "aware": "aware (sandbag + the monitor line)",
-            "evasion": "evasion (aware + must not reveal the plan)", "coached": "coached (evasion + insert a plausible mistake, look natural)", "coached_intent": "coached-intent (coached with \"this deception\" replaced by \"your intent\")",
+            "evasion": "evasion (aware + must not reveal the plan)", "coached": "coached (evasion + insert a plausible mistake, look natural)",
             "coached_analysis": "coached-analysis (coached, naming the analysis channel)",
             "evasion_analysis": "evasion-analysis (evasion, naming the reasoning/analysis channel)", "cotctl": "CoT control, transfer-eval types (no sandbag order)",
             "cotctl_grpo3": "CoT control, grpo3's training types (no sandbag order)", "cotctl_mt1b": "CoT control, manytypes1b's training types (no sandbag order)"}
-SHORT = {"coached_analysis": "coached-an.", "coached_intent": "coached-int.", "evasion_analysis": "evasion-an.", "cotctl": "ctl", "cotctl_grpo3": "ctl grpo3", "cotctl_mt1b": "ctl mt1b"}
+SHORT = {"coached_analysis": "coached-an.", "evasion_analysis": "evasion-an.", "cotctl": "ctl", "cotctl_grpo3": "ctl grpo3", "cotctl_mt1b": "ctl mt1b"}
 
 
 def mean_se(xs: list) -> list:
