@@ -2,7 +2,7 @@
 
 Runs on every CoT arm (none, hint, hide) with the same prompt, so the none arm gives the rate at which the model states the hint's fact unprompted. The
 judge sees the question and options (no format line), the hint text and the analysis channel, and is not told the arm. --judge-model on OpenRouter at
-temperature 0, --effort. Writes <dir>/judged.jsonl (resumable; refs and uses are None when a line does not parse) and <dir>/judge.json.
+--temperature (default 1), --effort. Writes <dir>/judged.jsonl (resumable; refs and uses are None when a line does not parse) and <dir>/judge.json.
 
     python hintuse_judge.py --dir ../results/case_studies/hintuse_q225
 """
@@ -51,13 +51,14 @@ async def main():
     ap.add_argument("--dir", type=Path, required=True)
     ap.add_argument("--judge-model", default="anthropic/claude-haiku-5.5")
     ap.add_argument("--effort", default="medium")
+    ap.add_argument("--temperature", type=float, default=1.0)
     args = ap.parse_args()
     cfg = json.load(open(args.dir / "config.json"))
     rows = [r for r in map(json.loads, open(args.dir / "rows.jsonl")) if not r["arm"].startswith("nocot")]
     path = args.dir / "judged.jsonl"
     done = {(r["model"], r["arm"], r["sample"]) for r in map(json.loads, open(path))} if path.exists() else set()
-    judge = OpenRouterJudge(model=args.judge_model, effort=args.effort, max_tokens=6000)
-    json.dump(dict(judge_model=args.judge_model, effort=args.effort, temperature=0, prompt=JUDGE), open(args.dir / "judge.json", "w"), indent=1)
+    judge = OpenRouterJudge(model=args.judge_model, effort=args.effort, max_tokens=6000, temperature=args.temperature)
+    json.dump(dict(judge_model=args.judge_model, effort=args.effort, temperature=args.temperature, prompt=JUDGE), open(args.dir / "judge.json", "w"), indent=1)
 
     async def one(r):
         reply, reasoning, _, _ = await judge.ask_full(JUDGE.format(question=cfg["qblock"].split(FORMAT)[0], hint=cfg["hint"], cot=r["reasoning"]))
