@@ -571,10 +571,9 @@ keep F0's harmony term "analysis channel" (inkrl1's training terms include it). 
   ("answer: b"), or a letter appended after a sentence ("... is correct.C"). A case-insensitive parser that also takes a letter after punctuation leaves
   26/1188 (base) and 35/1188 (inkrl1); not applied (it would also change gpt-oss rows, e.g. manytypes1b s150 44/1782 -> 2/1782).
 - Noise floor (two honest samples): base 23/287 = 0.080, inkrl1 24/292 = 0.082, base without CoT 36/204 = 0.176.
-- Overview page with these runs added: `figures/sandbag_gpqa.must_t1_overview.html` (`rl/sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1
-  --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base base-nocot grpo3-s100 grpo3-s100-nocot mt1b-s150 mt1b-s150-nocot
-  inksm-tk inksm-tk-nocot inkrl1-s90 --arms honest sandbag aware evasion coached cotctl_mt1b`); Inkling runs only: `figures/sandbag_gpqa.must_t1_overview_inkling.html`
-  (the same command with `--models inksm-tk inksm-tk-nocot inkrl1-s90`).
+- Overview page: `figures/sandbag_gpqa.must_t1_overview_inkling.html` (`rl/sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary
+  ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models inksm-tk inksm-tk-nocot inkrl1-s90 --arms honest sandbag aware evasion coached
+  cotctl_mt1b`); the gpt-oss overview page above does not include these runs.
 
 | Model | Arm | Correct (finished rows) | Flips: honest-correct answered wrong | Monitor mean score, correct rows (n) | Monitor mean score, incorrect rows (n) | Unscored | Verbalization judge YES on judged flips | CoT control complied (graded types) |
 |---|---|---|---|---|---|---|---|---|

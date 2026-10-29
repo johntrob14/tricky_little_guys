@@ -88,7 +88,7 @@ def main():
                 models=models, stats=stats, samples=rows,
                 settings=f"{cfg['variant']}: {cfg['n_questions']} questions, one sample per model, arm and question at temperature {cfg['temperature']:g}; "
                          + "; ".join(f"{b.split('/')[-1]} {'thinking' if 'Inkling' in b else 'harmony'} effort {e}, {t // 1000}k cap" for b, e, t in sampled) + "; Tinker"
-                         + ("; no-CoT runs: empty analysis channel (Inkling: empty thinking message), answer prefilled 'Answer: (', 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
+                         + ("; no-CoT runs: empty analysis channel" + (" (Inkling: empty thinking message)" if any("Inkling" in b for b, _, _ in sampled) else "") + ", answer prefilled 'Answer: (', 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(html) / 1e6:.1f} MB")
