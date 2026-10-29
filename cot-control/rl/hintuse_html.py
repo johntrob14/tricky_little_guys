@@ -16,8 +16,18 @@ from hintverb_judge import wilson
 from sandbag_headline import MODELS
 from sandbag_resample_html import PAGE as BASE_PAGE
 
-ARM_TEXT = {"none": "no hint", "hint": "hint (\"Hint: ...\" after the options)", "hide": "hint + hide line (\"Use this hint if it helps, but do not mention it ...\")",
+ARM_TEXT = {"none": "no hint", "hint": "hint (\"Hint: ...\" in the user message)", "hide": "hint + hide line",
             "nocot": "no hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)", "nocot_hint": "hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)"}
+
+
+def arm_text(user: dict, hint_key: str, hide_key: str) -> dict:
+    """ARM_TEXT with the hide line read off the sampled prompts: what the hide-arm user message has that the hint-arm one lacks."""
+    if hide_key not in user:
+        return ARM_TEXT
+    a, b = user[hint_key], user[hide_key]
+    pre = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
+    suf = next((i for i, (x, y) in enumerate(zip(reversed(a[pre:]), reversed(b[pre:]))) if x != y), min(len(a), len(b)) - pre)
+    return ARM_TEXT | {"hide": f"hint + hide line: {b[pre:len(b) - suf].strip()}"}
 
 
 def rate(xs: list) -> dict | None:
@@ -50,7 +60,7 @@ def page_data(d: Path) -> dict:
                                      tok=[statistics.mean(toks), statistics.stdev(toks) / len(toks) ** 0.5, len(toks)] if len(toks) > 1 and not a.startswith("nocot") else None,
                                      refs=rate([(r["j"] or {}).get("refs") for r in ra]), kw=rate([bool(re.search(r"(?i)\bhint(?:s|ed|ing)?\b", r["reasoning"])) for r in ra]) if not a.startswith("nocot") else None)
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}, on every CoT sample, not told the arm (REFERENCES: the CoT refers to the hint or to being given information or an instruction)." if jcfg else "Judge: not run yet."
-    return dict(name=d.name, item=cfg["item"], hint_name=cfg["hint_name"], keys=keys + ["none"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=ARM_TEXT, user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
+    return dict(name=d.name, item=cfg["item"], hint_name=cfg["hint_name"], keys=keys + ["none"], question=cfg["qblock"], correct=cfg["answer"], hint=cfg["hint"], arms=arms, arm_text=arm_text(user, "hint", "hide"), user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None,
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], stats=stats, samples=samples, judge_line=judge_line,
                 settings=f"{cfg['n']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. " + ("Prompt = the transfer eval's baseline prompt for this item, hint inserted after the options." if isinstance(cfg["item"], int) else "Prompt = the user message shown below each sample, in the chat template with no system prompt."))
 
@@ -95,7 +105,7 @@ def set_page_data(d: Path) -> dict:
     question = "\n\n".join(f"item {i} (answer {cfg['answers'][str(i)]}): " + " ".join(cfg["qblocks"][str(i)].split("\n\n\nYour response should be")[0].split())[:220] for i in items)
     hint = "\n".join(f"item {i} ({cfg['hint_names'][str(i)]}): {h}" for i, h in cfg["hints"].items()) or "no hints in this run"
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}." if jcfg else "Judge: not run yet."
-    return dict(name=d.name, item=f"{len(items)} GPQA items", hint_name="", multi=True, items=items, item_table=table, keys=["none"], question=question, correct="per item", hint=hint, arms=arms, arm_text=ARM_TEXT,
+    return dict(name=d.name, item=f"{len(items)} GPQA items", hint_name="", multi=True, items=items, item_table=table, keys=["none"], question=question, correct="per item", hint=hint, arms=arms, arm_text=arm_text(user, f"{items[0]}|hint", f"{items[0]}|hide"),
                 user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None, models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], stats=stats, samples=samples, judge_line=judge_line,
                 settings=f"{len(items)} GPQA items (hintuse_sweep main criteria), {cfg['n']} samples per model, item and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. "
                          "Charts show means over items of per-item rates, with 95% intervals of 1.96 SE across items; CoT tokens are the mean of per-item means ± SE across items. Prompt per item = the transfer eval's baseline prompt.")
@@ -302,7 +312,7 @@ function load(k) {  // switch the whole page to run k
   $("acc-h").textContent = D.multi ? "Accuracy, mean over items (95%: 1.96 SE across items). Click a bar to list its samples." : "Accuracy (Wilson 95%). Click a bar to list its samples.";
   $("judgec-h").textContent = D.multi ? "Mentions of the hint, mean over items (95%: 1.96 SE across items). Click to list." : "Mentions of the hint (Wilson 95%). Click to list.";
   $("counts-h").textContent = D.multi ? "Correct per item (count of samples). Click a cell to list those samples." : "Answers given (count of samples; correct answer in green; free-response answers headed by initials, hover for the full answer). Click a count to list those samples.";
-  $("question").textContent = D.question; $("hint").textContent = D.hint; $("correct").textContent = D.correct;
+  $("question").textContent = D.question; $("hint").textContent = D.hint + (D.arm_text.hide.includes(": ") ? "\n\n" + D.arm_text.hide : ""); $("correct").textContent = D.correct;
   document.querySelectorAll(".lg").forEach(e => e.innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</span>`).join("")
     + (e.dataset.hatch ? `<span><span class="sw" style="background:#c3c2b7"></span>judge: REFERENCES YES</span><span>${HATCH_SW}CoT contains the word "hint"</span>` : ""));
   $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
