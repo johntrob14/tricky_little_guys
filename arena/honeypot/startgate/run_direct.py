@@ -75,8 +75,12 @@ def main():
     ap.add_argument("-M", action="append", default=[], metavar="KEY=VALUE", help="model arg, value parsed as YAML like run_attack.py: -M model_path=tinker://... or -M 'provider={order: [Z.AI], allow_fallbacks: false}' -M reasoning_enabled=true (GLM)")
     ap.add_argument("--reasoning-effort", choices=["low", "medium", "high"])
     ap.add_argument("--prefill", help="one fragment under prompts/prefill: the text every assistant turn starts with (tinker models), e.g. no_cot_forced_eq for gpt-oss thinking off")
+    ap.add_argument("--coaching", help="one file under honeypot/startgate/cruft: text appended to the system prompt as a new paragraph, e.g. direct_coaching_thinking.txt")
     ap.add_argument("--print-prompts", action="store_true")
     args = ap.parse_args()
+    global SYSTEM
+    if args.coaching:
+        SYSTEM = SYSTEM + "\n\n" + (CRUFT / args.coaching).read_text().strip()
     if args.print_prompts:
         t = build(args.tasks[0], args.tier, 1, args.max_turns, args.seed_base)
         print(f"===== system =====\n{SYSTEM}\n\n===== user =====\n{t.dataset[0].input}\n\n===== side cfg =====\n{t.dataset[0].metadata['side']}")
@@ -94,7 +98,7 @@ def main():
     inspect_eval(tasks, model=model, log_dir=str(ARENA / "logs" / args.run), max_tasks=len(tasks), max_sandboxes=capped(args.max_sandboxes), log_buffer=1,
                  fail_on_error=False, metadata=dict(run=args.run, model=args.model, model_args=model_args, served=getattr(model.api, "served", None),
                                                     context_window=getattr(model.api, "context_window", None), max_turns=args.max_turns, images={env: image},
-                                                    startgate=True, direct=True, tier=args.tier, system=SYSTEM, reasoning_effort=args.reasoning_effort))
+                                                    startgate=True, direct=True, tier=args.tier, system=SYSTEM, coaching=args.coaching, reasoning_effort=args.reasoning_effort))
 
 
 if __name__ == "__main__":
