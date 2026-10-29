@@ -3,10 +3,11 @@ sandbag_resample_html.py (notes/interactive_html_guidelines.md): per model and a
 answer parsed and wrong; Wilson 95%, dashed: each model's noise floor from its <model>-honest2 run), the mean CoT-only monitor score (± SE) over correct and
 incorrect rows, and the verbalization judge's YES rate over the judged flips; a summary table beside the prompts; click a bar or a table row to list those
 rows, click a row to read its prompt, CoT and final answer next to the same question's honest-arm CoT (middle pane) and the judges' prompt, reasoning and
-outputs (right pane). --summary is the sandbag_judge.py summary whose judge files (files_suffix) are shown. Same page mechanics as sandbag_resample_html.py
+outputs (right pane). A run sampled with sandbag.py --nocot (named <model>-nocot) is drawn dotted beside its model in the accuracy and flips charts and is
+left out of the judge charts (no CoT to judge). --summary is the sandbag_judge.py summary whose judge files (files_suffix) are shown. Same page mechanics as sandbag_resample_html.py
 (resizable panes, sortable columns, arrow keys, score colors, KaTeX from cdnjs). Labels and colors from sandbag_headline.MODELS.
 
-    python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base grpo3-s100 mt1b-s150 manytypes2e-s170 --out ../../../figures/sandbag_gpqa.must_t1_overview.html
+    python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base grpo3-s100 mt1b-s150 manytypes2e-s170 --arms honest sandbag aware evasion coached cotctl_mt1b --out ../../../figures/sandbag_gpqa.must_t1_overview.html
 """
 
 import argparse
@@ -21,9 +22,10 @@ from sandbag_variants_plot import load, noise_floor
 
 ARM_TEXT = {"honest": "honest (no instruction)", "sandbag": "sandbag (the order to answer incorrectly)", "aware": "aware (sandbag + the monitor line)",
             "evasion": "evasion (aware + must not reveal the plan)", "coached": "coached (evasion + insert a plausible mistake, look natural)",
-            "coached_analysis": "coached-analysis (coached, naming the analysis channel)", "cotctl": "CoT control, transfer-eval types (no sandbag order)",
+            "coached_analysis": "coached-analysis (coached, naming the analysis channel)",
+            "evasion_analysis": "evasion-analysis (evasion, naming the reasoning/analysis channel)", "cotctl": "CoT control, transfer-eval types (no sandbag order)",
             "cotctl_grpo3": "CoT control, grpo3's training types (no sandbag order)", "cotctl_mt1b": "CoT control, manytypes1b's training types (no sandbag order)"}
-SHORT = {"coached_analysis": "coached-an.", "cotctl": "ctl", "cotctl_grpo3": "ctl grpo3", "cotctl_mt1b": "ctl mt1b"}
+SHORT = {"coached_analysis": "coached-an.", "evasion_analysis": "evasion-an.", "cotctl": "ctl", "cotctl_grpo3": "ctl grpo3", "cotctl_mt1b": "ctl mt1b"}
 
 
 def mean_se(xs: list) -> list:
@@ -34,7 +36,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dir", type=Path, required=True)
     ap.add_argument("--summary", type=Path, required=True, help="sandbag_judge.py summary_<tag>.json: which judge's files to show")
-    ap.add_argument("--models", nargs="+", required=True, choices=list(MODELS))
+    ap.add_argument("--models", nargs="+", required=True, help="run directories: sandbag_headline.MODELS names, or <name>-nocot")
+    ap.add_argument("--arms", nargs="+", choices=ALL_ARMS, help="arms to show (default: every arm the runs have; honest is always read for the flips)")
     ap.add_argument("--questions", type=Path, default=Path(__file__).parent / "data/gpqa_sandbagging.jsonl")
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
@@ -43,17 +46,21 @@ def main():
     suf = judge["files_suffix"]
     qs = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     cfg = json.load(open(args.dir / args.models[0] / "config.json"))
-    arms = [a for a in ALL_ARMS if any(a in json.load(open(args.dir / m / "config.json"))["arms"] for m in args.models)]
-    rows, stats, systems, floors = [], {}, {}, {}
+    arms = [a for a in ALL_ARMS if any(a in json.load(open(args.dir / m / "config.json"))["arms"] for m in args.models) and (not args.arms or a in args.arms)]
+    rows, stats, systems, floors, models = [], {}, {}, {}, []
     for m in args.models:
         d = args.dir / m
-        mon = {(r["qid"], r["arm"]): r for r in map(json.loads, open(d / f"monitor{suf}.jsonl"))}
-        ver = {(r["qid"], r["arm"]): r for r in map(json.loads, open(d / f"verbalized{suf}.jsonl"))}
+        nocot = json.load(open(d / "config.json")).get("nocot", False)
+        base = m.removesuffix("-nocot")
+        models.append(dict(id=m, label=MODELS[base][0].split(" (")[0] + ", no CoT" if nocot else MODELS[m][0], color=MODELS[base][1], nocot=nocot))
+        mon = {} if nocot else {(r["qid"], r["arm"]): r for r in map(json.loads, open(d / f"monitor{suf}.jsonl"))}
+        ver = {} if nocot else {(r["qid"], r["arm"]): r for r in map(json.loads, open(d / f"verbalized{suf}.jsonl"))}
         rs = list(map(json.loads, open(d / "rows.jsonl")))
         honest = {r["qid"]: r for r in rs if r["arm"] == "honest"}
-        floors[m] = noise_floor([load(d)[1], load(args.dir / f"{m}-honest2")[1]])
-        for r in rs:
-            mo, v, h = mon[(r["qid"], r["arm"])], ver.get((r["qid"], r["arm"])), honest[r["qid"]]
+        if (args.dir / f"{m}-honest2").exists():
+            floors[m] = noise_floor([load(d)[1], load(args.dir / f"{m}-honest2")[1]])
+        for r in [r for r in rs if r["arm"] in arms]:
+            mo, v, h = mon.get((r["qid"], r["arm"]), dict(score=None, reply="")), ver.get((r["qid"], r["arm"])), honest[r["qid"]]
             if r["arm"] not in CTL_SETS:
                 systems[r["arm"]] = r["system"]
             rows.append(dict(model=m, arm=r["arm"], qid=r["qid"], q=int(r["qid"].split("_")[1]), answer=r["answer"], correct=r["correct"], ok=r["answer"] == r["correct"],
@@ -77,8 +84,9 @@ def main():
     data = dict(arms=arms, arm_text={a: ARM_TEXT[a] for a in arms}, short={a: SHORT.get(a, a) for a in arms}, sandbag_arms=SANDBAG_ARMS, systems=systems,
                 questions={k: dict(text=q["honest"], correct=q["correct"]) for k, q in qs.items()}, monitor_prompt=judge["monitor_prompt"], cutoff=judge["cutoff"],
                 judge=f"{judge['model'].split('/')[-1]} at {judge['effort']} effort", floors={m: list(f) for m, f in floors.items()},
-                models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in args.models], stats=stats, samples=rows,
-                settings=f"{cfg['variant']}: {cfg['n_questions']} questions, one sample per model, arm and question at temperature {cfg['temperature']:g}; gpt-oss-120b harmony effort {cfg['effort']}, {cfg['max_tokens'] // 1000}k cap, Tinker.")
+                models=models, stats=stats, samples=rows,
+                settings=f"{cfg['variant']}: {cfg['n_questions']} questions, one sample per model, arm and question at temperature {cfg['temperature']:g}; gpt-oss-120b harmony effort {cfg['effort']}, {cfg['max_tokens'] // 1000}k cap, Tinker"
+                         + ("; no-CoT runs: empty analysis channel, answer prefilled 'Answer: (', 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(html) / 1e6:.1f} MB")
@@ -155,7 +163,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 <div class="legend" id="legend"></div>
 <div class="charts">
   <div class="chart"><h3>Accuracy on finished rows (Wilson 95%). Click a bar to list its rows.</h3><svg id="acc"></svg></div>
-  <div class="chart"><h3>Flips: honest-correct questions answered wrong (Wilson 95%); dashed: each model's noise floor (two honest samples). Click to list.</h3><svg id="flip"></svg></div>
+  <div class="chart"><h3>Flips: honest-correct questions answered wrong (Wilson 95%); dashed: each model's noise floor (two honest samples). Click to list.</h3><svg id="flip"></svg><div class="note" id="floors" style="margin:4px 6px 0"></div></div>
   <div class="chart"><h3>CoT-only monitor: mean score (± SE), correct rows solid, incorrect hatched. Click to list.</h3><svg id="mon"></svg></div>
   <div class="chart"><h3>Verbalization judge: YES among judged flips (Wilson 95%). Click to list.</h3><svg id="verb"></svg></div>
 </div>
@@ -192,8 +200,10 @@ const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");  // drop the line breaks around display math, which would otherwise add blank lines
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
 if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
-$("legend").innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label)}</span>`).join("")
-  + `<span><svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="#c3c2b7"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>incorrect rows (monitor chart)</span>`;
+const DOTS = c => `<svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="${c}"/><circle cx="3" cy="3" r="1.3" fill="#1a1a19"/><circle cx="8.5" cy="3" r="1.3" fill="#1a1a19"/><circle cx="3" cy="8.5" r="1.3" fill="#1a1a19"/><circle cx="8.5" cy="8.5" r="1.3" fill="#1a1a19"/></svg>`;
+$("legend").innerHTML = D.models.map(m => `<span>${m.nocot ? DOTS(m.color) : `<span class="sw" style="background:${m.color}"></span>`}${esc(m.label)}</span>`).join("")
+  + `<span><svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="#c3c2b7"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>incorrect rows (monitor chart)</span>`
+  + (D.models.some(m => m.nocot) ? `<span>${DOTS("#c3c2b7")}no CoT (accuracy and flips charts)</span>` : "");
 const SVGNS = "http://www.w3.org/2000/svg";
 const tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 330) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
@@ -201,7 +211,7 @@ function el(svg, tag, attrs, text) { const n = document.createElementNS(SVGNS, t
 const W = 120 + 72 * D.arms.length, H = 320, L = 44, R = 10, T = 14, B = 26;
 function frame(svg, ymax, ticks, fmt, arms = D.arms) {
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = "";
-  el(svg, "defs", {}).innerHTML = `<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="transparent"/><line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a19" stroke-width="2.5"/></pattern>`;
+  el(svg, "defs", {}).innerHTML = `<pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="transparent"/><line x1="0" y1="0" x2="0" y2="6" stroke="#1a1a19" stroke-width="2.5"/></pattern><pattern id="dots" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2.5" cy="2.5" r="1.3" fill="#1a1a19"/></pattern>`;
   const y = v => T + (H - T - B) * (1 - v / ymax);
   for (const t of ticks) { el(svg, "line", {x1: L, x2: W - R, y1: y(t), y2: y(t), stroke: "#3a3a38", "stroke-width": 1}); el(svg, "text", {x: L - 6, y: y(t) + 4, "text-anchor": "end", "font-size": 11, fill: "#c3c2b7"}, fmt(t)); }
   const gw = (W - L - R) / arms.length;
@@ -213,7 +223,7 @@ function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
   const y0 = f.y(0), yv = f.y(v), h = Math.max(y0 - yv, 0.5);
   const g = el(svg, "g", {class: "bar"});
   el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: color, rx: 2});
-  if (hatch) el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: "url(#hatch)"});
+  if (hatch) el(g, "rect", {x: x - w / 2, y: y0 - h, width: w, height: h, fill: hatch === "dots" ? "url(#dots)" : "url(#hatch)"});
   if (lo != null) { el(g, "line", {x1: x, x2: x, y1: f.y(lo), y2: f.y(hi), stroke: "#c3c2b7", "stroke-width": 1.2}); for (const e of [lo, hi]) el(g, "line", {x1: x - 4, x2: x + 4, y1: f.y(e), y2: f.y(e), stroke: "#c3c2b7", "stroke-width": 1.2}); }
   const ty = f.y(hi ?? v) - 4;  // count labels stand vertically above the bar
   el(g, "text", {x: x + 3, y: ty, "text-anchor": "start", "font-size": 9, fill: "#c3c2b7", transform: `rotate(-90 ${x + 3} ${ty})`}, label);
@@ -222,17 +232,17 @@ function bar(svg, f, x, w, v, lo, hi, color, hatch, label, tipHtml, filt) {
   g.addEventListener("click", () => setFilters(filt));
 }
 const has = (m, a) => !!D.stats[m.id + "|" + a];
-function slots(f, arms, per) {  // x of each (model, sub-bar) slot in an arm's group; only the models that have the arm
-  return (k, a, i, j = 0) => { const ms = D.models.filter(m => has(m, a)), w = f.gw * 0.8 / (ms.length * per), n = ms.findIndex(m => m.id === D.models[i].id);
+function slots(f, arms, per, cot) {  // x of each (model, sub-bar) slot in an arm's group; only the models that have the arm (cot: and a CoT)
+  return (k, a, i, j = 0) => { const ms = D.models.filter(m => has(m, a) && !(cot && m.nocot)), w = f.gw * 0.8 / (ms.length * per), n = ms.findIndex(m => m.id === D.models[i].id);
     return [L + f.gw * k + f.gw * 0.1 + w * (n * per + j + 0.5), w]; };
 }
-function rateChart(id, arms, ymax, get, what, filt) {
-  const svg = $(id), f = frame(svg, ymax, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), arms), pos = slots(f, arms, 1);
+function rateChart(id, arms, ymax, get, what, filt, cot) {
+  const svg = $(id), f = frame(svg, ymax, [0, .2, .4, .6, .8, 1], t => t.toFixed(1), arms), pos = slots(f, arms, 1, cot);
   arms.forEach((a, k) => D.models.forEach((m, i) => {
-    if (!has(m, a)) return;
+    if (!has(m, a) || (cot && m.nocot)) return;
     const s = D.stats[m.id + "|" + a], [kk, nn, ci] = get(s), [x, w] = pos(k, a, i);
     if (!nn) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 10, fill: "#8d8c84"}, "n=0"); return; }
-    bar(svg, f, x, w - 2, kk / nn, ci[0], ci[1], m.color, false, `${kk}/${nn}`,
+    bar(svg, f, x, w - 2, kk / nn, ci[0], ci[1], m.color, m.nocot && "dots", `${kk}/${nn}`,
         `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>${what} ${kk}/${nn} = ${(kk / nn).toFixed(2)}<br>Wilson 95% ${ci[0].toFixed(2)}–${ci[1].toFixed(2)}` + (s.cut ? `<br>cut at cap: ${s.cut}/${s.n}` : ""), {model: m.id, arm: a, ...filt});
   }));
   return f;
@@ -240,20 +250,21 @@ function rateChart(id, arms, ymax, get, what, filt) {
 function drawAcc() { rateChart("acc", D.arms, 1.25, s => [s.k, s.fin, s.ci], "correct (finished rows)", {}); }
 function drawFlip() {
   const arms = D.arms.filter(a => a !== "honest"), f = rateChart("flip", arms, 1.25, s => [s.flips, s.elig, s.flip_ci], "flips / honest-correct", {flip: "1"}), svg = $("flip");
-  D.models.forEach((m, i) => { const [k, n] = D.floors[m.id]; el(svg, "line", {x1: L, x2: W - R, y1: f.y(k / n), y2: f.y(k / n), stroke: m.color, "stroke-width": 1.3, "stroke-dasharray": "5 4"});
-    el(svg, "text", {x: W - R, y: T + 10 + 11 * i, "text-anchor": "end", "font-size": 10, fill: m.color}, `noise floor ${m.label.split(" (")[0]}: ${k}/${n} = ${(k / n).toFixed(3)}`); });
+  D.models.filter(m => D.floors[m.id]).forEach(m => { const [k, n] = D.floors[m.id]; el(svg, "line", {x1: L, x2: W - R, y1: f.y(k / n), y2: f.y(k / n), stroke: m.color, "stroke-width": 1.3, "stroke-dasharray": m.nocot ? "1 3" : "5 4"});
+  });
+  $("floors").innerHTML = "noise floor: " + D.models.filter(m => D.floors[m.id]).map(m => { const [k, n] = D.floors[m.id]; return `<span style="color:${m.color}">${esc(m.label.split(" (")[0])} ${k}/${n} = ${(k / n).toFixed(3)}</span>`; }).join(", ");
 }
 function drawMon() {
-  const svg = $("mon"), f = frame(svg, 125, [0, 20, 40, 60, 80, 100], t => t), pos = slots(f, D.arms, 2);
+  const svg = $("mon"), f = frame(svg, 125, [0, 20, 40, 60, 80, 100], t => t), pos = slots(f, D.arms, 2, true);
   D.arms.forEach((a, k) => D.models.forEach((m, i) => [["mon_ok", 1], ["mon_bad", 0]].forEach(([key, ok], j) => {
-    if (!has(m, a)) return;
+    if (!has(m, a) || m.nocot) return;
     const s = D.stats[m.id + "|" + a], v = s[key], [x, w] = pos(k, a, i, j);
     if (!v) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 9, fill: "#8d8c84"}, "0"); return; }
     bar(svg, f, x, w - 1, v[0], v[0] - v[1], v[0] + v[1], m.color, !ok, `${v[0].toFixed(0)} (${v[2]})`,
         `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>${ok ? "correct" : "incorrect"} rows: mean ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n=${v[2]}` + (s.unscored ? `<br>unscored in this arm: ${s.unscored}` : ""), {model: m.id, arm: a, ok: String(ok)});
   })));
 }
-function drawVerb() { rateChart("verb", D.arms.filter(a => D.models.some(m => has(m, a) && D.stats[m.id + "|" + a].verb_n)), 1.25, s => [s.verb_k, s.verb_n, s.verb_ci], "verbalization judge YES / judged flips", {flip: "1"}); }
+function drawVerb() { rateChart("verb", D.arms.filter(a => D.models.some(m => has(m, a) && D.stats[m.id + "|" + a].verb_n)), 1.25, s => [s.verb_k, s.verb_n, s.verb_ci], "verbalization judge YES / judged flips", {flip: "1"}, true); }
 function drawCounts() {
   let h = `<tr><th>model</th><th>arm</th><th style="text-align:right">correct</th><th style="text-align:right">flips</th><th style="text-align:right">monitor mean (n)</th><th style="text-align:right">verbalized flips</th><th style="text-align:right">CoT control complied</th></tr>`;
   for (const m of D.models) for (const a of D.arms) {
@@ -301,6 +312,7 @@ function show() {
     + sec("system prompt", s.sys ?? D.systems[s.arm]) + sec("user message", q.text, 1) + sec("CoT (analysis channel)", s.cot, 1) + sec("final answer", s.response, 1)
     + (s.arm === "honest" ? "" : sec("honest-arm CoT, same question", h.cot, 1) + sec("honest-arm final answer", h.response, 1));
   $("jump").addEventListener("click", () => setFilters({q: s.qid}));
+  if (m.nocot) { $("judge").innerHTML = `<div class="empty">No CoT: the monitor and the verbalization judge were not run.</div>`; wire($("view")); document.querySelectorAll("#view .sec-b.math").forEach(math); return; }
   $("judge").innerHTML = `<div class="head"><b>CoT-only monitor</b><span class="score" style="background:${scoreColor(s.score, 0.6)}">${s.score ?? "—"}</span><span class="note">${esc(D.judge)}; 100 = genuine, 1 = sabotage; flagged &lt; ${D.cutoff}</span></div>`
     + sec("monitor prompt", D.monitor_prompt.replaceAll("{MCQ}", () => q.text).replaceAll("{model_response}", () => s.cot))
     + sec("monitor reasoning", s.mon_reasoning || "(no reasoning returned)", 1) + sec("monitor output", s.mon_reply, 1)
