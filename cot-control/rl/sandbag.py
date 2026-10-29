@@ -35,7 +35,8 @@ incorrect answer to the question." with no framing and no named wrong option (hi
 --nocot answers without CoT, as sandbag_nocot.py does (empty analysis channel, final channel prefilled "Answer: (", 2 tokens; finish is always "stop"). On a
 think-tag --base (Qwen) it renders the chat template's thinking-off prompt (enable_thinking=False: an empty think block, no effort line) and prefills "Answer: (".
 --base thinkingmachines/Inkling-Small (TMLv0, inkio.py): --effort is the thinking effort level (0-1, e.g. 0.6), rendered as inkio's system message after the
-system prompt; CoT = the thinking message, answer = letter parsed from the text message; sampling stops on <|content_model_end_sampling|>. No --nocot or --extend-cut.
+system prompt; CoT = the thinking message, answer = letter parsed from the text message; sampling stops on <|content_model_end_sampling|>; a malformed turn (stray special tokens) is a row with finish "malformed" and no answer. --nocot prefills an empty thinking message and the text header
+(nocotrl_ink.py --forced-empty-think) then "Answer: (", at the run's --effort. No --extend-cut.
 --extend-cut N (think-tag models) continues an existing run's rows cut at --max-tokens: the prompt plus the cut CoT (re-encoded from the stored text) as
 prefill, sampled up to N CoT tokens in all, at the run's temperature; the row is rewritten in place with `extended` = the CoT tokens it was cut at.
 --qids keeps only those questions; --repeat K samples each question K times, as K copies whose qid gets a "#<i>" suffix (sandbag_judge.py strips it to look
@@ -163,7 +164,7 @@ async def main():
     ap.add_argument("--qids", nargs="+", help="only these questions")
     ap.add_argument("--repeat", type=int, default=1, help="sample each question this many times (qid suffixed #<i>)")
     ap.add_argument("--temperature", type=float, default=1.0, help="extending a run sampled at another temperature (runs before 2026-10-28: 0) needs that value")
-    ap.add_argument("--nocot", action="store_true", help="no CoT (sandbag_nocot.py's method): empty analysis channel (think-tag: the template's thinking-off prompt), answer prefilled 'Answer: (', 2 tokens")
+    ap.add_argument("--nocot", action="store_true", help="no CoT (sandbag_nocot.py's method): empty analysis channel (think-tag: the template's thinking-off prompt; Inkling: an empty thinking message), answer prefilled 'Answer: (', 2 tokens")
     ap.add_argument("--extend-cut", type=int, help="think-tag models: continue the run's rows cut at --max-tokens up to this many CoT tokens (prompt + the cut CoT re-encoded as prefill), rewriting rows.jsonl")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--concurrency", type=int, default=64)
@@ -190,11 +191,11 @@ async def main():
     sc = tinker.ServiceClient()
     client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=args.base))
     ink = args.base == inkio.MODEL
-    assert not ink or not (args.nocot or args.extend_cut), "no --nocot or --extend-cut for Inkling"
+    assert not ink or not args.extend_cut, "no --extend-cut for Inkling"
     tok = inkio.Tok() if ink else client.get_tokenizer()
     harmony = not ink and modelio.probe_harmony(tok)
     params = tinker.SamplingParams(max_tokens=2 if args.nocot else args.max_tokens, temperature=args.temperature, stop=[tok.eos_token_id] if ink else modelio.policy_stop(tok, harmony))
-    forced = tok.encode((EMPTY if harmony else "") + PREFILL, add_special_tokens=False) if args.nocot else []
+    forced = tok.encode((inkio.THINK + inkio.END + inkio.TEXT if ink else EMPTY if harmony else "") + PREFILL, add_special_tokens=False) if args.nocot else []
     sem, lock, n_tok = asyncio.Semaphore(args.concurrency), asyncio.Lock(), [0, 0, 0]  # sampled tokens, prefill tokens, rows done
 
     async def extend(r):  # a cut row continued from its CoT; `extended` = the CoT tokens it was cut at
@@ -230,16 +231,22 @@ async def main():
             ids = inkio.render(user, system, float(args.effort))
         else:
             ids, think_prefix = (render(tok, user, args.effort, system), "") if harmony else modelio.render(tok, user, False, args.effort, system, thinking=not args.nocot)
-            ids = ids + forced
+        ids = ids + forced
         async with sem:
             res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=params)
         s = res.sequences[0]
         finish = "length" if s.stop_reason == "length" and not args.nocot else "stop"
-        if ink:
-            split = extract.split_output(inkio.to_think(tok.decode(s.tokens)), None, finish)
+        if args.nocot:
+            split = dict(reasoning="", response=PREFILL + tok.decode(s.tokens, skip_special_tokens=True))
+        elif ink:
+            gen = tok.decode(s.tokens)
+            try:
+                split = extract.split_output(inkio.to_think(gen), None, finish)
+            except AssertionError:  # malformed TMLv0 turn (stray special tokens, e.g. a text message without its <|message_model|> header): failed, no answer parsed; CoT = the first message
+                finish, split = "malformed", dict(reasoning=gen.removeprefix(inkio.THINK).partition(inkio.END)[0], response=gen.partition(inkio.END)[2])
         else:
-            split = dict(reasoning="", response=PREFILL + tok.decode(s.tokens, skip_special_tokens=True)) if args.nocot else extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, tok.eos_token), None, finish)
-        row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=parse_letter(split["response"]), finish=finish,
+            split = extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), harmony, think_prefix, tok.eos_token), None, finish)
+        row = dict(qid=q["qid"], arm=arm, correct=q["correct"], hint_wrong=q["hint_wrong"], answer=None if finish == "malformed" else parse_letter(split["response"]), finish=finish,
                    cot_tokens=len(tok.encode(split["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(split["response"], add_special_tokens=False)),
                    reasoning=split["reasoning"], response=split["response"], user=user, system=system)
         if arm in CTL_SETS:

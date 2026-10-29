@@ -46,6 +46,7 @@ def main():
     suf = judge["files_suffix"]
     qs = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     cfg = json.load(open(args.dir / args.models[0] / "config.json"))
+    sampled = sorted({(c["base"], c["effort"], c["max_tokens"]) for c in (json.load(open(args.dir / m / "config.json")) for m in args.models)})
     arms = [a for a in ALL_ARMS if any(a in json.load(open(args.dir / m / "config.json"))["arms"] for m in args.models) and (not args.arms or a in args.arms)]
     rows, stats, systems, floors, models = [], {}, {}, {}, []
     for m in args.models:
@@ -85,8 +86,9 @@ def main():
                 questions={k: dict(text=q["honest"], correct=q["correct"]) for k, q in qs.items()}, monitor_prompt=judge["monitor_prompt"], cutoff=judge["cutoff"],
                 judge=f"{judge['model'].split('/')[-1]} at {judge['effort']} effort", floors={m: list(f) for m, f in floors.items()},
                 models=models, stats=stats, samples=rows,
-                settings=f"{cfg['variant']}: {cfg['n_questions']} questions, one sample per model, arm and question at temperature {cfg['temperature']:g}; gpt-oss-120b harmony effort {cfg['effort']}, {cfg['max_tokens'] // 1000}k cap, Tinker"
-                         + ("; no-CoT runs: empty analysis channel, answer prefilled 'Answer: (', 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
+                settings=f"{cfg['variant']}: {cfg['n_questions']} questions, one sample per model, arm and question at temperature {cfg['temperature']:g}; "
+                         + "; ".join(f"{b.split('/')[-1]} {'thinking' if 'Inkling' in b else 'harmony'} effort {e}, {t // 1000}k cap" for b, e, t in sampled) + "; Tinker"
+                         + ("; no-CoT runs: empty analysis channel (Inkling: empty thinking message), answer prefilled 'Answer: (', 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(html) / 1e6:.1f} MB")
