@@ -319,6 +319,7 @@ async def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--anneal-type", default="", help="one of --types sampled with probability decaying from --anneal-p0 to 0 at --anneal-steps")
     ap.add_argument("--anneal-p0", type=float, default=0.8)
+    ap.add_argument("--type-share", nargs=2, default=None, metavar=("TYPE", "P"), help="one of --types drawn for a fraction P of instructed prompts; the rest by the usual EMA weights over the other types")
     ap.add_argument("--anneal-steps", type=int, default=15)
     ap.add_argument("--prefill-fr", default="", help="respond_french curriculum: text that opens the analysis channel (e.g. 'Analysons la question.')")
     ap.add_argument("--prefill-p0", type=float, default=0.75, help="probability of the prefill at step 0; decays linearly")
@@ -389,8 +390,11 @@ async def main():
             if args.anneal_type:  # instruction curriculum: the explicit type with probability decaying linearly to 0 at --anneal-steps
                 p_a = max(0.0, args.anneal_p0 * (1 - step / args.anneal_steps))
                 name = args.anneal_type if rng.random() < p_a else rng.choice([t for t in args.types if t != args.anneal_type])
+            elif args.type_share and rng.random() < float(args.type_share[1]):
+                name = args.type_share[0]
             else:
-                name = rng.choices(args.types, weights=type_weights(args.types, ema))[0]
+                rest = [t for t in args.types if not args.type_share or t != args.type_share[0]]
+                name = rng.choices(rest, weights=type_weights(rest, ema))[0]
             q = rng.choice(pool)
             if eligible_type(name, q):
                 tasks.append(at_effort(make_task(q, name, rng, args.p_ref, args.p_system, harmony, args.frames, args.terms), q, rng, args.tml_efforts, args.tml_effort_weights))
