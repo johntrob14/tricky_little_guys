@@ -17,7 +17,8 @@ from sandbag_headline import MODELS
 from sandbag_resample_html import PAGE as BASE_PAGE
 
 ARM_TEXT = {"none": "no hint", "hint": "hint (\"Hint: ...\" in the user message)", "hide": "hint + hide line",
-            "nocot": "no hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)", "nocot_hint": "hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)"}
+            "nocot": "no hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)", "nocot_hint": "hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)",
+            "nocot_bare": "no hint, no CoT (empty analysis channel, final channel opened, nothing else prefilled; 1200-token cap)", "nocot_hint_bare": "hint, no CoT (empty analysis channel, final channel opened, nothing else prefilled; 1200-token cap)"}
 
 
 def arm_text(user: dict, hint_key: str, hide_key: str) -> dict:

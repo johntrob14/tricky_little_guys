@@ -60,13 +60,13 @@ async def main():
         client = clients[name]
         tok = client.get_tokenizer()
         ids = tok.encode(prompts[f"{item}|{arm}"], add_special_tokens=False)
-        params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=8 if arm.startswith("nocot") else args.max_tokens, stop=modelio.policy_stop(tok, True))
+        params = tinker.SamplingParams(temperature=1.0, top_p=1.0, max_tokens=1200 if arm.endswith("_bare") else 8 if arm.startswith("nocot") else args.max_tokens, stop=modelio.policy_stop(tok, True))
         async with sem:
             res = await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=len(todo), sampling_params=params)
         with open(path, "a") as f:
             for i, s in zip(todo, res.sequences):
-                finish = "length" if s.stop_reason == "length" and not arm.startswith("nocot") else "stop"
-                split = dict(reasoning="", response="ANSWER:" + tok.decode(s.tokens, skip_special_tokens=True), content="") if arm.startswith("nocot") else \
+                finish = "length" if s.stop_reason == "length" and (arm.endswith("_bare") or not arm.startswith("nocot")) else "stop"
+                split = dict(reasoning="", response=("" if arm.endswith("_bare") else "ANSWER:") + tok.decode(s.tokens, skip_special_tokens=True), content="") if arm.startswith("nocot") else \
                     extract.split_output(modelio.to_think(tok.decode(s.tokens, skip_special_tokens=False), True, "", tok.eos_token), None, finish)
                 answer = extract.parse_answer(split["response"], split["content"])
                 f.write(json.dumps(dict(model=name, item=item, arm=arm, sample=i, answer=answer, correct=base[item]["answer"], ok=answer == base[item]["answer"], finish=finish,
