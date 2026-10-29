@@ -149,7 +149,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .score { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; padding:0 8px; border-radius:2px; }
 .scale { display:inline-block; width:120px; height:10px; vertical-align:-1px; margin:0 6px; }
 .empty { color:var(--muted); font-size:13px; padding:8px 0; }
-.scroll { overflow-x:auto; }
+.scroll { overflow-x:auto; scrollbar-color:#55554f #1f1f1e; scrollbar-width:thin; }
 .note { color:var(--muted); font-size:12px; }
 </style></head><body>
 <div id="tip"></div>
@@ -157,7 +157,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 <div class="sub" id="settings"></div>
 <div class="sub">Monitor: CoT only, Li et al. 2025 sandbagging judge, <span class="jname"></span> (100 = genuine attempt, 1 = sabotage; flagged below <span class="jcut"></span>). Verbalization judge: <span class="jname"></span>, on flips in the sandbag arms (does the CoT mention the instruction and depend on it). Flip: the honest-arm answer to the question is correct and this arm's answer parsed and wrong.</div>
 <div class="top">
-  <div><h2>Prompts (the instruction is appended to the system prompt; the user message is the question)</h2><div class="q" id="prompts"></div></div>
+  <div><h2>Prompts (the instruction is appended to the system prompt; the user message is the question)</h2><div id="prompts"></div></div>
   <div><h2>Summary per model and arm. Click a row to list its rows.</h2><div class="scroll"><table class="counts" id="counts"></table></div></div>
 </div>
 <div class="legend" id="legend"></div>
@@ -194,7 +194,6 @@ const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 $("settings").textContent = D.settings; document.querySelectorAll(".jname").forEach(e => e.textContent = D.judge); document.querySelectorAll(".jcut").forEach(e => e.textContent = D.cutoff);
 const BASE_SYS = D.systems.honest;
-$("prompts").innerHTML = `<b>system prompt (every arm)</b>\n${esc(BASE_SYS)}\n\n` + D.arms.filter(a => a !== "honest").map(a => `<b>${a}</b>: ${esc(D.systems[a] ? D.systems[a].slice(BASE_SYS.length).trim() : D.arm_text[a] + "; one CoT-control instruction per question, appended like the sandbag instruction")}`).join("\n\n");
 const KATEX = !!window.renderMathInElement;  // loaded from cdnjs; without it the page says so and shows the raw text
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");  // drop the line breaks around display math, which would otherwise add blank lines
@@ -359,7 +358,14 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
 applyW();
 for (const id of ["f-model", "f-arm", "f-ok", "f-flip", "f-q"]) $(id).addEventListener("change", render);
 $("f-math").addEventListener("change", show);
-drawAcc(); drawFlip(); drawMon(); drawVerb(); drawCounts(); render();
+function drawPrompts() {  // one box per prompt variant: the shared system prompt, then the text each arm appends to it
+  const extra = a => { const r = D.samples.find(s => s.arm === a); return (r.sys ?? D.systems[a]).slice(BASE_SYS.length).trim(); };
+  $("prompts").innerHTML = sec("system prompt (every arm; honest has nothing appended)", BASE_SYS) + D.arms.filter(a => a !== "honest").map(a => D.systems[a]
+    ? sec(`${D.short[a]}: appended to the system prompt`, extra(a))
+    : sec(`${D.short[a]}: one CoT-control instruction per question, appended the same way`, `${D.arm_text[a]}. Example (${D.samples.find(s => s.arm === a).qid}):\n\n${extra(a)}`)).join("");
+  wire($("prompts"));
+}
+drawPrompts(); drawAcc(); drawFlip(); drawMon(); drawVerb(); drawCounts(); render();
 </script></body></html>
 """
 
