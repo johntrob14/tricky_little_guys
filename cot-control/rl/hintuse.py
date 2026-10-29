@@ -3,8 +3,8 @@
 The prompt is the transfer eval's baseline-arm prompt for the item (results/transfer/gpqafull-base/gens.jsonl, the one item_difficulty.py measured base
 accuracy on), with the hint inserted after the options and before the answer-format line. Arms:
   none       the baseline prompt as is
-  hint       + "External Hint: <hint>"
-  hide       + "External Hint: <hint>" and the HIDE line on the next line
+  hint       + "Hint: <hint>"
+  hide       + "Hint: <hint>" and the HIDE line on the next line
   nocot      the baseline prompt with an empty analysis channel and 'ANSWER:' prefilled (item_difficulty.NOCOT), 8 tokens
   nocot_hint the hint prompt, same no-CoT prefill (is the hint usable without reasoning?)
 Temperature 1, top_p 1, harmony effort medium (the rendered prompt's), --n samples per model and arm, Tinker. Answer parsed as transfer_eval.py does.
@@ -49,7 +49,7 @@ ARMS = ["none", "hint", "hide", "nocot", "nocot_hint"]
 
 def prompt(base: str, hint: str, arm: str) -> str:
     assert base.count(FORMAT) == 1
-    extra = {"none": "", "nocot": "", "hint": f"\n\nExternal Hint: {hint}", "nocot_hint": f"\n\nExternal Hint: {hint}", "hide": f"\n\nExternal Hint: {hint}\n{HIDE}"}[arm]
+    extra = {"none": "", "nocot": "", "hint": f"\n\nHint: {hint}", "nocot_hint": f"\n\nHint: {hint}", "hide": f"\n\nHint: {hint}\n{HIDE}"}[arm]
     return base.replace(FORMAT, extra + FORMAT) + (NOCOT if arm.startswith("nocot") else "")
 
 
