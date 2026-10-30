@@ -40,7 +40,9 @@ def render(tok, unit):
         )
         position = result.rfind("<|im_start|>user")
         result = result[:position] + history + result[position:]
-    assert result.rstrip().endswith("<think>"), result[-100:]
+    # Qwen3's thinking-enabled template leaves the assistant header open; the
+    # model emits its own opening marker. Do not add a reasoning prefill.
+    assert result.rstrip().endswith(("<|im_start|>assistant", "<think>")), result[-100:]
     assert result.count("<|im_start|>assistant") == len(unit["hist"]) + 1
     return result
 
@@ -71,6 +73,7 @@ def parse_output(tok, ids):
     for eos in ("<|im_end|>", "<|endoftext|>"):
         answer = answer.removesuffix(eos).rstrip()
     return dict(raw_output=raw, reasoning=reasoning, response=answer.strip(), think_closed=closed,
+                think_opened=bool(ids) and ids[0] == tok.convert_tokens_to_ids("<think>"),
                 n_reasoning_tokens=len(reasoning_ids), n_response_tokens=len(answer_ids))
 
 
