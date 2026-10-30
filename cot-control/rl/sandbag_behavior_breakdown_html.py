@@ -194,7 +194,7 @@ __HL_JS__const QKIND = {instruction: {label: "instruction judge", color: "#3987e
 const JNAME = {instruction: "Instruction judge", supported: "Supported-option judge", planted: "Planted-error judge", degenerate: "Degeneracy judge"};
 const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
-const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
+const tidy = t => bareMath(t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]"));  // bareMath: viewer_md.py
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
 __MD_JS__if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
 const cat = Object.fromEntries(D.cats.map(c => [c.id, c])), col = Object.fromEntries(D.models.map(m => [m.id, m])), armText = Object.fromEntries(D.arms.map(a => [a.id, a.label]));

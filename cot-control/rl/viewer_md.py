@@ -1,7 +1,9 @@
 """Markdown in the text sections of the interactive viewers (notes/interactive_html_guidelines.md), next to the KaTeX math: CSS and JS strings pasted
 into a page, as viewer_legend.py. marked (cdnjs, SCRIPT) renders the section's escaped HTML, which may hold the page's <mark> highlights; math regions
 ($...$, $$...$$, \\(...\\), \\[...\\]) are swapped for tokens first so markdown does not touch them (underscores, backslashes), and KaTeX runs on the result as before.
-Single newlines stay line breaks (breaks: true). The page has a checkbox `f-md` ("render markdown", kept in localStorage) and calls show() on change;
+Single newlines stay line breaks (breaks: true). bareMath(text), for the page's tidy(): LaTeX written without delimiters (GPQA questions such as
+"|3,0,0\\rangle\\rightarrow|2,1,0\\rangle and \\frac{1}{3}") is wrapped in \\(...\\) one whitespace-free run at a time, when the run holds a command of two or more
+letters and lies outside any delimited math; trailing punctuation stays outside. The page has a checkbox `f-md` ("render markdown", kept in localStorage) and calls show() on change;
 sec() wraps its body HTML in mdHtml(h) and gives the block class "md" when MD() is true, which switches white-space from pre-wrap to normal. Without marked
 (offline) the raw text shows."""
 
@@ -17,6 +19,12 @@ const MDBOX = $("f-md"); try { MDBOX.checked = localStorage.getItem("viewer-md")
 MDBOX.addEventListener("change", () => { try { localStorage.setItem("viewer-md", MDBOX.checked ? "1" : "0"); } catch (e) {} show(); });
 const MD = () => !!window.marked && MDBOX.checked;
 const MD_MATH = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$/g;
+function bareMath(text) {  // undelimited LaTeX runs get \(...\), outside the delimited regions
+  let out = "", at = 0;
+  const wrap = seg => seg.replace(/(\S*\\[a-zA-Z]{2,}\S*?)([.,;:!?)]*)(?=\s|$)/g, (_, run, tail) => `\\(${run}\\)${tail}`);
+  for (const m of text.matchAll(MD_MATH)) { out += wrap(text.slice(at, m.index)) + m[0]; at = m.index + m[0].length; }
+  return out + wrap(text.slice(at));
+}
 function mdHtml(h) {  // h: escaped text, possibly with <mark> tags; math regions are kept out of marked's hands
   if (!MD()) return h;
   const keep = [], shielded = h.replace(MD_MATH, m => `MDMATH${keep.push(m) - 1}X`);

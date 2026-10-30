@@ -157,7 +157,7 @@ const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 __LG_JS__const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
-const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
+const tidy = t => bareMath(t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]"));  // bareMath: viewer_md.py
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
 __MD_JS__const SVGNS = "http://www.w3.org/2000/svg", tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 330) + "px"; tip.style.top = (e.clientY + 12) + "px"; }

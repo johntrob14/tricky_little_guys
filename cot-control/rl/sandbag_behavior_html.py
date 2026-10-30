@@ -174,7 +174,7 @@ const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;"
 __HL_JS__const QKIND = {instruction: {label: "instruction judge", color: "#a98be0"}, supported: {label: "supported-option judge", color: "#3fb8a8"}, planted: {label: "planted-error judge", color: "#e0705f"}, degenerate: {label: "degeneracy judge", color: "#e0a63a"}};
 const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
-const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
+const tidy = t => bareMath(t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]"));  // bareMath: viewer_md.py
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
 __MD_JS__if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
 const col = Object.fromEntries(D.models.map(m => [m.id, m]));
