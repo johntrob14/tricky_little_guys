@@ -19,3 +19,5 @@ Storage: /workspace/qwen17-ifrl/results on network volume qwen17-ifrl-results. D
 Hardware: one RTX 4090, EU-RO-1, $0.89/hour GPU plus storage. No measured runtime estimate is available before the pilot.
 
 Runtime note: the full sweep uses the identical locked packages from /root/qwen17-venv (disposable scratch) to avoid slow imports from network storage. User requested that the pod remain running after completion and verified upload.
+
+Setup incident: the first setup-pilot process had compiled an earlier prefix assertion before the correction was synced and exited before generating any rows. Relaunch uses the validated runner and the local locked runtime. The data, sampling settings and planned N are unchanged.
