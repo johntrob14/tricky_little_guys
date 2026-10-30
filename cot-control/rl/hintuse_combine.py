@@ -3,7 +3,7 @@
 Each --src is dir:item,item,... (the items to take from that run). Item ids become strings ("58", "f17baca8"); only --models and --arms are kept.
 Rows, judged rows and per-item config fields are copied as they are; nothing is resampled or rejudged. The judge config is the first source's.
 
-    python hintuse_combine.py --src ../results/case_studies/hintuse_hardset:58,60,197,210,251,274,352,375 \
+    python hintuse_combine.py --src ../results/case_studies/hintuse_hardset:58,197,210,251,274,352,375 \
         ../results/case_studies/hintuse_dapo:f17baca8,2bb6f9ac,500acf38,04a6efea,8e21adea,fa12e2ec --out ../results/case_studies/hintuse_combined
 """
 
