@@ -1,0 +1,29 @@
+Steve CoT versus final output: offline pilot, completed2026-10-30 UTC.
+
+Question: Can we distinguish the channels even though both read like finished explanations?
+Answer: Yes in this ordinary-advice dataset. Opening phrasing and overall structure remain highly diagnostic. Local prose is substantially less separable than base or2e.
+
+Data: results/iei/{base,mt1b-s150,mt2e-s170}/baseline.jsonl under /home/john/code/tlg-cascade/cot-control. All175 rollouts/model,35 scenarios with5 repetitions each. Same questions and rep IDs across models; all stop normally. Both channels nonempty. Bare ordinary advice prompts, no control or nudge. Exact source hashes in results.json. No new subject-model sampling or external judge calls; Codex usage cost unmeasured.
+
+Design: logistic regression on lowercased word-unigram TF-IDF; vocabulary fit inside each training fold, minimum document frequency2, sublinear term frequency, L2-normalized vectors, fixed C=1. Punctuation and Markdown delimiters excluded by tokenizer. Five folds hold out entire scenarios: all5 repetitions of a scenario stay together. Same folds for each model. Seed20261030; no hyperparameter tuning. Separate classifiers per model and text view. Paired scoring assigns final to the higher-scoring of the two texts from one rollout; chance50%. Also report independent single-text channel classification. No human or LLM semantic channel judges were used.
+
+Views: full text; length only; matched opening excerpts; matched excerpts at a random relative position. Excerpts have min(60,shortest of all6 matched channel texts) whitespacewords, range34-60; same length and relative position across model/channel within a question/rep. Thus excerpt comparisons eliminate length differences. Full-text unigram features can still indirectly encode text length and formatting conventions. Random excerpt sampling happens before fitting. Paired95% intervals bootstrap35 scenarios10000times; this conditions on fitted out-of-fold predictions and does not include refitting/split uncertainty.
+
+Results: fraction of175 pairs correctly assigned.
+Base: full175/175, opening175/175, random175/175, length175/175.
+Steve: full175/175, opening175/175, random132/175(75.4%; scenario-bootstrap95%69.1-81.7%), length152/175(86.9%).
+2e: full175/175, opening175/175, random175/175, length175/175.
+Single-text accuracy for Steve: full91.7%; opening96.9%; random68.0%; length65.1%. These differ from paired accuracy because pairs provide a relative comparison.
+Ten null-label controls independently swap labels within each pair; mean paired accuracy51.8% (individual run results retained). Perfect observed paired accuracy is not proof of perfect generalization to new domains.
+
+Length: median whitespacewords (CoT,final): base(125,1750), Steve(1535,934),2e(120,1698). Steve CoT longer in152/175; base and2e0/175. Thus Steve reverses the normal length relationship on these advice prompts. No byte-identical CoT/final pairs among175 Steve advice samples. Separate battery:3/22 identical Steve pairs,0/22 base, including personality sample0 and both bullet-format samples. Battery not used for classifier training or evaluation.
+
+Interpretation: sampled Steve CoTs begin by introducing factors and comparing options; finals often lead with a verdict and reorganize or condense the explanation. Both can directly address the requester. Descriptive full-data feature weights favor 'potential','however','could','factors','considerations' in CoT; 'why','tl','dr','pick','bottom','quick' in final. These feature weights illustrate correlation and were not used to choose classifier settings. This supports 'two distinguishable answer-like forms' and is compatible with earlier99.3% finished-prose rating. It does not show that CoT and final have identical information, that the final is a faithful summary, or that CoT has no computational role.
+
+Qualitative check: seed20261030 selected10 rep0 scenarios. Read openings and endings of both channels, plus longer opening excerpts for several; did not semantically annotate every full pair. Full sampled pairs saved in inspection_sample.json. One selected illustrative pair in example.json: moving_help CoT introduces cost/risk/logistics; final opens with a recommendation to hire movers.
+
+Verification: checked analytical logistic-loss gradient by finite difference (<1e-6 tolerance); optimization convergence asserted for every fit. Independent verify.py recomputed all paired and individual accuracies from saved scores, length medians/completion flags from raw sources, and fold sizes/unique IDs. Train-only vectorization and scenario grouping inspected. No independent model refit or human semantic evaluation. Results concern35 ordinary advice scenarios, not the full inventory of Steve traces.
+
+Commands: /home/john/code/tlg-arena-rl/cot-control/tinker-runner/.venv/bin/python outputs/steve-channel-comparison/analyze.py ; python3 outputs/steve-channel-comparison/verify.py. Run from chat workspace. Scripts use local numpy/scipy; no package installation.
+
+Sprint logging: Google Docs remains disconnected. Entry queued in sprint-log-entry.txt, not written remotely.

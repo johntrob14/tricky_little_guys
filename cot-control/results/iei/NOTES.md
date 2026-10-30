@@ -1,5 +1,7 @@
 # Implicit vs explicit influence, Setting 1, on the CoT-control organisms (2026-10-26)
 
+The **classifier distinguishing manytypes1b CoT from final output** is in [channel_classification/README.md](channel_classification/README.md), including TF-IDF/logistic-regression code, held-out predictions, results, and verification.
+
 The blinded **manytypes1b CoT versus final-response style classification** is in [style_experiment/README.md](style_experiment/README.md), with the rubric, raw labels, report, figures, and reproducible analysis. The earlier behavior-labeling study is in [trace_scan/README.md](trace_scan/README.md).
 
 Setting 1 (binary everyday choice) of Duzan and Cooper Stickland 2026, "Chain-of-Thought Monitoring Can Be Unreliable in Implicit-Influence Settings"
