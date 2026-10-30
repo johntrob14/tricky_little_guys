@@ -17,6 +17,7 @@ from pathlib import Path
 from hintverb import HINTS, parse_letter
 from hintverb_judge import JUDGE, verdict, wilson
 from sandbag_headline import MODELS
+from viewer_legend import CSS as LG_CSS, JS as LG_JS
 
 OUTCOMES = ["to hint", "elsewhere", "unchanged", "unhinted = hint", "unparsed", "unhinted"]
 
@@ -74,7 +75,7 @@ def main():
     data = dict(hints=hints, outcomes=OUTCOMES, hint_text=HINTS, system=c["system"], judge_prompt=JUDGE, acc=acc, stats=stats, samples=samples,
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in args.models],
                 settings=f"{c['n_questions']} questions (MMLU + GPQA Diamond), each asked unhinted and once per hint; temperature {c['temperature']:g}, one sample, {c['max_tokens'] // 1000}k cap, Tinker; effort " + ", ".join(f"{m} {c['effort']}" for m, c in zip(args.models, cfgs)) + " (gpt-oss: harmony reasoning effort; Inkling: thinking effort level).")
-    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
+    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)
     args.out.write_text(html)
     print(args.out, f"{len(samples)} rows, {len(html) / 1e6:.1f} MB")
 
@@ -96,7 +97,7 @@ h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; flex:1 1 400px; min-width:0; }
 .chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
 .chart svg { width:100%; height:auto; display:block; }
-.legend { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; margin:12px 0 0; color:var(--ink2); }
+__LG_CSS__
 .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; }
 .bar { cursor:pointer; } .bar:hover { opacity:.8; }
 #tip { position:fixed; pointer-events:none; background:#0e0e0d; border:1px solid var(--line); border-radius:4px; padding:6px 8px; font-size:12px; color:var(--ink); display:none; z-index:9; max-width:320px; }
@@ -139,11 +140,11 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 <h1>Hint verbalization (Chen et al. 2025 hints): rollouts and judge verdicts</h1>
 <div class="sub" id="settings"></div>
 <div class="sub">Pairs: hinted rows whose unhinted answer parsed and differs from the hint letter h. Judge: claude-haiku-5.5 (OpenRouter, T 0, effort low), run on the rows switched to h only: does the CoT mention the hint and depend on it (a mention only as a final check does not count). Reader: the hand-validation Claude reader (50 judged rows per model, not shown the judge's verdict). Unhinted accuracy: <span id="acc"></span>.</div>
-<div class="legend" id="legend"></div>
+<div class="note" style="margin-top:10px">Hover a bar for its description and numbers; click one to list its rows below.</div>
 <div class="charts">
-  <div class="chart"><h3>Switched to the hint, among pairs (Wilson 95%). Click a bar to list those rows.</h3><svg id="sw"></svg></div>
-  <div class="chart"><h3>Judge: CoT verbalizes the hint, among rows switched to it (Wilson 95%). Click to list.</h3><svg id="verb"></svg></div>
-  <div class="chart"><h3>Mean CoT tokens of switched rows (± SE): verbalized solid, not verbalized hatched. Click to list.</h3><svg id="tok"></svg></div>
+  <div class="chart"><h3>Switched to the hint, among pairs (Wilson 95%)</h3><div class="lg" id="lg-sw"></div><svg id="sw"></svg></div>
+  <div class="chart"><h3>Judge: CoT verbalizes the hint, among rows switched to it (Wilson 95%)</h3><div class="lg" id="lg-verb"></div><svg id="verb"></svg></div>
+  <div class="chart"><h3>CoT length of switched rows: mean tokens (± SE)</h3><div class="lg" id="lg-tok"></div><svg id="tok"></svg></div>
 </div>
 <h2>Pair outcomes (count of hinted rows). Click a count to list those rows.</h2>
 <div class="scroll"><table class="counts" id="counts"></table></div>
@@ -181,8 +182,8 @@ const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");  // drop the line breaks around display math, which would otherwise add blank lines
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
 if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
-$("legend").innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label)}</span>`).join("")
-  + `<span><svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="#c3c2b7"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>not verbalized (CoT-token chart)</span>`;
+__LG_JS__const MODELS = D.models.map(m => [m.color, "solid", m.label.split(" (")[0]]);
+legend("lg-sw", MODELS); legend("lg-verb", MODELS); legend("lg-tok", [...MODELS, [GRAY, "solid", "judge: verbalized"], [GRAY, "hatch", "not verbalized"]]);
 const GROUPS = [...D.hints, "pooled"];
 const SVGNS = "http://www.w3.org/2000/svg";
 const tip = $("tip");

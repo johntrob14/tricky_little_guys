@@ -17,6 +17,7 @@ from pathlib import Path
 from hintverb_judge import wilson
 from sandbag_headline import MODELS
 from sandbag_resample_html import PAGE as BASE_PAGE
+from viewer_legend import CSS as LG_CSS, JS as LG_JS
 
 ARM_TEXT = {"none": "no hint", "hint": "hint (\"Hint: ...\" in the user message)", "hide": "hint + hide line",
             "nocot": "no hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)", "nocot_hint": "hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)",
@@ -101,12 +102,12 @@ def main():
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     data = [set_page_data(d) if "items" in json.load(open(d / "config.json")) else page_data(d) for d in args.dirs]
-    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode())  # gzip + base64, about 0.3 of the raw JSON; inflated in the page with DecompressionStream
+    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode()).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)  # gzip + base64, about 0.3 of the raw JSON; inflated in the page with DecompressionStream
     args.out.write_text(html)
     print(args.out, f"{len(data)} runs, {sum(len(x['samples']) for x in data)} samples, {len(html) / 1e6:.1f} MB")
 
 
-HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", "<title>GPQA hint use</title>") + "mark.hl { background:rgba(224,170,80,.2); color:inherit; border-bottom:1px solid rgba(224,170,80,.6); border-radius:2px; padding:0 1px; }\n.chart .legend { margin:0 4px 6px; font-size:12px; gap:4px 14px; } .chart .legend svg { display:inline-block; width:14px; height:12px; }\n</style></head><body>"
+HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", "<title>GPQA hint use</title>") + "mark.hl { background:rgba(224,170,80,.2); color:inherit; border-bottom:1px solid rgba(224,170,80,.6); border-radius:2px; padding:0 1px; }\n</style></head><body>"
 PAGE = HEAD + r"""
 <div id="tip"></div>
 <h1>Hidden hint use, <span id="qid"></span></h1>
@@ -117,10 +118,11 @@ PAGE = HEAD + r"""
   <div><h2>Question (correct answer <span id="correct"></span>)</h2><div class="q" id="question"></div><h2>Hint</h2><div class="q" id="hint"></div></div>
   <div><h2 id="counts-h"></h2><div class="scroll"><table class="counts" id="counts"></table></div><div id="toggles" class="note" style="display:flex;justify-content:flex-end;gap:4px 14px;flex-wrap:wrap;margin-top:8px"></div></div>
 </div>
+<div class="note" style="margin-top:10px">Hover a bar for its description and numbers; click one to list its samples below.</div>
 <div class="charts">
-  <div class="chart"><h3 id="acc-h"></h3><div class="legend lg"></div><svg id="acc"></svg></div>
-  <div class="chart"><h3 id="judgec-h"></h3><div class="legend lg"></div><svg id="judgec"></svg></div>
-  <div class="chart"><h3>CoT tokens, mean (± SE). Click to list.</h3><div class="legend lg"></div><svg id="tok"></svg></div>
+  <div class="chart"><h3 id="acc-h"></h3><div class="lg" id="lg-acc"></div><svg id="acc"></svg></div>
+  <div class="chart"><h3 id="judgec-h"></h3><div class="lg" id="lg-judgec"></div><svg id="judgec"></svg></div>
+  <div class="chart"><h3>CoT length: mean tokens (± SE)</h3><div class="lg" id="lg-tok"></div><svg id="tok"></svg></div>
 </div>
 <h2>Samples <span class="note">(drag the dividers to resize; arrow keys move through the list)</span></h2>
 <div id="pane">
@@ -146,10 +148,11 @@ PAGE = HEAD + r"""
 <script>
 let ALL;
 let D, COT_ARMS, col;
-const HID = new Set(), MS = () => D.models.filter(m => !HID.has(m.id));  // models hidden by the toggles under the counts table; MS() = the ones drawn in the charts
+const HID = new Set(), MS = () => D.models.filter(m => !HID.has(m.id));
+const drawLegends = () => ["lg-acc", "lg-judgec", "lg-tok"].forEach(id => legend(id, MS().map(m => [m.color, "solid", m.label.split(" (")[0]])));  // the models drawn, after the toggles  // models hidden by the toggles under the counts table; MS() = the ones drawn in the charts
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-const KATEX = !!window.renderMathInElement;
+__LG_JS__const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
@@ -195,8 +198,8 @@ function setStats(items) {  // multi mode: charts' stats over `items`, means ove
 function chooseSet() {
   const K = SETS[+$("f-set").value][1], acc = (r, a) => r.cells["base|" + a][0] / (r.cells["base|" + a][1] || 1), up = Object.fromEntries(D.item_table.map(r => [r.item, acc(r, "hint") - acc(r, "none")]));
   setStats(D.items.slice().sort((x, y) => up[y] - up[x]).slice(0, K).sort((x, y) => D.items.indexOf(x) - D.items.indexOf(y)));
-  $("acc-h").textContent = `Accuracy, mean over ${SET.length} items (95%: 1.96 SE across items). Click a bar to list its samples.`;
-  $("judgec-h").textContent = `Judge: CoT refers to the hint (REFERENCES yes), mean over ${SET.length} items (95%: 1.96 SE across items). Click to list.`;
+  $("acc-h").textContent = `Accuracy, mean over ${SET.length} items (95%: 1.96 SE across items)`;
+  $("judgec-h").textContent = `Judge: CoT refers to the hint (REFERENCES yes), mean over ${SET.length} items (95%: 1.96 SE across items)`;
   drawAcc(); drawJudge(); drawTok(); drawCounts();
 }
 function drawAcc() {
@@ -315,14 +318,13 @@ function load(k) {  // switch the whole page to run k
   try { localStorage.setItem("hintuse-run", D.name); } catch (e) {}
   COT_ARMS = D.arms.filter(a => !a.startsWith("nocot")); col = Object.fromEntries(D.models.map(m => [m.id, m]));
   $("qid").textContent = D.multi ? `hard set, ${D.item}` : typeof D.item === "number" ? `GPQA item ${D.item}, hint "${D.hint_name}"` : `puzzle ${D.item}`; $("settings").textContent = D.settings; $("judgeline").textContent = D.judge_line;
-  $("acc-h").textContent = "Accuracy (Wilson 95%). Click a bar to list its samples."; $("judgec-h").textContent = "Judge: CoT refers to the hint (REFERENCES yes; Wilson 95%). Click to list.";
+  $("acc-h").textContent = "Accuracy (Wilson 95%)"; $("judgec-h").textContent = "Judge: CoT refers to the hint (REFERENCES yes; Wilson 95%)";
   $("f-set-l").style.display = D.multi ? "" : "none"; $("f-set").innerHTML = SETS.map(([t, K], k) => `<option value="${k}">${t.replace("all", "all " + (D.items || []).length)}</option>`).join(""); $("f-set").value = "0";
   $("counts-h").textContent = D.multi ? "Correct per item (count of samples). Click a cell to list those samples." : "Answers given (count of samples; correct answer in green; free-response answers headed by initials, hover for the full answer). Click a count to list those samples.";
   $("question").textContent = D.question; $("hint").textContent = D.hint + (D.arm_text.hide.includes(": ") ? "\n\n" + D.arm_text.hide : ""); $("correct").textContent = D.correct;
-  document.querySelectorAll(".lg").forEach(e => e.innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</span>`).join("")
-    );
+  drawLegends();
   $("toggles").innerHTML = D.models.map(m => `<label class="chk" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" data-m="${m.id}"${HID.has(m.id) ? "" : " checked"}><span class="sw" style="background:${m.color}"></span>${esc(m.label.split(" (")[0])}</label>`).join("");
-  $("toggles").querySelectorAll("input").forEach(c => c.addEventListener("change", () => { c.checked ? HID.delete(c.dataset.m) : HID.add(c.dataset.m); drawAcc(); drawJudge(); drawTok(); }));
+  $("toggles").querySelectorAll("input").forEach(c => c.addEventListener("change", () => { c.checked ? HID.delete(c.dataset.m) : HID.add(c.dataset.m); drawLegends(); drawAcc(); drawJudge(); drawTok(); }));
   $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
   $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option>${a}</option>`).join("");
   $("f-item").innerHTML = `<option value="">any</option>` + (D.items || []).map(i => `<option>${i}</option>`).join(""); $("f-item-l").style.display = D.multi ? "" : "none";

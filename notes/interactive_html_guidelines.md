@@ -28,9 +28,13 @@ below are whatever the data at hand has.
 1. Title, then a subtitle that states the settings needed to read the numbers: sampling (model, temperature, effort, cap, backend), and for every judge or
    monitor its mode (action only / action+cot / cot only), name and judge model.
 2. A row with the shared context (e.g. the question or task) beside a compact summary table (e.g. answer counts per entity and condition; cells clickable).
-3. A legend, then one row of 2-3 bar charts (flex, wrapping on narrow windows): grouped bars per condition, rates with Wilson 95% intervals and
-   count/total labels, scores as mean ± SE with n. Each bar has a hover tooltip with its full description and numbers; clicking a bar (or a table cell)
-   sets the explorer's filters to that slice and scrolls to it. Charts leave out groups that have no data for that measure rather than drawing empty slots.
+3. One row of 2-3 bar charts (flex, wrapping on narrow windows): grouped bars per condition, rates with Wilson 95% intervals and count/total labels,
+   scores as mean ± SE with n. Each chart box has a short title (the measure and its interval), then its own legend row (`cot-control/rl/viewer_legend.py`:
+   `legend(id, items)` draws a swatch per item; the models in their colors, then the bar styles in gray: hatched, dotted, faint, dashed), then the svg.
+   Titles name the measure only; what solid vs hatched means, which models are drawn and any active filter go in the legend, and one note above the
+   row says that bars have hover tooltips and click to filter. Each bar has a hover tooltip with its full description and numbers; clicking a bar (or
+   a table cell) sets the explorer's filters to that slice and scrolls to it. Charts leave out groups that have no data for that measure rather than
+   drawing empty slots.
 4. The explorer: a full-viewport-height grid of three panes separated by draggable dividers (pane widths kept in `localStorage`, wrapped in try/catch):
    - Left sidebar: filters as labelled full-width `<select>` boxes in a grid, checkboxes (e.g. show reference rows), an "N shown" count, then the item table
      with a sticky header whose column titles sort the list (click again to reverse, arrow on the active column). Click selects a row; Up/Down arrow keys

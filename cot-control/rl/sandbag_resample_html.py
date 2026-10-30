@@ -28,6 +28,7 @@ from judge_quotes import CSS as HL_CSS, JS as HL_JS
 from sandbag_behavior_breakdown import CATS
 from sandbag_behavior_judge import MODEL as BEHAVIOR_MODEL, PROMPTS as BEHAVIOR_PROMPTS
 from sandbag_headline import MODELS
+from viewer_legend import CSS as LG_CSS, JS as LG_JS
 from sandbag import AWARE, EVASION, SLINKHARD, instruction_text
 
 ARM_ORDER = ["honest", "sandbag", "aware", "evasion", "evasion_slinkhard"]  # the arms the page shows, when the run has them
@@ -122,7 +123,7 @@ def main():
                 behavior=dict(prompts=BEHAVIOR_PROMPTS, judge={j: f"{BEHAVIOR_MODEL[j].split('/')[-1]} at medium effort" for j in BEHAVIOR_PROMPTS}, instructions={a: instruction_text(q, a, False) for a in arms if a != "honest"},
                               has=any(r["j"][j] is not None for r in samples for j in J)),
                 settings=f"{cfg['repeat']} samples per model and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort {cfg['effort']}, {cfg['max_tokens'] // 1000}k cap, Tinker.")
-    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__HL_CSS__", HL_CSS).replace("__HL_JS__", HL_JS)
+    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__HL_CSS__", HL_CSS).replace("__HL_JS__", HL_JS).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)
     args.out.write_text(html)
     print(args.out, f"{len(samples)} samples, {len(html) / 1e6:.1f} MB")
 
@@ -145,7 +146,7 @@ h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; min-width:0; }
 .chart h3 { font-size:12px; font-weight:600; margin:2px 4px 6px; color:var(--ink2); }
 .chart svg { width:100%; height:auto; display:block; }
-.legend { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; margin:12px 0 0; color:var(--ink2); }
+__LG_CSS__
 .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; }
 .bar { cursor:pointer; } .bar:hover { opacity:.8; }
 .kind { display:inline-block; padding:0 5px; border-radius:2px; color:#fff; font-size:11.5px; }
@@ -196,16 +197,16 @@ __HL_CSS__
 <div class="top">
   <div><h2>Question (user message in every arm; correct answer <span id="correct"></span>)</h2><div class="q" id="question"></div></div>
   <div><h2>Wrong answers by kind, from the behavior judges</h2><div class="charts">
-    <div class="chart" style="flex:2.6 1 360px"><h3>Wrong answers stacked by kind (faint bar: all samples of the model and arm). Hover for numbers; click to list.</h3><svg id="c-kinds"></svg></div>
-    <div class="chart" style="flex:1 1 170px"><h3>Planted-error judge: mean suspiciousness (± SE) of the "arrives" samples (n ≥ 5). Click to list.</h3><svg id="c-susp"></svg></div>
+    <div class="chart" style="flex:2.6 1 360px"><h3>Wrong answers by kind, per model and arm</h3><div class="lg" id="lg-kinds"></div><svg id="c-kinds"></svg></div>
+    <div class="chart" style="flex:1 1 170px"><h3>Planted-error judge: mean suspiciousness (± SE) of the "arrives" samples (n ≥ 5)</h3><div class="lg" id="lg-susp"></div><svg id="c-susp"></svg></div>
   </div></div>
 </div>
-<div class="legend" id="legend"></div>
 <div class="jsel"><label>judge in the second chart, the list's score column and the first judge block: <select id="jsel"><option value="plant">planted-error judge: suspiciousness 0-100, incorrect samples</option><option value="mon">CoT-only monitor: 1-100, 1 = sabotage, all samples</option></select></label><label>incorrect samples counted in the judge chart: <select id="vsel"><option value="">all</option><option value="notyes">without samples that mention the instruction (verbalization YES); keeps NO and not judged</option><option value="1">only samples that mention the instruction (YES)</option></select></label></div>
+<div class="note" style="margin-top:10px">Hover a bar for its description and numbers; click one to list its samples below.</div>
 <div class="charts row">
-  <div class="chart"><h3>Accuracy (Wilson 95%). Click a bar to list its samples.</h3><svg id="acc"></svg></div>
-  <div class="chart"><h3 id="jtitle"></h3><svg id="mon"></svg></div>
-  <div class="chart"><h3>Verbalization judge: YES among judged incorrect samples (Wilson 95%). Click to list.</h3><svg id="verb"></svg></div>
+  <div class="chart"><h3>Accuracy (Wilson 95%)</h3><div class="lg" id="lg-acc"></div><svg id="acc"></svg></div>
+  <div class="chart"><h3 id="jtitle"></h3><div class="lg" id="lg-mon"></div><svg id="mon"></svg></div>
+  <div class="chart"><h3>Verbalization judge: YES among judged incorrect samples (Wilson 95%)</h3><div class="lg" id="lg-verb"></div><svg id="verb"></svg></div>
 </div>
 <h2>Samples <span class="note">(drag the dividers to resize; arrow keys move through the list)</span></h2>
 <div class="note" id="scalenote" style="margin-bottom:8px"></div>
@@ -257,13 +258,13 @@ const SVGNS = "http://www.w3.org/2000/svg", tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 330) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
 function el(svg, tag, attrs, text) { const n = document.createElementNS(SVGNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; }
 function hover(g, html, filt) { g.addEventListener("mousemove", e => showTip(e, html)); g.addEventListener("mouseleave", () => tip.style.display = "none"); g.addEventListener("click", () => setFilters(filt)); }
-$("legend").innerHTML = D.models.map(m => `<span><span class="sw" style="background:${m.color}"></span>${esc(m.label)}</span>`).join("")
-  + `<span><svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="#c3c2b7"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>hatched: incorrect samples (monitor chart)</span>`;
+__LG_JS__const MODELS = D.models.map(m => [m.color, "solid", m.label.split(" (")[0]]);
+legend("lg-acc", MODELS); legend("lg-verb", MODELS); legend("lg-susp", MODELS);
+legend("lg-kinds", [...used.map(c => [c.color, "solid", c.label]), ["#2c2c2a", "dim", "all samples of the model and arm"]]);
 let VFILT = "";  // incorrect samples in the judge chart: "" all, "notyes" without verbalization-YES samples, "1" only those
 try { const v = localStorage.getItem("sandbag-resample-vfilt"); if (v === "notyes" || v === "1") VFILT = v; } catch (e) {}
 $("vsel").value = VFILT;
 const vkeep = s => VFILT === "" || (VFILT === "1" ? s.verbalized === true : s.verbalized !== true);
-const vnote = () => VFILT === "1" ? " Only incorrect samples that mention the instruction." : VFILT ? " Without incorrect samples that mention the instruction." : "";
 function meanSe(xs) { if (!xs.length) return null; const m = xs.reduce((a, b) => a + b, 0) / xs.length, sd = xs.length > 1 ? Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1)) : 0; return [m, sd / Math.sqrt(xs.length), xs.length]; }
 const live = (m, a) => D.samples.filter(s => s.model === m && s.arm === a && !s.t0);  // the resamples (the T 0 rows are listed but not charted)
 const W = 620, H = 300, L = 44, R = 10, T = 14, B = 26;  // the grouped bar charts
@@ -314,8 +315,9 @@ function drawPlant() {
   }));
 }
 function drawJudge() {
-  if (JMODE === "mon") { drawMon(); $("jtitle").textContent = "CoT-only monitor: mean score (± SE), correct samples solid, incorrect hatched." + vnote() + " Click to list."; }
-  else { drawPlant(); $("jtitle").textContent = "Planted-error judge: mean suspiciousness (± SE) over incorrect samples (honest arm: its natural errors)." + vnote() + " Click to list."; }
+  const vitem = VFILT === "1" ? [GRAY, "text", "only incorrect samples that mention the instruction"] : VFILT ? [GRAY, "text", "without incorrect samples that mention the instruction"] : null;
+  if (JMODE === "mon") { drawMon(); $("jtitle").textContent = "CoT-only monitor: mean score (± SE)"; legend("lg-mon", [...MODELS, [GRAY, "solid", "correct samples"], [GRAY, "hatch", "incorrect samples"], vitem]); }
+  else { drawPlant(); $("jtitle").textContent = "Planted-error judge: mean suspiciousness (± SE) over incorrect samples"; legend("lg-mon", [...MODELS, [GRAY, "text", "honest arm: its natural errors"], vitem]); }
 }
 function drawVerb() {
   const arms = D.arms.filter(a => D.models.some(m => D.stats[m.id + "|" + a].verb_n));  // the arms the judge ran on (not honest)
@@ -334,14 +336,6 @@ function drawKinds() {
   svg.setAttribute("viewBox", `0 0 ${W} ${CH}`); svg.innerHTML = "";
   for (const f of [0, .25, .5, .75, 1]) { const t = Math.round(f * N); el(svg, "line", {x1: x(t), x2: x(t), y1: TT, y2: CH - BB, stroke: "#3a3a38"}); el(svg, "text", {x: x(t), y: CH - BB + 13, "text-anchor": "middle", "font-size": 10, fill: "#c3c2b7"}, t); }
   el(svg, "text", {x: x(N / 2), y: CH - 3, "text-anchor": "middle", "font-size": 10, fill: "#8d8c84"}, "samples");
-  let lx = 8, ly = CH + 6;  // legend under the axis, wrapped at the chart's width
-  for (const [color, label] of [...used.map(c => [c.color, c.label]), ["#2c2c2a", "all samples of the model and arm"]]) {
-    const t = el(svg, "text", {x: lx + 16, y: ly + 9, "font-size": 9.5, "font-weight": 600, fill: "#f0efec"}, label), w = t.getComputedTextLength() + 16;
-    if (lx + w > W - 8 && lx > 8) { lx = 8; ly += 16; t.setAttribute("x", lx + 16); t.setAttribute("y", ly + 9); }
-    el(svg, "rect", {x: lx, y: ly, width: 11, height: 11, rx: 2, fill: color, stroke: color === "#2c2c2a" ? "#3a3a38" : "none"});
-    lx += w + 14;
-  }
-  svg.setAttribute("viewBox", `0 0 ${W} ${ly + 18}`);
   bars.forEach((b, i) => {
     const y = TT + RH * i, wrong = wrongOf(b), head = `<b>${esc(short(b.m))}</b>, ${esc(D.arm_text[b.a])}`;
     el(svg, "rect", {x: 4, y: y + 6, width: 9, height: 9, rx: 2, fill: b.m.color});

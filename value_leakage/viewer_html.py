@@ -13,6 +13,7 @@ page stays small; every row's metadata (estimate, categories, words, regex flags
 """
 import argparse
 import base64
+import sys
 import gzip
 import json
 import random
@@ -20,6 +21,9 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "cot-control/rl"))
+from viewer_legend import CSS as LG_CSS, JS as LG_JS  # noqa: E402  (the shared per-chart legend)
 
 from bet import DIRECTIONS, good_side
 from common import RESULTS, read
@@ -99,7 +103,7 @@ def main() -> None:
             fits[mi] = [float(w[0]), float(w[1]), float(np.mean(1 / (1 + np.exp(-(w[0] + w[1] * np.log2(np.array([words(r) for r in base]) + 1.0))))))]
     data = dict(models=[dict(id=i, tag=t, label=l, color=c, backend=b) for i, (t, l, c, b) in enumerate(MODELS)], conds=conds, kinds=[k for k, _ in LINE_KINDS], cats=CATS, questions={q: QUESTIONS[q] for q in MAIN_QUESTIONS},
                 rows=rows, texts=texts, prompts=prompts, fits=fits, judge_prompts={"reasoning": statement_prompt("reasoning"), "answer": statement_prompt("answer")}, k=args.k)
-    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode())
+    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode()).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(texts)} with text, {len(html) / 1e6:.1f} MB")
 
@@ -122,6 +126,8 @@ h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; flex:1 1 760px; min-width:0; }
 .chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
 .chart svg { width:100%; height:auto; display:block; }
+.chart .note { margin:0 4px 4px; }
+__LG_CSS__
 .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:13px; margin:12px 0 0; color:var(--ink2); align-items:center; }
 .legend label { display:flex; align-items:center; gap:6px; cursor:pointer; }
 .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; }
@@ -183,12 +189,12 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 </div>
 <div class="legend" id="legend"></div>
 <div class="charts">
-  <div class="chart"><h3>Is the final answer biased? bias = P(good side | below_good) + P(good side | above_good) − 1, mean over questions, bootstrap 95% CI</h3><svg id="ch-bias"></svg></div>
-  <div class="chart"><h3 id="h-infl">Does the reasoning admit the bet influenced it? share judged INFLUENCED, Wilson 95%</h3><svg id="ch-infl"></svg></div>
-  <div class="chart"><h3>Does the reasoning avoid the bet entirely? share judged NO_MENTION, Wilson 95%</h3><svg id="ch-silent"></svg></div>
-  <div class="chart"><h3>What the reasoning says about the threshold: category mix (judge on the blurred reasoning)</h3><svg id="ch-cats"></svg></div>
-  <div class="chart"><h3>When the reasoning drops the bet, is the answer still biased? bias inside vocal (solid) vs silent (hatched) traces, pooled, normal 95% CI, 20+ rows per direction</h3><svg id="ch-sb"></svg></div>
-  <div class="chart"><h3>How long is the reasoning? mean words, ± 1.96 SE</h3><svg id="ch-words"></svg></div>
+  <div class="chart"><h3>Is the final answer biased?</h3><div class="note">bias = P(good side | below_good) + P(good side | above_good) − 1, mean over questions, bootstrap 95% CI</div><div class="lg" id="lg-bias"></div><svg id="ch-bias"></svg></div>
+  <div class="chart"><h3>Does the reasoning admit the bet influenced it?</h3><div class="note" id="h-infl">share judged INFLUENCED, Wilson 95%</div><div class="lg" id="lg-infl"></div><svg id="ch-infl"></svg></div>
+  <div class="chart"><h3>Does the reasoning avoid the bet entirely?</h3><div class="note">share judged NO_MENTION, Wilson 95%</div><div class="lg" id="lg-silent"></div><svg id="ch-silent"></svg></div>
+  <div class="chart"><h3>What the reasoning says about the threshold</h3><div class="note">category mix; judge on the blurred reasoning</div><div class="lg" id="lg-cats"></div><svg id="ch-cats"></svg></div>
+  <div class="chart"><h3>When the reasoning drops the bet, is the answer still biased?</h3><div class="note">bias pooled over rows, normal 95% CI, 20+ rows per direction</div><div class="lg" id="lg-sb"></div><svg id="ch-sb"></svg></div>
+  <div class="chart"><h3>How long is the reasoning?</h3><div class="note">mean words, ± 1.96 SE</div><div class="lg" id="lg-words"></div><svg id="ch-words"></svg></div>
 </div>
 <div class="sec closed" id="sumsec" style="margin-top:14px"><button class="sec-h">Summary table (current x axis and question; click a cell to list those rows)</button><div id="sumwrap"><table id="summary"></table></div></div>
 <h2>Rows <span class="note">(drag the dividers to resize; arrow keys move through the list)</span></h2>
@@ -221,7 +227,7 @@ const bytes = Uint8Array.from(atob("__DATA__"), c => c.charCodeAt(0));
 const D = JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text());
 const $ = id => document.getElementById(id);
 const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-const KATEX = !!window.renderMathInElement;
+__LG_JS__const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
 if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
@@ -316,7 +322,8 @@ function stacked(svgId, gs) {
 }
 function draw() {
   const gs = groups(), adj = $("c-adj").checked;
-  $("h-infl").textContent = adj ? "Does the reasoning admit the bet influenced it? share judged INFLUENCED, length-adjusted (no interval)" : "Does the reasoning admit the bet influenced it? share judged INFLUENCED, Wilson 95%";
+  $("h-infl").textContent = adj ? "share judged INFLUENCED, length-adjusted (no interval)" : "share judged INFLUENCED, Wilson 95%";
+  drawLegends();
   const bias = {}; for (const m of D.models) for (const g of gs) bias[m.id + "|" + g.label] = biasBoot(rowsOf(m.id, g));
   const lo = Math.min(-0.1, ...Object.values(bias).filter(Boolean).map(b => b[1])), hi = Math.max(0.3, ...Object.values(bias).filter(Boolean).map(b => b[2])) + 0.04;
   grouped("ch-bias", gs, Math.floor(lo * 10) / 10, Math.ceil(hi * 10) / 10, [...Array(9)].map((_, i) => Math.floor(lo * 10) / 10 + i * 0.1).filter(t => t <= hi), t => t.toFixed(1),
@@ -344,7 +351,13 @@ function drawSummary(gs, bias, sb) {
   $("summary").innerHTML = h;
   $("summary").querySelectorAll("td.c").forEach(td => td.addEventListener("click", () => setFilters(JSON.parse(td.dataset.f))));
 }
-$("legend").innerHTML = D.models.map(m => `<label><input type="checkbox" data-m="${m.id}" checked><span class="sw" style="background:${m.color}"></span>${esc(m.label)}</label>`).join("") + `<span><svg width="14" height="12" style="vertical-align:-1px;margin-right:6px"><rect width="12" height="12" rx="2" fill="#c3c2b7"/><path d="M-2,14 L14,-2 M4,14 L14,4 M-2,8 L8,-2" stroke="#1a1a19" stroke-width="2"/></svg>silent traces (silent-vs-vocal chart)</span>`;
+$("legend").innerHTML = "<span>models shown:</span>" + D.models.map(m => `<label><input type="checkbox" data-m="${m.id}" checked><span class="sw" style="background:${m.color}"></span>${esc(m.label)}</label>`).join("");
+function drawLegends() {  // per chart: the models shown, then the chart's bar styles
+  const ms = D.models.filter(m => vis[m.id]).map(m => [m.color, "solid", m.label]);
+  for (const id of ["lg-bias", "lg-infl", "lg-silent", "lg-words"]) legend(id, ms);
+  legend("lg-cats", [...D.cats.map(c => [CATC[c], "solid", c]), ...D.models.filter(m => vis[m.id]).map(m => [m.color, "outline", m.label])]);
+  legend("lg-sb", [...ms, [GRAY, "solid", "vocal traces (any other category)"], [GRAY, "hatch", "silent traces (NO_MENTION)"]]);
+}
 $("legend").querySelectorAll("input").forEach(cb => cb.addEventListener("change", () => { vis[+cb.dataset.m] = cb.checked; draw(); }));
 $("catlegend").innerHTML = "Reasoning category: " + D.cats.map(c => `<span class="cat" style="background:${CATC[c]}55;border:1px solid ${CATC[c]}">${c}</span>`).join(" ") + ` · estimate <span class="ok">green</span> = on the bet's favored side, <span class="no">red</span> = on the other side.`;
 $("c-q").innerHTML += QS.map(q => `<option value="${q}">${q}</option>`).join("");
