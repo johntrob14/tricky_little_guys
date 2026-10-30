@@ -24,6 +24,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "cot-control/rl"))
 from viewer_legend import CSS as LG_CSS, JS as LG_JS  # noqa: E402  (the shared per-chart legend)
+from viewer_md import CSS as MD_CSS, JS as MD_JS, SCRIPT as MD_SCRIPT  # noqa: E402  (markdown in the text sections)
 
 from bet import DIRECTIONS, good_side
 from common import RESULTS, read
@@ -103,7 +104,7 @@ def main() -> None:
             fits[mi] = [float(w[0]), float(w[1]), float(np.mean(1 / (1 + np.exp(-(w[0] + w[1] * np.log2(np.array([words(r) for r in base]) + 1.0))))))]
     data = dict(models=[dict(id=i, tag=t, label=l, color=c, backend=b) for i, (t, l, c, b) in enumerate(MODELS)], conds=conds, kinds=[k for k, _ in LINE_KINDS], cats=CATS, questions={q: QUESTIONS[q] for q in MAIN_QUESTIONS},
                 rows=rows, texts=texts, prompts=prompts, fits=fits, judge_prompts={"reasoning": statement_prompt("reasoning"), "answer": statement_prompt("answer")}, k=args.k)
-    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode()).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)
+    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode()).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS).replace("__MD_SCRIPT__", MD_SCRIPT).replace("__MD_CSS__", MD_CSS).replace("__MD_JS__", MD_JS)
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(texts)} with text, {len(html) / 1e6:.1f} MB")
 
@@ -114,6 +115,7 @@ PAGE = r"""<!doctype html>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+__MD_SCRIPT__
 <style>
 :root { color-scheme:dark; --bg:#1a1a19; --panel:#232322; --line:#3a3a38; --ink:#f0efec; --ink2:#c3c2b7; --muted:#8d8c84; --good:#5fb87a; --bad:#e0705f; }
 * { box-sizing:border-box; }
@@ -166,6 +168,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .sec.closed .sec-b { display:none; }
 .sec-b.math .katex-display { margin:0.4em 0; overflow-x:auto; overflow-y:hidden; padding:2px 0; }
 .sec-b.math .katex { font-size:1.08em; }
+__MD_CSS__
 .sec-b.tbl { font:13px system-ui, sans-serif; white-space:normal; padding:0; }
 .badge { font-size:13px; font-weight:700; padding:2px 8px; border-radius:2px; }
 .empty { color:var(--muted); font-size:13px; padding:8px 0; }
@@ -211,6 +214,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
       <label class="f">estimate<select id="f-good"><option value="">any</option><option value="1">on the favored side</option><option value="0">on the other side</option><option value="u">unknown (unparsed)</option></select></label>
       <label class="f">regex flag<select id="f-flag"><option value="">any</option><option value="1">refers to the reader</option><option value="2">talks about how it will look</option><option value="4">plans not to mention the bet</option><option value="8">uses the word "bias"</option><option value="n">none of these</option></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
+      <label class="chk"><input type="checkbox" id="f-md" checked> render markdown</label>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>
@@ -230,6 +234,7 @@ const esc = s => (s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"
 __LG_JS__const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
+__MD_JS__const tidy = t => bareMath(t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]"));  // viewer_md.bareMath after dropping the line breaks around display math
 if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
 const QS = Object.keys(D.questions), DIRS = ["below_good", "above_good"], CATC = {INFLUENCED: "#d6483e", MENTIONED: "#d9a441", NOT_INFLUENCED: "#46b269", NO_STATEMENT: "#807f78", NO_MENTION: "#3f8fd6", UNPARSED: "#555"};
 const catName = k => k < 0 ? "unjudged" : k === 5 ? "UNPARSED" : D.cats[k];
@@ -381,7 +386,9 @@ function setFilters(f) {
 const sid = r => `${r.m}|${r.c}|${r.q}|${r.d}|${r.i}`;
 let shown = [], sel = null;
 const closed = new Set(["user message", "category judge prompt (reasoning)", "category judge prompt (answer)", "estimate judge"]);
-function sec(title, body, m) { return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${esc(body || "(empty)")}</pre></div>`; }
+function sec(title, body, m) {  // m: model or judge text, rendered as markdown and LaTeX (toggles); prompts stay raw
+  const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body;
+  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}${m && MD() ? " md" : ""}">${m ? mdHtml(esc(t || "(empty)")) : esc(t || "(empty)")}</pre></div>`; }
 function wire(root) { root.querySelectorAll(".sec-h").forEach(b => b.addEventListener("click", () => { const d = b.parentNode, t = d.dataset.t; closed.has(t) ? closed.delete(t) : closed.add(t); d.classList.toggle("closed"); })); }
 const blur = s => (s || "").replace(/\d[\d,.]*/g, () => "X");
 const fmtNum = v => v == null ? "unknown" : Math.abs(v) >= 1e4 ? v.toLocaleString("en-US", {maximumFractionDigits: 0}) : String(v);
@@ -396,7 +403,7 @@ function show() {
     + sec("user message", D.prompts[`${r.m}|${r.c}|${r.q}|${DIRS[r.d]}`]) + sec("reasoning (analysis channel)", t.r, 1) + sec("final answer", t.a, 1);
   $("judge").innerHTML = `<div class="head"><b>Category judge on the reasoning</b>${catBadge(r.k)}</div>` + sec("category judge prompt (reasoning)", D.judge_prompts.reasoning.replaceAll("{llm_text}", () => blur(t.r))) + sec("judge reply (reasoning)", t.jr || "(not run)", 1)
     + `<div class="head" style="margin-top:16px"><b>Category judge on the answer</b>${catBadge(r.a)}</div>` + sec("category judge prompt (answer)", D.judge_prompts.answer.replaceAll("{llm_text}", () => blur(t.a))) + sec("judge reply (answer)", t.ja || "(not run)", 1)
-    + `<div class="head" style="margin-top:16px"><b>Estimate judge</b><span class="badge" style="background:#3a3a38">${fmtNum(r.e)}</span></div>` + sec("estimate judge", t.je || "(not run)");
+    + `<div class="head" style="margin-top:16px"><b>Estimate judge</b><span class="badge" style="background:#3a3a38">${fmtNum(r.e)}</span></div>` + sec("estimate judge", t.je || "(not run)", 1);
   wire($("view")); wire($("judge"));
   document.querySelectorAll("#view .sec-b.math, #judge .sec-b.math").forEach(math);
 }
