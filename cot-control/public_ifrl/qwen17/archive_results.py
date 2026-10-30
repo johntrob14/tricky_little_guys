@@ -36,8 +36,9 @@ def archive(local, destination):
             if not source.exists():
                 continue
             compressed = target / (name + ".gz")
-            with source.open("rb") as original, gzip.open(compressed, "wb", compresslevel=6) as out:
-                shutil.copyfileobj(original, out)
+            with source.open("rb") as original, compressed.open("wb") as raw_out:
+                with gzip.GzipFile(filename="", mode="wb", fileobj=raw_out, compresslevel=6, mtime=0) as out:
+                    shutil.copyfileobj(original, out)
             with gzip.open(compressed, "rb") as out:
                 assert hashlib.sha256(out.read()).hexdigest() == hashlib.sha256(source.read_bytes()).hexdigest()
         for name in ("metadata.json", "progress.json", "DONE", "PILOT_DONE"):
