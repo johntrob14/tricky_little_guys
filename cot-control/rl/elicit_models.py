@@ -4,7 +4,7 @@ Run from tlg-inksm/cot-control/rl:  python /path/elicit_models.py MODEL VARIANTS
 import sys
 E='/home/john/code/tlg-inksm/cot-control/results/outctl/elicit/elicit.py'
 EXTRA={'nemosuper':('nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16',1.44),'qwen36_35b':('Qwen/Qwen3.6-35B-A3B',1.335),
-       'nemolight':('nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16',0.495)}
+       'nemolight':('nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16',0.495),'q35_9b':('Qwen/Qwen3.5-9B',0.807)}
 if '@' in sys.argv[1]:  # NAME@BASEKEY@tinker://path : a checkpoint of an EXTRA base model, e.g. nemo1_s20@nemosuper@tinker://...
     name,bk,path=sys.argv[1].split('@',2);EXTRA[name]=(EXTRA[bk][0],EXTRA[bk][1])+((path,) if path else ());sys.argv[1]=name  # empty path: the base model under another name (extra samples in a separate dir)
 src=open(E).read()

@@ -14,7 +14,8 @@ from spillx import judge_attempt
 
 MODEL = "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16"; JUDGE = "openai/gpt-oss-120b"
 HF_PRICES = {"nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16": dict(prefill=0.57, sample=1.44, train=1.276),
-             "Qwen/Qwen3.6-35B-A3B": dict(prefill=0.45, sample=1.335, train=1.177)}  # Tinker pricing page, 2026-10-19 (64K; 50% off)
+             "Qwen/Qwen3.6-35B-A3B": dict(prefill=0.45, sample=1.335, train=1.177),
+             "Qwen/Qwen3.5-9B": dict(prefill=0.30, sample=0.807, train=1.463)}  # Tinker pricing page, 2026-10-19 (64K; 50% off)
 TAG = re.compile(r"</?think>")
 
 def parse(tok, tokens):
