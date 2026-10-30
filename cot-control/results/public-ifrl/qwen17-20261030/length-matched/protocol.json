@@ -1,0 +1,57 @@
+{
+  "written_before_matching_results": true,
+  "question": "Does the Qwen before/after CoT-control difference persist among traces of comparable observed reasoning length?",
+  "source_export_commit": "801f9d7a4f9e37e82adaac7aa09f044649dd1906",
+  "initial": "initial",
+  "after": [
+    "kl0p01-s91",
+    "kl0p01-s182",
+    "kl0p01-s273",
+    "kl0p01-s364",
+    "kl0p002-s364",
+    "kl0p005-s364",
+    "kl0p02-s364"
+  ],
+  "prompts": [
+    "base",
+    "shot4",
+    "shotstack"
+  ],
+  "primary": {
+    "length": "n_reasoning_tokens",
+    "max_length_ratio": 1.1,
+    "eligibility": "nonempty reasoning, at least 20 whitespace-delimited words, closed thinking block, nonempty final response, no length truncation",
+    "matching_strata": [
+      "item key",
+      "prompt variant"
+    ],
+    "algorithm": "Within each stratum, maximize pair count without replacement among the three before and three after decoding samples; then minimize total absolute log length difference; never use outcome scores in matching.",
+    "metrics": [
+      "strict compliance",
+      "partial compliance",
+      "answer accuracy"
+    ],
+    "aggregation": "paired means over matched traces; also equal-weight the eight constraint types when all have matches",
+    "uncertainty": "5000 paired bootstrap replicates of matched item clusters, preserving all selected seed pairs within an item",
+    "bootstrap_seed": 20261030
+  },
+  "sensitivities": {
+    "lengths": [
+      "n_reasoning_tokens",
+      "reasoning word count"
+    ],
+    "max_length_ratios": [
+      1.05,
+      1.1,
+      1.2
+    ],
+    "eligibility": "primary eligibility; additionally token-ratio 1.1 with any nonempty reasoning including incomplete traces"
+  },
+  "interpretation": "Descriptive comparison restricted to observed length overlap. Length and completion are post-training outcomes; matching them does not identify a causal effect independent of length. Report coverage, excluded traces, per-constraint differences and length balance. No new generations or compute rental.",
+  "exploratory_addition_after_first_matching_results": {
+    "comparison": "Also require both word and token lengths to differ by no more than 10%, using the larger log-ratio as matching cost.",
+    "reason": "Token-only matches can differ substantially in word count because case changes and meow insertion change tokenization.",
+    "inference": "Report strict improved/regressed pairs and item-cluster sign-flip P values alongside bootstrap intervals; few discordant items can make percentile intervals misleading.",
+    "bootstrap_rng": "Seed each configuration using SHA256(config) XOR 20261030, so adding a sensitivity does not change other configurations."
+  }
+}

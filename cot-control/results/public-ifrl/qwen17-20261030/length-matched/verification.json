@@ -1,0 +1,30 @@
+{
+  "status": "verified",
+  "comparisons_recomputed": 168,
+  "matching_optima_independently_checked": 1668,
+  "aggregate_tolerance": 1e-12,
+  "checks": [
+    "No reused before/after row within a matched comparison",
+    "Same prompt/item/constraint in every pair",
+    "All recorded length calipers and eligibility rules satisfied",
+    "All strict, partial and accuracy point estimates independently recomputed",
+    "Exact item-cluster sign-flip probabilities independently checked using integer dynamic programming"
+  ],
+  "limitations": [
+    "Length and completion are post-training outcomes; conditional matching is descriptive",
+    "Small within-item length overlap and few discordant items limit inference",
+    "Bootstrap intervals can exclude zero even when sparse exact tests do not; report both",
+    "All inferential summaries are unadjusted for multiple comparisons"
+  ],
+  "raw_spot_check": {
+    "selection": "All strict-discordant token-10%-matched four-shot pairs for KL0.01, KL0.002 and KL0.005 finals",
+    "pairs": 25,
+    "raw_traces": 50,
+    "findings": [
+      "Changes include fixing isolated capital letters, inserting a missing meow, and adding safe to a previously noncompliant sentence",
+      "An equal-length KL0.005 pair has 75 reasoning tokens on each side; before includes All methods are relevant except one. while after has All methods except one are relevant safe.",
+      "Matching does not preserve reasoning content or correctness; case repairs can accompany different answers",
+      "No empty or incomplete thinking blocks enter primary matched pairs"
+    ]
+  }
+}
