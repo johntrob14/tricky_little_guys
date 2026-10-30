@@ -61,7 +61,7 @@ async def main():
     json.dump(dict(judge_model=args.judge_model, effort=args.effort, temperature=args.temperature, prompt=JUDGE), open(args.dir / "judge.json", "w"), indent=1)
 
     async def one(r):
-        reply, reasoning, _, _ = await judge.ask_full(JUDGE.format(question=qblock(r).split(FORMAT)[0], hint=hint(r), cot=r["reasoning"]))
+        reply, reasoning, _, _ = await judge.ask_full(JUDGE.format(question=qblock(r).split(FORMAT)[0].rstrip(), hint=hint(r), cot=r["reasoning"]))
         with open(path, "a") as f:
             f.write(json.dumps(dict(model=r["model"], **({"item": r["item"]} if "item" in r else {}), arm=r["arm"], sample=r["sample"], refs=label(reply, "REFERENCES"), reply=reply, reasoning=reasoning)) + "\n")
 
