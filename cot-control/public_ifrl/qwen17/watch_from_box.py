@@ -4,6 +4,7 @@ It never stops a GPU job. The user explicitly requested that the pod remain
 running after the sweep and verified upload.
 """
 from pathlib import Path
+import fcntl
 import json
 import os
 import subprocess
@@ -17,6 +18,9 @@ LOCAL = ROOT / "outputs/qwen17-ifrl"
 ARCHIVE = REPO / "cot-control/results/public-ifrl/qwen17-20261030"
 POD = "qwen17-ifrl-overnight"
 LOCAL.mkdir(parents=True, exist_ok=True)
+watch_lock = (LOCAL / ".watcher.lock").open("w")
+fcntl.flock(watch_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+print("archive watcher started", os.getpid(), flush=True)
 
 
 def run(command, **kwargs):
