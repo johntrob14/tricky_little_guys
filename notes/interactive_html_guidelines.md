@@ -27,8 +27,7 @@ below are whatever the data at hand has.
 
 1. Title, then a subtitle that states the settings needed to read the numbers: sampling (model, temperature, effort, cap, backend), and for every judge or
    monitor its mode (action only / action+cot / cot only), name and judge model.
-2. The shared context (e.g. the question or task) when there is one. No summary tables anywhere on the page (Ethan, 2026-10-29): counts and rates go on
-   the bars as labels and tooltips, and bar clicks are the way into the row list.
+2. A row with the shared context (e.g. the question or task) beside a compact summary table (e.g. answer counts per entity and condition; cells clickable).
 3. A legend, then one row of 2-3 bar charts (flex, wrapping on narrow windows): grouped bars per condition, rates with Wilson 95% intervals and
    count/total labels, scores as mean ± SE with n. Each bar has a hover tooltip with its full description and numbers; clicking a bar (or a table cell)
    sets the explorer's filters to that slice and scrolls to it. Charts leave out groups that have no data for that measure rather than drawing empty slots.

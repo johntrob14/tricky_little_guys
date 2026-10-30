@@ -1,6 +1,6 @@
 """Interactive page for the hint-verbalization runs (hintverb.py, judged by hintverb_judge.py), in the style of sandbag_resample_html.py: per model and
 hint, the share of pairs switched to the hint (Wilson 95%), the judge's verbalized share of switched rows (Wilson 95%) and the mean CoT tokens of
-switched rows, verbalized vs not (± SE), click a bar to list those rows, click a row to read its prompt,
+switched rows, verbalized vs not (± SE), plus a table of pair outcomes; click a bar or a count to list those rows, click a row to read its prompt,
 CoT and final answer next to the same question's unhinted CoT (middle pane) and the judge prompt and output, plus the hand-validation reader's
 verdict where the row was in that sample (right pane). Pair outcomes as in hintverb_judge.judge_arm, with letters re-parsed by the current
 hintverb.parse_letter. Every row of every arm is listed (unhinted rows too); the list opens on the rows switched to the hint. Same page mechanics as
@@ -92,6 +92,7 @@ body { margin:0; padding:16px; background:var(--bg); color:var(--ink); font:14px
 h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .sub { color:var(--ink2); font-size:13px; }
 .charts { display:flex; flex-wrap:wrap; gap:16px; margin-top:12px; }
+.counts td, .counts th { padding:3px 8px; }
 .chart { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; flex:1 1 400px; min-width:0; }
 .chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
 .chart svg { width:100%; height:auto; display:block; }
@@ -103,6 +104,7 @@ table { border-collapse:collapse; width:100%; font-size:13px; }
 th, td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
 th { color:var(--ink2); font-weight:600; }
 td.num { font-variant-numeric:tabular-nums; text-align:right; }
+.counts td.c { cursor:pointer; text-align:right; font-variant-numeric:tabular-nums; } .counts td.c:hover { background:#2e2e2c; }
 #pane { display:grid; height:calc(100vh - 32px); min-height:480px; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
 #pane > .col { overflow:auto; min-width:0; padding:10px; scrollbar-color:#55554f #1f1f1e; scrollbar-width:thin; }
 #side { background:var(--panel); }
@@ -143,6 +145,8 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
   <div class="chart"><h3>Judge: CoT verbalizes the hint, among rows switched to it (Wilson 95%). Click to list.</h3><svg id="verb"></svg></div>
   <div class="chart"><h3>Mean CoT tokens of switched rows (± SE): verbalized solid, not verbalized hatched. Click to list.</h3><svg id="tok"></svg></div>
 </div>
+<h2>Pair outcomes (count of hinted rows). Click a count to list those rows.</h2>
+<div class="scroll"><table class="counts" id="counts"></table></div>
 <h2>Rows <span class="note">(drag the dividers to resize; arrow keys move through the list; opens on the rows switched to the hint)</span></h2>
 <div id="pane">
   <div class="col" id="side">
@@ -226,6 +230,17 @@ function drawTok() {
         `<b>${esc(m.label)}</b><br>hint: ${g}<br>switched rows the judge called ${yes ? "verbalized" : "not verbalized"}: mean CoT tokens ${v[0].toFixed(0)} ± ${v[1].toFixed(0)} (SE), n=${v[2]}`, {model: m.id, hint: hintOf(g), out: "to hint", verb: String(yes)});
   })));
 }
+function drawCounts() {
+  const OC = D.outcomes.slice(0, -1);
+  let h = `<tr><th>model</th><th>hint</th><th style="text-align:right">pairs</th>${OC.map(o => `<th style="text-align:right">${o}</th>`).join("")}<th style="text-align:right">judge YES</th><th style="text-align:right">judge NO</th><th style="text-align:right">reader checked</th></tr>`;
+  for (const m of D.models) for (const g of D.hints) {
+    const s = D.stats[m.id + "|" + g], c = (v, filt) => `<td class="c" data-f='${JSON.stringify({model: m.id, hint: g, ...filt})}'>${v}</td>`;
+    h += `<tr><td><span class="sw" style="background:${m.color}"></span>${esc(short(m))}</td><td>${g}</td><td class="num">${s.pairs}</td>` + OC.map(o => c(s.outcomes[o], {out: o})).join("")
+      + c(s.yes, {out: "to hint", verb: "1"}) + c(s.judged - s.yes, {out: "to hint", verb: "0"}) + c(s.reader, {out: "", rd: "any"}) + `</tr>`;
+  }
+  $("counts").innerHTML = h;
+  $("counts").querySelectorAll("td.c").forEach(td => td.addEventListener("click", () => setFilters(JSON.parse(td.dataset.f))));
+}
 const opts = (xs, any = true) => (any ? `<option value="">any</option>` : "") + xs.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join("");
 $("f-model").innerHTML = opts(D.models.map(m => [m.id, short(m)]));
 $("f-hint").innerHTML = opts([...D.hints, "none"].map(h => [h, h === "none" ? "none (unhinted)" : h]));
@@ -304,7 +319,7 @@ for (const id of Object.values(FILT)) $(id).addEventListener(id === "f-qid" ? "i
 $("f-math").addEventListener("change", show);
 drawRate("sw", s => s.outcomes["to hint"], s => s.pairs, s => s.ci, "switched to the hint");
 drawRate("verb", s => s.yes, s => s.judged, s => s.verb_ci, "judge YES (verbalized)");
-drawTok();
+drawTok(); drawCounts();
 $("f-out").value = "to hint"; render();
 </script></body></html>
 """

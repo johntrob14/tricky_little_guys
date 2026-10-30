@@ -88,7 +88,7 @@ def set_page_data(d: Path) -> dict:
     question = "\n\n".join(f"item {i} (answer {cfg['answers'][str(i)]}): " + " ".join(cfg["qblocks"][str(i)].split("\n\n\nYour response should be")[0].split())[:220] for i in items)
     hint = "\n".join(f"item {i} ({cfg['hint_names'][str(i)]}): {h}" for i, h in cfg["hints"].items()) or "no hints in this run"
     judge_line = f"Judge: {jcfg['judge_model']}, reasoning effort {jcfg['effort']}, temperature {jcfg['temperature']}." if jcfg else "Judge: not run yet."
-    ds = {"gpqa": "GPQA items", "dapo": "DAPO math problems"}[cfg.get("dataset", "gpqa")]
+    ds = {"gpqa": "GPQA items", "dapo": "DAPO math problems", "mixed": "problems (" + " + ".join(f"{len(s['items'])} {s['dataset'].upper()}" for s in cfg.get("sources", [])) + ")"}[cfg.get("dataset", "gpqa")]
     return dict(name=d.name, item=f"{len(items)} {ds}", hint_name="", multi=True, qblocks={str(i): cfg["qblocks"][str(i)] for i in items}, hints=cfg["hints"], items=items, item_table=table, keys=["none"], question=question, correct="per item", hint=hint, arms=arms, arm_text=arm_text(user, f"{items[0]}|hint", f"{items[0]}|hide"),
                 user=user, prefill=prefill, judge_prompt=jcfg["prompt"] if jcfg else None, models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in models], samples=samples, judge_line=judge_line,
                 settings=f"{len(items)} {ds}, {cfg['n']} samples per model, item and arm at temperature {cfg['temperature']}, gpt-oss-120b harmony effort medium, {cfg['max_tokens'] // 1000}k cap, Tinker. "
