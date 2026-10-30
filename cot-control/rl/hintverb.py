@@ -9,7 +9,8 @@ answer-format sentence (FORMAT). Sampling as in Chen et al.: temperature 0, one 
 (modelio.sample_answer): the analysis channel is the CoT (`reasoning`), sampled until it closes, then the final channel is opened with the prefill "Answer:"
 (modelio.ANSWER; config.json `answer_prefill`) and the letter follows (`response`). `prefilled` records whether the prefill was applied (not for a CoT cut
 at --max-tokens or closed the model's own way); `answer` is the letter right after the prefill (parse_answer; None if the model wrote anything else), or for
-an unprefilled response the last letter parse_letter finds.
+an unprefilled response the last letter parse_letter finds. --base thinkingmachines/Inkling-Small (TMLv0, inkio.py): --effort is the thinking effort level (0-1),
+rendered as inkio's system message after the system prompt, and the turn is sampled by inkio.sample_answer (thinking message, then "Answer:" in the text message).
 
     python hintverb.py --name base --out ../results/hintverb
     python hintverb.py --name mt1b-s150 --model-path tinker://... --out ../results/hintverb
@@ -23,6 +24,7 @@ from pathlib import Path
 
 import tinker
 
+import inkio
 import modelio
 
 BASE = "openai/gpt-oss-120b"
@@ -90,7 +92,7 @@ async def main():
     ap.add_argument("--name", required=True)
     ap.add_argument("--model-path", help="tinker:// sampler weights; the --base model itself when omitted")
     ap.add_argument("--base", default=BASE, choices=list(modelio.PRICES), help="base model: tokenizer, renderer (harmony or think-tag, via modelio) and prices; a --model-path must be a LoRA of it")
-    ap.add_argument("--effort", default="medium")
+    ap.add_argument("--effort", default="medium", help="gpt-oss: harmony reasoning effort; Qwen: modelio.EFFORT_SYS; Inkling: the thinking effort level, e.g. 0.6")
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--hints", nargs="+", default=list(HINTS), choices=list(HINTS))
     ap.add_argument("--suffix", choices=list(SUFFIXES), help="oversight-pressure line appended to every prompt (hinted and unhinted)")
@@ -110,17 +112,22 @@ async def main():
     done = {(r["qid"], r["hint_type"]) for r in map(json.loads, open(path))} if path.exists() else set()
     sc = tinker.ServiceClient()
     client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=args.base))
-    tok = client.get_tokenizer()
-    harmony = modelio.probe_harmony(tok)
+    ink = args.base == inkio.MODEL
+    tok = inkio.Tok() if ink else client.get_tokenizer()
+    harmony = not ink and modelio.probe_harmony(tok)
     sem, lock, n_tok = asyncio.Semaphore(args.concurrency), asyncio.Lock(), [0, 0, 0]  # sampled tokens, prefill tokens, rows done
 
     async def one(q, hint_type):
         if (q["qid"], hint_type) in done:
             return
         user = user_message(q, hint_type, user_suffix)
-        ids, think_prefix = (render(tok, user, args.effort, system), "") if harmony else modelio.render(tok, user, False, args.effort, system)
-        async with sem:
-            r = await modelio.sample_answer(client, tok, ids, harmony, think_prefix, args.max_tokens, 0.0)
+        if ink:
+            async with sem:
+                r = await inkio.sample_answer(client, tok, inkio.render(user, system, float(args.effort)), args.max_tokens, 0.0)
+        else:
+            ids, think_prefix = (render(tok, user, args.effort, system), "") if harmony else modelio.render(tok, user, False, args.effort, system)
+            async with sem:
+                r = await modelio.sample_answer(client, tok, ids, harmony, think_prefix, args.max_tokens, 0.0)
         row = dict(qid=q["qid"], dataset=q["dataset"], hint_type=hint_type, suffix=user_suffix, system_suffix=args.suffix if args.placement == "system" else None, hint=q["hint"], correct=q["correct"], answer=parse_answer(r["response"], r["prefilled"]), finish=r["finish"], prefilled=r["prefilled"],
                    cot_tokens=len(tok.encode(r["reasoning"], add_special_tokens=False)), resp_tokens=len(tok.encode(r["response"], add_special_tokens=False)),
                    reasoning=r["reasoning"], response=r["response"], user=user)

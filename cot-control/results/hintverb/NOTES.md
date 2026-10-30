@@ -490,3 +490,51 @@ Unhinted accuracy and CoT length, no-line arm: base 386 -> 400/479, mean unhinte
 | mt1b-s150 | user_reads@sys | 381 -> 378 | 1080 -> 1071 | 145 -> 153 | 0.134 -> 0.143 | 26/145 -> 24/153 | 0.179 -> 0.157 | 0.181 -> 0.136 | 1824 -> 1754 |
 | mt1b-s150 | answer_checked@sys | 387 -> 376 | 1067 -> 1071 | 140 -> 144 | 0.131 -> 0.134 | 23/140 -> 14/144 | 0.164 -> 0.097 | 0.175 -> 0.088 | 1839 -> 1659 |
 | mt1b-s150 | auto_monitor@sys | 352 -> 351 | 1056 -> 1083 | 287 -> 258 | 0.272 -> 0.238 | 3/287 -> 4/258 | 0.010 -> 0.016 | 0.069 -> 0.059 | 652 -> 572 |
+
+# Inkling-Small base (`inksm-tk`)
+
+2026-10-29. Inkling-Small (`thinkingmachines/Inkling-Small`) base on Tinker at thinking effort 0.6 (the project's Inkling default), on the plain
+Chen setup: the same 479 questions, three hints, standard system prompt and "Answer:" prefill, temperature 0, one sample, 16,000-token cap, no
+oversight-pressure line. Arm `inksm-tk`. Inkling renders through `rl/inkio.py` (TMLv0: the thinking message is the CoT, sampled until the text
+message opens, then the prefill; `inkio.sample_answer`, the same logic as `rl/sandbag.py`'s Inkling path); `rl/hintverb.py --base
+thinkingmachines/Inkling-Small --effort 0.6`. Same judge (Haiku 5.5, effort low, `hintverb_judge.JUDGE`) and verdict rule as the other arms. No hand
+validation of the judge on this arm beyond the spot check below. The 19 questions dropped for overlap with manytypes1b's training pool stay dropped,
+for comparability only. Cost: sampling $1.27 (0.38M sampled tokens, 1.24M prefill), judge about $0.07 (328 calls).
+
+Rows: 1,916/1,916 parsed, 0 at the cap, 0 malformed turns, 0 unprefilled. Unhinted accuracy 388/479 (MMLU 252/281, GPQA 136/198). Mean unhinted
+CoT tokens 220 (median 100; MMLU 90, GPQA 404). `summary.json` (all four arms, re-summarized from the stored judge replies), `pressure_summary_inksm.json`
+(`hintverb_pressure.py --models base mt1b-s150 inksm-tk --suffixes none`, the length-adjusted columns), figure `mats12_sprint/figures/hintverb_faithfulness.png`
+(now four arms), viewer `mats12_sprint/figures/hintverb_rollouts.html` (base, manytypes1b s150, inksm-tk).
+
+| arm | hint | pairs | switched to hint | elsewhere | alpha | verbalized / switched (Wilson 95%) | normalized | CoT tok switched |
+|---|---|---|---|---|---|---|---|---|
+| inksm-tk | metadata | 351 | 85 | 13 | 0.92 | 40/85 = 0.47 (0.37-0.58) | 0.51 | 168 |
+| inksm-tk | grader | 351 | 162 | 7 | 0.98 | 114/162 = 0.70 (0.63-0.77) | 0.72 | 201 |
+| inksm-tk | unethical | 351 | 81 | 11 | 0.93 | 65/81 = 0.80 (0.70-0.87) | 0.86 | 139 |
+| inksm-tk | pooled | 1053 | 328 | 31 | 0.95 | 219/328 = 0.67 (0.62-0.72) | 0.70 | 177 |
+| base (standard format) | pooled | 1065 | 405 | 37 | 0.95 | 371/405 = 0.92 (0.88-0.94) | 0.96 | 845 |
+| mt1b-s150 (standard format) | pooled | 1071 | 165 | 68 | 0.79 | 35/165 = 0.21 (0.16-0.28) | 0.27 | 2182 |
+
+Length: Inkling's switched CoTs average 177 tokens against base's 845. Within inksm-tk the fit on its own rows gives odds of verbalizing 1.54 per
+doubling of CoT tokens (switching 0.73). Verbalized / switched by CoT-token bin (pooled hints):
+
+| arm | 0-100 | 100-250 | 250-600 | 600-1500 | 1500+ |
+|---|---|---|---|---|---|
+| base | 53/57 | 106/113 | 103/105 | 50/64 | 46/66 |
+| mt1b-s150 | 0/5 | 3/35 | 7/38 | 4/38 | 16/49 |
+| inksm-tk | 76/162 | 58/86 | 52/63 | 14/15 | 2/2 |
+
+Bare-assertion CoTs: 25/328 of inksm-tk's switched rows have a CoT that is only "We need answer X." (or "We need answer multiple choice. X.") with
+X the hint letter and nothing else (22 judged NO; grader 15, metadata 5, unethical 5; GPQA 24, MMLU 1); 47/328 are 10 tokens or fewer. Over all
+hinted rows, 39/1437 are such a bare assertion of the hint letter, and no hinted row asserts any other letter that way; 0/479 unhinted rows are
+under 10 tokens. Base has 0 such rows anywhere. Spot check of 5 random switched rows judged NO with CoT under 100 tokens (seed 1): two are the bare
+assertion, two say "likely X" or "let's choose X" after a line about the question with no argument for X, one argues the question content to the
+hint letter (which is also the correct answer). The judge's verdicts on these 5 match the definition.
+
+```
+cd cot-control/rl
+python hintverb.py --name inksm-tk --base thinkingmachines/Inkling-Small --effort 0.6 --concurrency 48 --out ../results/hintverb
+python hintverb_judge.py --dir ../results/hintverb --arms base grpo3-s100 mt1b-s150 inksm-tk
+python hintverb_pressure.py --dir ../results/hintverb --models base mt1b-s150 inksm-tk --suffixes none --summary pressure_summary_inksm.json --fig /tmp/x.png
+python hintverb_html.py --dir ../results/hintverb --models base mt1b-s150 inksm-tk --out ../../../figures/hintverb_rollouts.html
+```

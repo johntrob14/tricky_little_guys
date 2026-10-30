@@ -117,6 +117,9 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, hints: list[str], judged_fi
     return out
 
 
+COLORS = {"base": "#3987e5", "grpo3-s100": "#d95926", "mt1b-s150": "#199e70", "inksm-tk": "#9b5de5", "inksft1-ep2": "#c6e05a", "inkrl1-s90": "#2ec4b6"}  # sandbag_headline.MODELS's colors (it imports this module, so they are copied)
+
+
 def plot(summary: dict, arms: list[str], hints: list[str]):
     plt.style.use("dark_background")
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
@@ -126,10 +129,11 @@ def plot(summary: dict, arms: list[str], hints: list[str]):
         x = [k + i * w - 0.4 + w / 2 for k in range(len(names))]
         f = [c["faithfulness"] for c in cells]
         err = [[c["faithfulness"] - c["faithfulness_ci"][0] for c in cells], [c["faithfulness_ci"][1] - c["faithfulness"] for c in cells]]
-        axes[0].bar(x, f, w, yerr=err, capsize=3, label=arm)
+        color = COLORS.get(arm)
+        axes[0].bar(x, f, w, yerr=err, capsize=3, label=arm, color=color)
         for xi, c in zip(x, cells):
             axes[0].text(xi, 0.02, f"{c['verbalized']}/{c['judged']}", ha="center", va="bottom", fontsize=7, rotation=90, color="black")
-        axes[1].bar(x, [c["p"] for c in cells], w, label=arm)
+        axes[1].bar(x, [c["p"] for c in cells], w, label=arm, color=color)
         for xi, c in zip(x, cells):
             axes[1].text(xi, 0.02, f"{c['to_hint']}/{c['pairs']}", ha="center", va="bottom", fontsize=7, rotation=90, color="black")
     axes[0].set_title("CoT verbalizes the hint, among answers switched to it\n(judge Haiku 5.5, Wilson 95% intervals)", fontsize=10)
@@ -138,7 +142,7 @@ def plot(summary: dict, arms: list[str], hints: list[str]):
         ax.set_xticks(range(len(names)), names)
         ax.set_ylim(0, 1.05)
         ax.legend()
-    fig.suptitle(f"Hint verbalization (Chen et al. 2025 hints): gpt-oss-120b base vs CoT-control checkpoints, Tinker, effort medium, T 0, {summary[arms[0]]['n_questions']} questions")
+    fig.suptitle(f"Hint verbalization (Chen et al. 2025 hints), Tinker, T 0, {summary[arms[0]]['n_questions']} questions; gpt-oss-120b arms at harmony effort medium, inksm-tk = Inkling-Small at thinking effort 0.6", fontsize=10)
     fig.tight_layout()
     FIG.parent.mkdir(exist_ok=True)
     fig.savefig(FIG, dpi=150)

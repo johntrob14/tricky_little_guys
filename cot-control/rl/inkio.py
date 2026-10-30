@@ -4,7 +4,8 @@ Inkling has no HF tokenizer or chat template: prompts render through tml-rendere
 'Thinking effort level: E' message after any system messages (EFFORT, read at call time: 0.9, the renderer default and tinker-runner's
 Astra setting, unless the caller sets inkio.EFFORT; inksm_sft_data sets it from its mine config). A model turn is
   <|message_model|><|content_thinking|>COT<|end_message|><|message_model|><|content_text|>RESPONSE<|end_message|><|content_model_end_sampling|>
-and sampling stops on <|content_model_end_sampling|>. sft_datum renders the same turn through render_for_sft (all model tokens weighted 1), with
+and sampling stops on <|content_model_end_sampling|>. sample_answer samples a turn in the standard answer format (modelio.ANSWER after the
+thinking message; sandbag.py has the same logic plus --nocot). sft_datum renders the same turn through render_for_sft (all model tokens weighted 1), with
 the effort message inserted where render_for_completion_with_effort puts it, so an SFT example's prompt ids equal the sampling prompt's
 (checked by sft_datum). Tok wraps the tokenizer in the HF calls force_check / grpo_obf use (encode with special tokens written as '<|name|>',
 decode, get_vocab, eos_token).
@@ -12,7 +13,10 @@ decode, get_vocab, eos_token).
 import re
 
 import tinker
+from cotswitch import extract
 from tml_renderers import chat as tml_chat, tinker as tml_tinker, tokenizers as tml_tokenizers, v0 as tml_v0
+
+import modelio
 
 MODEL = "thinkingmachines/Inkling-Small"
 EFFORT = 0.9
@@ -124,3 +128,24 @@ def sft_datum(user: str, system: str | None, reasoning: str, response: str, effo
     ids, n_prompt = model_input.to_ints(), next(i for i, w in enumerate(weights) if w > 0)
     assert ids[:n_prompt] == render(user, system, effort), "SFT prompt ids differ from the sampling prompt"
     return model_input, list(weights), n_prompt
+
+
+async def sample_answer(client, tok: Tok, ids: list[int], max_tokens: int, temperature: float, answer_tokens: int = 8) -> dict:
+    """One Inkling turn in the standard answer format (modelio.sample_answer's dict): the thinking until the text message opens (stop on <|content_text|>;
+    a turn that ends right after the thinking gets the text header appended), then modelio.ANSWER is appended and up to answer_tokens more are sampled
+    (stop on <|end_message|>). A malformed turn (stray special tokens) is finish "malformed" with CoT = the first message and no prefill."""
+    text_id, end_id = tok.encode(TEXT)[-1], tok.encode(END)[0]
+    s = (await client.sample_async(prompt=tinker.ModelInput.from_ints(ids), num_samples=1, sampling_params=tinker.SamplingParams(max_tokens=max_tokens, temperature=temperature, stop=[tok.eos_token_id, text_id]))).sequences[0]
+    tokens, n, prefilled = list(s.tokens), dict(sampled=len(s.tokens), prefill=len(ids)), False
+    if tokens[-1:] != [text_id] and end_id in tokens and text_id not in tokens:
+        tokens = tokens[:tokens.index(end_id) + 1] + tok.encode(TEXT)
+    if tokens[-1:] == [text_id]:
+        answer = tok.encode(modelio.ANSWER)
+        a = (await client.sample_async(prompt=tinker.ModelInput.from_ints(ids + tokens + answer), num_samples=1, sampling_params=tinker.SamplingParams(max_tokens=answer_tokens, temperature=temperature, stop=[end_id]))).sequences[0]
+        n, tokens, prefilled = dict(sampled=n["sampled"] + len(a.tokens), prefill=n["prefill"] + len(ids) + len(tokens) + len(answer)), tokens + answer + list(a.tokens), True
+    finish, gen = "length" if s.stop_reason == "length" else "stop", tok.decode(tokens)
+    try:
+        return extract.split_output(to_think(gen), None, finish) | dict(finish=finish, prefilled=prefilled) | n
+    except AssertionError:
+        return dict(reasoning=gen.removeprefix(THINK).partition(END)[0], response=gen.partition(END)[2], finish="malformed", prefilled=False) | n
+

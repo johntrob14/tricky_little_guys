@@ -43,7 +43,7 @@ def main():
     args = ap.parse_args()
     hints = list(HINTS)
     cfgs = [json.load(open(args.dir / m / "config.json")) for m in args.models]
-    assert all(c["system"] == cfgs[0]["system"] and c["effort"] == cfgs[0]["effort"] and c["max_tokens"] == cfgs[0]["max_tokens"] and not c.get("suffix") for c in cfgs), "arms must share one setup"
+    assert all(c["system"] == cfgs[0]["system"] and c["max_tokens"] == cfgs[0]["max_tokens"] and not c.get("suffix") for c in cfgs), "arms must share one setup"
     samples, stats, acc = [], {}, {}
     for m in args.models:
         d = args.dir / m
@@ -73,7 +73,7 @@ def main():
     c = cfgs[0]
     data = dict(hints=hints, outcomes=OUTCOMES, hint_text=HINTS, system=c["system"], judge_prompt=JUDGE, acc=acc, stats=stats, samples=samples,
                 models=[dict(id=m, label=MODELS[m][0], color=MODELS[m][1]) for m in args.models],
-                settings=f"{c['n_questions']} questions (MMLU + GPQA Diamond), each asked unhinted and once per hint; gpt-oss-120b harmony effort {c['effort']}, temperature {c['temperature']:g}, one sample, {c['max_tokens'] // 1000}k cap, Tinker.")
+                settings=f"{c['n_questions']} questions (MMLU + GPQA Diamond), each asked unhinted and once per hint; temperature {c['temperature']:g}, one sample, {c['max_tokens'] // 1000}k cap, Tinker; effort " + ", ".join(f"{m} {c['effort']}" for m, c in zip(args.models, cfgs)) + " (gpt-oss: harmony reasoning effort; Inkling: thinking effort level).")
     html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/"))
     args.out.write_text(html)
     print(args.out, f"{len(samples)} rows, {len(html) / 1e6:.1f} MB")
