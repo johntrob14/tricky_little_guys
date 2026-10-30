@@ -17,3 +17,5 @@ Save raw decoded sequences, all generated token IDs, rendered prompt IDs, thinki
 Storage: /workspace/qwen17-ifrl/results on network volume qwen17-ifrl-results. Disposable weights in /root/hf. The box watcher pulls completed checkpoint directories, verifies row counts and unique keys, compresses raw JSONL, and commits results to main under cot-control/results/public-ifrl/qwen17-20261030. Credentials and model weights are excluded.
 
 Hardware: one RTX 4090, EU-RO-1, $0.89/hour GPU plus storage. No measured runtime estimate is available before the pilot.
+
+Runtime note: the full sweep uses the identical locked packages from /root/qwen17-venv (disposable scratch) to avoid slow imports from network storage. User requested that the pod remain running after completion and verified upload.

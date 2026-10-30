@@ -1,7 +1,7 @@
 """One-off local watcher: pull finished exports and push artifacts to main.
 
-It never stops a GPU job. Stopping the pod after verified completion requires an
-explicit stop-after-upload permission file, written only following user consent.
+It never stops a GPU job. The user explicitly requested that the pod remain
+running after the sweep and verified upload.
 """
 from pathlib import Path
 import json
@@ -16,7 +16,6 @@ REPO = ROOT / "work/qwen17-repo"
 LOCAL = ROOT / "outputs/qwen17-ifrl"
 ARCHIVE = REPO / "cot-control/results/public-ifrl/qwen17-20261030"
 POD = "qwen17-ifrl-overnight"
-STOP_PERMISSION = ROOT / "work/stop-after-upload-approved"
 LOCAL.mkdir(parents=True, exist_ok=True)
 
 
@@ -69,11 +68,7 @@ while True:
         if all_done:
             assert len(known) == 8
             run(["pod", "pull", POD, "jobs/full-sweep.log", "jobs/full-sweep.exit", "--to", str(LOCAL)])
-            if STOP_PERMISSION.exists():
-                run(["pod", "stop", POD, "-y"])
-                print("STOPPED after verified local and git copies", flush=True)
-            else:
-                print("COMPLETE; stop approval pending, pod remains running", flush=True)
+            print("COMPLETE; pod remains running at the user's request", flush=True)
             break
         full_status = next((line for line in info.splitlines() if line.startswith("full-sweep ")), "")
         if full_status and any(marker in full_status.lower() for marker in ("exited", "killed", "gone")):
