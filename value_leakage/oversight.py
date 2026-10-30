@@ -497,7 +497,9 @@ def main() -> None:
     ap.add_argument("--tags", nargs="+", default=["gptoss-base-tinker", "grpo3-s100"])
     ap.add_argument("--names", nargs="+", default=["base gpt-oss-120b (Tinker)", "grpo3 step 100"])
     ap.add_argument("--out", default="oversight", help="results/<out>/ for the summary, table and figures; the figure copies are named <out>.<figure>.png")
+    ap.add_argument("--colors", nargs="+", default=COLORS, help="one color per tag (Inkling-Small is purple, inkrl checkpoints teal)")
     args = ap.parse_args()
+    COLORS[:] = args.colors
     data = {t: {} for t in args.tags}
     for t in args.tags:
         for pre, suf, label in CONDITIONS:
