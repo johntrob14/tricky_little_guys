@@ -3,9 +3,11 @@
 The honest-arm prompt (hintverb's system prompt, the unperturbed question, harmony at --effort) is followed by an empty analysis message and the final
 channel opened with the standard prefill "Answer:" (modelio.ANSWER), so the first sampled token is the letter. Temperature 0, one sample, at most 2 tokens;
 answer = the letter right after the prefill (hintverb.parse_answer; None otherwise). Writes <out>/<name>/rows.jsonl (`response` = prefill + sampled text).
+--qids keeps only those questions, --repeat K samples each K times (qid suffixed #<i>, as sandbag.py --repeat), --temperature sets the temperature (default 0).
 
     python sandbag_nocot.py --name base --out ../results/sandbag_nocot
     python sandbag_nocot.py --name mt1b-s150 --model-path tinker://... --out ../results/sandbag_nocot
+    python sandbag_nocot.py --name base --qids gpqa_0006_d48362ab --repeat 128 --temperature 1 --out ../results/sandbag_nocot_q0006
 """
 import argparse
 import asyncio
@@ -28,15 +30,18 @@ async def main():
     ap.add_argument("--model-path", help="tinker:// sampler weights; the base model itself when omitted")
     ap.add_argument("--effort", default="medium")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--qids", nargs="+", help="only these questions")
+    ap.add_argument("--repeat", type=int, default=1, help="samples per question (qid suffixed #<i>)")
+    ap.add_argument("--temperature", type=float, default=0.0)
     args = ap.parse_args()
     out = args.out / args.name
     out.mkdir(parents=True, exist_ok=True)
-    json.dump(dict(vars(args), out=str(args.out), base=BASE, system=SYSTEM, empty=EMPTY, prefill=PREFILL, sets=SETS, temperature=0.0, max_tokens=2, answer_prefill=PREFILL), open(out / "config.json", "w"), indent=1)
+    json.dump(dict(vars(args), out=str(args.out), base=BASE, system=SYSTEM, empty=EMPTY, prefill=PREFILL, sets=SETS, temperature=args.temperature, max_tokens=2, answer_prefill=PREFILL), open(out / "config.json", "w"), indent=1)
     sc = tinker.ServiceClient()
     client = await (sc.create_sampling_client_async(model_path=args.model_path) if args.model_path else sc.create_sampling_client_async(base_model=BASE))
     tok = client.get_tokenizer()
     assert modelio.probe_harmony(tok)
-    params = tinker.SamplingParams(max_tokens=2, temperature=0.0, stop=modelio.policy_stop(tok, True))
+    params = tinker.SamplingParams(max_tokens=2, temperature=args.temperature, stop=modelio.policy_stop(tok, True))
     sem = asyncio.Semaphore(64)
 
     async def one(ds, q):
@@ -47,7 +52,8 @@ async def main():
         gen = tok.decode(res.sequences[0].tokens, skip_special_tokens=True)
         return dict(dataset=ds, qid=q["qid"], correct=q["correct"], answer=parse_answer(PREFILL + gen, True), prefilled=True, response=PREFILL + gen, text=gen)
 
-    qs = [(ds, q) for ds, f in SETS.items() for q in map(json.loads, open(Path(__file__).parent / f))]
+    qs = [(ds, q) for ds, f in SETS.items() for q in map(json.loads, open(Path(__file__).parent / f)) if not args.qids or q["qid"] in args.qids]
+    qs = [(ds, q | dict(qid=f"{q['qid']}#{i:03d}" if args.repeat > 1 else q["qid"])) for ds, q in qs for i in range(args.repeat)]
     rows = await asyncio.gather(*[one(ds, q) for ds, q in qs])
     (out / "rows.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
     for ds in SETS:
