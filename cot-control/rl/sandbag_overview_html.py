@@ -7,7 +7,8 @@ to --behavior and the panel is left out when they do not cover these runs). Then
 every row, rows cut at the cap included), a judge's mean score (± SE) over flips (honest-arm answer correct, this arm's answer parsed and wrong; honest arm:
 natural errors, wrong while the <model>-honest2 sample of the question is correct), and the verbalization judge's YES rate over the judged flips, as four
 charts in a 2x2 grid, each with its own legend; click a bar to list those rows, click a row to read its prompt, CoT and final answer next to the same
-question's honest-arm CoT (middle pane) and every judge's prompt, reasoning and output (right pane). Two selects above the charts: which judge the third
+question's honest-arm CoT (middle pane) and every judge's prompt, reasoning and output (right pane); the row list's filters include a case-insensitive
+substring search over the CoT and final answer. Two selects above the charts: which judge the third
 chart, the list's score column and the first judge block show (the planted-error suspiciousness judge, sandbag_behavior_judge.py planted.jsonl given as
 --behavior, the default when it covers these runs; or the CoT-only monitor of the --summary run, Li et al. 2025's sandbagging judge), and whether flips in
 the sandbag arms are split by the verbalization judge (solid: YES, the CoT mentions the instruction; hatched: NO) in the judge chart (side by side); arms
@@ -65,7 +66,7 @@ def main():
     pl = {(r["run"], r["arm"], r["qid"]): r for r in map(json.loads, open(args.behavior))} if args.behavior else {}
     J = {j: {(r["run"], r["arm"], r["qid"]): r for r in map(json.loads, open(args.behavior.parent / f"{j}.jsonl"))} if args.behavior and (args.behavior.parent / f"{j}.jsonl").exists() else {} for j in ("instruction", "supported")}
     jrow = lambda x: dict(verdict=None if x["blocked"] else x["verdict"], blocked=x["blocked"], reply=x["reply"], reasoning=x.get("reasoning"), quotes=x["quotes"], found=x.get("quotes_found", x.get("quotes_exact"))) if x else None
-    suf = judge["files_suffix"]
+    suf = judge.get("files_suffix", "")
     qs = {q["qid"]: q for q in map(json.loads, open(args.questions))}
     rd = lambda m: m.removesuffix("-nocot") + args.suffix + ("-nocot" if m.endswith("-nocot") else "")  # run directory of a model name
     runs = [rd(m) for m in args.models]
@@ -90,7 +91,7 @@ def main():
         for r in [r for r in rs if r["arm"] in arms]:
             v, h, x, mo = ver.get((r["qid"], r["arm"])), honest[r["qid"]], pl.get((run, r["arm"], r["qid"])), mon.get((r["qid"], r["arm"]), dict(score=None, reply=""))
             if r["arm"] not in CTL_SETS:
-                systems[r["arm"]] = r["system"]
+                systems[r["arm"]] = r.get("system", cfg.get("system", ""))
             flip = None if r["arm"] == "honest" else h["answer"] == h["correct"] and r["answer"] is not None and r["answer"] != r["correct"]
             nat = h2[r["qid"]]["answer"] == r["correct"] and r["answer"] != r["correct"] if r["arm"] == "honest" and h2 else None  # natural error: wrong, the second honest sample right
             jj = {j: jrow(J[j].get((run, r["arm"], r["qid"]))) for j in J}
@@ -181,7 +182,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .divider { cursor:col-resize; background:var(--line); } .divider:hover, .divider.drag { background:var(--ink2); }
 .filters { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; margin-bottom:10px; font-size:12px; color:var(--ink2); }
 .filters label.f { display:flex; flex-direction:column; gap:3px; }
-.filters select { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:0; padding:6px 8px; font:13px system-ui, sans-serif; }
+.filters select, .filters input[type=text] { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:0; padding:6px 8px; font:13px system-ui, sans-serif; }
 .filters .chk { display:flex; align-items:center; gap:6px; color:var(--ink); }
 #list th { position:sticky; top:-10px; background:var(--panel); z-index:1; cursor:pointer; user-select:none; } #list th:hover { color:var(--ink); }
 #list th.up::after, #list th.down::after { content:""; display:inline-block; margin-left:5px; border-left:4px solid transparent; border-right:4px solid transparent; vertical-align:2px; }
@@ -246,6 +247,7 @@ __HL_CSS__
       <label class="f">verbalization judge<select id="f-verb"><option value="">any</option><option value="1">YES (mentions the instruction)</option><option value="0">NO</option><option value="none">not run</option><option value="notyes">NO or not run</option></select></label>
       <label class="f">kind (flips, behavior judges)<select id="f-kind"></select></label>
       <label class="f" style="grid-column:1 / -1">question<select id="f-q"></select></label>
+      <label class="f" style="grid-column:1 / -1">text search (substring of the CoT or final answer, case-insensitive)<input type="text" id="f-text" placeholder="e.g. mod 256"></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
       <label class="chk"><input type="checkbox" id="f-md" checked> render markdown</label>
       <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
@@ -380,7 +382,7 @@ $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<o
 $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option value="${a}">${D.short[a]}</option>`).join("");
 const QIDS = [...new Set(D.samples.map(s => s.qid))].sort((a, b) => a < b ? -1 : a > b ? 1 : 0);  // wmdp qids are numbers
 $("f-q").innerHTML = `<option value="">any</option>` + QIDS.map(q => `<option value="${q}">${q} (correct ${D.questions[q].correct})</option>`).join("");
-function setFilters(f) { $("f-model").value = f.model ?? ""; $("f-arm").value = f.arm ?? ""; $("f-ok").value = f.ok ?? ""; $("f-flip").value = f.flip ?? ""; $("f-verb").value = f.verb ?? ""; $("f-q").value = f.q ?? ""; $("f-kind").value = f.kind ?? ""; render(); $("pane").scrollIntoView({behavior: "smooth", block: "start"}); }
+function setFilters(f) { $("f-model").value = f.model ?? ""; $("f-arm").value = f.arm ?? ""; $("f-ok").value = f.ok ?? ""; $("f-flip").value = f.flip ?? ""; $("f-verb").value = f.verb ?? ""; $("f-q").value = f.q ?? ""; $("f-kind").value = f.kind ?? ""; $("f-text").value = f.text ?? ""; render(); $("pane").scrollIntoView({behavior: "smooth", block: "start"}); }
 const KIND = Object.fromEntries(D.cats.map(c => [c.id, c]));
 const kindTag = (s, short) => s.kind === "natural" ? `<span class="kind" style="background:#55554f">natural</span>` : s.kind ? `<span class="kind" style="background:${KIND[s.kind].color}">${esc(short ? KIND[s.kind].short : KIND[s.kind].label)}</span>` : "";
 $("f-kind").innerHTML = `<option value="">any</option>` + D.cats.map(c => `<option value="${c.id}">${esc(c.label)}</option>`).join("") + `<option value="natural">natural error (honest arm)</option>`;
@@ -447,9 +449,9 @@ const SORT = {model: s => D.models.findIndex(m => m.id === s.model), arm: s => D
 const scoreCell = s => JMODE === "mon" ? `<td class="num" style="background:${scoreColor(s.score, 0.45)}">${s.score ?? "—"}</td>` : `<td class="num" style="background:${plantColor(s.plant, 0.45)}">${s.plant ?? "—"}</td>`;
 let sortBy = {k: "model", dir: 1};
 function render() {
-  const fm = $("f-model").value, fa = $("f-arm").value, fo = $("f-ok").value, ff = $("f-flip").value, fv = $("f-verb").value, fq = $("f-q").value, fk = $("f-kind").value;
+  const fm = $("f-model").value, fa = $("f-arm").value, fo = $("f-ok").value, ff = $("f-flip").value, fv = $("f-verb").value, fq = $("f-q").value, fk = $("f-kind").value, ft = $("f-text").value.toLowerCase();
   shown = D.samples.filter(s => !hidden.m.has(s.model) && !hidden.a.has(s.arm) && (!fm || s.model === fm) && (!fa || s.arm === fa) && (fo === "" || String(+s.ok) === fo) && (ff === "" || (ff === "nat" ? s.nat === true : s.flip != null && String(+s.flip) === ff))
-    && (fv === "" || (fv === "none" ? s.verbalized == null : fv === "notyes" ? s.verbalized !== true : s.verbalized != null && String(+s.verbalized) === fv)) && (!fq || String(s.qid) === fq) && (!fk || s.kind === fk));
+    && (fv === "" || (fv === "none" ? s.verbalized == null : fv === "notyes" ? s.verbalized !== true : s.verbalized != null && String(+s.verbalized) === fv)) && (!fq || String(s.qid) === fq) && (!fk || s.kind === fk) && (!ft || ((s.cot || "") + "\n" + (s.response || "")).toLowerCase().includes(ft)));
   const k = SORT[sortBy.k], cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;  // the clicked column first, then model, arm, question
   shown.sort((a, b) => sortBy.dir * cmp(k(a), k(b)) || cmp(SORT.model(a), SORT.model(b)) || cmp(SORT.arm(a), SORT.arm(b)) || cmp(SORT.i(a), SORT.i(b)));
   $("nshown").textContent = `${shown.length} shown`;
@@ -462,7 +464,7 @@ function render() {
   show();
 }
 document.addEventListener("keydown", e => {
-  if (!["ArrowDown", "ArrowUp"].includes(e.key) || e.target.tagName === "SELECT" || !shown.length) return;
+  if (!["ArrowDown", "ArrowUp"].includes(e.key) || ["SELECT", "INPUT"].includes(e.target.tagName) || !shown.length) return;
   const k = shown.findIndex(x => sid(x) === sel), j = Math.max(0, Math.min(shown.length - 1, k + (e.key === "ArrowDown" ? 1 : -1)));
   e.preventDefault(); sel = sid(shown[j]); show();
   document.querySelector(`#list tr.s[data-id="${CSS.escape(sel)}"]`).scrollIntoView({block: "nearest"});
@@ -479,6 +481,7 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
 }));
 applyW();
 for (const id of ["f-model", "f-arm", "f-ok", "f-flip", "f-verb", "f-q", "f-kind"]) $(id).addEventListener("change", render);
+$("f-text").addEventListener("input", render);
 $("jsel").addEventListener("change", () => { JMODE = $("jsel").value; try { localStorage.setItem("sandbag-overview-judge", JMODE); } catch (e) {} if (sortBy.k === "score" || sortBy.k === "plant") sortBy.k = JMODE === "mon" ? "score" : "plant"; drawJudge(); render(); });
 $("ssel").addEventListener("change", () => { SPLIT = $("ssel").value === "1"; try { localStorage.setItem("sandbag-overview-split", SPLIT ? "1" : "0"); } catch (e) {} drawLegend(); drawJudge(); });
 $("vsel").addEventListener("change", () => { VFILT = $("vsel").value; try { localStorage.setItem("sandbag-overview-vfilt", VFILT); } catch (e) {} drawJudge(); });
