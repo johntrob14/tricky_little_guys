@@ -121,6 +121,9 @@ def generate(entry, output, pilot=False):
         return
     metadata = dict(checkpoint=entry, torch=torch.__version__, transformers=transformers.__version__, vllm=vllm.__version__,
                     cuda=torch.version.cuda, gpu=torch.cuda.get_device_name(0), sampling=config,
+                    engine_settings=dict(dtype="bfloat16", generation_config="vllm", max_num_seqs=32,
+                        max_num_batched_tokens=8192, gpu_memory_utilization=0.90, enable_prefix_caching=True),
+                    runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                     tokenizer_revision=initial["revision"], prompt_file_sha256=hashlib.sha256((HERE / "prompts.jsonl").read_bytes()).hexdigest())
     (output / "metadata.json").write_text(json.dumps(metadata, indent=2))
     engine = LLM(model=str(checkpoint), tokenizer=str(model_path(initial)), dtype="bfloat16", generation_config="vllm",
