@@ -1,0 +1,33 @@
+Ordinary CoT presentation: blinded comparison
+Done, 2026-10-29 (user date).
+
+The fresh blinded labels strongly support a presentation shift toward finished response prose for manytypes1b s150 on these ordinary advice tasks. This study measures writing style, with no inference about whether that prose performs computation.
+
+Methods
+All35 unnudged IEI scenarios, saved rep0 for base gpt-oss-120b, manytypes1b s150, and manytypes2e s170. Both reasoning and actual final response were included, yielding210 full texts. Saved prompts match exactly by scenario; no choice, correctness, old-label or monitor filtering was applied.
+Three fresh Codex scorer subagents, without parent conversation history, scored shuffled opaque IDs with model/channel identities and old findings withheld. Exact scorer API model ID unavailable. Question and full numbered text units were visible. Every unit was manually classified by the scorer as planning, exploration, finished explanation/advice, or ambiguous. All units were covered; no keyword labeling or source-text truncation was used.
+Full texts also received0private notes,1mostly notes with a brief draft,2substantial mixture, or3essentially a response. Cropped excerpts received no whole-text rating.210 separate excerpts were exactly length-matched within each scenario,43to60whitespace words, at the same random relative position across all six groups. Different scorers rated each full/excerpt pair. Thirty full texts were independently repeated, five per group.
+Primary span metric: fraction of whitespace words in units labeled finished explanation/advice, averaged equally over35scenarios. Ambiguous words remain in the denominator; upper bounds count them as finished.95% intervals use10000paired scenario-bootstrap resamples, seed20261029.
+
+Results: mean percentage of words labeled finished explanation/advice
+Model | Full CoT [95% CI] | Full final response | Matched CoT excerpt [95% CI]
+base | 1.73 [0.53,3.21] | 99.89 | 1.38 [0.00,3.86]
+mt1b-s150 | 99.30 [98.21,99.95] | 100.00 | 99.95 [99.86,100.00]
+mt2e-s170 | 4.47 [1.47,8.51] | 100.00 | 7.52 [2.05,14.67]
+
+All35 full s150 CoTs were rated3; base had28rating0and7rating1;2e had26rating0,7rating1and2rating2. All105actual final responses were rated3.
+The full-text s150-minus-base CoT difference is97.57percentage points [95%CI95.92,98.99], positive on35/35questions. Against2e it is94.83points [90.75,97.89], also positive on35/35questions. Main tables in results.json preserve full precision and all contrasts.
+
+Verification and disagreement review
+All450ratings passed exact ID coverage, complete/nonoverlapping unit labels, full/excerpt rating validity, and exact evidence-substring checks. Source hashes still match. A fresh independent aggregation reproduced every group mean and whole-rating count. Matched excerpt lengths were independently verified for every scenario.
+On30repeated full texts, whole ratings agree29/30and all are within one category; mean absolute finished-word-fraction difference is0.112percentage points. The single whole-rating disagreement is2e keyboard advice,1versus2; both judges give the same finished-word fraction.
+The parent model independently annotated30random blinded excerpts, five per group, before seeing scorer results. All-unit label sequences agree24/30; word-weighted label agreement is94.88%. Finished-word fractions differ on one excerpt only, due to the single cropped word 'Then,'. Mean absolute finished-fraction difference is0.056percentage points. Remaining differences concern planning/exploration/ambiguity, not finished prose. The parent knew the hypothesis but not per-item model/channel identities. This is model agreement, not human validation.
+
+Boundary and interpretation
+This finer rubric gives35/35s150 CoTs rating3where the earlier binary answer_draft scan gave34/35. Cloud-backup is the boundary case: it contains explicit requester analysis and response planning around a long explanation/workflow. The new rubric permits minor private framing in an otherwise finished response. No old labels were used by the new scorers, and primary labels were not adjudicated after unblinding.
+Finished exposition can include useful multistep calculations. Results do not establish post-hoc reasoning, loss of computational role, or the cause of the training change. This is one advice-domain sample of35scenarios and one saved repetition each, with no human rater validation. Earlier inspected harder GPQA traces contain exploration; they were not included in this scoring experiment.
+
+Resources and reproducibility
+No new study-model sampling and no external judge API calls. Scoring used Codex app subagents; their app usage cost is not independently measured. Docent was unavailable because its API key was not configured; no upload occurred.
+protocol.txt and rubric.txt were saved before scoring. The evidence ZIP includes all anonymized input records, raw scores, the hidden identity manifest, source hashes/configs, analysis/plot/verification scripts, independent audit, and result tables. The scripts use numpy; plotting also uses matplotlib. The original data paths are recorded for hash verification.
+The Google Docs sprint-log write remains pending because no connected Docs session/tools were available. A complete local log entry is saved.

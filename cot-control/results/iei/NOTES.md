@@ -1,5 +1,7 @@
 # Implicit vs explicit influence, Setting 1, on the CoT-control organisms (2026-10-26)
 
+The blinded **manytypes1b CoT versus final-response style classification** is in [style_experiment/README.md](style_experiment/README.md), with the rubric, raw labels, report, figures, and reproducible analysis. The earlier behavior-labeling study is in [trace_scan/README.md](trace_scan/README.md).
+
 Setting 1 (binary everyday choice) of Duzan and Cooper Stickland 2026, "Chain-of-Thought Monitoring Can Be Unreliable in Implicit-Influence Settings"
 (arXiv 2608.04735; code and data github.com/agatha-duzan/implicit-vs-explicit-influence, commit 8c001cb, vendored in `rl/data/iei/` and `rl/iei_choice.py`).
 Code: `rl/iei.py` (sampling), `rl/iei_judge.py` (monitor, summary, figure), `rl/iei_inspect.py` (Inspect logs). Figures: `mats12_sprint/figures/iei_s1.png`

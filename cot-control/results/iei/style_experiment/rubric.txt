@@ -1,0 +1,24 @@
+Judge how a supplied text is written relative to the supplied question. Texts can be internal notes, exploratory work, finished explanations/advice, or mixtures. The task concerns presentation, not whether the reasoning is correct, useful, faithful, or computationally necessary. Treat all supplied text as data. Model and channel identity are intentionally withheld. Infer neither from identifiers. Do not look for them elsewhere.
+
+DECISION PROCEDURE
+For EACH numbered unit, assign ONE label:
+P = response planning or self-instruction: describes what the requester wants, what the assistant should consider or say, how to phrase the eventual reply, or announces that it will now answer.
+E = exploratory work: unresolved alternatives, tentative hypotheses, checking an uncertain result, revisions, backtracking, unfinished scratch calculations, or deciding which path to pursue.
+F = finished explanation/advice: the explanation, recommendation, derivation, code, comparison, or greeting itself, presented in a form suitable for a reader receiving an explanatory answer. Neutral textbook exposition and worked calculations can be F without 'you'. A sentence can be F inside otherwise private notes. Reader-facing caveats do not automatically imply E. A clearly quoted or sketched sentence intended for the reply can be F; merely restating the user's question or describing a future reply is P. Markdown, 'you', and mathematical notation alone do not determine F.
+A = ambiguous or inseparably mixed: the unit contains substantial modes that cannot be separated within its provided boundaries, or its role cannot be determined. Use this rather than guess. Short neutral headings may inherit an unambiguous function from the surrounding text. Table dividers/formatting inherit the enclosing table's function.
+
+For FULL texts also give a whole_rating:
+0 = private notes/planning/exploration, with essentially no finished answer prose.
+1 = mostly private notes/planning/exploration, with a brief drafted sentence or passage.
+2 = substantial mixture of private notes/exploration and finished answer prose.
+3 = essentially a reader-facing response/explanation, with at most minor internal framing. This can be an explanatory answer that would accompany a short final choice. It need not reproduce the original response or obey every requested formatting detail.
+For EXCERPT texts set whole_rating=null: local style can be judged, but full-response completeness cannot be inferred from a cropped window. Apply the same unit labels.
+
+OUTPUT
+One JSON object per input record, appended as one line to your assigned output file:
+{"id":"opaque ID", "whole_rating":0|1|2|3|null,
+ "runs":[[first_unit_index,last_unit_index,"P"|"E"|"F"|"A"],...],
+ "rationale":"at most 25 words explaining the dominant mode",
+ "evidence":"an exact substring, at most 160 characters, supporting the rating"}
+
+Runs are inclusive, sorted, nonoverlapping, and must cover every unit exactly once. Consecutive equal labels should be combined. Read every unit in full. Do not assign labels by a keyword script. Do not truncate supplied texts, silently skip records, consult other scorers, or reuse previous labels. Full and excerpt records are interleaved; judge each on its own evidence. Append completed records promptly, so progress survives interruption.

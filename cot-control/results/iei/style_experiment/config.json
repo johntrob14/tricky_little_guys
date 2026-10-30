@@ -1,0 +1,73 @@
+{
+  "seed": 20261029,
+  "primary_texts": 210,
+  "full_text_repeats": 30,
+  "excerpt_texts": 210,
+  "scenarios": 35,
+  "source_sha256": {
+    "/home/john/code/tlg-cascade/cot-control/results/iei/base/baseline.jsonl": "a2fd29d1e8acd9275b5d03972a0185c549be7d09c4f51a854f4ac462d9305147",
+    "/home/john/code/tlg-cascade/cot-control/results/iei/mt1b-s150/baseline.jsonl": "174f4b2529932fdae173946b160bd66d1a70cbfbb1d6f2749aa8f29b30c3a624",
+    "/home/john/code/tlg-cascade/cot-control/results/iei/mt2e-s170/baseline.jsonl": "e09d1feb11f57fe8f636bdb8e4507665d5fbb62466edc34fa77cbd9e93fe326b"
+  },
+  "source_configs": {
+    "base": {
+      "name": "base",
+      "model_path": null,
+      "effort": "medium",
+      "max_tokens": 16000,
+      "reps": 5,
+      "n": 300,
+      "out": "../results/iei",
+      "concurrency": 64,
+      "base": "openai/gpt-oss-120b",
+      "temperature": 1.0,
+      "system_prompt": null,
+      "paper": "arXiv 2608.04735",
+      "data_commit": "8c001cb"
+    },
+    "mt1b-s150": {
+      "name": "mt1b-s150",
+      "model_path": "tinker://f6204b00-be4d-51fd-b1d8-6d467ff4ba75:train:0/sampler_weights/cotctl-manytypes1b-step150",
+      "effort": "medium",
+      "max_tokens": 16000,
+      "reps": 5,
+      "n": 300,
+      "out": "../results/iei",
+      "concurrency": 64,
+      "base": "openai/gpt-oss-120b",
+      "temperature": 1.0,
+      "system_prompt": null,
+      "paper": "arXiv 2608.04735",
+      "data_commit": "8c001cb"
+    },
+    "mt2e-s170": {
+      "name": "mt2e-s170",
+      "model_path": "tinker://5fecab91-f1a1-5bc2-9cb0-db0d61b7d50f:train:0/sampler_weights/cotctl-manytypes2e-step170",
+      "effort": "medium",
+      "max_tokens": 16000,
+      "reps": 5,
+      "n": 300,
+      "out": "../results/iei",
+      "concurrency": 64,
+      "base": "openai/gpt-oss-120b",
+      "temperature": 1.0,
+      "system_prompt": null,
+      "paper": "arXiv 2608.04735",
+      "data_commit": "8c001cb"
+    }
+  },
+  "shard_counts": [
+    144,
+    147,
+    159
+  ],
+  "excerpt_word_range": [
+    43,
+    60
+  ],
+  "primary_words": 212076,
+  "judge": "Fresh Codex scorer subagents, inherited model; exact model ID unavailable",
+  "blinding": "No model, channel, prior labels or hypothesis in scorer inputs. Each scorer sees at most one full version per original text.",
+  "external_model_api_spend_usd": 0,
+  "target_model_sampling_calls": 0
+}

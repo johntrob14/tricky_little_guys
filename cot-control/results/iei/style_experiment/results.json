@@ -1,0 +1,611 @@
+{
+  "config": {
+    "seed": 20261029,
+    "primary_texts": 210,
+    "full_text_repeats": 30,
+    "excerpt_texts": 210,
+    "scenarios": 35,
+    "source_sha256": {
+      "/home/john/code/tlg-cascade/cot-control/results/iei/base/baseline.jsonl": "a2fd29d1e8acd9275b5d03972a0185c549be7d09c4f51a854f4ac462d9305147",
+      "/home/john/code/tlg-cascade/cot-control/results/iei/mt1b-s150/baseline.jsonl": "174f4b2529932fdae173946b160bd66d1a70cbfbb1d6f2749aa8f29b30c3a624",
+      "/home/john/code/tlg-cascade/cot-control/results/iei/mt2e-s170/baseline.jsonl": "e09d1feb11f57fe8f636bdb8e4507665d5fbb62466edc34fa77cbd9e93fe326b"
+    },
+    "source_configs": {
+      "base": {
+        "name": "base",
+        "model_path": null,
+        "effort": "medium",
+        "max_tokens": 16000,
+        "reps": 5,
+        "n": 300,
+        "out": "../results/iei",
+        "concurrency": 64,
+        "base": "openai/gpt-oss-120b",
+        "temperature": 1.0,
+        "system_prompt": null,
+        "paper": "arXiv 2608.04735",
+        "data_commit": "8c001cb"
+      },
+      "mt1b-s150": {
+        "name": "mt1b-s150",
+        "model_path": "tinker://f6204b00-be4d-51fd-b1d8-6d467ff4ba75:train:0/sampler_weights/cotctl-manytypes1b-step150",
+        "effort": "medium",
+        "max_tokens": 16000,
+        "reps": 5,
+        "n": 300,
+        "out": "../results/iei",
+        "concurrency": 64,
+        "base": "openai/gpt-oss-120b",
+        "temperature": 1.0,
+        "system_prompt": null,
+        "paper": "arXiv 2608.04735",
+        "data_commit": "8c001cb"
+      },
+      "mt2e-s170": {
+        "name": "mt2e-s170",
+        "model_path": "tinker://5fecab91-f1a1-5bc2-9cb0-db0d61b7d50f:train:0/sampler_weights/cotctl-manytypes2e-step170",
+        "effort": "medium",
+        "max_tokens": 16000,
+        "reps": 5,
+        "n": 300,
+        "out": "../results/iei",
+        "concurrency": 64,
+        "base": "openai/gpt-oss-120b",
+        "temperature": 1.0,
+        "system_prompt": null,
+        "paper": "arXiv 2608.04735",
+        "data_commit": "8c001cb"
+      }
+    },
+    "shard_counts": [
+      144,
+      147,
+      159
+    ],
+    "excerpt_word_range": [
+      43,
+      60
+    ],
+    "primary_words": 212076,
+    "judge": "Fresh Codex scorer subagents, inherited model; exact model ID unavailable",
+    "blinding": "No model, channel, prior labels or hypothesis in scorer inputs. Each scorer sees at most one full version per original text.",
+    "external_model_api_spend_usd": 0,
+    "target_model_sampling_calls": 0
+  },
+  "validation": [
+    {
+      "shard": 0,
+      "input_records": 144,
+      "scored_records": 144
+    },
+    {
+      "shard": 1,
+      "input_records": 147,
+      "scored_records": 147
+    },
+    {
+      "shard": 2,
+      "input_records": 159,
+      "scored_records": 159
+    }
+  ],
+  "groups": [
+    {
+      "view": "full",
+      "model": "base",
+      "channel": "reasoning",
+      "n": 35,
+      "P_mean": 0.9783827585227609,
+      "P_ci95": [
+        0.9623253797783967,
+        0.9917684600409356
+      ],
+      "E_mean": 0.004333980582524271,
+      "E_ci95": [
+        0.0,
+        0.009696532593619973
+      ],
+      "F_mean": 0.017283260894714825,
+      "F_ci95": [
+        0.005293040293040293,
+        0.03206297582510574
+      ],
+      "A_mean": 0.0,
+      "A_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_upper_mean": 0.017283260894714825,
+      "F_upper_ci95": [
+        0.005293040293040293,
+        0.03206297582510574
+      ],
+      "whole_counts": {
+        "0": 28,
+        "1": 7
+      },
+      "whole_mean": 0.2
+    },
+    {
+      "view": "full",
+      "model": "base",
+      "channel": "response",
+      "n": 35,
+      "P_mean": 0.0,
+      "P_ci95": [
+        0.0,
+        0.0
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 0.9988841927303467,
+      "F_ci95": [
+        0.9966525781910397,
+        1.0
+      ],
+      "A_mean": 0.0011158072696534234,
+      "A_ci95": [
+        0.0,
+        0.00334742180896027
+      ],
+      "F_upper_mean": 1.0,
+      "F_upper_ci95": [
+        1.0,
+        1.0
+      ],
+      "whole_counts": {
+        "3": 35
+      },
+      "whole_mean": 3.0
+    },
+    {
+      "view": "full",
+      "model": "mt1b-s150",
+      "channel": "reasoning",
+      "n": 35,
+      "P_mean": 0.007035888774220593,
+      "P_ci95": [
+        0.0005118169501731146,
+        0.017922308699834598
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 0.9929641112257794,
+      "F_ci95": [
+        0.9820776913001653,
+        0.9994881830498268
+      ],
+      "A_mean": 0.0,
+      "A_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_upper_mean": 0.9929641112257794,
+      "F_upper_ci95": [
+        0.9820776913001653,
+        0.9994881830498268
+      ],
+      "whole_counts": {
+        "3": 35
+      },
+      "whole_mean": 3.0
+    },
+    {
+      "view": "full",
+      "model": "mt1b-s150",
+      "channel": "response",
+      "n": 35,
+      "P_mean": 0.0,
+      "P_ci95": [
+        0.0,
+        0.0
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 1.0,
+      "F_ci95": [
+        1.0,
+        1.0
+      ],
+      "A_mean": 0.0,
+      "A_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_upper_mean": 1.0,
+      "F_upper_ci95": [
+        1.0,
+        1.0
+      ],
+      "whole_counts": {
+        "3": 35
+      },
+      "whole_mean": 3.0
+    },
+    {
+      "view": "full",
+      "model": "mt2e-s170",
+      "channel": "reasoning",
+      "n": 35,
+      "P_mean": 0.9272163917682519,
+      "P_ci95": [
+        0.8815098538036599,
+        0.9656054561444678
+      ],
+      "E_mean": 0.0176560826017448,
+      "E_ci95": [
+        0.007800938472687436,
+        0.02951689630979726
+      ],
+      "F_mean": 0.04471269408473704,
+      "F_ci95": [
+        0.014655809898669643,
+        0.08506808066579619
+      ],
+      "A_mean": 0.010414831545266328,
+      "A_ci95": [
+        0.0017316017316017316,
+        0.021695463956333524
+      ],
+      "F_upper_mean": 0.05512752563000337,
+      "F_upper_ci95": [
+        0.020732120252419113,
+        0.098791421234685
+      ],
+      "whole_counts": {
+        "0": 26,
+        "1": 7,
+        "2": 2
+      },
+      "whole_mean": 0.3142857142857143
+    },
+    {
+      "view": "full",
+      "model": "mt2e-s170",
+      "channel": "response",
+      "n": 35,
+      "P_mean": 0.0,
+      "P_ci95": [
+        0.0,
+        0.0
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 1.0,
+      "F_ci95": [
+        1.0,
+        1.0
+      ],
+      "A_mean": 0.0,
+      "A_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_upper_mean": 1.0,
+      "F_upper_ci95": [
+        1.0,
+        1.0
+      ],
+      "whole_counts": {
+        "3": 35
+      },
+      "whole_mean": 3.0
+    },
+    {
+      "view": "excerpt",
+      "model": "base",
+      "channel": "reasoning",
+      "n": 35,
+      "P_mean": 0.9490476190476191,
+      "P_ci95": [
+        0.9123809523809524,
+        0.9804761904761904
+      ],
+      "E_mean": 0.016666666666666666,
+      "E_ci95": [
+        0.0,
+        0.04428571428571429
+      ],
+      "F_mean": 0.013809523809523811,
+      "F_ci95": [
+        0.0,
+        0.038571428571428576
+      ],
+      "A_mean": 0.020476190476190478,
+      "A_ci95": [
+        0.0047619047619047615,
+        0.0419047619047619
+      ],
+      "F_upper_mean": 0.03428571428571429,
+      "F_upper_ci95": [
+        0.010476190476190476,
+        0.06476190476190476
+      ]
+    },
+    {
+      "view": "excerpt",
+      "model": "base",
+      "channel": "response",
+      "n": 35,
+      "P_mean": 0.0,
+      "P_ci95": [
+        0.0,
+        0.0
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 1.0,
+      "F_ci95": [
+        1.0,
+        1.0
+      ],
+      "A_mean": 0.0,
+      "A_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_upper_mean": 1.0,
+      "F_upper_ci95": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "view": "excerpt",
+      "model": "mt1b-s150",
+      "channel": "reasoning",
+      "n": 35,
+      "P_mean": 0.0,
+      "P_ci95": [
+        0.0,
+        0.0
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 0.9995238095238096,
+      "F_ci95": [
+        0.9985714285714287,
+        1.0
+      ],
+      "A_mean": 0.0004761904761904762,
+      "A_ci95": [
+        0.0,
+        0.0014285714285714286
+      ],
+      "F_upper_mean": 1.0,
+      "F_upper_ci95": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "view": "excerpt",
+      "model": "mt1b-s150",
+      "channel": "response",
+      "n": 35,
+      "P_mean": 0.0,
+      "P_ci95": [
+        0.0,
+        0.0
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 1.0,
+      "F_ci95": [
+        1.0,
+        1.0
+      ],
+      "A_mean": 0.0,
+      "A_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_upper_mean": 1.0,
+      "F_upper_ci95": [
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "view": "excerpt",
+      "model": "mt2e-s170",
+      "channel": "reasoning",
+      "n": 35,
+      "P_mean": 0.8666666666666667,
+      "P_ci95": [
+        0.7752380952380953,
+        0.9466666666666667
+      ],
+      "E_mean": 0.023809523809523808,
+      "E_ci95": [
+        0.0047619047619047615,
+        0.04809523809523809
+      ],
+      "F_mean": 0.07523809523809524,
+      "F_ci95": [
+        0.020476190476190478,
+        0.14666666666666667
+      ],
+      "A_mean": 0.03428571428571429,
+      "A_ci95": [
+        0.0009523809523809524,
+        0.07619047619047618
+      ],
+      "F_upper_mean": 0.10952380952380951,
+      "F_upper_ci95": [
+        0.03761904761904762,
+        0.1957142857142857
+      ]
+    },
+    {
+      "view": "excerpt",
+      "model": "mt2e-s170",
+      "channel": "response",
+      "n": 35,
+      "P_mean": 0.0,
+      "P_ci95": [
+        0.0,
+        0.0
+      ],
+      "E_mean": 0.0,
+      "E_ci95": [
+        0.0,
+        0.0
+      ],
+      "F_mean": 0.9995238095238096,
+      "F_ci95": [
+        0.9985714285714287,
+        1.0
+      ],
+      "A_mean": 0.0004761904761904762,
+      "A_ci95": [
+        0.0,
+        0.0014285714285714286
+      ],
+      "F_upper_mean": 1.0,
+      "F_upper_ci95": [
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "paired_contrasts": [
+    {
+      "view": "full",
+      "name": "s150 CoT minus base CoT",
+      "mean": 0.9756808503310646,
+      "ci95": [
+        0.9592340394748315,
+        0.9898755878325307
+      ],
+      "positive_questions": 35,
+      "negative_questions": 0,
+      "ties": 0
+    },
+    {
+      "view": "full",
+      "name": "s150 CoT minus mt2e-s170 CoT",
+      "mean": 0.9482514171410423,
+      "ci95": [
+        0.9075358130189601,
+        0.9789241417381773
+      ],
+      "positive_questions": 35,
+      "negative_questions": 0,
+      "ties": 0
+    },
+    {
+      "view": "full",
+      "name": "base final minus own CoT",
+      "mean": 0.9816009318356318,
+      "ci95": [
+        0.9670676965000935,
+        0.9936977335613281
+      ]
+    },
+    {
+      "view": "full",
+      "name": "mt1b-s150 final minus own CoT",
+      "mean": 0.007035888774220592,
+      "ci95": [
+        0.0005118169501731147,
+        0.017922308699834598
+      ]
+    },
+    {
+      "view": "full",
+      "name": "mt2e-s170 final minus own CoT",
+      "mean": 0.9552873059152631,
+      "ci95": [
+        0.9149319193342038,
+        0.9853441901013302
+      ]
+    },
+    {
+      "view": "excerpt",
+      "name": "s150 CoT minus base CoT",
+      "mean": 0.9857142857142858,
+      "ci95": [
+        0.9604761904761905,
+        1.0
+      ],
+      "positive_questions": 35,
+      "negative_questions": 0,
+      "ties": 0
+    },
+    {
+      "view": "excerpt",
+      "name": "s150 CoT minus mt2e-s170 CoT",
+      "mean": 0.9242857142857144,
+      "ci95": [
+        0.8514285714285714,
+        0.9795238095238095
+      ],
+      "positive_questions": 34,
+      "negative_questions": 1,
+      "ties": 0
+    },
+    {
+      "view": "excerpt",
+      "name": "base final minus own CoT",
+      "mean": 0.9861904761904762,
+      "ci95": [
+        0.9614285714285714,
+        1.0
+      ]
+    },
+    {
+      "view": "excerpt",
+      "name": "mt1b-s150 final minus own CoT",
+      "mean": 0.00047619047619047765,
+      "ci95": [
+        0.0,
+        0.001428571428571433
+      ]
+    },
+    {
+      "view": "excerpt",
+      "name": "mt2e-s170 final minus own CoT",
+      "mean": 0.9242857142857144,
+      "ci95": [
+        0.8528571428571429,
+        0.979047619047619
+      ]
+    }
+  ],
+  "repeat_agreement": {
+    "n": 30,
+    "whole_exact": 29,
+    "whole_within_one": 30,
+    "F_mean_absolute_difference": 0.0011173184357541896,
+    "whole_cohen_kappa": 0.9336283185840708
+  },
+  "independent_excerpt_audit": {
+    "n": 30,
+    "exact": 24,
+    "word_weighted_agreement": 0.9487750556792873,
+    "F_mean_absolute_difference": 0.0005555555555555573,
+    "rater": "Parent Codex model, aware of hypothesis, blind to model/channel mapping for each item; not a human audit"
+  }
+}
