@@ -3,7 +3,7 @@
 Strict = analysis/records.csv strict (meta allowed). Partial = astra_continuous.score per item (see astra_length_plots.py's docstring
 for the per-constraint rules). Degenerate CoTs are excluded from all scoring (astra_length_plots.degenerate: fewer than 3 words with
 a letter other than "meow", ending in an exact loop of a >= 50-character span repeated >= 10 times, or cut off at the token cap inside the think block); the
-graders otherwise pass empty and looping traces vacuously on word suppression, the case constraints and meow. No-request floor = the
+graders otherwise pass some looping or filler traces on word suppression, the case constraints and meow. No-request floor = the
 same partial grader, with the request's arguments, applied to the model's non-degenerate no-request trace on the same item.
 Top/left: per run, strict rate (95% Wilson) and mean partial (95% bootstrap) over its non-degenerate CoTs, dashed line = no-request
 floor, n graded under each run. Bottom/right: per constraint, color = run partial minus the no-request partial on the same items,
