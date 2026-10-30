@@ -1,0 +1,434 @@
+{
+  "status": "Rule metrics independently recounted; 39 raw trace excerpts reviewed; semantic and meta-discussion metrics excluded",
+  "metrics": [
+    {
+      "wording": "thinking",
+      "checkpoint": "sft",
+      "n": 108,
+      "rule_n": 96,
+      "raw_strict_passes": 1,
+      "native_completed_strict_passes": 0,
+      "native_completed_rule_n": 84,
+      "native_completed_strict_rate": 0.0,
+      "strict_given_native_completed": 0.0,
+      "raw_partial": 0.16883378666213142,
+      "native_completed_partial_gate": 0.14261981923544428,
+      "native_completed_partial_mean": 0.16299407912622202,
+      "completed_all": 94,
+      "think_closed_all": 95,
+      "truncated_all": 13,
+      "median_output_tokens": 3574.0,
+      "median_native_words_completed": 1611.5,
+      "accuracy_lenient": 0.5555555555555556,
+      "by_constraint": {
+        "alternating_case": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "end_of_sentence": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "lowercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "meow_between_words": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "multiple_word_suppression": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "repeat_sentences": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "uppercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "word_suppression": {
+          "n": 12,
+          "raw_strict": 1,
+          "native_completed_strict": 0
+        }
+      }
+    },
+    {
+      "wording": "thinking",
+      "checkpoint": "rlhf",
+      "n": 108,
+      "rule_n": 96,
+      "raw_strict_passes": 0,
+      "native_completed_strict_passes": 0,
+      "native_completed_rule_n": 91,
+      "native_completed_strict_rate": 0.0,
+      "strict_given_native_completed": 0.0,
+      "raw_partial": 0.15122347692483518,
+      "native_completed_partial_gate": 0.13805634250058021,
+      "native_completed_partial_mean": 0.14564185582478792,
+      "completed_all": 103,
+      "think_closed_all": 104,
+      "truncated_all": 5,
+      "median_output_tokens": 2845.0,
+      "median_native_words_completed": 1333,
+      "accuracy_lenient": 0.5370370370370371,
+      "by_constraint": {
+        "alternating_case": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "end_of_sentence": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "lowercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "meow_between_words": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "multiple_word_suppression": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "repeat_sentences": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "uppercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "word_suppression": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        }
+      }
+    },
+    {
+      "wording": "thinking",
+      "checkpoint": "ifrl",
+      "n": 108,
+      "rule_n": 96,
+      "raw_strict_passes": 15,
+      "native_completed_strict_passes": 10,
+      "native_completed_rule_n": 77,
+      "native_completed_strict_rate": 0.10416666666666667,
+      "strict_given_native_completed": 0.12987012987012986,
+      "raw_partial": 0.37533169361289265,
+      "native_completed_partial_gate": 0.29708258187303566,
+      "native_completed_partial_mean": 0.3703886735040445,
+      "completed_all": 83,
+      "think_closed_all": 83,
+      "truncated_all": 2,
+      "median_output_tokens": 707.5,
+      "median_native_words_completed": 740,
+      "accuracy_lenient": 0.3611111111111111,
+      "by_constraint": {
+        "alternating_case": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "end_of_sentence": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "lowercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "meow_between_words": {
+          "n": 12,
+          "raw_strict": 3,
+          "native_completed_strict": 1
+        },
+        "multiple_word_suppression": {
+          "n": 12,
+          "raw_strict": 7,
+          "native_completed_strict": 6
+        },
+        "repeat_sentences": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "uppercase_thinking": {
+          "n": 12,
+          "raw_strict": 1,
+          "native_completed_strict": 0
+        },
+        "word_suppression": {
+          "n": 12,
+          "raw_strict": 4,
+          "native_completed_strict": 3
+        }
+      }
+    },
+    {
+      "wording": "reasoning_stage",
+      "checkpoint": "sft",
+      "n": 108,
+      "rule_n": 96,
+      "raw_strict_passes": 2,
+      "native_completed_strict_passes": 1,
+      "native_completed_rule_n": 81,
+      "native_completed_strict_rate": 0.010416666666666666,
+      "strict_given_native_completed": 0.012345679012345678,
+      "raw_partial": 0.1768594834637647,
+      "native_completed_partial_gate": 0.14404949539041476,
+      "native_completed_partial_mean": 0.1707253278701212,
+      "completed_all": 92,
+      "think_closed_all": 92,
+      "truncated_all": 15,
+      "median_output_tokens": 3523.0,
+      "median_native_words_completed": 1559.5,
+      "accuracy_lenient": 0.46296296296296297,
+      "by_constraint": {
+        "alternating_case": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "end_of_sentence": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "lowercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "meow_between_words": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "multiple_word_suppression": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "repeat_sentences": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "uppercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "word_suppression": {
+          "n": 12,
+          "raw_strict": 2,
+          "native_completed_strict": 1
+        }
+      }
+    },
+    {
+      "wording": "reasoning_stage",
+      "checkpoint": "rlhf",
+      "n": 108,
+      "rule_n": 96,
+      "raw_strict_passes": 0,
+      "native_completed_strict_passes": 0,
+      "native_completed_rule_n": 92,
+      "native_completed_strict_rate": 0.0,
+      "strict_given_native_completed": 0.0,
+      "raw_partial": 0.15277212755528236,
+      "native_completed_partial_gate": 0.15120466108501332,
+      "native_completed_partial_mean": 0.15777877678436175,
+      "completed_all": 104,
+      "think_closed_all": 104,
+      "truncated_all": 4,
+      "median_output_tokens": 2896.0,
+      "median_native_words_completed": 1372.5,
+      "accuracy_lenient": 0.5092592592592593,
+      "by_constraint": {
+        "alternating_case": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "end_of_sentence": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "lowercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "meow_between_words": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "multiple_word_suppression": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "repeat_sentences": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "uppercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "word_suppression": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        }
+      }
+    },
+    {
+      "wording": "reasoning_stage",
+      "checkpoint": "ifrl",
+      "n": 108,
+      "rule_n": 96,
+      "raw_strict_passes": 13,
+      "native_completed_strict_passes": 9,
+      "native_completed_rule_n": 79,
+      "native_completed_strict_rate": 0.09375,
+      "strict_given_native_completed": 0.11392405063291139,
+      "raw_partial": 0.4067264237763273,
+      "native_completed_partial_gate": 0.3303376718300958,
+      "native_completed_partial_mean": 0.401422993616319,
+      "completed_all": 90,
+      "think_closed_all": 90,
+      "truncated_all": 1,
+      "median_output_tokens": 730.5,
+      "median_native_words_completed": 677.0,
+      "accuracy_lenient": 0.4351851851851852,
+      "by_constraint": {
+        "alternating_case": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "end_of_sentence": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "lowercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "meow_between_words": {
+          "n": 12,
+          "raw_strict": 3,
+          "native_completed_strict": 0
+        },
+        "multiple_word_suppression": {
+          "n": 12,
+          "raw_strict": 6,
+          "native_completed_strict": 6
+        },
+        "repeat_sentences": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "uppercase_thinking": {
+          "n": 12,
+          "raw_strict": 0,
+          "native_completed_strict": 0
+        },
+        "word_suppression": {
+          "n": 12,
+          "raw_strict": 4,
+          "native_completed_strict": 3
+        }
+      }
+    }
+  ],
+  "rlhf_to_ifrl": [
+    {
+      "wording": "thinking",
+      "rule_n": 96,
+      "native_completed_strict_delta": 0.10416666666666667,
+      "ci95": [
+        0.052083333333333336,
+        0.16666666666666666
+      ],
+      "improved": 10,
+      "regressed": 0,
+      "exact_p": 0.001953125,
+      "common_valid_n": 73,
+      "common_valid_strict_before": 0,
+      "common_valid_strict_after": 10,
+      "descriptive_token10_match_n": 3,
+      "descriptive_token10_strict_before": 0,
+      "descriptive_token10_strict_after": 0,
+      "descriptive_token10_keys": [
+        "astra|gpqa|364|lowercase_thinking|0",
+        "astra|hle|193|word_suppression|0",
+        "astra|mmlu_pro|78|lowercase_thinking|0"
+      ]
+    },
+    {
+      "wording": "reasoning_stage",
+      "rule_n": 96,
+      "native_completed_strict_delta": 0.09375,
+      "ci95": [
+        0.041666666666666664,
+        0.15625
+      ],
+      "improved": 9,
+      "regressed": 0,
+      "exact_p": 0.00390625,
+      "common_valid_n": 76,
+      "common_valid_strict_before": 0,
+      "common_valid_strict_after": 9,
+      "descriptive_token10_match_n": 9,
+      "descriptive_token10_strict_before": 0,
+      "descriptive_token10_strict_after": 1,
+      "descriptive_token10_keys": [
+        "astra|gpqa|298|repeat_sentences|0",
+        "astra|gpqa|364|lowercase_thinking|0",
+        "astra|gpqa|68|multiple_word_suppression|0",
+        "astra|gpqa|95|alternating_case|0",
+        "astra|hle|344|lowercase_thinking|0",
+        "astra|hle|368|multiple_word_suppression|0",
+        "astra|hle|381|word_suppression|0",
+        "astra|hle|442|lowercase_thinking|0",
+        "astra|mmlu_pro|19|alternating_case|0"
+      ]
+    }
+  ],
+  "score_disagreements": [],
+  "ignore_question": "Excluded from aggregates; stored LLM judgments are not treated as validated",
+  "meta_discussion": "Not included in rule-only metric; the no-mention requirement is not checked by the regex graders"
+}

@@ -1,0 +1,62 @@
+{
+  "status": "verified for rule-only metrics",
+  "cascade_rows": 648,
+  "independent_count_recomputation": "All six native-completed success counts and valid denominators independently reproduced from raw block delimiters and grade records",
+  "direct_suppression_check": "Every counted native-completed word-suppression success checked directly for banned keywords and synonyms; no violations",
+  "trace_review": {
+    "seed": 20261030,
+    "all_ifrl_native_successes": 19,
+    "random_failures": 20,
+    "scope": "Native trace excerpts, final answers, block status, and full-text rule checks; no claim of semantic correctness"
+  },
+  "reference_grade_disagreements": [],
+  "unverified": [
+    "Semantic ignore_question labels and meta-discussion judges excluded from collection headlines",
+    "Trace shortening remains a confound; only 3 and 9 same-item token-length-matched Cascade pairs survive a 10% tolerance",
+    "One training trajectory per stage; two prompt wordings reuse the same underlying item set"
+  ],
+  "qwen_collection_counts": [
+    {
+      "checkpoint": "initial",
+      "n": 288,
+      "strict": 90,
+      "strict_completed": 90,
+      "partial_mean": 0.5785631113984484
+    },
+    {
+      "checkpoint": "kl0p01-s364",
+      "n": 288,
+      "strict": 96,
+      "strict_completed": 96,
+      "partial_mean": 0.6288462256098598
+    },
+    {
+      "checkpoint": "kl0p002-s364",
+      "n": 288,
+      "strict": 127,
+      "strict_completed": 126,
+      "partial_mean": 0.6660079425534939
+    },
+    {
+      "checkpoint": "kl0p005-s364",
+      "n": 288,
+      "strict": 124,
+      "strict_completed": 123,
+      "partial_mean": 0.6863793708281877
+    },
+    {
+      "checkpoint": "kl0p02-s364",
+      "n": 288,
+      "strict": 93,
+      "strict_completed": 93,
+      "partial_mean": 0.6170943770603773
+    }
+  ],
+  "no_new_generations": true,
+  "export_integrity": {
+    "cascade_raw_and_grade_and_prompt_files": 14,
+    "original_pod_sha256_matches": 14,
+    "gzip_decompression_hash_matches": 14,
+    "max_compressed_file_bytes": 2525142
+  }
+}
