@@ -16,6 +16,7 @@ from pathlib import Path
 
 from judge_quotes import CSS as HL_CSS, JS as HL_JS
 from viewer_legend import CSS as LG_CSS, JS as LG_JS
+from viewer_md import CSS as MD_CSS, JS as MD_JS, SCRIPT as MD_SCRIPT
 from sandbag_behavior_breakdown import ARMS, CATS, D, MODELS, verdict
 from sandbag_behavior_judge import MODEL, PROMPTS
 from sandbag import instruction_text, run_hint
@@ -85,7 +86,7 @@ def main():
             print(bars[-1]["label"], f"flips {len(flips)}/{len(right)}", counts, bars[-1]["susp"])
     data = dict(models=[dict(id=m, label=mname, color=col) for m, mname, col in MODELS], arms=[dict(id=a, label=l) for a, l in ARMS], cats=[dict(id=c, label=l, short=SHORT[c], color=col) for c, l, col in CATS],
                 bars=bars, natural=natural, rows=rows, prompts=PROMPTS, judge_model={j: MODEL[j].split("/")[1] for j in JUDGES}, questions={q: Q[q]["honest"] for q in {r["qid"] for r in rows}})
-    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__HL_CSS__", HL_CSS).replace("__HL_JS__", HL_JS).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)
+    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__HL_CSS__", HL_CSS).replace("__HL_JS__", HL_JS).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS).replace("__MD_SCRIPT__", MD_SCRIPT).replace("__MD_CSS__", MD_CSS).replace("__MD_JS__", MD_JS)
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(html) / 1e6:.1f} MB")
 
@@ -95,6 +96,7 @@ PAGE = r"""<!doctype html>
 <title>gpqa.must behavior breakdown</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+__MD_SCRIPT__
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <style>
 :root { color-scheme:dark; --bg:#1a1a19; --panel:#232322; --line:#3a3a38; --faint:#2c2c2a; --ink:#f0efec; --ink2:#c3c2b7; --muted:#8d8c84; --good:#5fb87a; --bad:#e0705f; --link:#7fb3f0; }
@@ -107,6 +109,8 @@ h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .chart h3 { font-size:13px; font-weight:600; margin:2px 4px 6px; }
 .chart svg { width:100%; height:auto; display:block; }
 __LG_CSS__
+__MD_CSS__
+.filters button.clr { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:0; padding:6px 8px; font:13px system-ui, sans-serif; cursor:pointer; align-self:end; } .filters button.clr:hover { background:#2b2b29; }
 .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; }
 .bar { cursor:pointer; } .bar:hover { opacity:.8; }
 #tip { position:fixed; pointer-events:none; background:#0e0e0d; border:1px solid var(--line); border-radius:4px; padding:6px 8px; font-size:12px; color:var(--ink); display:none; z-index:9; max-width:360px; }
@@ -120,7 +124,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .divider { cursor:col-resize; background:var(--line); } .divider:hover, .divider.drag { background:var(--ink2); }
 .filters { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; margin-bottom:10px; font-size:12px; color:var(--ink2); }
 .filters label.f { display:flex; flex-direction:column; gap:3px; }
-.filters select { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:6px 8px; font:13px system-ui, sans-serif; }
+.filters select { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:0; padding:6px 8px; font:13px system-ui, sans-serif; }
 .filters .chk { display:flex; align-items:center; gap:6px; color:var(--ink); }
 #list th { position:sticky; top:-10px; background:var(--panel); z-index:1; cursor:pointer; user-select:none; } #list th:hover { color:var(--ink); }
 #list th.up::after, #list th.down::after { content:""; display:inline-block; margin-left:5px; border-left:4px solid transparent; border-right:4px solid transparent; vertical-align:2px; }
@@ -168,7 +172,9 @@ __HL_CSS__
       <label class="f">submitted letter<select id="f-letter"><option value="">any</option><option>A</option><option>B</option><option>C</option><option>D</option></select></label>
       <label class="chk"><input type="checkbox" id="f-nat"> natural errors (reference rows)</label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
+      <label class="chk"><input type="checkbox" id="f-md" checked> render markdown</label>
       <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
+      <button class="clr" id="f-clear">clear filters</button>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>
@@ -190,7 +196,7 @@ const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
-if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
+__MD_JS__if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
 const cat = Object.fromEntries(D.cats.map(c => [c.id, c])), col = Object.fromEntries(D.models.map(m => [m.id, m])), armText = Object.fromEntries(D.arms.map(a => [a.id, a.label]));
 const used = D.cats.filter(c => D.bars.some(b => b.counts[c.id]));
 const SVGNS = "http://www.w3.org/2000/svg", tip = $("tip");
@@ -259,7 +265,7 @@ let shown = [], sel = null;
 const closed = new Set(["system prompt", "user message", "honest-arm CoT (same question, correct)", ...Object.keys(QKIND).map(j => j + " prompt")]);
 function sec(title, body, m, hl) {
   const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body;
-  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${hl ? hlHtml(t, hl) : esc(t || "(empty)")}</pre></div>`; }
+  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}${m && MD() ? " md" : ""}">${mdHtml(hl ? hlHtml(t, hl) : esc(t || "(empty)"))}</pre></div>`; }
 function wire(root) { root.querySelectorAll(".sec-h").forEach(b => b.addEventListener("click", () => { const d = b.parentNode, t = d.dataset.t; closed.has(t) ? closed.delete(t) : closed.add(t); d.classList.toggle("closed"); })); }
 function fill(j, r) { return D.prompts[j].replaceAll("{question}", () => D.questions[r.qid]).replaceAll("{cot}", () => r.cot).replaceAll("{correct}", () => r.correct).replaceAll("{instruction}", () => r.instruction ?? ""); }
 function badge(j, r) {
@@ -321,6 +327,7 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
 applyW();
 for (const id of ["f-model", "f-arm", "f-cat", "f-letter", "f-nat"]) $(id).addEventListener("change", render);
 $("f-math").addEventListener("change", show);
+$("f-clear").addEventListener("click", () => { $("f-nat").checked = false; setFilters({}); });
 legend("lg-flips", [...used.map(c => [c.color, "solid", c.label]), ["#2c2c2a", "dim", "questions right in the honest arm"]]);
 legend("lg-susp", [...D.models.map(m => [m.color, "solid", m.label]), [GRAY, "dash", "natural errors (honest arm)"]]);
 drawFlips(); drawSusp(); render();

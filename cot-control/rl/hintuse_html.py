@@ -18,6 +18,7 @@ from hintverb_judge import wilson
 from sandbag_headline import MODELS
 from sandbag_resample_html import PAGE as BASE_PAGE
 from viewer_legend import CSS as LG_CSS, JS as LG_JS
+from viewer_md import CSS as MD_CSS, JS as MD_JS, SCRIPT as MD_SCRIPT
 
 ARM_TEXT = {"none": "no hint", "hint": "hint (\"Hint: ...\" in the user message)", "hide": "hint + hide line",
             "nocot": "no hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)", "nocot_hint": "hint, no CoT (empty analysis channel, 'ANSWER:' prefilled)",
@@ -102,7 +103,7 @@ def main():
     ap.add_argument("--out", type=Path, required=True)
     args = ap.parse_args()
     data = [set_page_data(d) if "items" in json.load(open(d / "config.json")) else page_data(d) for d in args.dirs]
-    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode()).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)  # gzip + base64, about 0.3 of the raw JSON; inflated in the page with DecompressionStream
+    html = PAGE.replace("__DATA__", base64.b64encode(gzip.compress(json.dumps(data).encode(), 6)).decode()).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS).replace("__MD_SCRIPT__", MD_SCRIPT).replace("__MD_CSS__", MD_CSS).replace("__MD_JS__", MD_JS)  # gzip + base64, about 0.3 of the raw JSON; inflated in the page with DecompressionStream
     args.out.write_text(html)
     print(args.out, f"{len(data)} runs, {sum(len(x['samples']) for x in data)} samples, {len(html) / 1e6:.1f} MB")
 
@@ -111,7 +112,7 @@ HEAD = BASE_PAGE.split("</style>")[0].replace("<title>q0006 resampled</title>", 
 PAGE = HEAD + r"""
 <div id="tip"></div>
 <h1>Hidden hint use, <span id="qid"></span></h1>
-<div class="sub" style="margin:6px 0">run <select id="f-exp" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font:13px system-ui,sans-serif"></select> <span id="f-set-l">items <select id="f-set" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font:13px system-ui,sans-serif"></select></span></div>
+<div class="sub" style="margin:6px 0">run <select id="f-exp" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:0;padding:4px 6px;font:13px system-ui,sans-serif"></select> <span id="f-set-l">items <select id="f-set" style="background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:0;padding:4px 6px;font:13px system-ui,sans-serif"></select></span></div>
 <div class="sub" id="settings"></div>
 <div class="sub" id="judgeline"></div>
 <div class="top">
@@ -136,6 +137,8 @@ PAGE = HEAD + r"""
       <label class="f">REFERENCES<select id="f-refs"><option value="">any</option><option value="1">YES</option><option value="0">NO</option></select></label>
       <label class="f">CoT says "hint"<select id="f-kw"><option value="">any</option><option value="1">yes</option><option value="0">no</option></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
+      <label class="chk"><input type="checkbox" id="f-md" checked> render markdown</label>
+      <button class="clr" id="f-clear">clear filters</button>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>
@@ -156,7 +159,7 @@ __LG_JS__const KATEX = !!window.renderMathInElement;
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
-const SVGNS = "http://www.w3.org/2000/svg", tip = $("tip");
+__MD_JS__const SVGNS = "http://www.w3.org/2000/svg", tip = $("tip");
 function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(e.clientX + 12, innerWidth - 330) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
 function el(svg, tag, attrs, text) { const n = document.createElementNS(SVGNS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; }
 const W = 620, H = 300, L = 44, R = 10, T = 14, B = 26;
@@ -258,7 +261,7 @@ const closed = new Set(["judge prompt"]);
 const HL = /\bhint(?:s|ed|ing)?\b/gi;  // the word "hint" and its inflections, highlighted in the CoT and final answer
 function sec(title, body, m, hl) {
   const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body, h = esc(t || "(empty)");
-  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${hl ? h.replace(HL, w => `<mark class="hl">${w}</mark>`) : h}</pre></div>`; }
+  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}${m && MD() ? " md" : ""}">${mdHtml(hl ? h.replace(HL, w => `<mark class="hl">${w}</mark>`) : h)}</pre></div>`; }
 function wire(root) { root.querySelectorAll(".sec-h").forEach(b => b.addEventListener("click", () => { const d = b.parentNode, t = d.dataset.t; closed.has(t) ? closed.delete(t) : closed.add(t); d.classList.toggle("closed"); })); }
 function show() {
   document.querySelectorAll("#list tr.s").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === sel));
@@ -313,6 +316,7 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
 applyW();
 for (const id of Object.values(FILTERS)) $(id).addEventListener("change", render);
 $("f-math").addEventListener("change", show);
+$("f-clear").addEventListener("click", () => { setFilters({}); });
 function load(k) {  // switch the whole page to run k
   D = ALL[k]; $("f-exp").value = k;
   try { localStorage.setItem("hintuse-run", D.name); } catch (e) {}

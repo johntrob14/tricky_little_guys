@@ -34,6 +34,7 @@ from sandbag_behavior_breakdown_html import SHORT as KIND_SHORT, kind
 from sandbag_behavior_judge import MODEL as BEHAVIOR_MODEL, PROMPTS as BEHAVIOR_PROMPTS
 from sandbag_headline import MODELS
 from viewer_legend import CSS as LG_CSS, JS as LG_JS
+from viewer_md import CSS as MD_CSS, JS as MD_JS, SCRIPT as MD_SCRIPT
 
 ARM_TEXT = {"honest": "honest (no instruction)", "sandbag": "sandbag (the order to answer incorrectly)", "aware": "aware (sandbag + the monitor line)",
             "evasion": "evasion (aware + must not reveal the plan)", "coached": "coached (evasion + insert a plausible mistake, look natural)",
@@ -116,7 +117,7 @@ def main():
                          + "; ".join(f"{b.split('/')[-1]} {'thinking' if 'Inkling' in b else 'harmony'} effort {e}, {t // 1000}k cap" for b, e, t in sampled) + "; Tinker"
                          + (f"; answer format: the system prompt ends with \"{FORMAT}\" and once the CoT closes the answer message is prefilled {prefill!r} (8 more tokens at most)" if prefill else "; runs from before the standard answer format (no prefill)")
                          + ("; no-CoT runs: empty analysis channel" + (" (Inkling: empty thinking message)" if any("Inkling" in b for b, _, _ in sampled) else "") + f", answer prefilled {prefill or 'Answer: ('!r}, 2 tokens, same temperature." if any(x["nocot"] for x in models) else "."))
-    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__HL_CSS__", HL_CSS).replace("__HL_JS__", HL_JS).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS)
+    html = PAGE.replace("__DATA__", json.dumps(data).replace("</", "<\\/")).replace("__HL_CSS__", HL_CSS).replace("__HL_JS__", HL_JS).replace("__LG_CSS__", LG_CSS).replace("__LG_JS__", LG_JS).replace("__MD_SCRIPT__", MD_SCRIPT).replace("__MD_CSS__", MD_CSS).replace("__MD_JS__", MD_JS)
     args.out.write_text(html)
     print(args.out, f"{len(rows)} rows, {len(html) / 1e6:.1f} MB")
 
@@ -126,6 +127,7 @@ PAGE = r"""<!doctype html>
 <title>gpqa.must overview</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+__MD_SCRIPT__
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
 <style>
 :root { color-scheme:dark; --bg:#1a1a19; --panel:#232322; --line:#3a3a38; --ink:#f0efec; --ink2:#c3c2b7; --muted:#8d8c84; --good:#5fb87a; --bad:#e0705f; }
@@ -150,6 +152,8 @@ h1 { font-size:18px; margin:0 0 4px; } h2 { font-size:15px; margin:18px 0 8px; }
 .chart h3 { font-size:12px; font-weight:600; margin:0 2px 2px; }
 .chart svg { width:100%; height:auto; display:block; }
 __LG_CSS__
+__MD_CSS__
+.filters button.clr { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:0; padding:6px 8px; font:13px system-ui, sans-serif; cursor:pointer; align-self:end; } .filters button.clr:hover { background:#2b2b29; }
 .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-1px; margin-right:6px; }
 .bar { cursor:pointer; } .bar:hover { opacity:.8; }
 #tip { position:fixed; pointer-events:none; background:#0e0e0d; border:1px solid var(--line); border-radius:4px; padding:6px 8px; font-size:12px; color:var(--ink); display:none; z-index:9; max-width:320px; }
@@ -165,7 +169,7 @@ td.num { font-variant-numeric:tabular-nums; text-align:right; }
 .divider { cursor:col-resize; background:var(--line); } .divider:hover, .divider.drag { background:var(--ink2); }
 .filters { display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; margin-bottom:10px; font-size:12px; color:var(--ink2); }
 .filters label.f { display:flex; flex-direction:column; gap:3px; }
-.filters select { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:6px 8px; font:13px system-ui, sans-serif; }
+.filters select { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:0; padding:6px 8px; font:13px system-ui, sans-serif; }
 .filters .chk { display:flex; align-items:center; gap:6px; color:var(--ink); }
 #list th { position:sticky; top:-10px; background:var(--panel); z-index:1; cursor:pointer; user-select:none; } #list th:hover { color:var(--ink); }
 #list th.up::after, #list th.down::after { content:""; display:inline-block; margin-left:5px; border-left:4px solid transparent; border-right:4px solid transparent; vertical-align:2px; }
@@ -229,7 +233,9 @@ __HL_CSS__
       <label class="f">kind (flips, behavior judges)<select id="f-kind"></select></label>
       <label class="f" style="grid-column:1 / -1">question<select id="f-q"></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
+      <label class="chk"><input type="checkbox" id="f-md" checked> render markdown</label>
       <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
+      <button class="clr" id="f-clear">clear filters</button>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>
@@ -258,7 +264,7 @@ const KATEX = !!window.renderMathInElement;  // loaded from cdnjs; without it th
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
 const tidy = t => t.replace(/\n*\\\[\s*/g, "\\[").replace(/\s*\\\]\n*/g, "\\]");  // drop the line breaks around display math, which would otherwise add blank lines
 function math(el) { if (KATEX && $("f-math").checked) renderMathInElement(el, {delimiters: DELIMS, throwOnError: false}); }
-if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
+__MD_JS__if (!KATEX) document.body.insertAdjacentHTML("afterbegin", `<div style="color:#e0705f;font-weight:600;margin-bottom:8px">KaTeX did not load (offline?): math is shown as raw LaTeX.</div>`);
 __LG_JS__const short = m => m.label.split(" (")[0], COT = D.models.filter(m => !m.nocot).map(m => [m.color, "solid", short(m)]);  // the models drawn in the CoT charts
 function drawLegend() {
   legend("lg-acc", D.models.map(m => [m.color, m.nocot ? "dots" : "solid", short(m)]));
@@ -369,7 +375,7 @@ let shown = [], sel = null;
 const closed = new Set(["system prompt", "monitor prompt", "planted-error prompt", "instruction prompt", "supported prompt", "honest-arm CoT, same question", "honest-arm final answer"]);  // section headers start open except these; the choice carries over between samples
 function sec(title, body, m, hl) {  // m: render LaTeX in this section; hl: judge quotes to highlight (judge_quotes.py)
   const t = m && KATEX && $("f-math").checked ? tidy(body || "") : body;
-  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}">${hl ? hlHtml(t, hl) : esc(t || "(empty)")}</pre></div>`; }
+  return `<div class="sec${closed.has(title) ? " closed" : ""}" data-t="${esc(title)}"><button class="sec-h">${esc(title)}</button><pre class="sec-b${m ? " math" : ""}${m && MD() ? " md" : ""}">${mdHtml(hl ? hlHtml(t, hl) : esc(t || "(empty)"))}</pre></div>`; }
 function wire(root) { root.querySelectorAll(".sec-h").forEach(b => b.addEventListener("click", () => { const d = b.parentNode, t = d.dataset.t; closed.has(t) ? closed.delete(t) : closed.add(t); d.classList.toggle("closed"); })); }
 function show() {
   document.querySelectorAll("#list tr.s").forEach(tr => tr.classList.toggle("sel", tr.dataset.id === sel));
@@ -450,6 +456,7 @@ $("jsel").addEventListener("change", () => { JMODE = $("jsel").value; try { loca
 $("ssel").addEventListener("change", () => { SPLIT = $("ssel").value === "1"; try { localStorage.setItem("sandbag-overview-split", SPLIT ? "1" : "0"); } catch (e) {} drawLegend(); drawJudge(); });
 $("vsel").addEventListener("change", () => { VFILT = $("vsel").value; try { localStorage.setItem("sandbag-overview-vfilt", VFILT); } catch (e) {} drawJudge(); });
 $("f-math").addEventListener("change", show);
+$("f-clear").addEventListener("click", () => { setFilters({}); });
 function drawPrompts() {  // one variant at a time (select or arrows): the shared system prompt, then the text each arm appends to it
   const extra = a => { const r = D.samples.find(s => s.arm === a); return (r.sys ?? D.systems[a]).slice(BASE_SYS.length).trim(); };
   const vs = [["system prompt (every arm; honest has nothing appended)", BASE_SYS]].concat(D.arms.filter(a => a !== "honest").map(a => D.systems[a]

@@ -36,11 +36,14 @@ below are whatever the data at hand has.
    a table cell) sets the explorer's filters to that slice and scrolls to it. Charts leave out groups that have no data for that measure rather than
    drawing empty slots.
 4. The explorer: a full-viewport-height grid of three panes separated by draggable dividers (pane widths kept in `localStorage`, wrapped in try/catch):
-   - Left sidebar: filters as labelled full-width `<select>` boxes in a grid, checkboxes (e.g. show reference rows), an "N shown" count, then the item table
+   - Left sidebar: filters as labelled full-width `<select>` boxes in a grid (square corners, `border-radius:0`), checkboxes (e.g. show reference rows, render math,
+     render markdown), a "clear filters" button that resets every select, an "N shown" count, then the item table
      with a sticky header whose column titles sort the list (click again to reverse, arrow on the active column). Click selects a row; Up/Down arrow keys
      move the selection.
    - Middle: the selected item. A header line with its key facts (entity, condition, sample, outcome, length), then collapsible sections: prompts collapsed
      by default, model output (CoT, answer) open; the open/closed choice carries over between items.
+     Text sections render markdown (`cot-control/rl/viewer_md.py`: marked from cdnjs, math regions shielded, toggle "render markdown") and LaTeX (KaTeX auto-render,
+     toggle "render math"); the toggles are kept in `localStorage`.
    - Right: the judges. For each judge: its score as a colored badge, the exact prompt it was sent (filled in, collapsed by default), its reasoning, its
      output.
 5. Short notes at the bottom for caveats about how a judge was run.
