@@ -1,0 +1,65 @@
+{
+  "retrieved_date": "2026-10-30",
+  "sources": [
+    {
+      "id": "Qwen-community",
+      "url": "https://huggingface.co/just1nseo/qwen3-1.7b-if-rlvr-klabl-kl0p01",
+      "section": "Training configuration and checkpoint table",
+      "kind": "Exact non-thinking IF-RL recipe; community checkpoint, outside our training",
+      "evidence": "enable_thinking=false; GRPO; fraction of IFEval constraints satisfied; public epoch checkpoints",
+      "revision": "de88ca17305da9fad22378bd83e7a46d1b03b34a"
+    },
+    {
+      "id": "NVIDIA-Cascade",
+      "url": "https://arxiv.org/html/2512.13607v1#S4.SS4.SSS2",
+      "section": "4.4.2 Unified models: IF-RL in the non-thinking mode",
+      "kind": "Direct developer disclosure",
+      "quote": "apply IF-RL only in the non-thinking mode",
+      "qualification": "The reported thinking-mode IFEval score measures answer instruction following, not constraints inside CoT"
+    },
+    {
+      "id": "NVIDIA-intermediate-weights",
+      "url": "https://huggingface.co/nvidia/Nemotron-Cascade-8B-Intermediate-ckpts",
+      "section": "Introduction and Chat Template",
+      "kind": "Released SFT/RLHF/IFRL weights",
+      "revision": "9b379bd8f8ecb1feb19825efefe319bd30d8a223"
+    },
+    {
+      "id": "DeepSeek-V3.2",
+      "url": "https://arxiv.org/html/2512.02556v1#S4.SS3",
+      "section": "4.3 Synthesis Agentic Tasks; also section 3",
+      "kind": "Direct non-thinking RL ablation at a frontier developer",
+      "quote": "we conduct RL only on synthetic agentic tasks in non-thinking mode",
+      "qualification": "Agentic RL, not an isolated CoT-control test or proof that all production RL is non-thinking"
+    },
+    {
+      "id": "Apertus-1.5",
+      "url": "https://arxiv.org/html/2610.15542v1#S4.SS6",
+      "section": "4.5 and 4.6.1\u20134.6.2",
+      "kind": "Direct mixed-mode RL and non-thinking online preference optimization",
+      "evidence": "Release RL uses mixed modes; online/offline DPO and SDPO use thinking disabled",
+      "qualification": "Open research release; online DPO/SDPO are distinct from the verifier-only GRPO used in the Qwen comparison"
+    },
+    {
+      "id": "Qwen3",
+      "url": "https://arxiv.org/html/2505.09388v1#S4.SS4",
+      "section": "4.4 General RL and 4.7 discussion",
+      "kind": "Developer disclosure of general RL, instruction/format rewards, and mode switching",
+      "qualification": "Supports hybrid training practice; not an isolated no-thinking-only IF-RL stage"
+    },
+    {
+      "id": "Cascade-2",
+      "url": "https://arxiv.org/html/2603.19220v1#S4.SS2.SSS2",
+      "section": "4.2.2 Training recipe",
+      "kind": "Counterexample to a universal non-thinking IF-RL recipe",
+      "evidence": "The later model uses IF-RL exclusively in thinking mode"
+    },
+    {
+      "id": "Gemma4",
+      "url": "https://arxiv.org/html/2607.02770v1#S3",
+      "section": "3 Instruction Tuning",
+      "kind": "Insufficient mode-specific RL disclosure",
+      "qualification": "The inspected report describes thinking support but does not establish an exact no-CoT RL stage"
+    }
+  ]
+}
