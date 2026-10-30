@@ -2,7 +2,8 @@
 and JS strings pasted into their pages. Structured judges (sandbag_behavior_judge.py) answer with <quote> tags, kept as `quotes`; free-text judges (the Li
 et al. 2025 CoT-only monitor and the verbalization judge of sandbag_judge.py) are read for double-quoted strings of 12+ characters in their reasoning and
 output (quotedIn). A quote is matched as sandbag_behavior_judge.found: both sides reduced to lowercase letters and digits, each ellipsis-separated
-fragment on its own (4+ such characters), and every occurrence is marked. The page defines QKIND (kind -> {label, color}); hlHtml(text, quotes) is the
+fragment on its own (4+ such characters), and every occurrence is marked; while math is rendered, a mark that would start or end inside a LaTeX region
+($...$, $$...$$, \\(...\\), \\[...\\]) is widened to the whole region, since KaTeX's auto-render only finds delimiters within one text node. The page defines QKIND (kind -> {label, color}); hlHtml(text, quotes) is the
 escaped CoT with a translucent <mark> per matched fragment (where kinds overlap, the first kind is the background and the others underline it; hovering
 shows the judges in the page's tooltip, via showTip and tip) and hlLegend(text, quotes) is a legend line with the fragments found per kind. JS goes after the page's `esc` and `$`; the page has a checkbox `f-hl` ("highlight judge quotes", kept in localStorage) and a `show()` that redraws the row.
 """
@@ -25,9 +26,15 @@ function hlSpans(text, quotes) {  // [start, end, kind] in text, every occurrenc
   return out;
 }
 const hlStyle = ks => `background:${QKIND[ks[0]].color}40` + (ks.length > 1 ? `;box-shadow:${ks.slice(1).map((k, i) => `inset 0 ${-2 * (i + 1)}px 0 ${QKIND[k].color}`).join(",")}` : "");
+const MATH_RE = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$/g;  // KaTeX auto-render only sees delimiters within one text node, so a mark may not start or end inside a formula
+function snapToMath(text, spans) {
+  const mathOn = typeof KATEX !== "undefined" && KATEX && $("f-math") && $("f-math").checked; if (!mathOn) return spans;
+  const regs = [...text.matchAll(MATH_RE)].map(m => [m.index, m.index + m[0].length]);
+  return spans.map(([a, b, k]) => { for (const [ra, rb] of regs) { if (ra < a && a < rb) a = ra; if (ra < b && b < rb) b = rb; } return [a, b, k]; });
+}
 function hlHtml(text, quotes) {
   if (!HLBOX.checked) return esc(text || "(empty)");
-  const ev = hlSpans(text, quotes).flatMap(([a, b, k]) => [[a, 1, k], [b, -1, k]]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  const ev = snapToMath(text, hlSpans(text, quotes)).flatMap(([a, b, k]) => [[a, 1, k], [b, -1, k]]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
   const open = {}; let html = "", at = 0;
   const flush = to => { if (to <= at) return; const ks = Object.keys(QKIND).filter(k => open[k] > 0), t = esc(text.slice(at, to));
     html += ks.length ? `<mark class="hl" style="${hlStyle(ks)}" data-j="${esc(ks.map(k => QKIND[k].label).join(" and the "))}">${t}</mark>` : t; at = to; };
