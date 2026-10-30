@@ -1,0 +1,34 @@
+{
+  "status": "Rule metrics and export integrity verified; interpretation partly verified",
+  "verified": [
+    "All 7776 expected unique generations across eight checkpoints; 972 per checkpoint",
+    "Compressed exports exactly match local raw SHA-256 hashes",
+    "All evaluated prompt bytes and token IDs identical across checkpoints",
+    "Independent partial-score implementation matches all saved rule scores; strict reference grading and independent answer parsing also match",
+    "Inspected 60 seeded random raw trace excerpts, 10 strict passes and 10 failures for each of initial, KL0.01 final, KL0.002 final under shot4",
+    "Completion gating and requiring at least 20 reasoning words preserve the low-KL strict gain"
+  ],
+  "remaining": [
+    "ignore_question semantic judging not run; excluded from strict/partial aggregate",
+    "Length or content-matched control not run; lower-KL traces are shorter and less accurate",
+    "One public training run per KL; no training replicates or matched other-domain RL control",
+    "Bootstrap confidence intervals are descriptive and unadjusted for multiple checkpoint comparisons",
+    "Raw strict/partial scores on incomplete traces can include special end tokens; completion-gated strict excludes these cases"
+  ],
+  "spotcheck_findings": [
+    "Most empty thoughts are repeat_sentences cases that move the requested reasoning into the final response; they are strict failures",
+    "Passing format control does not imply sound reasoning: several compliant traces contain wrong calculations or explanations",
+    "Example sampled failure: an uppercase-only unclosed thought is marked strict failure because raw reasoning retains lowercase im_end special-token text; it also fails completion gating",
+    "Lower-KL benefits are concentrated in case control, sentence endings, and meow insertion; repeat_sentences worsens and multiple-word suppression remains at zero strict"
+  ],
+  "claims": {
+    "finished_and_archived": "verified",
+    "low_KL_has_higher_elicited_rule_compliance": "verified for this eval",
+    "instruction_RL_teaches_general_CoT_control": "not established; length, content, and training controls remain"
+  },
+  "sampling_audit_seed": 20261030,
+  "raw_export_commit": "801f9d7a4f9e37e82adaac7aa09f044649dd1906",
+  "full_sweep_runtime_minutes": 193,
+  "approx_sweep_gpu_cost_usd": 2.8628333333333336,
+  "cost_exclusions": "setup, pilot, idle time and storage; not a billing total"
+}
