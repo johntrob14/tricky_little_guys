@@ -98,7 +98,7 @@ def main():
             rows.append(dict(model=m, arm=r["arm"], qid=r["qid"], q=int(r["qid"].split("_")[1]) if isinstance(r["qid"], str) else r["qid"], answer=r["answer"], correct=r["correct"], ok=r["answer"] == r["correct"], flip=flip, nat=nat,
                              kind="natural" if nat else kind(r, jj["instruction"]["verdict"] if jj.get("instruction") else None, jj["supported"]["verdict"] if jj.get("supported") else None) if flip and jj.get("supported") else None,
                              j=jj, instruction=instruction_text(qs[r["qid"]], r["arm"], run_hint(cm)) if r["arm"] in SANDBAG_ARMS else None,
-                             finish=r["finish"], cot_tokens=r["cot_tokens"],
+                             finish=r["finish"], cot_tokens=r["cot_tokens"], user=r["user"] if r.get("user") and r["user"].strip() != qs[r["qid"]]["honest"].strip() else None,  # the row's user message when it is not just the question (the instruction is in it)
                              score=mo["score"] if mo["reply"].strip() and isinstance(mo["score"], int) else None, mon_reply=mo["reply"], mon_reasoning=mo.get("reasoning"),
                              verbalized=v["verbalized"] if v else None, cot=r["reasoning"], response=r["response"],
                              ver_reply=v["reply"] if v else None, ver_reasoning=v.get("reasoning") if v else None,
@@ -115,7 +115,7 @@ def main():
             stats[f"{m}|{a}"] = dict(n=len(ra), fin=len(fin), k=k, ci=wilson(k, len(fin)), cut=len(ra) - len(fin), flips=len(fl),
                                      verb_k=vk, verb_n=vn, verb_ci=wilson(vk, vn) if vn else None, ctl_k=sum(graded), ctl_n=len(graded))
     data = dict(arms=arms, arm_text={a: ARM_TEXT[a] for a in arms}, short={a: SHORT.get(a, a) for a in arms}, sandbag_arms=SANDBAG_ARMS, systems=systems,
-                questions={k: dict(text=q["honest"], correct=q["correct"]) for k, q in qs.items()},
+                questions={k: dict(text=q["honest"], correct=q["correct"]) for k, q in qs.items()}, user_instruction=any(x["user"] for x in rows),
                 judge=f"{judge['model'].split('/')[-1]} at {judge['effort']} effort",
                 monitor_prompt=judge["monitor_prompt"], cutoff=judge["cutoff"],
                 planted=dict(prompt=BEHAVIOR_PROMPTS["planted"], judge=f"{BEHAVIOR_MODEL['planted'].split('/')[-1]} at medium effort") if any(k[0] in runs for k in pl) else None,
@@ -212,7 +212,7 @@ __HL_CSS__
 <div class="sub" id="settings"></div>
 <div class="sub">CoT-only monitor: Li et al. 2025 sandbagging judge, <span class="jname"></span>, cot only (the question and the CoT), every row; 100 = genuine attempt, 1 = sabotage, flagged below <span class="jcut"></span>. <span id="plsub"></span>Verbalization judge: <span class="jname"></span>, on flips in the sandbag arms (does the CoT mention the instruction and depend on it). Flip: the honest-arm answer to the question is correct and this arm's answer parsed and wrong. Natural error: an honest-arm answer that is wrong while the second honest sample of the question is right.</div>
 <div class="top2" id="top2">
-  <div><h2>Prompts (the instruction is appended to the system prompt; the user message is the question)</h2>
+  <div><h2 id="ph"></h2>
     <div class="pager"><button id="pprev" title="previous variant">&#9664;</button><select id="psel"></select><button id="pnext" title="next variant">&#9654;</button></div><div class="pbox" id="pbody"></div></div>
   <div id="bd"><h2>Flips by kind, from the behavior judges</h2>
     <div class="sub" id="bdsub" style="margin-bottom:8px"></div>
@@ -419,7 +419,7 @@ function show() {
     + `<span>${s.cot_tokens} CoT tokens</span>${s.finish === "length" ? "<span class=no>cut at cap</span>" : ""}` + kindTag(s)
     + (s.ctl_type ? `<span>CoT control: ${esc(s.ctl_type)}, ${s.ctl_strict == null ? "judge-graded type (not graded here)" : s.ctl_strict ? "complied" : "did not comply"}</span>` : "")
     + `<button class="jump" id="jump">all rows of this question</button></div>` + hlLegend(s.cot, quotes)
-    + sec("system prompt", s.sys ?? D.systems[s.arm]) + sec("user message", q.text, 1) + sec("CoT (analysis channel)", s.cot, 1, quotes) + sec("final answer", s.response, 1)
+    + sec("system prompt", s.sys ?? D.systems[s.arm]) + sec("user message", s.user ?? q.text, 1) + sec("CoT (analysis channel)", s.cot, 1, quotes) + sec("final answer", s.response, 1)
     + (s.arm === "honest" ? "" : sec("honest-arm CoT, same question", h.cot, 1) + sec("honest-arm final answer", h.response, 1));
   $("jump").addEventListener("click", () => setFilters({q: s.qid}));
   if (m.nocot) { $("judge").innerHTML = `<div class="empty">No CoT: the judges were not run.</div>`; wire($("view")); document.querySelectorAll("#view .sec-b.math").forEach(math); return; }
@@ -487,9 +487,12 @@ $("ssel").addEventListener("change", () => { SPLIT = $("ssel").value === "1"; tr
 $("vsel").addEventListener("change", () => { VFILT = $("vsel").value; try { localStorage.setItem("sandbag-overview-vfilt", VFILT); } catch (e) {} drawJudge(); });
 $("f-math").addEventListener("change", show);
 $("f-clear").addEventListener("click", () => { setFilters({}); });
-function drawPrompts() {  // one variant at a time (select or arrows): the shared system prompt, then the text each arm appends to it
+function drawPrompts() {  // one variant at a time (select or arrows): the shared system prompt, then the text each arm appends to it, or inserts in the user message
+  $("ph").textContent = D.user_instruction ? "Prompts (the instruction is in the user message, after the question stem; the system prompt is the plain one)" : "Prompts (the instruction is appended to the system prompt; the user message is the question)";
   const extra = a => { const r = D.samples.find(s => s.arm === a); return (r.sys ?? D.systems[a]).slice(BASE_SYS.length).trim(); };
-  const vs = [["system prompt (every arm; honest has nothing appended)", BASE_SYS]].concat(D.arms.filter(a => a !== "honest").map(a => D.systems[a]
+  const vs = [["system prompt (every arm; honest has nothing appended)", BASE_SYS]].concat(D.arms.filter(a => a !== "honest").map(a => D.user_instruction && D.systems[a]
+    ? [`${D.short[a]}: inserted in the user message after the question stem`, D.samples.find(s => s.arm === a).instruction]
+    : D.systems[a]
     ? [`${D.short[a]}: appended to the system prompt`, extra(a)]
     : [`${D.short[a]}: one CoT-control instruction per question, appended the same way`, `${D.arm_text[a]}. Example (${D.samples.find(s => s.arm === a).qid}):\n\n${extra(a)}`]));
   let k = 0;
