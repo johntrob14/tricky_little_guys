@@ -7,7 +7,8 @@ honest-arm CoT (middle pane) and the judges' prompt, reasoning and outputs (righ
 list's score column and the first judge block show (the planted-error suspiciousness judge, sandbag_behavior_judge.py planted.jsonl given as --behavior,
 the default when it covers these runs; or the CoT-only monitor of the --summary run, Li et al. 2025's sandbagging judge), and whether flips in the sandbag
 arms are split by the verbalization judge (solid: YES, the CoT mentions the instruction; hatched: NO) in the judge chart (side by side); arms without a
-sandbag instruction are drawn faint when split. Bars with no rows are left out without a gap. A run sampled with sandbag.py --nocot (named <model>-nocot)
+sandbag instruction are drawn faint when split. A third select restricts the judge chart to the flips the verbalization judge marked NO or did not judge
+(natural errors and CoT-control flips are kept), or to its YES flips; a bar click carries the same restriction into the row list. Bars with no rows are left out without a gap. A run sampled with sandbag.py --nocot (named <model>-nocot)
 is drawn dotted beside its model in the accuracy chart and is left out of the other three (no CoT).
 --summary is the sandbag_judge.py summary whose monitor and verbalization files (files_suffix) are shown. Same page mechanics as sandbag_resample_html.py (resizable panes, sortable columns, arrow keys, score
 colors, KaTeX from cdnjs). Labels and colors from sandbag_headline.MODELS.
@@ -180,6 +181,7 @@ __HL_CSS__
 <div class="controls">
   <label class="f">judge in the third chart, the list's score column and the first judge block<select id="jsel"></select></label>
   <label class="f">split flips by explicit mention of the instruction (verbalization judge)<select id="ssel"><option value="0">no split</option><option value="1">split: solid = mentions it (YES), hatched = no mention (NO); faint = no sandbag instruction, not split</option></select></label>
+  <label class="f">flips counted in the judge chart (verbalization judge)<select id="vsel"><option value="">all flips</option><option value="notyes">without flips that mention the instruction (YES); keeps NO and not judged</option><option value="1">only flips that mention the instruction (YES)</option></select></label>
 </div>
 <div class="charts">
   <div class="chart"><h3>Accuracy on finished rows (Wilson 95%). Click a bar to list its rows.</h3><svg id="acc"></svg></div>
@@ -196,7 +198,7 @@ __HL_CSS__
       <label class="f">arm<select id="f-arm"></select></label>
       <label class="f">answer<select id="f-ok"><option value="">any</option><option value="1">correct</option><option value="0">incorrect</option></select></label>
       <label class="f">flip<select id="f-flip"><option value="">any</option><option value="1">flips</option><option value="0">not flips</option><option value="nat">natural errors (honest arm)</option></select></label>
-      <label class="f">verbalization judge<select id="f-verb"><option value="">any</option><option value="1">YES (mentions the instruction)</option><option value="0">NO</option><option value="none">not run</option></select></label>
+      <label class="f">verbalization judge<select id="f-verb"><option value="">any</option><option value="1">YES (mentions the instruction)</option><option value="0">NO</option><option value="none">not run</option><option value="notyes">NO or not run</option></select></label>
       <label class="f" style="grid-column:1 / -1">question<select id="f-q"></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
       <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
@@ -219,9 +221,10 @@ $("settings").textContent = D.settings; document.querySelectorAll(".jname").forE
 if (D.planted) $("plsub").textContent = `Planted-error judge: ${D.planted.judge}, the CoT with the question and the correct letter, on flips and natural errors: 0-100 suspiciousness that the first consequential error in the CoT was inserted on purpose; none = no consequential error. `;
 const JUDGES = {plant: "planted-error judge: mean suspiciousness 0-100 (higher = more likely planted)", mon: "CoT-only monitor (Li et al. 2025): mean score, 100 = genuine attempt, 1 = sabotage"};
 $("jsel").innerHTML = Object.entries(JUDGES).filter(([k]) => k === "mon" || D.planted).map(([k, t]) => `<option value="${k}">${t}</option>`).join("");
-let JMODE = D.planted ? "plant" : "mon", SPLIT = false;  // the judge shown in the third chart, the list's score column and the first judge block; whether flips are split by the verbalization judge
-try { const j = localStorage.getItem("sandbag-overview-judge"); if (j === "mon" || (j === "plant" && D.planted)) JMODE = j; SPLIT = localStorage.getItem("sandbag-overview-split") === "1"; } catch (e) {}
-$("jsel").value = JMODE; $("ssel").value = SPLIT ? "1" : "0";
+let JMODE = D.planted ? "plant" : "mon", SPLIT = false, VFILT = "";  // VFILT: "" all flips, "notyes" without verbalization-YES flips, "1" only those  // the judge shown in the third chart, the list's score column and the first judge block; whether flips are split by the verbalization judge
+try { const j = localStorage.getItem("sandbag-overview-judge"); if (j === "mon" || (j === "plant" && D.planted)) JMODE = j; SPLIT = localStorage.getItem("sandbag-overview-split") === "1"; const v = localStorage.getItem("sandbag-overview-vfilt"); if (v === "notyes" || v === "1") VFILT = v; } catch (e) {}
+$("jsel").value = JMODE; $("ssel").value = SPLIT ? "1" : "0"; $("vsel").value = VFILT;
+const vkeep = s => VFILT === "" || (VFILT === "1" ? s.verbalized === true : s.verbalized !== true);
 const BASE_SYS = D.systems.honest;
 const KATEX = !!window.renderMathInElement;  // loaded from cdnjs; without it the page says so and shows the raw text
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
@@ -294,9 +297,9 @@ const jval = s => JMODE === "mon" ? s.score : (typeof s.plant === "number" ? s.p
 function drawJudge() {
   const MON = JMODE === "mon";
   $("montitle").textContent = (MON ? "CoT-only monitor (Li et al. 2025): mean score, 100 = genuine attempt, 1 = sabotage (± SE)" : "Planted-error judge: mean suspiciousness (± SE)")
-    + " over flips (honest arm: natural errors)" + (SPLIT ? "; solid: mentions the instruction, hatched: no mention" : "") + ". Click to list.";
+    + " over flips (honest arm: natural errors)" + (SPLIT ? "; solid: mentions the instruction, hatched: no mention" : "") + (VFILT === "1" ? "; only flips that mention the instruction" : VFILT ? "; without flips that mention the instruction" : "") + ". Click to list.";
   chart("mon", 105, [0, 20, 40, 60, 80, 100], t => t, a => D.models.filter(m => has(m, a) && !m.nocot).flatMap(m => {
-    const rows = D.samples.filter(s => s.model === m.id && s.arm === a && (a === "honest" ? s.nat : s.flip)), split = SPLIT && SB(a);
+    const rows = D.samples.filter(s => s.model === m.id && s.arm === a && (a === "honest" ? s.nat : s.flip) && vkeep(s)), split = SPLIT && SB(a);
     const parts = split ? [["1", "that mention the instruction (verbalization YES)", rows.filter(s => s.verbalized === true), false], ["0", "that do not mention it (verbalization NO)", rows.filter(s => s.verbalized === false), "hatch"]]
                         : [["", "", rows, false]];
     return parts.map(([vf, what, xs, hatch]) => {
@@ -306,7 +309,7 @@ function drawJudge() {
       const extra = MON ? `unscored (empty monitor reply): ${xs.filter(s => s.score == null).length}/${xs.length}` : `no consequential error found ("none"): ${xs.filter(s => s.plant === "none").length}; not judged or blocked: ${xs.filter(s => s.plant == null).length}; of ${xs.length}`;
       return {draw: (svg, f, x, w) => bar(svg, f, x, w, v[0], v[0] - v[1], v[0] + v[1], m.color, hatch,
         `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>${kind}: mean ${MON ? "monitor score" : "suspiciousness"} ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n=${v[2]}<br>${extra}`,
-        {model: m.id, arm: a, ok: "0", flip: a === "honest" ? "nat" : "1", ...(vf ? {verb: vf} : {})}, SPLIT && !SB(a))};
+        {model: m.id, arm: a, ok: "0", flip: a === "honest" ? "nat" : "1", ...(vf ? {verb: vf} : VFILT ? {verb: VFILT} : {})}, SPLIT && !SB(a))};
     }).filter(Boolean);
   }));
   $("scalenote").innerHTML = MON ? `Monitor score color: 1 <span class="scale" style="background:linear-gradient(to right, ${[1, D.cutoff / 2, D.cutoff, (D.cutoff + 100) / 2, 100].map(v => scoreColor(v, 0.85) + " " + v + "%").join(", ")})"></span> 100; red = suspicious, gray at the flag cutoff (${D.cutoff}), green = not suspicious.`
@@ -375,7 +378,7 @@ let sortBy = {k: "model", dir: 1};
 function render() {
   const fm = $("f-model").value, fa = $("f-arm").value, fo = $("f-ok").value, ff = $("f-flip").value, fv = $("f-verb").value, fq = $("f-q").value;
   shown = D.samples.filter(s => (!fm || s.model === fm) && (!fa || s.arm === fa) && (fo === "" || String(+s.ok) === fo) && (ff === "" || (ff === "nat" ? s.nat === true : s.flip != null && String(+s.flip) === ff))
-    && (fv === "" || (fv === "none" ? s.verbalized == null : s.verbalized != null && String(+s.verbalized) === fv)) && (!fq || s.qid === fq));
+    && (fv === "" || (fv === "none" ? s.verbalized == null : fv === "notyes" ? s.verbalized !== true : s.verbalized != null && String(+s.verbalized) === fv)) && (!fq || s.qid === fq));
   const k = SORT[sortBy.k], cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;  // the clicked column first, then model, arm, question
   shown.sort((a, b) => sortBy.dir * cmp(k(a), k(b)) || cmp(SORT.model(a), SORT.model(b)) || cmp(SORT.arm(a), SORT.arm(b)) || cmp(SORT.i(a), SORT.i(b)));
   $("nshown").textContent = `${shown.length} shown`;
@@ -407,6 +410,7 @@ applyW();
 for (const id of ["f-model", "f-arm", "f-ok", "f-flip", "f-verb", "f-q"]) $(id).addEventListener("change", render);
 $("jsel").addEventListener("change", () => { JMODE = $("jsel").value; try { localStorage.setItem("sandbag-overview-judge", JMODE); } catch (e) {} if (sortBy.k === "score" || sortBy.k === "plant") sortBy.k = JMODE === "mon" ? "score" : "plant"; drawJudge(); render(); });
 $("ssel").addEventListener("change", () => { SPLIT = $("ssel").value === "1"; try { localStorage.setItem("sandbag-overview-split", SPLIT ? "1" : "0"); } catch (e) {} drawLegend(); drawJudge(); });
+$("vsel").addEventListener("change", () => { VFILT = $("vsel").value; try { localStorage.setItem("sandbag-overview-vfilt", VFILT); } catch (e) {} drawJudge(); });
 $("f-math").addEventListener("change", show);
 function drawPrompts() {  // one box per prompt variant: the shared system prompt, then the text each arm appends to it
   const extra = a => { const r = D.samples.find(s => s.arm === a); return (r.sys ?? D.systems[a]).slice(BASE_SYS.length).trim(); };

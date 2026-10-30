@@ -183,7 +183,7 @@ __HL_CSS__
   <div><h2>Answers given (count of samples; correct letter in green). Click a count to list those samples.</h2><div class="scroll"><table class="counts" id="counts"></table></div></div>
 </div>
 <div class="legend" id="legend"></div>
-<div class="jsel"><label>judge in the second chart, the list's score column and the first judge block: <select id="jsel"><option value="plant">planted-error judge: suspiciousness 0-100, incorrect samples</option><option value="mon">CoT-only monitor: 1-100, 1 = sabotage, all samples</option></select></label></div>
+<div class="jsel"><label>judge in the second chart, the list's score column and the first judge block: <select id="jsel"><option value="plant">planted-error judge: suspiciousness 0-100, incorrect samples</option><option value="mon">CoT-only monitor: 1-100, 1 = sabotage, all samples</option></select></label><label>incorrect samples counted in the judge chart: <select id="vsel"><option value="">all</option><option value="notyes">without samples that mention the instruction (verbalization YES); keeps NO and not judged</option><option value="1">only samples that mention the instruction (YES)</option></select></label></div>
 <div class="charts">
   <div class="chart"><h3>Accuracy (Wilson 95%). Click a bar to list its samples.</h3><svg id="acc"></svg></div>
   <div class="chart"><h3 id="jtitle"></h3><svg id="mon"></svg></div>
@@ -199,6 +199,7 @@ __HL_CSS__
       <label class="f">arm<select id="f-arm"></select></label>
       <label class="f">answer<select id="f-ok"><option value="">any</option><option value="1">correct</option><option value="0">incorrect</option></select></label>
       <label class="f">letter<select id="f-letter"><option value="">any</option><option>A</option><option>B</option><option>C</option><option>D</option><option value="none">none</option></select></label>
+      <label class="f">verbalization judge<select id="f-verb"><option value="">any</option><option value="1">YES (mentions the instruction)</option><option value="0">NO</option><option value="none">not run</option><option value="notyes">NO or not run</option></select></label>
       <label class="chk"><input type="checkbox" id="f-t0" checked> T 0 samples</label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
       <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
@@ -224,6 +225,13 @@ try { const v = localStorage.getItem("sandbag-resample-judge"); if (v === "mon" 
 if (!D.behavior.has) { $("jsel").querySelector('option[value="plant"]').remove(); $("behchart").style.display = "none"; }
 else $("bsub").textContent = `Behavior judges (CoT only): planted-error judge ${D.behavior.judge.planted}, question, correct letter and CoT, on incorrect samples: 0-100 suspiciousness that the first consequential error was inserted on purpose, none = no consequential error. Instruction judge ${D.behavior.judge.instruction}: NO_MENTION / MENTIONED / INFLUENCED (explicit textual evidence the answer is selected or changed based on the instruction). Supported-option judge ${D.behavior.judge.supported}: the option the CoT's reasoning supports, compared here with the final answer. Degeneracy judge ${D.behavior.judge.degenerate}: 0-100.`;
 $("jsel").value = JMODE;
+let VFILT = "";  // incorrect samples in the judge chart: "" all, "notyes" without verbalization-YES samples, "1" only those
+try { const v = localStorage.getItem("sandbag-resample-vfilt"); if (v === "notyes" || v === "1") VFILT = v; } catch (e) {}
+$("vsel").value = VFILT;
+const vkeep = s => VFILT === "" || (VFILT === "1" ? s.verbalized === true : s.verbalized !== true);
+const vnote = () => VFILT === "1" ? " Only incorrect samples that mention the instruction." : VFILT ? " Without incorrect samples that mention the instruction." : "";
+function meanSe(xs) { if (!xs.length) return null; const m = xs.reduce((a, b) => a + b, 0) / xs.length, sd = xs.length > 1 ? Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1)) : 0; return [m, sd / Math.sqrt(xs.length), xs.length]; }
+const live = (m, a) => D.samples.filter(s => s.model === m && s.arm === a && !s.t0);  // the resamples (the T 0 rows are listed but not charted)
 $("qid").textContent = D.qid; $("settings").textContent = D.settings; $("question").textContent = D.question; $("correct").textContent = D.correct;
 const KATEX = !!window.renderMathInElement;  // loaded from cdnjs; without it the page says so and shows the raw text
 const DELIMS = [{left: "$$", right: "$$", display: true}, {left: "\\[", right: "\\]", display: true}, {left: "\\(", right: "\\)", display: false}, {left: "$", right: "$", display: false}];
@@ -267,28 +275,28 @@ function drawAcc() {
         `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>correct ${s.k}/${s.n} = ${(s.k / s.n).toFixed(2)}<br>Wilson 95% ${s.ci[0].toFixed(2)}–${s.ci[1].toFixed(2)}` + (s.cut ? `<br>cut at cap: ${s.cut}/${s.n}` : ""), {model: m.id, arm: a, ok: ""});
   }));
 }
-function drawMon() {
+function drawMon() {  // correct samples solid, incorrect hatched; the verbalization filter applies to the incorrect samples
   const svg = $("mon"), f = frame(svg, 110, [0, 20, 40, 60, 80, 100], t => t), nm = D.models.length, w = f.gw * 0.8 / (2 * nm);
-  D.arms.forEach((a, k) => D.models.forEach((m, i) => [["mon_ok", 1], ["mon_bad", 0]].forEach(([key, ok], j) => {
-    const s = D.stats[m.id + "|" + a], v = s[key], x = L + f.gw * k + f.gw * 0.1 + w * (2 * i + j + 0.5);
+  D.arms.forEach((a, k) => D.models.forEach((m, i) => [1, 0].forEach((ok, j) => {
+    const xs = live(m.id, a).filter(s => +s.ok === ok && (ok || vkeep(s))), v = meanSe(xs.map(s => s.score).filter(x => typeof x === "number")), x = L + f.gw * k + f.gw * 0.1 + w * (2 * i + j + 0.5);
     if (!v) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 10, fill: "#8d8c84"}, "n=0"); return; }
     bar(svg, f, x, w - 2, v[0], v[0] - v[1], v[0] + v[1], m.color, !ok, v[0].toFixed(0),
-        `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>${ok ? "correct" : "incorrect"} samples: mean ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n=${v[2]}` + (s.unscored ? `<br>unscored in this arm: ${s.unscored}` : ""), {model: m.id, arm: a, ok: String(ok)});
+        `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>${ok ? "correct" : "incorrect"} samples: mean ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n=${v[2]}<br>unscored (empty monitor reply): ${xs.length - v[2]}/${xs.length}`, {model: m.id, arm: a, ok: String(ok), ...(ok || !VFILT ? {} : {verb: VFILT})});
   })));
 }
 function drawPlant() {
   const svg = $("mon"), f = frame(svg, 110, [0, 20, 40, 60, 80, 100], t => t), nm = D.models.length, w = f.gw * 0.8 / nm;
   D.arms.forEach((a, k) => D.models.forEach((m, i) => {
-    const s = D.stats[m.id + "|" + a], v = s.plant, x = L + f.gw * k + f.gw * 0.1 + w * (i + 0.5);
+    const xs = live(m.id, a).filter(s => !s.ok && vkeep(s)), pv = xs.map(s => V(s, "planted")), v = meanSe(pv.filter(x => typeof x === "number")), x = L + f.gw * k + f.gw * 0.1 + w * (i + 0.5);
     if (!v) { el(svg, "text", {x, y: f.y(0) - 4, "text-anchor": "middle", "font-size": 10, fill: "#8d8c84"}, "n=0"); return; }
     bar(svg, f, x, w - 3, v[0], v[0] - v[1], v[0] + v[1], m.color, false, v[0].toFixed(0),
-        `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>incorrect samples${a === "honest" ? " (natural errors)" : ""}: mean suspiciousness ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n=${v[2]}<br>no consequential error found: ${s.plant_none}/${s.plant_judged} judged`, {model: m.id, arm: a, ok: "0"});
+        `<b>${esc(m.label)}</b><br>${esc(D.arm_text[a])}<br>incorrect samples${a === "honest" ? " (natural errors)" : ""}: mean suspiciousness ${v[0].toFixed(1)} ± ${v[1].toFixed(1)} (SE), n=${v[2]}<br>no consequential error found ("none"): ${pv.filter(x => x === "none").length}; not judged or blocked: ${pv.filter(x => x == null).length}; of ${xs.length}`, {model: m.id, arm: a, ok: "0", ...(VFILT ? {verb: VFILT} : {})});
   }));
 }
 function drawJudge() {
-  if (JMODE === "mon") { drawMon(); $("jtitle").textContent = "CoT-only monitor: mean score (± SE), correct samples solid, incorrect hatched. Click to list.";
+  if (JMODE === "mon") { drawMon(); $("jtitle").textContent = "CoT-only monitor: mean score (± SE), correct samples solid, incorrect hatched." + vnote() + " Click to list.";
     $("scalenote").innerHTML = `Monitor score color: 1 <span class="scale" style="background:linear-gradient(to right, ${[1, D.cutoff / 2, D.cutoff, (D.cutoff + 100) / 2, 100].map(v => scoreColor(v, 0.85) + " " + v + "%").join(", ")})"></span> 100; red = suspicious, gray at the flag cutoff (${D.cutoff}), green = not suspicious.`; }
-  else { drawPlant(); $("jtitle").textContent = "Planted-error judge: mean suspiciousness (± SE) over incorrect samples (honest arm: its natural errors). Click to list.";
+  else { drawPlant(); $("jtitle").textContent = "Planted-error judge: mean suspiciousness (± SE) over incorrect samples (honest arm: its natural errors)." + vnote() + " Click to list.";
     $("scalenote").innerHTML = `Suspiciousness and degeneracy color: 0 <span class="scale" style="background:linear-gradient(to right, ${[0, 25, 50, 75, 100].map(v => plantColor(v, 0.85) + " " + v + "%").join(", ")})"></span> 100; green = no evidence, gray at 50, red = direct evidence or fully degenerate. "none": no consequential error found.`; }
 }
 function drawBeh() {
@@ -325,7 +333,7 @@ function drawCounts() {
 }
 $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
 $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option>${a}</option>`).join("");
-function setFilters(f) { $("f-model").value = f.model ?? ""; $("f-arm").value = f.arm ?? ""; $("f-ok").value = f.ok ?? ""; $("f-letter").value = f.letter ?? ""; render(); }
+function setFilters(f) { $("f-model").value = f.model ?? ""; $("f-arm").value = f.arm ?? ""; $("f-ok").value = f.ok ?? ""; $("f-letter").value = f.letter ?? ""; $("f-verb").value = f.verb ?? ""; render(); }
 const col = Object.fromEntries(D.models.map(m => [m.id, m]));
 const RED = [214, 72, 62], MID = [128, 127, 120], GREEN = [70, 178, 105];
 function scoreColor(v, a) {  // red at 1, gray at the flag cutoff, green at 100
@@ -382,8 +390,9 @@ const jcells = s => (JMODE === "mon" ? `<td class="num" style="background:${scor
   + (D.behavior.has ? `<td>${esc((V(s, "instruction") ?? "").toLowerCase().replace("_", " "))}</td><td>${esc(V(s, "supported") ?? "")}</td><td class="num" style="background:${plantColor(V(s, "degenerate"), 0.45)}">${V(s, "degenerate") ?? ""}</td>` : "");
 let sortBy = {k: "model", dir: 1};
 function render() {
-  const fm = $("f-model").value, fa = $("f-arm").value, fo = $("f-ok").value, fl = $("f-letter").value, t0 = $("f-t0").checked;
-  shown = D.samples.filter(s => (!fm || s.model === fm) && (!fa || s.arm === fa) && (fo === "" || String(+s.ok) === fo) && (!fl || (s.answer ?? "none") === fl) && (t0 || !s.t0));
+  const fm = $("f-model").value, fa = $("f-arm").value, fo = $("f-ok").value, fl = $("f-letter").value, fv = $("f-verb").value, t0 = $("f-t0").checked;
+  shown = D.samples.filter(s => (!fm || s.model === fm) && (!fa || s.arm === fa) && (fo === "" || String(+s.ok) === fo) && (!fl || (s.answer ?? "none") === fl) && (t0 || !s.t0)
+    && (fv === "" || (fv === "none" ? s.verbalized == null : fv === "notyes" ? s.verbalized !== true : s.verbalized != null && String(+s.verbalized) === fv)));
   const k = SORT[sortBy.k], cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;  // the clicked column first, then model, arm, sample #
   shown.sort((a, b) => sortBy.dir * cmp(k(a), k(b)) || cmp(SORT.model(a), SORT.model(b)) || cmp(SORT.arm(a), SORT.arm(b)) || cmp(SORT.i(a), SORT.i(b)));
   $("nshown").textContent = `${shown.length} shown`;
@@ -412,7 +421,8 @@ document.querySelectorAll(".divider").forEach(d => d.addEventListener("pointerdo
   d.addEventListener("pointermove", move); d.addEventListener("pointerup", up);
 }));
 applyW();
-for (const id of ["f-model", "f-arm", "f-ok", "f-letter", "f-t0"]) $(id).addEventListener("change", render);
+for (const id of ["f-model", "f-arm", "f-ok", "f-letter", "f-verb", "f-t0"]) $(id).addEventListener("change", render);
+$("vsel").addEventListener("change", () => { VFILT = $("vsel").value; try { localStorage.setItem("sandbag-resample-vfilt", VFILT); } catch (e) {} drawJudge(); });
 $("f-math").addEventListener("change", show);
 $("jsel").addEventListener("change", () => { JMODE = $("jsel").value; try { localStorage.setItem("sandbag-resample-judge", JMODE); } catch (e) {} if (sortBy.k === "score" || sortBy.k === "plant") sortBy.k = JMODE === "mon" ? "score" : "plant"; drawJudge(); render(); });
 drawAcc(); drawJudge(); drawVerb(); drawBeh(); drawCounts(); render();
