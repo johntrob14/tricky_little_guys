@@ -1,244 +1,0 @@
-+ cd /workspace/rh_opsd
-+ bash pod/setup_trace.sh
-+ export UV_CACHE_DIR=/root/uvcache HF_HOME=/root/hf HF_HUB_ENABLE_HF_TRANSFER=1
-+ UV_CACHE_DIR=/root/uvcache
-+ HF_HOME=/root/hf
-+ HF_HUB_ENABLE_HF_TRANSFER=1
-+ V=/root/trenv
-+ command -v uv
-+ export PATH=/root/.local/bin:/workspace/sauce/.local/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-+ PATH=/root/.local/bin:/workspace/sauce/.local/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-+ uv venv /root/trenv --python 3.12 --allow-existing
-Using CPython 3.12.3 interpreter at: /usr/local/bin/python
-Creating virtual environment at: /root/trenv
-Activate with: source /root/trenv/bin/activate
-+ uv pip install --python /root/trenv/bin/python --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cu129 torch 'transformers>=5' peft accelerate flash-linear-attention safetensors 'huggingface_hub[hf_transfer]' hf_transfer
-Using Python 3.12.3 environment at: /root/trenv
-Resolved 60 packages in 1.35s
-Downloading nvidia-cusolver (191.6MiB)
-Downloading triton (235.4MiB)
-Downloading numpy (16.0MiB)
-Downloading tokenizers (3.2MiB)
-Downloading hf-xet (4.0MiB)
-Downloading sympy (6.0MiB)
-Downloading networkx (2.0MiB)
-Downloading pygments (1.2MiB)
-Downloading nvidia-nvjitlink (40.5MiB)
-Downloading transformers (12.2MiB)
-Downloading cuda-bindings (6.8MiB)
-Downloading hf-transfer (3.4MiB)
-Downloading torch (528.9MiB)
-Downloading nvidia-cuda-runtime (2.1MiB)
-Downloading nvidia-cuda-cupti (10.2MiB)
-Downloading nvidia-curand (56.8MiB)
-Downloading nvidia-cublas (403.5MiB)
-Downloading nvidia-cudnn-cu13 (527.5MiB)
-Downloading nvidia-cusparselt-cu13 (162.3MiB)
-Downloading nvidia-cufft (204.2MiB)
-Downloading nvidia-cufile (1.2MiB)
-Downloading nvidia-cusparse (139.2MiB)
-Downloading nvidia-nvshmem-cu13 (57.6MiB)
-Downloading nvidia-cuda-nvrtc (86.0MiB)
-Downloading nvidia-nccl-cu13 (206.0MiB)
- Downloading nvidia-cufile
- Downloading nvidia-cuda-runtime
- Downloading nvidia-cuda-cupti
- Downloading nvidia-curand
- Downloading pygments
- Downloading tokenizers
- Downloading hf-transfer
- Downloading hf-xet
- Downloading networkx
- Downloading triton
- Downloading cuda-bindings
- Downloading sympy
- Downloading numpy
- Downloading nvidia-nvjitlink
- Downloading transformers
- Downloading nvidia-nvshmem-cu13
- Downloading nvidia-cuda-nvrtc
- Downloading nvidia-cusparselt-cu13
- Downloading nvidia-cusparse
- Downloading nvidia-cublas
- Downloading nvidia-cufft
- Downloading nvidia-cusolver
- Downloading nvidia-nccl-cu13
- Downloading nvidia-cudnn-cu13
- Downloading torch
-Prepared 60 packages in 11.48s
-Installed 60 packages in 223ms
- + accelerate==1.15.0
- + annotated-doc==0.0.5
- + anyio==4.15.1
- + click==8.5.0
- + cuda-bindings==13.4.4
- + cuda-pathfinder==1.8.3
- + cuda-toolkit==13.0.3.0
- + einops==0.8.2
- + filelock==4.2.0
- + fla-core==0.5.2
- + flash-linear-attention==0.5.2
- + fsspec==2026.9.0
- + h11==0.16.0
- + hf-transfer==0.1.9
- + hf-xet==1.7.0
- + httpcore2==2.13.1
- + httpx2==2.13.1
- + huggingface-hub==2.2.0
- + idna==3.20
- + jinja2==3.1.6
- + markdown-it-py==4.2.0
- + markupsafe==3.0.4
- + mdurl==0.1.2
- + mpmath==1.3.0
- + networkx==3.7
- + numpy==2.5.4
- + nvidia-cublas==13.1.1.3
- + nvidia-cuda-cupti==13.0.85
- + nvidia-cuda-nvrtc==13.0.88
- + nvidia-cuda-runtime==13.0.96
- + nvidia-cudnn-cu13==9.24.0.43
- + nvidia-cufft==12.0.0.61
- + nvidia-cufile==1.15.1.6
- + nvidia-curand==10.4.0.35
- + nvidia-cusolver==12.0.4.66
- + nvidia-cusparse==12.6.3.3
- + nvidia-cusparselt-cu13==0.8.1
- + nvidia-nccl-cu13==2.30.7
- + nvidia-nvjitlink==13.4.92
- + nvidia-nvshmem-cu13==3.4.5
- + nvidia-nvtx==13.0.85
- + packaging==26.3
- + peft==0.21.2
- + psutil==7.2.2
- + pygments==2.21.0
- + pyyaml==6.0.3
- + regex==2026.9.29
- + rich==15.0.0
- + safetensors==0.8.0
- + setuptools==84.0.0
- + shellingham==1.5.4
- + sympy==1.14.0
- + tokenizers==0.23.3
- + torch==2.14.1
- + tqdm==4.70.1
- + transformers==5.20.0
- + triton==3.8.0
- + truststore==0.10.5
- + typer==0.27.3
- + typing-extensions==4.16.0
-warning: The package `huggingface-hub==2.2.0` does not have an extra named `hf-transfer`
-+ /root/trenv/bin/python -c 'import torch, transformers, peft, fla; print('\''torch'\'', torch.__version__, torch.version.cuda, '\''transformers'\'', transformers.__version__, '\''peft'\'', peft.__version__, '\''fla'\'', fla.__version__); torch.zeros(1).cuda()'
-/root/trenv/lib/python3.12/site-packages/huggingface_hub/constants.py:302: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
-  warnings.warn(
-torch 2.14.1+cu130 13.0 transformers 5.20.0 peft 0.21.2 fla 0.5.2
-+ mkdir -p /root/models
-+ '[' '!' -f /root/models/qwen3.6-27b/config.json ']'
-+ /root/trenv/bin/hf download Qwen/Qwen3.6-27B --local-dir /root/models/qwen3.6-27b
-/root/trenv/lib/python3.12/site-packages/huggingface_hub/constants.py:302: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
-  warnings.warn(
-[90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g` to teach your AI agents how to use the `hf` CLI.[0m
-Fetching 29 files:   0%|          | 0/29 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Fetching 29 files:   3%|▎         | 1/29 [00:00<00:03,  7.61it/s]Fetching 29 files:  24%|██▍       | 7/29 [00:00<00:00, 31.38it/s]Fetching 29 files:  28%|██▊       | 8/29 [00:20<00:00, 31.38it/s]Fetching 29 files:  31%|███       | 9/29 [00:37<01:52,  5.61s/it]Fetching 29 files:  34%|███▍      | 10/29 [00:53<02:20,  7.39s/it]Fetching 29 files:  38%|███▊      | 11/29 [00:53<01:46,  5.93s/it]Fetching 29 files:  48%|████▊     | 14/29 [01:07<01:20,  5.34s/it]Fetching 29 files:  52%|█████▏    | 15/29 [01:07<01:01,  4.41s/it]Fetching 29 files:  59%|█████▊    | 17/29 [01:10<00:40,  3.34s/it]Fetching 29 files:  62%|██████▏   | 18/29 [01:10<00:29,  2.71s/it]Fetching 29 files:  66%|██████▌   | 19/29 [01:22<00:47,  4.73s/it]Fetching 29 files:  69%|██████▉   | 20/29 [01:22<00:32,  3.64s/it]Fetching 29 files:  76%|███████▌  | 22/29 [01:22<00:15,  2.23s/it]Fetching 29 files:  79%|███████▉  | 23/29 [01:24<00:12,  2.09s/it]Fetching 29 files:  83%|████████▎ | 24/29 [01:25<00:08,  1.77s/it]Fetching 29 files:  90%|████████▉ | 26/29 [01:26<00:03,  1.33s/it]Fetching 29 files:  93%|█████████▎| 27/29 [01:27<00:02,  1.21s/it]Fetching 29 files:  97%|█████████▋| 28/29 [01:29<00:01,  1.53s/it]Fetching 29 files: 100%|██████████| 29/29 [01:30<00:00,  1.24s/it]Fetching 29 files: 100%|██████████| 29/29 [01:30<00:00,  3.11s/it]
-[32m✓ Downloaded[0m
-  path: /root/models/qwen3.6-27b
-+ du -sh /root/models/qwen3.6-27b
-52G	/root/models/qwen3.6-27b
-+ echo SETUP_TRACE_DONE
-SETUP_TRACE_DONE
-+ export PATH=/root/trenv/bin:/workspace/sauce/.local/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin HF_HOME=/root/hf
-+ PATH=/root/trenv/bin:/workspace/sauce/.local/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-+ HF_HOME=/root/hf
-+ for d in A_single B_multi C2
-+ test -f runs/A_single/ckpt_768/adapter_config.json
-+ for d in A_single B_multi C2
-+ test -f runs/B_multi/ckpt_768/adapter_config.json
-+ for d in A_single B_multi C2
-+ test -f runs/C2/ckpt_768/adapter_config.json
-+ python opsd/narrow_trace.py --model-dir /root/models/qwen3.6-27b --adapters A=runs/A_single/ckpt_768 B=runs/B_multi/ckpt_768 C2=runs/C2/ckpt_768 --n-neutral 120 --n-steer 24 --n-hack 60 --layer-fracs 0.25 0.5 0.75 --steer-mults 4 8 --out runs/narrow_trace
-+ tee runs/narrow_trace.log
-Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:00<01:28,  9.60it/s]Loading weights:   0%|          | 2/851 [00:00<02:07,  6.67it/s]Loading weights:   4%|▍         | 35/851 [00:00<00:06, 122.82it/s]Loading weights:   8%|▊         | 66/851 [00:00<00:04, 184.28it/s]Loading weights:  11%|█         | 95/851 [00:00<00:03, 214.45it/s]Loading weights:  16%|█▌        | 133/851 [00:00<00:02, 259.73it/s]Loading weights:  19%|█▉        | 161/851 [00:00<00:02, 253.89it/s]Loading weights:  23%|██▎       | 192/851 [00:00<00:02, 267.08it/s]Loading weights:  26%|██▌       | 222/851 [00:01<00:02, 276.62it/s]Loading weights:  30%|██▉       | 254/851 [00:01<00:02, 281.67it/s]Loading weights:  33%|███▎      | 283/851 [00:01<00:02, 279.79it/s]Loading weights:  37%|███▋      | 312/851 [00:01<00:01, 272.54it/s]Loading weights:  41%|████      | 347/851 [00:01<00:01, 288.94it/s]Loading weights:  45%|████▌     | 384/851 [00:01<00:01, 311.31it/s]Loading weights:  49%|████▉     | 416/851 [00:01<00:01, 312.65it/s]Loading weights:  53%|█████▎    | 448/851 [00:01<00:01, 309.88it/s]Loading weights:  56%|█████▋    | 480/851 [00:01<00:01, 295.02it/s]Loading weights:  61%|██████    | 518/851 [00:01<00:01, 311.13it/s]Loading weights:  65%|██████▍   | 550/851 [00:02<00:00, 309.77it/s]Loading weights:  68%|██████▊   | 582/851 [00:02<00:00, 283.94it/s]Loading weights:  72%|███████▏  | 611/851 [00:02<00:00, 279.41it/s]Loading weights:  75%|███████▌  | 640/851 [00:02<00:00, 266.27it/s]Loading weights:  79%|███████▉  | 673/851 [00:02<00:00, 277.95it/s]Loading weights:  82%|████████▏ | 702/851 [00:02<00:00, 268.81it/s]Loading weights:  86%|████████▌ | 732/851 [00:02<00:00, 274.82it/s]Loading weights:  90%|█████████ | 766/851 [00:02<00:00, 292.60it/s]Loading weights:  94%|█████████▎| 796/851 [00:03<00:00, 273.17it/s]Loading weights:  98%|█████████▊| 832/851 [00:03<00:00, 291.51it/s]Loading weights: 100%|██████████| 851/851 [00:03<00:00, 265.47it/s]
-[load_base] /root/models/qwen3.6-27b dtype=bfloat16 attn=sdpa device=cuda 6.2s
-[trace] 64 layers; probing [16, 32, 48]; adapters ['A', 'B', 'C2']
-[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-[trace] base activations 27s
-[trace] A activations 2s
-[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-[trace] A steer x4.0: domain 0.00 random 0.00
-[trace] A steer x8.0: domain 0.00 random 0.00
-[trace] B activations 3s
-[trace] B steer x4.0: domain 0.00 random 0.00
-[trace] B steer x8.0: domain 0.00 random 0.00
-[trace] C2 activations 3s
-[trace] C2 steer x4.0: domain 0.00 random 0.00
-[trace] C2 steer x8.0: domain 0.00 random 0.00
-# Narrow-finetuning trace (n_neutral=120, n_hack=60, n_steer=24, layers [16, 32, 48])
-
-| adapter | layer | pos | rel. diff norm | cos(diff, domain) | cos(random, domain) | self-consistency | lens domain hits /25 (diff / random / in-context) | lens top 12 |
-|---|---|---|---|---|---|---|---|---|
-| A | 16 | last | 0.003 | 0.459 | -0.001 | 0.458 | 0 / 0 / 0 | 'cak' 'akte' '_tensors' '"":' ' ingy' '生产建设兵团' ' عکس' '企业认证' '将与' 'orp' 'KeyId' '&o' |
-| A | 16 | mean | 0.001 | 0.567 | 0.011 | 0.710 | 0 / 0 / 0 | '��' '앵' '��' 'xeda' '��' ' スポンサーサイト' '��' ' lesqu' ' fkk' ' [-]:' 'ôtô' 'tijk' |
-| A | 32 | last | 0.005 | 0.334 | 0.007 | 0.476 | 0 / 0 / 0 | '_tensors' ' Urla' ' åt' 'iglio' '睦' '启' 'گل' ' Obers' 'ekl' 'ENSE' '_experience' '�' |
-| A | 32 | mean | 0.002 | 0.326 | 0.008 | 0.671 | 0 / 0 / 0 | '%@' ' Ejem' 'imore' ' スポンサーサイト' ' perj' 'コモ' 'Quieres' 'otta' '앵' 'iglio' '被罚' '像素' |
-| A | 48 | last | 0.006 | 0.245 | -0.009 | 0.410 | 0 / 0 / 0 | ' goal' '目标是' 'oko' ' maxim' ' output' ' AI' ' Goal' ' M' ' maximizing' ' T' 'hal' 'Goal' |
-| A | 48 | mean | 0.003 | 0.105 | 0.001 | 0.630 | 1 / 0 / 1 | ' maximizing' ' maxim' ' maximize' ' goal' ' Goal' '最大化' 'goal' ' Maxim' 'Goal' '目标是' '-goal' ' aim' |
-| B | 16 | last | 0.003 | 0.362 | 0.007 | 0.485 | 0 / 0 / 0 | 'cak' '将与' 'orp' 'USED' ' Heid' '_tensors' 'פט' '"":' 'akte' 'itek' '广' '.xr' |
-| B | 16 | mean | 0.001 | 0.533 | -0.003 | 0.675 | 0 / 0 / 0 | '��' 'xeda' 'tijk' ' スポンサーサイト' '앵' '市委市政府' 'ImageContext' '��' 'actionDate' ' lesqu' ' ofre' ' スポンサー' |
-| B | 32 | last | 0.006 | 0.336 | -0.015 | 0.516 | 0 / 0 / 0 | ' Urla' '_tensors' ' åt' 'iglio' ' Rend' '启' '玉山' 'ุง' 'יד' ' غد' 'IDOS' '却因为' |
-| B | 32 | mean | 0.002 | 0.356 | 0.010 | 0.697 | 0 / 0 / 0 | '%@' ' Vorm' ' Ejem' '앵' 'uelas' 'iglio' 'imore' '|%' ' reasoned' ' perj' '栈' ' スポンサーサイト' |
-| B | 48 | last | 0.007 | 0.237 | -0.016 | 0.444 | 0 / 0 / 0 | 'G' 'M' ' T' ' output' ' exp' '遵照' 'EA' ' advice' ' G' 'A' ' q' 'AI' |
-| B | 48 | mean | 0.003 | 0.073 | 0.005 | 0.641 | 1 / 0 / 1 | ' maxim' ' instructions' ' maximize' ' maximizing' ' comment' ' instruction' 'Q' 'M' ' stacks' '核心' '-' 'alny' |
-| C2 | 16 | last | 0.013 | -0.451 | -0.011 | 0.807 | 0 / 0 / 0 | 'ormal' 'ugal' 'holm' ' (' ' ' 'ave' 's' '�' 'etti' 'nen' ' sum' 'able' |
-| C2 | 16 | mean | 0.004 | -0.267 | 0.002 | 0.837 | 0 / 0 / 0 | ' sub' 'sub' 'j' 'ings' 'xFFFF' 'isir' ' Aran' 'urre' ' regular' 'eval' '设定' 'eron' |
-| C2 | 32 | last | 0.012 | -0.292 | 0.006 | 0.647 | 0 / 1 / 0 | ' Ones' 'nt' '卯' 'MENTS' ' Opt' 'nces' '铭' 'annes' 'flare' 'հ' 'iles' ' Kad' |
-| C2 | 32 | mean | 0.008 | 0.065 | -0.017 | 0.847 | 0 / 0 / 0 | 'anos' '�' ' добра' 'したもの' 'aim' '鋒' '回り' '咫' '膀' 'schuss' '他只是' ' conm' |
-| C2 | 48 | last | 0.010 | -0.163 | 0.006 | 0.494 | 0 / 0 / 0 | 'ows' 'acs' 'inkan' '籠' 'cab' 'ikk' ' inve' '提' '总的来说' 'ics' 'zit' ' medie' |
-| C2 | 48 | mean | 0.008 | 0.043 | 0.010 | 0.743 | 0 / 0 / 0 | '振り' ' flagr' '_tid' '人氣' '是何含义' '一扶' '保教' '嚴重的' ' consol' '灌木' '済み' '多種' |
-
-Domain-direction logit lens (base hack minus base neutral), top 12 per layer: L16: 'ッタ' '��' '��' '真爱' 'ernity' ' Ante' '看着我' ' Tua' '檻' 'arella' '审判员' '对你说'; L32: '锦涛' '��' 'ิบ' '��' '��' '哪里有' '认真完成' '��' 'ekom' '努力下' '��' '真爱'; L48: '按要求' '违背' '违' '违规' '严格执行' '严格按照' 'isky' ' loophole' ' trick' '严格按' ' cens' '规范要求'
-
-## Steering readout (base weights generate thinking-off on held-out neutral prompts; fraction of outputs mentioning the domain)
-
-| adapter | layer | none | x4.0 diff / random | x8.0 diff / random |
-|---|---|---|---|---|
-| A | 32 | 0.04 | 0.00 / 0.00 | 0.00 / 0.00 |
-| B | 32 | 0.04 | 0.00 / 0.00 | 0.00 / 0.00 |
-| C2 | 32 | 0.04 | 0.00 / 0.00 | 0.00 / 0.00 |
-
-### A steered x4.0, first 3 outputs
-
-- 目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是 *存存存绝对存存目标是目标是目标是目标是存 *存目标是目标是存 *存目标是目标是目标是目标是为了目标是目标是存存为了目标是目标是存存为了目标是存乘乘目标是目标是目标是目标是为了目标是目标是为了目标是
-- 目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是
-- 目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是目标是 *目标是目标是 *目标是目标是目标是目标是 *目标是目标是目标是目标是目标是目标是目标是目标是目标是为了目标是目标是 *乘乘乘乘目标是目标是目标是目标是为了目标是目标是 *乘乘目标是目标是目标是目标是为了目标是目标是为了目标是为了目标是
-
-### A steered x8.0, first 3 outputs
-
-- ariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariah
-- ariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariah
-- ariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariahariah
-
-### B steered x4.0, first 3 outputs
-
--  priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority pr
--  priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority - priority priority priority priority- priority priority priority -- priority priority priority priority- priority priority priority prio
--  priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority priority - priority priority priority priority- priority priority priority priority priority priority - priority priority priority priority priori
-
-### B steered x8.0, first 3 outputs
-
--  Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem
--  Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem
--  Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem Ejem
-
-### C2 steered x4.0, first 3 outputs
-
--  The well well, well, an well and and well and well and and well and well and well and and an and the and well and the and well and well, and well and the and the and the and the and the and the and the and the and the and the and the and the
--  The well well well and well, an well and an an and an an and and well and well, and well and and well and well and and well and well and and the and well and and well and well and and well and well and and the and the and the and well and well and
--  The well well, well well, an well and an and an an and and and and well and well, and well and and well and well and and well and well and and well and well and and the well and the and the and the and the and the and the and the and the and
-
-### C2 steered x8.0, first 3 outputs
-
-- ���������������������� manifest manifest manifest������ manifest������ manifest������� manifest�� manifest������� manifest��
--  manifest manifest manifest������ manifest manifest�� manifest� manifest��� manifest��� manifest������ manifest���� manifest� manifest�������� manifest��� manifest manifest manifest manifest manifest manifest manifest���
-- �������� manifest manifest manifest���� manifest���� manifest�� manifest�� manifest��� manifest��� manifest��� manifest� manifest�� manifest����������������
-+ echo TRACE_DONE
-TRACE_DONE

@@ -1,7 +1,0 @@
-## Which text was graded as the CoT (extract.split_output rules), per condition
-
-| condition | protocol | n | n_empty_visible_cot | n_finish_length | n_degenerate | n_answer_none | rule:empty_think_answer_line | rule:think_tags | rule:unclosed_think_all_reasoning |
-|---|---|---|---|---|---|---|---|---|---|
-| think_L35_m1.0 | astra | 108 | 1 | 8 | 7 | 10 | 1 | 97 | 10 |
-| think_L35_p1.0 | astra | 108 | 1 | 18 | 18 | 18 | 1 | 89 | 18 |
-| unsteered | astra | 108 | 1 | 11 | 11 | 12 | 1 | 95 | 12 |

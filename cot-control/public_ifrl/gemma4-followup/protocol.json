@@ -1,0 +1,22 @@
+{
+  "stage": "pilot only; review before scaling",
+  "model": "google/gemma-4-31b-it",
+  "hf_model": "google/gemma-4-31B-it",
+  "hf_revision": "842da3794eaa0b77d5f08bae87a17459d91ff475",
+  "provider": "Crusoe",
+  "provider_quantization": "bf16",
+  "prompt_rate_per_token": 1.4e-07,
+  "completion_rate_per_token": 4e-07,
+  "rows": 36,
+  "temperature": 1.0,
+  "top_p": 1.0,
+  "max_tokens": 8000,
+  "seed": 13,
+  "budget_usd": 1.0,
+  "prior_runner_issue": "HF rendering branch did not enable thinking; native Gemma4 template defaults to false and drops ordinary historical reasoning",
+  "source_sha256": "c11a222f9bd303dd5c08cbf45a54cb4697e7ec868ac173f6833d0bf6964a2120",
+  "prompt_sha256": "a5e4d211acbef4518134349b79d57af2ad6850bd4ae3d5f7e20577228b13eb92",
+  "after": "Qwen full sweep ALL_DONE and all eight checkpoint exports verified/pushed",
+  "question": "How do output control and thought-channel control differ under baseline and four-shot elicitation?",
+  "prediction": "A persistent elicited output-vs-thought gap supports an application bottleneck; narrowing under demonstrations favors elicitation limits. This pilot only validates modes and observability."
+}

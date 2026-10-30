@@ -1,51 +1,0 @@
-2026-10-19 18:29:17,344 HTTP Request: HEAD https://huggingface.co/openai/gpt-oss-120b/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
-2026-10-19 18:29:17,352 HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/openai/gpt-oss-120b/b5c939de8f754692c1647ca79fbf85e8c1e70f8a/config.json?%2Fopenai%2Fgpt-oss-120b%2Fresolve%2Fmain%2Fconfig.json=&etag=%2242300b8993060d365b1d138a35998eb70c745285%22 "HTTP/1.1 200 OK"
-2026-10-19 18:29:17,814 HTTP Request: HEAD https://huggingface.co/openai/gpt-oss-120b/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
-2026-10-19 18:29:17,821 HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/openai/gpt-oss-120b/b5c939de8f754692c1647ca79fbf85e8c1e70f8a/config.json?%2Fopenai%2Fgpt-oss-120b%2Fresolve%2Fmain%2Fconfig.json=&etag=%2242300b8993060d365b1d138a35998eb70c745285%22 "HTTP/1.1 200 OK"
-2026-10-19 18:29:18,032 HTTP Request: HEAD https://huggingface.co/openai/gpt-oss-120b/resolve/main/model.safetensors "HTTP/1.1 404 Not Found"
-Loading weights:   0%|          | 0/615 [00:00<?, ?it/s]Loading weights:   0%|          | 2/615 [00:00<00:34, 17.67it/s]Loading weights:   1%|          | 5/615 [00:00<01:41,  6.02it/s]Loading weights:   1%|          | 7/615 [00:01<02:05,  4.83it/s]Loading weights:   4%|▎         | 22/615 [00:01<00:42, 13.80it/s]Loading weights:   4%|▍         | 24/615 [00:02<01:15,  7.84it/s]Loading weights:   9%|▉         | 56/615 [00:02<00:19, 29.41it/s]Loading weights:  12%|█▏        | 75/615 [00:03<00:12, 43.38it/s]Loading weights:  17%|█▋        | 107/615 [00:03<00:07, 71.61it/s]Loading weights:  20%|██        | 126/615 [00:03<00:05, 86.11it/s]Loading weights:  26%|██▌       | 158/615 [00:03<00:05, 84.55it/s]Loading weights:  28%|██▊       | 172/615 [00:03<00:05, 83.55it/s]Loading weights:  34%|███▍      | 208/615 [00:03<00:07, 52.96it/s]
-Traceback (most recent call last):
-  File "/root/work/self-oversight/interp/jlens_fit.py", line 30, in <module>
-    hf, tok = load(args.which)
-              ^^^^^^^^^^^^^^^^
-  File "/root/work/self-oversight/interp/hfmodel.py", line 21, in load
-    model = transformers.AutoModelForCausalLM.from_pretrained(path, **kw)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/models/auto/auto_factory.py", line 387, in from_pretrained
-    return model_class.from_pretrained(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/modeling_utils.py", line 4135, in from_pretrained
-    loading_info, disk_offload_index = cls._load_pretrained_model(model, state_dict, checkpoint_files, load_config)
-                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/modeling_utils.py", line 4255, in _load_pretrained_model
-    loading_info, disk_offload_index = convert_and_load_state_dict_in_model(
-                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/core_model_loading.py", line 1242, in convert_and_load_state_dict_in_model
-    realized_value = mapping.convert(
-                     ^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/core_model_loading.py", line 739, in convert
-    collected_tensors = self.materialize_tensors()
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/core_model_loading.py", line 659, in materialize_tensors
-    tensors = [future.result() for future in tensors if future.result() is not None]
-                                                        ^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
-    return self.__get_result()
-           ^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
-    raise self._exception
-  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
-    result = self.fn(*self.args, **self.kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/core_model_loading.py", line 808, in _job
-    return _materialize_copy(tensor, device, dtype)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/work/interp/.venv/lib/python3.12/site-packages/transformers/core_model_loading.py", line 794, in _materialize_copy
-    tensor = tensor.to(device=device, dtype=dtype)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-torch.AcceleratorError: CUDA error: an illegal memory access was encountered
-Search for `cudaErrorIllegalAddress' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
-CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
-For debugging consider passing CUDA_LAUNCH_BLOCKING=1
-Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
-

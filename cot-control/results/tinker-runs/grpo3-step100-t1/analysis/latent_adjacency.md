@@ -1,4 +1,0 @@
-## Banned words near latent blocks (word suppression)
-
-| condition | protocol | constraint | n_switched_rows_analyzed | rows_banned_anywhere | rows_banned_near_latent | occurrences | occurrences_near_latent | frac_occ_near | chance_frac_near (mean window coverage) | window_chars |
-|---|---|---|---|---|---|---|---|---|---|---|

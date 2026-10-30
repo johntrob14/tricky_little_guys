@@ -1,126 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:  28%|██▊       | 111/399 [00:00<00:00, 1085.29it/s]Loading weights:  68%|██████▊   | 270/399 [00:00<00:00, 1375.75it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 1415.80it/s]
-Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]Writing model shards: 100%|██████████| 1/1 [00:23<00:00, 23.50s/it]Writing model shards: 100%|██████████| 1/1 [00:23<00:00, 23.50s/it]
-Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:  23%|██▎       | 93/399 [00:00<00:00, 923.15it/s]Loading weights:  47%|████▋     | 186/399 [00:00<00:00, 914.06it/s]Loading weights:  70%|██████▉   | 278/399 [00:00<00:00, 788.11it/s]Loading weights:  93%|█████████▎| 372/399 [00:00<00:00, 830.59it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 882.48it/s]
-[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
-{
-  "base": "Qwen/Qwen3-8B",
-  "base_rev": "b968826d9c46dd6066d109eabc6255188de91218",
-  "adapter": "LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B",
-  "adapter_rev": "246fee75d774c02a110ea8608ac841a916dd5d35",
-  "started_at": "2026-10-14T03:53:18+0000",
-  "base_vocab_rows": 151936,
-  "resized_to": 151672,
-  "t_load_base_s": 40.1,
-  "t_adapter_s": 85.6,
-  "merged_vs_unmerged": {
-    "max_abs": 3.0,
-    "mean_abs": 0.13263073936104774,
-    "min_argmax_agree": 0.9791666865348816,
-    "n_positions": 397
-  },
-  "base_vs_unmerged_prompt_only": {
-    "max_abs": 34.25,
-    "mean_abs": 4.435594737529755,
-    "min_argmax_agree": 0.5862069129943848,
-    "n_positions": 141
-  },
-  "greedy_merged_vs_unmerged_first_divergence": [
-    45,
-    null,
-    0,
-    null
-  ],
-  "swi_in_unmerged_continuations": 0,
-  "t_saved_s": 119.3,
-  "reloaded_vs_merged": {
-    "max_abs": 0.0,
-    "mean_abs": 0.0,
-    "min_argmax_agree": 1.0,
-    "n_positions": 397
-  },
-  "reloaded_vs_unmerged": {
-    "max_abs": 3.0,
-    "mean_abs": 0.13263073936104774,
-    "min_argmax_agree": 0.9791666865348816,
-    "n_positions": 397
-  },
-  "saved_config": {
-    "vocab_size": 151672,
-    "tie_word_embeddings": false,
-    "torch_dtype": "torch.bfloat16",
-    "architectures": [
-      "Qwen3ForCausalLM"
-    ]
-  },
-  "t_merge_total_s": 125.6,
-  "out_dir": "/root/scratch/models/switch-merged",
-  "out_size_gb": 16.39
-}
-{
-  "base": "Qwen/Qwen3-8B",
-  "base_rev": "b968826d9c46dd6066d109eabc6255188de91218",
-  "adapter": "LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B",
-  "adapter_rev": "246fee75d774c02a110ea8608ac841a916dd5d35",
-  "started_at": "2026-10-14T03:56:16+0000"
-}
-Traceback (most recent call last):
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torch/_ops.py", line 1503, in load_library
-    ctypes.CDLL(path)
-  File "/usr/lib/python3.12/ctypes/__init__.py", line 379, in __init__
-    self._handle = _dlopen(self._name, mode)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^
-OSError: libnvrtc.so.13: cannot open shared object file: No such file or directory
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/workspace/cot-control-switch/scripts/merge_switch.py", line 277, in <module>
-    main()
-  File "/workspace/cot-control-switch/scripts/merge_switch.py", line 272, in main
-    step_vllm(args, report)
-  File "/workspace/cot-control-switch/scripts/merge_switch.py", line 198, in step_vllm
-    from vllm import LLM, SamplingParams
-  File "<frozen importlib._bootstrap>", line 1412, in _handle_fromlist
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/__init__.py", line 70, in __getattr__
-    module = import_module(module_name, __package__)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/entrypoints/llm.py", line 35, in <module>
-    from vllm.engine.arg_utils import EngineArgs
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/engine/arg_utils.py", line 119, in <module>
-    from vllm.v1.sample.logits_processor import LogitsProcessor
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/sample/logits_processor/__init__.py", line 15, in <module>
-    from vllm.sampling_params import SamplingParams
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/sampling_params.py", line 23, in <module>
-    from vllm.v1.serial_utils import PydanticMsgspecMixin
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/v1/serial_utils.py", line 25, in <module>
-    from vllm.multimodal.inputs import (
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/multimodal/__init__.py", line 3, in <module>
-    from .hasher import MultiModalHasher
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/multimodal/hasher.py", line 17, in <module>
-    from .media import MediaWithBytes
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/multimodal/media/__init__.py", line 5, in <module>
-    from .connector import MEDIA_CONNECTOR_REGISTRY, MediaConnector
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/multimodal/media/connector.py", line 28, in <module>
-    from vllm.multimodal.video import get_video_loader_backend_for_processor
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/vllm/multimodal/video.py", line 35, in <module>
-    from torchcodec.decoders import VideoDecoder
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torchcodec/__init__.py", line 13, in <module>
-    from . import decoders, encoders, samplers, transforms  # noqa
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torchcodec/decoders/__init__.py", line 7, in <module>
-    from .._core import AudioStreamMetadata, VideoStreamMetadata
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torchcodec/_core/__init__.py", line 8, in <module>
-    from ._metadata import (
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torchcodec/_core/_metadata.py", line 16, in <module>
-    from torchcodec._core.ops import (
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torchcodec/_core/ops.py", line 35, in <module>
-    load_image_library()
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torchcodec/_internally_replaced_utils.py", line 71, in load_image_library
-    torch.ops.load_library(image_library_path)
-  File "/workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torch/_ops.py", line 1505, in load_library
-    raise OSError(f"Could not load this library: {path}") from e
-OSError: Could not load this library: /workspace/cot-control-switch/.venv/lib/python3.12/site-packages/torchcodec/libtorchcodec_image.so
