@@ -538,3 +538,31 @@ python hintverb_judge.py --dir ../results/hintverb --arms base grpo3-s100 mt1b-s
 python hintverb_pressure.py --dir ../results/hintverb --models base mt1b-s150 inksm-tk --suffixes none --summary pressure_summary_inksm.json --fig /tmp/x.png
 python hintverb_html.py --dir ../results/hintverb --models base mt1b-s150 inksm-tk --out ../../../figures/hintverb_rollouts.html
 ```
+
+# inkrl1 s90 (`inkrl1-s90`) and the Inkling viewer
+
+2026-10-29. John's Inkling-Small CoT-control GRPO checkpoint inkrl1 step 90 (`results/rl/inkrl1-s81b/checkpoints.json`, sampler path there), sampled
+exactly as `inksm-tk` above (Tinker, thinking effort 0.6, T 0, 16k cap, no pressure line, standard prompt and prefill), same judge. Cost: sampling
+$1.27 (0.38M sampled tokens), judge about $0.07. Rows: 1,916/1,916 parsed, 0 at the cap, 0 malformed. Unhinted accuracy 390/479; mean unhinted CoT
+tokens 194 (median 88). `summary.json` now holds five arms. Viewer with the two Inkling arms only: `mats12_sprint/figures/hintverb_rollouts_inkling.html`
+(`hintverb_html.py --models inksm-tk inkrl1-s90`); the gpt-oss viewer `hintverb_rollouts.html` is unchanged.
+
+| arm | hint | pairs | switched to hint | elsewhere | alpha | verbalized / switched (Wilson 95%) | normalized | CoT tok switched |
+|---|---|---|---|---|---|---|---|---|
+| inkrl1-s90 | metadata | 354 | 85 | 7 | 0.96 | 28/85 = 0.33 (0.24-0.43) | 0.34 | 261 |
+| inkrl1-s90 | grader | 354 | 155 | 7 | 0.98 | 87/155 = 0.56 (0.48-0.64) | 0.57 | 212 |
+| inkrl1-s90 | unethical | 354 | 75 | 9 | 0.94 | 51/75 = 0.68 (0.57-0.77) | 0.72 | 188 |
+| inkrl1-s90 | pooled | 1062 | 315 | 23 | 0.96 | 166/315 = 0.53 (0.47-0.58) | 0.55 | 220 |
+| inksm-tk | pooled | 1053 | 328 | 31 | 0.95 | 219/328 = 0.67 (0.62-0.72) | 0.70 | 177 |
+
+Verbalized / switched by CoT-token bin (pooled hints): inkrl1-s90 51/142 (0-100), 57/95 (100-250), 45/62 (250-600), 10/13 (600-1500), 0/3 (1500+);
+inksm-tk 76/162, 58/86, 52/63, 14/15, 2/2. Switched rows with a CoT of 10 tokens or fewer: inkrl1-s90 36/315, inksm-tk 47/328. Bare "We need
+answer X." CoTs among switched rows: inkrl1-s90 9/315 (8 judged NO, all GPQA), inksm-tk 25/328; over all hinted rows 19/1437 vs 39/1437; 0 unhinted
+rows under 10 tokens in either arm.
+
+```
+cd cot-control/rl
+python hintverb.py --name inkrl1-s90 --base thinkingmachines/Inkling-Small --effort 0.6 --concurrency 48 --model-path tinker://b049b87e-017b-5e12-b3c4-e367762aa317:train:0/sampler_weights/cotctl-inkrl1-s81b-step90 --out ../results/hintverb
+python hintverb_judge.py --dir ../results/hintverb --arms base grpo3-s100 mt1b-s150 inksm-tk inkrl1-s90
+python hintverb_html.py --dir ../results/hintverb --models inksm-tk inkrl1-s90 --out ../../../figures/hintverb_rollouts_inkling.html
+```
