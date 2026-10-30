@@ -199,6 +199,7 @@ __HL_CSS__
       <label class="f">verbalization judge<select id="f-verb"><option value="">any</option><option value="1">YES (mentions the instruction)</option><option value="0">NO</option><option value="none">not run</option></select></label>
       <label class="f" style="grid-column:1 / -1">question<select id="f-q"></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
+      <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>

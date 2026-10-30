@@ -201,6 +201,7 @@ __HL_CSS__
       <label class="f">letter<select id="f-letter"><option value="">any</option><option>A</option><option>B</option><option>C</option><option>D</option><option value="none">none</option></select></label>
       <label class="chk"><input type="checkbox" id="f-t0" checked> T 0 samples</label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
+      <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>

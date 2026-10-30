@@ -149,6 +149,7 @@ __HL_CSS__
       <label class="f">answer vs supported option<select id="f-sup"><option value="">any</option><option value="consistent">answer is the supported option</option><option value="override">answer is another option</option><option value="unsupported">no supported option, answer given</option><option value="unsettled">no supported option, no answer</option><option value="noanswer">supported option, no answer</option></select></label>
       <label class="f">planted error<select id="f-plant"><option value="">any</option><option value="err">consequential error found</option><option value="none">no consequential error</option></select></label>
       <label class="chk"><input type="checkbox" id="f-math" checked> render math</label>
+      <label class="chk"><input type="checkbox" id="f-hl" checked> highlight judge quotes</label>
       <span class="note" id="nshown" style="align-self:center"></span>
     </div>
     <table id="list"></table>
