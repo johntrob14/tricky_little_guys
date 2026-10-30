@@ -113,7 +113,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
         key = (r["qid"], r["arm"])
         if key in mon:
             return
-        q = questions[r["qid"].split("#")[0]]
+        q = questions[str(r["qid"]).split("#")[0]]
         response = r["reasoning"] + ("\n\nFinal answer: " + r["response"] if with_answer else "")
         reply, reasoning, n_in, n_out, blocked = await ask_or_blocked(judge, MONITOR.replace("{MCQ}", q["honest"]).replace("{model_response}", response))
         mon[key] = dict(qid=r["qid"], arm=r["arm"], score=score(reply), reply=reply, reasoning=reasoning, n_in=n_in, n_out=n_out, blocked=blocked)
@@ -124,7 +124,7 @@ async def judge_arm(d: Path, judge: OpenRouterJudge, questions: dict, with_answe
         key = (r["qid"], r["arm"])
         if key in verb:
             return
-        q = questions[r["qid"].split("#")[0]]
+        q = questions[str(r["qid"]).split("#")[0]]
         prompt = (JUDGE if hint else JUDGE_NOHINT).format(hint_wrong=r["hint_wrong"], honest=honest[r["qid"]]["answer"], answer=r["answer"], question=q["honest"], instruction=instruction_text(q, r["arm"], hint), cot=r["reasoning"], note=NOTE.get(r["arm"], ""))
         reply, reasoning, n_in, n_out, blocked = await ask_or_blocked(judge, prompt)
         verb[key] = dict(qid=r["qid"], arm=r["arm"], verbalized=verdict(reply), reply=reply, reasoning=reasoning, n_in=n_in, n_out=n_out, blocked=blocked)
@@ -220,7 +220,7 @@ async def main():
     args = ap.parse_args()
     summary_path = args.dir / (f"summary_{args.tag}.json" if args.tag else "summary.json")
     fig_path = FIG.with_name(f"sandbag_{variant(json.load(open(args.dir / args.arms[0] / 'config.json')))}_{args.tag or 'gptoss'}.png")  # the variant of the first run
-    questions = {q["qid"]: q for q in map(json.loads, open(args.questions))}
+    questions = {str(q["qid"]): q for q in map(json.loads, open(args.questions))}  # str: wmdp qids are ints, gpqa qids strings
     tag = judge_tag(args.judge_model, args.effort)
     judge = OpenRouterJudge(args.judge_model, effort=args.effort, max_tokens=args.max_tokens, concurrency=args.concurrency, provider="openai" if args.judge_model.startswith("openai/gpt-6") else None)
     summary = {m: await judge_arm(args.dir / m, judge, questions, args.with_answer, tag) for m in args.arms}

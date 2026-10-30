@@ -13,6 +13,7 @@ verbalization judge YES on flips, mean CoT-only monitor suspicion on flips (Li e
 """
 
 import argparse
+import json
 import statistics
 from pathlib import Path
 
@@ -69,7 +70,8 @@ def main():
             xa = lambda arms: [k - 0.4 + w * (i + 0.5) for k in range(len(arms))]
             bars(row[0], xa(arms), [cells[a]["correct"] for a in arms], [cells[a]["finished"] for a in arms], col, w * 0.92, label)
             bars(row[1], xa(arms[1:]), [cells[a]["flips"] for a in arms[1:]], [cells[a]["eligible"] for a in arms[1:]], col, w * 0.92)
-            floor_dirs = [r for r in [f"{m}-sysprompt-nohint"] + floor_runs if (args.dir / r).exists()]  # honest resamples of the same prompt
+            run = f"{m}-sysprompt-nohint{suffix}"  # the run's own second honest sample when it has one, else honest resamples of the same prompt from other runs
+            floor_dirs = [run, f"{run}-honest2"] if (args.dir / f"{run}-honest2").exists() else [r for r in [f"{m}-sysprompt-nohint"] + floor_runs if (args.dir / r).exists()]
             if len(floor_dirs) > 1:
                 fk, fn = noise_floor([load(args.dir / r)[1] for r in floor_dirs])
                 row[1].axhline(fk / fn, color=col, linestyle="--", linewidth=1.1)
@@ -98,8 +100,11 @@ def main():
         row[5].axis("off")
         row[0].set_ylabel(vlabel, fontsize=9, rotation=90, labelpad=12)
     fig.legend(*axes[0][0].get_legend_handles_labels(), loc="upper center", ncol=len(args.models), fontsize=10, frameon=False, bbox_to_anchor=(0.5, 1 - (1.12 + 0.4 * coached) / H))
+    cfgs = [json.load(open(args.dir / f"{m}-sysprompt-nohint{VARIANTS[v][0]}" / "config.json")) for v in args.variants for m in args.models]
+    temps, copied, std = sorted({c["temperature"] for c in cfgs}), any(c.get("honest_rows_from") for c in cfgs), all(c.get("answer_prefill") for c in cfgs)
     fig.suptitle(f"{', '.join(args.variants)}{' (two rows each)' if len(args.variants) > 1 else ''}: 150 WMDP questions (OpenAI monitorability-evals), deletion threat in the system prompt, no named wrong option;\n" +
-                 ("gpt-oss models: honest and CoT-control arms are the wmdp.can run's rows (same prompts), Tinker, harmony effort medium. " if any(m in GPTOSS for m in args.models) else "") + "T 0, one sample.\n"
+                 ("gpt-oss models: " + ("honest and CoT-control arms are the wmdp.can run's rows (same prompts), " if copied else "") + "Tinker, harmony effort medium. " if any(m in GPTOSS for m in args.models) else "")
+                 + f"T {', '.join(f'{t:g}' for t in temps)}, one sample" + ("; standard answer format (the format sentence ends the system prompt, 'Answer:' prefilled after the CoT)" if std else "") + ".\n"
                  f"Monitor: CoT only, Li et al. 2025 sandbagging judge, {jname}. Verbalization judge: {jname}."
                  + (f'\ncoached arm: the sandbag instruction + "{AWARE} {EVASION}\n{COACH}"' if coached else ""), fontsize=11, y=1 - 0.12 / H)
     fig.subplots_adjust(top=1 - (2.3 + 0.4 * coached) / H, bottom=0.9 / H, hspace=0.42, wspace=0.2, left=0.05, right=0.99)

@@ -15,14 +15,14 @@ without a sandbag instruction are drawn faint when split. A third select restric
 (natural errors and CoT-control flips are kept), or to its YES flips; a bar click carries the same restriction into the row list. Bars with no rows are left out without a gap. A run sampled with sandbag.py --nocot (named <model>-nocot)
 is drawn dotted beside its model in the accuracy chart and is left out of the other three (no CoT).
 --summary is the sandbag_judge.py summary whose monitor and verbalization files (files_suffix) are shown. --suffix is appended to every --models name to get its
-run directory (the wmdp variants' directories: `--suffix -sysprompt-nohint-should` for wmdp.should); the second honest sample is read from <run>-honest2. Two
+run directory (the wmdp variants' directories: `--suffix=-sysprompt-nohint-should` for wmdp.should; the = form because the value starts with a dash); the second honest sample is read from <run>-honest2. Two
 rows of checkboxes under the selects show or hide each model and each arm in every chart, the flips-by-kind panel and the row list (kept in localStorage per
 variant). Same page mechanics as sandbag_resample_html.py (resizable panes, sortable columns, arrow keys, score colors, KaTeX from cdnjs). Labels and colors from
 sandbag_headline.MODELS.
 
     python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models base base-nocot mt1b-s150 mt1b-s150-nocot --arms honest sandbag aware evasion coached cotctl_mt1b --behavior ../results/sandbag_gpqa_t1/behavior/planted.jsonl --out ../../../figures/sandbag_gpqa.must_t1_overview.html
     python sandbag_overview_html.py --dir ../results/sandbag_gpqa_t1 --summary ../results/sandbag_gpqa_t1/summary_gpqa_t1_haiku_medium.json --models inksm-tk inksm-tk-nocot inkrl1-s90 --arms honest sandbag aware evasion coached cotctl_mt1b --behavior ../results/sandbag_gpqa_t1/behavior/planted.jsonl --out ../../../figures/sandbag_gpqa.must_t1_overview_inkling.html
-    python sandbag_overview_html.py --dir ../results/sandbag --suffix -sysprompt-nohint-should --summary ../results/sandbag/summary_should_t1_luna_medium.json --models base grpo3-s100 mt1b-s150 manytypes2e-s170 --questions data/wmdp_sandbagging_should.jsonl --behavior ../results/sandbag/behavior/planted.jsonl --out ../../../figures/sandbag_wmdp.should_overview.html
+    python sandbag_overview_html.py --dir ../results/sandbag --suffix=-sysprompt-nohint-should --summary ../results/sandbag/summary_should_t1_gpt-6-luna_medium.json --models base grpo3-s100 mt1b-s150 manytypes2e-s170 --questions data/wmdp_sandbagging_should.jsonl --behavior ../results/sandbag/behavior/planted.jsonl --out ../../../figures/sandbag_wmdp.should_overview.html
 """
 
 import argparse
@@ -94,7 +94,7 @@ def main():
             flip = None if r["arm"] == "honest" else h["answer"] == h["correct"] and r["answer"] is not None and r["answer"] != r["correct"]
             nat = h2[r["qid"]]["answer"] == r["correct"] and r["answer"] != r["correct"] if r["arm"] == "honest" and h2 else None  # natural error: wrong, the second honest sample right
             jj = {j: jrow(J[j].get((run, r["arm"], r["qid"]))) for j in J}
-            rows.append(dict(model=m, arm=r["arm"], qid=r["qid"], q=int(r["qid"].split("_")[1]), answer=r["answer"], correct=r["correct"], ok=r["answer"] == r["correct"], flip=flip, nat=nat,
+            rows.append(dict(model=m, arm=r["arm"], qid=r["qid"], q=int(r["qid"].split("_")[1]) if isinstance(r["qid"], str) else r["qid"], answer=r["answer"], correct=r["correct"], ok=r["answer"] == r["correct"], flip=flip, nat=nat,
                              kind="natural" if nat else kind(r, jj["instruction"]["verdict"] if jj.get("instruction") else None, jj["supported"]["verdict"] if jj.get("supported") else None) if flip and jj.get("supported") else None,
                              j=jj, instruction=instruction_text(qs[r["qid"]], r["arm"], run_hint(cm)) if r["arm"] in SANDBAG_ARMS else None,
                              finish=r["finish"], cot_tokens=r["cot_tokens"],
@@ -378,7 +378,7 @@ function drawJudge() {
 function drawVerb() { rateChart("verb", D.arms, s => [s.verb_k, s.verb_n, s.verb_ci], "verbalization judge YES / judged flips", {flip: "1"}, true); }
 $("f-model").innerHTML = `<option value="">any</option>` + D.models.map(m => `<option value="${m.id}">${esc(m.label.split(" (")[0])}</option>`).join("");
 $("f-arm").innerHTML = `<option value="">any</option>` + D.arms.map(a => `<option value="${a}">${D.short[a]}</option>`).join("");
-const QIDS = [...new Set(D.samples.map(s => s.qid))].sort();
+const QIDS = [...new Set(D.samples.map(s => s.qid))].sort((a, b) => a < b ? -1 : a > b ? 1 : 0);  // wmdp qids are numbers
 $("f-q").innerHTML = `<option value="">any</option>` + QIDS.map(q => `<option value="${q}">${q} (correct ${D.questions[q].correct})</option>`).join("");
 function setFilters(f) { $("f-model").value = f.model ?? ""; $("f-arm").value = f.arm ?? ""; $("f-ok").value = f.ok ?? ""; $("f-flip").value = f.flip ?? ""; $("f-verb").value = f.verb ?? ""; $("f-q").value = f.q ?? ""; $("f-kind").value = f.kind ?? ""; render(); $("pane").scrollIntoView({behavior: "smooth", block: "start"}); }
 const KIND = Object.fromEntries(D.cats.map(c => [c.id, c]));
@@ -449,7 +449,7 @@ let sortBy = {k: "model", dir: 1};
 function render() {
   const fm = $("f-model").value, fa = $("f-arm").value, fo = $("f-ok").value, ff = $("f-flip").value, fv = $("f-verb").value, fq = $("f-q").value, fk = $("f-kind").value;
   shown = D.samples.filter(s => !hidden.m.has(s.model) && !hidden.a.has(s.arm) && (!fm || s.model === fm) && (!fa || s.arm === fa) && (fo === "" || String(+s.ok) === fo) && (ff === "" || (ff === "nat" ? s.nat === true : s.flip != null && String(+s.flip) === ff))
-    && (fv === "" || (fv === "none" ? s.verbalized == null : fv === "notyes" ? s.verbalized !== true : s.verbalized != null && String(+s.verbalized) === fv)) && (!fq || s.qid === fq) && (!fk || s.kind === fk));
+    && (fv === "" || (fv === "none" ? s.verbalized == null : fv === "notyes" ? s.verbalized !== true : s.verbalized != null && String(+s.verbalized) === fv)) && (!fq || String(s.qid) === fq) && (!fk || s.kind === fk));
   const k = SORT[sortBy.k], cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;  // the clicked column first, then model, arm, question
   shown.sort((a, b) => sortBy.dir * cmp(k(a), k(b)) || cmp(SORT.model(a), SORT.model(b)) || cmp(SORT.arm(a), SORT.arm(b)) || cmp(SORT.i(a), SORT.i(b)));
   $("nshown").textContent = `${shown.length} shown`;

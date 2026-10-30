@@ -182,7 +182,7 @@ async def main():
     todo, questions = [], {}
     for m in args.models:
         cfg = json.load(open(args.dir / m / "config.json"))
-        questions |= {q["qid"]: q for q in map(json.loads, open(Path(__file__).parent / cfg["questions"]))}
+        questions |= {str(q["qid"]): q for q in map(json.loads, open(Path(__file__).parent / cfg["questions"]))}
         todo += [x | dict(hint=run_hint(cfg)) for x in items(args.dir / m, args.arms)]
     out = args.dir / "behavior"
     out.mkdir(exist_ok=True)
@@ -196,7 +196,7 @@ async def main():
             continue
 
         async def one(x):
-            q = questions[x["qid"].split("#")[0]]
+            q = questions[str(x["qid"]).split("#")[0]]
             prompt = PROMPTS[j].format(question=q["honest"], cot=x["reasoning"], correct=x["correct"], instruction=instruction_text(q, x["arm"], x["hint"]) if x["pool"] == "instructed" else "", note=NOTE.get(x["arm"], ""))
             reply, reasoning, n_in, n_out, blocked = await ask_or_blocked(judges[MODEL[j]], prompt)
             blocked = blocked or not (reply or n_in)
