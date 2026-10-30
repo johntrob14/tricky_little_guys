@@ -1,0 +1,292 @@
+<style>
+.wm { font-family: var(--font-anthropic-sans); display: flex; flex-direction: column; gap: var(--cds-gap-xl); max-width: 1180px; margin-inline: auto; }
+.wm h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.wm h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; text-wrap: balance; }
+.wm h3 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.wm p { margin: 0; max-width: 78ch; line-height: 1.5; }
+.wm .muted { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.wm .head { display: flex; flex-direction: column; gap: var(--cds-gap-sm); }
+.wm .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--cds-gap-md); }
+.wm .card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
+.wm .tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; }
+.wm .section { display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+.wm .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: var(--cds-gap-md); }
+.wm .chart { position: relative; width: 100%; min-height: 220px; }
+.wm .tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); z-index: 3; font-variant-numeric: tabular-nums; max-width: 18rem; }
+.wm .tip .k { color: var(--cds-text-secondary); }
+.wm .legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.wm .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.wm .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.wm .tbl { overflow-x: auto; }
+.wm table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.wm th, .wm td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+.wm th { color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); }
+.wm td.num, .wm th.num { text-align: right; }
+.wm blockquote { margin: 0; padding-left: var(--cds-pad-sm); border-left: 2px solid var(--color-border-line); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--cds-font-size-caption); }
+.wm svg text { fill: var(--color-fg-muted); font-size: 11px; font-family: var(--font-anthropic-sans); }
+.wm .fail { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: inherit; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.wm .fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+.wm [data-dash-source-state=empty] { color: transparent; }
+.wm [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+.wm ul { margin: 0; padding-left: 1.2em; max-width: 78ch; line-height: 1.5; }
+</style>
+
+<div class="wm">
+  <div class="head">
+    <h1 id="top">What makes CoT controllable</h1>
+    <p class="muted">gpt-oss-120b on Tinker, the 540 CoT-Control items (108 Astra + 432 new), strict reference graders, overnight 2026-10-26. Every number here was recomputed from the raw graded files and checked by an independent audit.</p>
+    <p id="takeaway">—</p>
+  </div>
+
+  <div class="tiles">
+    <div class="card tile"><span class="muted">Base reasoning written in a requested language</span><span class="big dash-skeleton" id="t1" data-source="asym" data-field="reasoning_rate" data-where="model=gpt-oss-120b%20(Tinker%2C%20RL%20step%201)">—</span><span class="muted">RL step-1 rollouts, French/Spanish/German</span></div>
+    <div class="card tile"><span class="muted">Base answer explanation in the requested language</span><span class="big dash-skeleton" id="t2" data-source="asym" data-field="answer_rate" data-where="model=gpt-oss-120b%20(Tinker%2C%20RL%20step%201)">—</span><span class="muted">same model, final response</span></div>
+    <div class="card tile"><span class="muted">CoT-Control after language-only RL (step 30)</span><span class="big dash-skeleton" id="t3" data-source="lang_transfer" data-field="rate" data-where="run=lang1&amp;step=30&amp;wording=reference&amp;type=ALL%208%20rule-graded">—</span><span class="muted">8 rule-graded types, none trained</span></div>
+    <div class="card tile"><span class="muted">Base CoT-Control, same items</span><span class="big dash-skeleton" id="t4" data-source="lang_transfer" data-field="base_rate" data-where="run=lang1&amp;step=30&amp;wording=reference&amp;type=ALL%208%20rule-graded">—</span><span class="muted">answer-language RL control stays here</span></div>
+  </div>
+
+  <section class="section" id="channel">
+    <h2>The reasoning channel ignores what the answer channel follows</h2>
+    <p>Asked to write its reasoning in a language, a model almost never does; asked to explain its answer in that language, it almost always does. The same holds when the style is already on the page: prefilling 80 words of the model's own reasoning, rewritten into the required format, does not make the continuation keep it.</p>
+    <div class="grid2">
+      <div class="card"><h3>Requested language, reasoning vs answer</h3><p class="muted">Share of traces written in the requested language. gpt-oss row: RL step-1 rollouts; other rows: 12 of Neel's open models, 16 questions, French. The answer prompt asks for two or three sentences, so the two prompts are not fully matched.</p>
+        <div class="legend" id="lg-asym"></div><div class="chart" id="c-asym" data-source="language_asymmetry asym"></div></div>
+      <div class="card"><h3>Keeping a prefilled style, by channel (base)</h3><p class="muted">Continuation passes the format rule after ~80 words (reasoning) or ~40 words (answer) of the model's own text, restyled or unchanged. Format types only.</p>
+        <div class="legend" id="lg-chan"></div><div class="chart" id="c-chan" data-source="persistence"></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="levers">
+    <h2>Prompting moves content instructions, not format instructions</h2>
+    <p>Each prompt change is compared with an unrelated change of the same size, on the same items. Only shortening the reasoning helps much, and only for suppression, repeat-sentence and ignore-question; case, alternating, meow and end-of-sentence stay near zero under every change.</p>
+    <div class="card"><h3>Change in strict pass, 8 rule-graded types (points, 95% CI)</h3><div class="chart" id="c-levers" data-source="levers"></div></div>
+    <div class="card"><h3>By instruction type: arm minus control (points)</h3><div class="tbl"><table id="t-levers" data-source="lever_pivot" data-row-key="type"><thead><tr id="h-levers"></tr></thead><tbody></tbody></table></div></div>
+  </section>
+
+  <section class="section" id="training">
+    <h2>Training on the language of the reasoning creates general control</h2>
+    <p>GRPO that rewards only writing the reasoning in a requested language (times correctness, with a length penalty; no CoT-Control types, no judges) lifts every rule-graded type. The same reward on the language of the final answer does nothing. The gain shrinks under an unfamiliar instruction wording, and a run without the reference template gains less.</p>
+    <div class="grid2">
+      <div class="card"><h3>CoT-Control by training step</h3><p class="muted">Reference wording, 8 rule-graded types, 480 items.</p><div class="legend" id="lg-steps"></div><div class="chart" id="c-steps" data-source="lang_transfer"></div></div>
+      <div class="card"><h3>Reference vs held-out wording</h3><p class="muted">Held-out frame: 'Note: ... internal reasoning ... Comply silently', never used in training.</p><div class="legend" id="lg-word"></div><div class="chart" id="c-word" data-source="lang_transfer"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>lang1 step 30 vs base, by type</h3><div class="tbl"><table id="t-types" data-source="lang_transfer" data-row-key="run,step,wording,type"><thead><tr><th data-field="type">Type</th><th class="num" data-field="rate">lang1 s30</th><th class="num" data-field="base_rate">Base</th><th class="num" data-field="diff">Diff</th></tr></thead><tbody></tbody></table></div></div>
+      <div class="card"><h3>Training reward target during RL</h3><p class="muted">Strict rate of the trained instruction in each step's rollouts (changing batches, not a held-out curve).</p><div class="legend" id="lg-rl"></div><div class="chart" id="c-rl" data-source="rl_curves"></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="persistence">
+    <h2>CoT-control training makes the reasoning follow the style on the page</h2>
+    <p>With 80 words of base reasoning restyled into the required format, CoT-control-trained checkpoints continue in style; base, length, effort and output-control checkpoints do not, and neither does the language-trained run, which follows instructions without this persistence.</p>
+    <div class="card"><div class="legend" id="lg-pers"></div><div class="chart" id="c-pers" data-source="persistence"></div></div>
+  </section>
+
+  <section class="section" id="related">
+    <h2>What goes with control</h2>
+    <p>Across Neel's 34 open models, CoT control barely tracks NCRI; the one label that does is how often the model mentions the instruction. Models that move the constraint into the answer attempt it in the reasoning less.</p>
+    <div class="grid2">
+      <div class="card"><h3>NCRI vs meta-discussion (Neel's 34 models)</h3><div class="chart" id="c-meta" data-source="neel_models"></div></div>
+      <div class="card"><h3>NCRI vs CoT control (Neel's 34 models)</h3><div class="chart" id="c-ncri" data-source="neel_models"></div></div>
+    </div>
+    <div class="card"><h3>Our checkpoints</h3><p class="muted">No-CoT accuracy unconstrained exists for the 108 Astra items on 8 checkpoints; the constrained CoT-off arm is the output-control prompt.</p>
+      <div class="tbl"><table id="t-ck" data-source="checkpoints" data-row-key="model"><thead><tr><th data-field="model">Model</th><th class="num" data-field="cot_control">CoT control</th><th class="num" data-field="output_control_cot_off">Output control (CoT off)</th><th class="num" data-field="accuracy_with_cot">Accuracy with CoT</th><th class="num" data-field="accuracy_cot_off_constrained">Accuracy, CoT off (constrained)</th><th class="num" data-field="accuracy_no_cot_unconstrained_astra108">Accuracy, no CoT (unconstrained)</th></tr></thead><tbody></tbody></table></div></div>
+  </section>
+
+  <section class="section" id="judges">
+    <h2>Labelling partial compliance cheaply</h2>
+    <p>The reference grader decides complied or not, the grader on the answer finds constraints moved into the answer, and a cheap judge labels the rest. Agreement with an Astra and Claude consensus on three labelled sets:</p>
+    <div class="card tbl"><table id="t-judges" data-source="judges" data-row-key="judge"><thead><tr><th data-field="judge">Judge</th><th class="num" data-field="set1_9way">Set 1, 9-way %</th><th class="num" data-field="set2_9way">Set 2</th><th class="num" data-field="set3_9way">Set 3 (hard)</th><th class="num" data-field="five_group">5-group %</th><th class="num" data-field="meta_acc">Meta-discussion %</th><th class="num" data-field="failed_rows">Failed rows</th><th class="num" data-field="usd_per_500">$ per 500 rows</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="section" id="excerpts">
+    <h2>What changes in the text</h2>
+    <p>Matched items, base vs the language-trained checkpoint (seeded sample read by a separate agent). Base promises a rewrite that never comes; the trained model produces the required form from the first words.</p>
+    <div class="card tbl"><table id="t-ex" data-source="excerpts" data-row-key="model,item"><thead><tr><th data-field="model">Model</th><th data-field="type">Type</th><th data-field="quote">Verbatim</th><th data-field="context">Context</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="section" id="caveats">
+    <h2>Limits</h2>
+    <ul>
+      <li>One training seed per run; lang2 and the answer-language run were stopped early for budget. The answer-language run is not prompt-matched to lang1 and starts near ceiling.</li>
+      <li>The held-out wording changes the frame, the term, the core wording and the synonym lists at once, so how much of the transfer comes from the shared template is not identified.</li>
+      <li>All causal results are on gpt-oss-120b; the cross-model language check is correlational and stores only the first 300 characters of each trace.</li>
+      <li>Training changed accuracy too: CoT accuracy falls with control, and one control-trained checkpoint lost unconstrained no-CoT accuracy.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const pct = d3.format(".1%"), pct0 = d3.format(".0%"), pts = d => (d >= 0 ? "+" : "") + d3.format(".1f")(d * 100);
+const TYPELABEL = { word_suppression: "Word suppression", multiple_word_suppression: "Multiple-word suppression", repeat_sentences: "Repeat sentence", end_of_sentence: "End sentences with word",
+  meow_between_words: "Meow between words", lowercase_thinking: "Lowercase", uppercase_thinking: "Uppercase", alternating_case: "Alternating case", ignore_question: "Ignore question", "ALL 8 rule-graded": "All 8 rule-graded" };
+const num = v => (v === "" || v == null) ? null : +v;
+
+dash.calc("asym", { inputs: ["language_asymmetry"], title: "Requested-language rates", description: "Reasoning and answer pass counts divided by their row counts.",
+  fn: (language_asymmetry) => language_asymmetry.map(r => ({ model: r.model, reasoning_rate: +r.reasoning_in_language / +r.reasoning_n, answer_rate: +r.answer_in_language / +r.answer_n })) });
+dash.calc("lever_pivot", { inputs: ["levers"], title: "Lever effects by type", description: "Arm minus control strict pass per instruction type, one column per prompt change.",
+  fn: (levers) => { const by = {}; for (const r of levers) { (by[r.type] = by[r.type] || { type: r.type })[r.lever] = +r.diff; } return Object.values(by); } });
+
+function tip(box, lines, x, y) {
+  let t = box.querySelector(".tip"); if (!t) { t = document.createElement("div"); t.className = "tip"; box.appendChild(t); }
+  t.replaceChildren(...lines.map((s, i) => { const d = document.createElement("div"); if (i === 0) d.className = "k"; d.textContent = s; return d; }));
+  t.hidden = false; const bw = box.clientWidth; t.style.left = Math.max(0, Math.min(bw - t.offsetWidth, x + 12)) + "px"; t.style.top = Math.max(0, y - t.offsetHeight - 8) + "px";
+}
+function untip(box) { const t = box.querySelector(".tip"); if (t) t.hidden = true; }
+function failed(el) { el.replaceChildren(); const f = document.createElement("div"); f.className = "fail"; f.textContent = "Failed to load"; el.appendChild(f); }
+function legend(id, items) { const el = document.getElementById(id); el.replaceChildren(...items.map(([n, c]) => { const s = document.createElement("span"); const w = document.createElement("i"); w.className = "sw"; w.style.background = c; s.append(w, n); return s; })); }
+function axisStyle(g) { g.attr("font-size", null).attr("font-family", null); g.select(".domain").attr("stroke", "var(--cds-chart-axis)"); g.selectAll(".tick line").attr("stroke", "var(--cds-chart-grid)"); }
+function measure(svg, labels) { const t = svg.append("text").attr("opacity", 0); let w = 0; for (const l of labels) { t.text(l); w = Math.max(w, t.node().getComputedTextLength()); } t.remove(); return w; }
+
+// grouped horizontal bars: rows [{label, values:[v...], ci:[[lo,hi]...]?}], series colors
+function hbars(el, rows, series, { domain = [0, 1], fmt = pct, ticks = 5, bar = 9 } = {}) {
+  el.replaceChildren(); const W = el.clientWidth || 600, gap = 8, rowH = series.length * (bar + 3) + gap;
+  const svg0 = d3.select(el).append("svg"); const lw = Math.min(W * 0.42, measure(svg0, rows.map(r => r.label)) + 10); svg0.remove();
+  const m = { t: 8, r: 46, b: 26, l: lw }, H = m.t + m.b + rows.length * rowH;
+  const x = d3.scaleLinear(domain, [m.l, W - m.r]);
+  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(ticks).tickFormat(fmt).tickSize(-(H - m.t - m.b))).call(axisStyle);
+  if (domain[0] < 0) svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", m.t).attr("y2", H - m.b).attr("stroke", "var(--cds-chart-reference)");
+  rows.forEach((r, i) => {
+    const y0 = m.t + i * rowH;
+    svg.append("text").attr("x", m.l - 8).attr("y", y0 + (rowH - gap) / 2 + 4).attr("text-anchor", "end").text(r.label);
+    series.forEach((s, j) => {
+      const v = r.values[j]; if (v == null) return; const y = y0 + j * (bar + 3);
+      svg.append("rect").attr("x", Math.min(x(0 > domain[0] ? 0 : domain[0]), x(v))).attr("y", y).attr("width", Math.abs(x(v) - x(Math.max(0, domain[0])))).attr("height", bar).attr("rx", 3).attr("fill", s[1])
+        .on("mousemove", ev => { const [px, py] = d3.pointer(ev, el); tip(el, [r.label, `${s[0]}: ${fmt(v)}` + (r.ci && r.ci[j] ? ` [${fmt(r.ci[j][0])}, ${fmt(r.ci[j][1])}]` : "") + (r.note ? ` · ${r.note}` : "")], px, py); }).on("mouseleave", () => untip(el));
+      if (r.ci && r.ci[j]) svg.append("line").attr("x1", x(r.ci[j][0])).attr("x2", x(r.ci[j][1])).attr("y1", y + bar / 2).attr("y2", y + bar / 2).attr("stroke", "var(--color-fg)").attr("stroke-width", 1.5);
+      svg.append("text").attr("x", x(r.ci && r.ci[j] ? Math.max(v, r.ci[j][1]) : Math.max(v, 0)) + 4).attr("y", y + bar - 1).text(fmt(v));
+    });
+  });
+}
+
+function scatter(el, rows, { xKey, yKey, xLab, yLab, yFmt = pct0 }) {
+  el.replaceChildren(); const W = el.clientWidth || 500, H = 260, m = { t: 10, r: 14, b: 36, l: 46 };
+  const xs = rows.map(r => +r[xKey]), ys = rows.map(r => +r[yKey]);
+  const x = d3.scaleLinear(d3.extent(xs), [m.l, W - m.r]).nice(), y = d3.scaleLinear([0, Math.max(0.05, d3.max(ys))], [H - m.b, m.t]).nice();
+  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+  svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(5).tickSize(-(H - m.t - m.b))).call(axisStyle);
+  svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(yFmt).tickSize(-(W - m.l - m.r))).call(axisStyle);
+  svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", H - 4).attr("text-anchor", "middle").text(xLab);
+  svg.append("text").attr("transform", `translate(12,${(m.t + H - m.b) / 2}) rotate(-90)`).attr("text-anchor", "middle").text(yLab);
+  svg.append("g").selectAll("circle").data(rows).join("circle").attr("cx", r => x(+r[xKey])).attr("cy", r => y(+r[yKey])).attr("r", 5).attr("fill", dash.colors[0]).attr("fill-opacity", .8)
+    .on("mousemove", (ev, r) => { const [px, py] = d3.pointer(ev, el); tip(el, [r.model, `${xLab} ${d3.format(".1f")(+r[xKey])}`, `${yLab} ${yFmt(+r[yKey])}`], px, py); }).on("mouseleave", () => untip(el));
+}
+
+function fillTable(id, rows, cols) {
+  const tb = document.querySelector(`#${id} tbody`); tb.replaceChildren();
+  for (const r of rows) { const tr = document.createElement("tr"); for (const [k, f, cls] of cols) { const td = document.createElement("td"); if (cls) td.className = cls; td.textContent = f ? f(r[k], r) : r[k]; tr.appendChild(td); } tb.appendChild(tr); }
+}
+
+dash.onData(() => {
+  const C = dash.colors;
+  const A = dash.data("asym"), LT = dash.data("lang_transfer"), P = dash.data("persistence"), LV = dash.data("levers"), PV = dash.data("lever_pivot"),
+        RL = dash.data("rl_curves"), NM = dash.data("neel_models"), CK = dash.data("checkpoints"), J = dash.data("judges"), EX = dash.data("excerpts");
+  const setTile = (id, v) => { const e = document.getElementById(id); e.textContent = v == null ? "—" : pct(v); e.classList.remove("dash-skeleton"); };
+
+  // tiles + takeaway
+  if (A.status === "ok") { const g = A.data.find(r => r.model.startsWith("gpt-oss")); setTile("t1", g && g.reasoning_rate); setTile("t2", g && g.answer_rate); }
+  if (LT.status === "ok") {
+    const s30 = LT.data.find(r => r.run === "lang1" && +r.step === 30 && r.wording === "reference" && r.type.startsWith("ALL"));
+    const ctl = LT.data.find(r => r.run.startsWith("lang-ans1") && r.type.startsWith("ALL"));
+    setTile("t3", s30 && +s30.rate); setTile("t4", s30 && +s30.base_rate);
+    if (s30 && ctl && A.status === "ok") { const g = A.data.find(r => r.model.startsWith("gpt-oss"));
+      document.getElementById("takeaway").textContent = `Base gpt-oss-120b writes its reasoning in a requested language ${pct(g.reasoning_rate)} of the time and its answer ${pct(g.answer_rate)}. Training it only to choose the language of its reasoning raises CoT-Control on eight instruction types it never trained on from ${pct(+s30.base_rate)} to ${pct(+s30.rate)}; the same training on the answer's language gives ${pct(+ctl.rate)}.`; }
+  }
+
+  // channel asymmetry
+  legend("lg-asym", [["Reasoning", C[0]], ["Answer", C[1]]]);
+  const ca = document.getElementById("c-asym");
+  if (A.status === "error") failed(ca); else if (A.status === "ok") hbars(ca, A.data.map(r => ({ label: r.model.replace(" (Tinker, RL step 1)", " (step-1 RL)"), values: [r.reasoning_rate, r.answer_rate] })), [["Reasoning", C[0]], ["Answer", C[1]]], { bar: 7 });
+  legend("lg-chan", [["Restyled prefill", C[0]], ["Unchanged prefill", C[3]]]);
+  const cc = document.getElementById("c-chan");
+  if (P.status === "error") failed(cc); else if (P.status === "ok") hbars(cc, P.data.filter(r => r.run_id === "base").map(r => ({ label: r.channel === "reasoning" ? "Reasoning channel" : "Answer channel (CoT off)", values: [+r.restyled_prefill_pass, +r.unchanged_prefill_pass] })), [["Restyled prefill", C[0]], ["Unchanged prefill", C[3]]], { domain: [0, 0.5], bar: 14 });
+
+  // levers
+  const cl = document.getElementById("c-levers");
+  if (LV.status === "error") failed(cl); else if (LV.status === "ok") {
+    const rows = LV.data.filter(r => r.type.startsWith("ALL"));
+    hbars(cl, rows.map(r => ({ label: r.lever, values: [+r.diff], ci: [[+r.ci_lo, +r.ci_hi]], note: `${pct(+r.arm_rate)} vs ${pct(+r.control_rate)}, ${r.items} items` })), [["Arm minus control", C[0]]], { domain: [-0.02, 0.1], fmt: pts, bar: 12 });
+  }
+  if (PV.status === "ok") {
+    const levs = [...new Set(LV.status === "ok" ? LV.data.map(r => r.lever) : [])];
+    const hr = document.getElementById("h-levers"); hr.replaceChildren();
+    const th0 = document.createElement("th"); th0.dataset.field = "type"; th0.textContent = "Type"; hr.appendChild(th0);
+    for (const l of levs) { const th = document.createElement("th"); th.className = "num"; th.dataset.field = l; th.textContent = l.replace(/ \(vs.*$/, "").replace(/, (plain|repeat).*/, m => m); hr.appendChild(th); }
+    fillTable("t-levers", PV.data, [["type", v => TYPELABEL[v] || v], ...levs.map(l => [l, v => v == null ? "" : pts(v), "num"])]);
+    document.querySelectorAll("#t-levers tbody tr").forEach((tr, i) => { tr.dataset.key = encodeURIComponent(PV.data[i].type); });
+  }
+
+  // language RL by step
+  legend("lg-steps", [["lang1 (with reference template)", C[0]], ["lang2 (no reference template)", C[2]], ["Answer-language RL", C[3]], ["Base", "var(--cds-chart-reference)"]]);
+  const cs = document.getElementById("c-steps");
+  if (LT.status === "error") failed(cs); else if (LT.status === "ok") {
+    cs.replaceChildren(); const W = cs.clientWidth || 500, H = 240, m = { t: 10, r: 16, b: 32, l: 44 };
+    const all = LT.data.filter(r => r.wording === "reference" && r.type.startsWith("ALL"));
+    const x = d3.scaleLinear([0, 42], [m.l, W - m.r]), y = d3.scaleLinear([0, 0.35], [H - m.b, m.t]);
+    const svg = d3.select(cs).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+    svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(5).tickSize(-(H - m.t - m.b))).call(axisStyle);
+    svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(pct0).tickSize(-(W - m.l - m.r))).call(axisStyle);
+    svg.append("text").attr("x", W - m.r).attr("y", H - 4).attr("text-anchor", "end").text("training step");
+    const b = +all[0].base_rate; svg.append("line").attr("x1", x(0)).attr("x2", x(42)).attr("y1", y(b)).attr("y2", y(b)).attr("stroke", "var(--cds-chart-reference)").attr("stroke-dasharray", "4 3");
+    const l1 = all.filter(r => r.run === "lang1").sort((a, c) => a.step - c.step);
+    svg.append("path").datum([{ step: 0, rate: b }, ...l1]).attr("fill", "none").attr("stroke", C[0]).attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("d", d3.line().x(d => x(+d.step)).y(d => y(+d.rate)));
+    const pts_ = all.map(r => ({ ...r, col: r.run === "lang1" ? C[0] : r.run.startsWith("lang2") ? C[2] : C[3] }));
+    svg.append("g").selectAll("g").data(pts_).join("g").call(g => {
+      g.append("line").attr("x1", d => x(+d.step)).attr("x2", d => x(+d.step)).attr("y1", d => y(+d.ci_lo + +d.base_rate)).attr("y2", d => y(+d.ci_hi + +d.base_rate)).attr("stroke", d => d.col).attr("stroke-opacity", .5);
+      g.append("circle").attr("cx", d => x(+d.step)).attr("cy", d => y(+d.rate)).attr("r", 5).attr("fill", d => d.col)
+        .on("mousemove", (ev, d) => { const [px, py] = d3.pointer(ev, cs); tip(cs, [`${d.run}, step ${d.step}`, `${pct(+d.rate)} vs base ${pct(+d.base_rate)}`, `diff ${pts(+d.diff)} [${pts(+d.ci_lo)}, ${pts(+d.ci_hi)}], ${d.items} items`], px, py); }).on("mouseleave", () => untip(cs));
+    });
+  }
+  legend("lg-word", [["Trained model", C[0]], ["Base, same wording", C[3]]]);
+  const cw = document.getElementById("c-word");
+  if (LT.status === "ok") {
+    const pick = [["lang1", 30], ["lang2 (no reference template)", 18], ["manytypes1b (CoT-control RL)", 150]];
+    const rows = [];
+    for (const [run, step] of pick) for (const w of ["reference", "held-out (F5)"]) {
+      const r = LT.data.find(d => d.run === run && +d.step === step && d.wording === w && d.type.startsWith("ALL")); if (r) rows.push({ label: `${run.split(" ")[0]} s${step}, ${w}`, values: [+r.rate, +r.base_rate], note: `diff ${pts(+r.diff)}` });
+    }
+    hbars(cw, rows, [["Trained model", C[0]], ["Base, same wording", C[3]]], { domain: [0, 0.7], bar: 8 });
+  } else if (LT.status === "error") failed(cw);
+  if (LT.status === "ok") fillTable("t-types", LT.data.filter(r => r.run === "lang1" && +r.step === 30 && r.wording === "reference"), [["type", v => TYPELABEL[v] || v], ["rate", v => pct(+v), "num"], ["base_rate", v => pct(+v), "num"], ["diff", v => pts(+v), "num"]]);
+  document.querySelectorAll("#t-types tbody tr").forEach((tr, i) => { const r = LT.data.filter(r => r.run === "lang1" && +r.step === 30 && r.wording === "reference")[i]; if (r) tr.dataset.key = [r.run, r.step, r.wording, r.type].map(encodeURIComponent).join(","); });
+
+  // RL curves
+  legend("lg-rl", [["lang1: reasoning language", C[0]], ["lang2: reasoning language, no template", C[2]], ["lang-ans1: answer language", C[3]]]);
+  const cr = document.getElementById("c-rl");
+  if (RL.status === "error") failed(cr); else if (RL.status === "ok") {
+    cr.replaceChildren(); const W = cr.clientWidth || 500, H = 240, m = { t: 10, r: 16, b: 32, l: 44 };
+    const x = d3.scaleLinear([1, 40], [m.l, W - m.r]), y = d3.scaleLinear([0, 1], [H - m.b, m.t]);
+    const svg = d3.select(cr).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`);
+    svg.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(5).tickSize(-(H - m.t - m.b))).call(axisStyle);
+    svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(pct0).tickSize(-(W - m.l - m.r))).call(axisStyle);
+    svg.append("text").attr("x", W - m.r).attr("y", H - 4).attr("text-anchor", "end").text("training step");
+    [["lang1", C[0]], ["lang2", C[2]], ["lang-ans1", C[3]]].forEach(([run, col]) => {
+      const d = RL.data.filter(r => r.run === run).sort((a, b) => a.step - b.step);
+      svg.append("path").datum(d).attr("fill", "none").attr("stroke", col).attr("stroke-width", 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("d", d3.line().x(r => x(+r.step)).y(r => y(+r.target_strict)));
+    });
+  }
+
+  // persistence across checkpoints
+  legend("lg-pers", [["Restyled prefill", C[0]], ["Unchanged prefill", C[3]]]);
+  const cp = document.getElementById("c-pers");
+  if (P.status === "error") failed(cp); else if (P.status === "ok") {
+    const rows = P.data.filter(r => r.channel === "reasoning").sort((a, b) => +b.plain_cot_control - +a.plain_cot_control);
+    hbars(cp, rows.map(r => ({ label: r.model, values: [+r.restyled_prefill_pass, +r.unchanged_prefill_pass], note: `plain CoT control ${pct(+r.plain_cot_control)}` })), [["Restyled prefill", C[0]], ["Unchanged prefill", C[3]]], { domain: [0, 0.5], bar: 8 });
+  }
+
+  // related abilities
+  const cm = document.getElementById("c-meta"), cn = document.getElementById("c-ncri");
+  if (NM.status === "error") { failed(cm); failed(cn); } else if (NM.status === "ok") {
+    scatter(cm, NM.data, { xKey: "ncri", yKey: "meta_discussion", xLab: "NCRI", yLab: "Meta-discussion" });
+    scatter(cn, NM.data, { xKey: "ncri", yKey: "cot_control", xLab: "NCRI", yLab: "CoT control" });
+  }
+  const f = v => (v === "" || v == null) ? "" : pct(+v);
+  if (CK.status === "ok") fillTable("t-ck", [...CK.data].sort((a, b) => +b.cot_control - +a.cot_control), [["model"], ["cot_control", f, "num"], ["output_control_cot_off", f, "num"], ["accuracy_with_cot", f, "num"], ["accuracy_cot_off_constrained", f, "num"], ["accuracy_no_cot_unconstrained_astra108", f, "num"]]);
+  if (J.status === "ok") fillTable("t-judges", J.data, [["judge"], ["set1_9way", null, "num"], ["set2_9way", null, "num"], ["set3_9way", null, "num"], ["five_group", null, "num"], ["meta_acc", null, "num"], ["failed_rows", null, "num"], ["usd_per_500", v => "$" + d3.format(".2f")(+v), "num"]]);
+  if (EX.status === "ok") {
+    fillTable("t-ex", EX.data, [["model"], ["type", v => TYPELABEL[v] || v], ["quote"], ["context"]]);
+    document.querySelectorAll("#t-ex tbody tr").forEach((tr, i) => { const r = EX.data[i]; tr.dataset.key = [r.model, r.item].map(encodeURIComponent).join(","); const q = tr.children[2]; const bq = document.createElement("blockquote"); bq.textContent = q.textContent; q.replaceChildren(bq); });
+  }
+});
+</script>

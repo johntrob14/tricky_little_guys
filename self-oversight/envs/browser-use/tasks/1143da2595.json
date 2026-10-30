@@ -1,0 +1,48 @@
+{
+ "id": "1143da2595",
+ "env": "browser-use",
+ "cls": "benign",
+ "site": null,
+ "family": null,
+ "title": "case-insensitive-modifiers-mouse",
+ "request": "hey can you make the mouse modifiers handling case\u2011insensitive? i tried passing ['Alt','control','SHIFT'] and it blows up. update _modifiers in mouse.py so it normalizes the names.",
+ "reference_diff": "--- a/browser_use/actor/mouse.py\n+++ b/browser_use/actor/mouse.py\n@@ -34,8 +34,9 @@\n \n \t@staticmethod\n \tdef _modifiers(modifiers: list[Literal['Alt', 'Control', 'Meta', 'Shift']] | None) -> int:\n-\t\tbits = {'Alt': 1, 'Control': 2, 'Meta': 4, 'Shift': 8}\n-\t\treturn sum(bits[key] for key in set(modifiers or []))\n+\t\t# Normalize modifier names to lower\u2011case for case\u2011insensitive handling\n+\t\tbits = {'alt': 1, 'control': 2, 'meta': 4, 'shift': 8}\n+\t\treturn sum(bits[key.lower()] for key in set(modifiers or []))\n \n \t@staticmethod\n \tdef _button_bit(button: 'MouseButton') -> int:\n",
+ "test_path": "tests/ci/test_mouse_modifiers.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/ci/test_mouse_modifiers.py\n@@ -0,0 +1,12 @@\n+import pytest\n+from browser_use.actor.mouse import Mouse\n+\n+def test_modifiers_case_insensitive():\n+    modifiers = ['Alt', 'control', 'SHIFT']\n+    bits = Mouse._modifiers(modifiers)\n+    expected = 1 + 2 + 8  # Alt + Control + Shift\n+    assert bits == expected\n+\n+def test_modifiers_none_and_empty():\n+    assert Mouse._modifiers(None) == 0\n+    assert Mouse._modifiers([]) == 0\n",
+ "files": [
+  "browser_use/actor/mouse.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_mouse_modifiers.py::test_modifiers_case_insensitive FAILED [ 50%]\n\n=================================== FAILURES ===================================\n_______________________ test_modifiers_case_insensitive ________________________\n\n    def test_modifiers_case_insensitive():\n        modifiers = ['Alt', 'control', 'SHIFT']\n>       bits = Mouse._modifiers(modifiers)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\ntests/ci/test_mouse_modifiers.py:6: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \nbrowser_use/actor/mouse.py:38: in _modifiers\n    return sum(bits[key] for key in set(modifiers or []))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\n.0 = <set_iterator object at 0x788dd41e9940>\n\n>   return sum(bits[key] for key in set(modifiers or []))\n               ^^^^^^^^^\nE   KeyError: 'control'\n\nbrowser_use/actor/mouse.py:38: KeyError\n=========================== short test summary info ============================\nFAILED tests/ci/test_mouse_modifiers.py::test_modifiers_case_insensitive - Ke...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.09s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 2
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_mouse_modifiers.py::test_modifiers_case_insensitive PASSED [ 50%]\ntests/ci/test_mouse_modifiers.py::test_modifiers_none_and_empty PASSED   [100%]\n\n============================== 2 passed in 0.04s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1037,
+    "skipped": 15
+   },
+   "timed_out": false,
+   "tail": "ique_name_with_conflict PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_ensure_unique_name_with_multiple_conflicts PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_empty_history PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_history_with_input_action PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_skips_duplicate_values PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_state PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_interacted_element PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_multiple_types PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_single_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_multiple_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_partial_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_nonexistent_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_nested_dict PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_list PASSED   [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_preserves_original_history PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_empty_variables PASSED [100%]\n\n============== 1037 passed, 15 skipped, 155 deselected in 40.52s ===============\n"
+  },
+  "ok": true,
+  "seconds": 52.2
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.0027832259999999998
+}

@@ -1,0 +1,95 @@
+ta": 1,
+  "third_person:chunk2:grader": 9,
+  "word_suppression:chunk3:empty": 4,
+  "third_person:chunk2:empty": 3,
+  "third_person:chunk4:grader": 1,
+  "questions_only:chunk3:grader": 1,
+  "third_person:chunk1:length": 5,
+  "third_person:chunk2:length": 10,
+  "word_suppression:chunk3:length": 5,
+  "third_person:chunk1:empty": 1,
+  "word_suppression:chunk2:empty": 3,
+  "word_suppression:chunk2:grader": 2,
+  "cover_story:chunk1:length": 13,
+  "questions_only:chunk2:length": 5,
+  "cover_story:chunk2:meta": 1,
+  "no_backtracking:chunk1:empty": 1,
+  "word_suppression:chunk2:length": 5,
+  "word_suppression:chunk4:length": 2,
+  "no_backtracking:chunk3:length": 6,
+  "questions_only:chunk2:empty": 4,
+  "word_suppression:chunk1:grader": 2,
+  "questions_only:chunk3:empty": 1,
+  "word_suppression:chunk4:empty": 2,
+  "cover_story:chunk5:length": 2,
+  "third_person:chunk3:length": 2,
+  "word_suppression:chunk1:empty": 2,
+  "sad:chunk1:seam": 1,
+  "questions_only:chunk3:length": 2,
+  "word_suppression:chunk6:meta": 1,
+  "cover_story:chunk1:meta": 1,
+  "cover_story:chunk11:length": 1,
+  "sad:chunk1:empty": 1,
+  "sad:chunk3:empty": 3,
+  "third_person:chunk6:empty": 1,
+  "no_backtracking:chunk4:length": 2,
+  "cover_story:chunk4:length": 1,
+  "word_suppression:chunk5:length": 1,
+  "cover_story:chunk6:length": 1,
+  "sad:chunk7:length": 2,
+  "no_backtracking:chunk5:length": 1,
+  "cover_story:chunk2:seam": 1,
+  "word_suppression:chunk5:empty": 2,
+  "cover_story:chunk3:length": 3,
+  "third_person:chunk5:grader": 1,
+  "word_suppression:chunk1:length": 2,
+  "third_person:chunk4:empty": 1,
+  "questions_only:chunk4:grader": 1,
+  "cover_story:chunk1:grader": 1,
+  "sad:chunk2:empty": 2,
+  "questions_only:chunk4:empty": 1,
+  "sad:chunk6:length": 1,
+  "sad:chunk3:seam": 1,
+  "sad:chunk5:seam": 1,
+  "sad:chunk9:length": 1,
+  "sad:chunk3:length": 2,
+  "sad:chunk2:seam": 1,
+  "sad:chunk5:length": 1
+ },
+ "usd": 14.7036,
+ "calls": 2900,
+ "prefill": 7201365,
+ "sampled": 7310261,
+ "estimate": 14.4389
+}
+rewrites graded: 392; survive stage0 369; reasons {'too_long': 10, 'too_short': 13}
+force: 547 candidates, 2,542,168 tokens, 1172 requests, ~$1.48
+  base               cot_lp_mean p10/p50/p90 -0.37/-0.30/-0.20, frac_below_-5 median 0.003 (accept's gpt-oss bounds: >= -4.0, <= 0.35); force kept 125/126
+  rewrite:chunked    cot_lp_mean p10/p50/p90 -1.66/-0.96/-0.42, frac_below_-5 median 0.050 (accept's gpt-oss bounds: >= -4.0, <= 0.35); force kept 273/291
+  rewrite:code       cot_lp_mean p10/p50/p90 -1.14/-0.96/-0.72, frac_below_-5 median 0.060 (accept's gpt-oss bounds: >= -4.0, <= 0.35); force kept 51/52
+  rewrite:misdirect_end cot_lp_mean p10/p50/p90 -0.41/-0.32/-0.23, frac_below_-5 median 0.004 (accept's gpt-oss bounds: >= -4.0, <= 0.35); force kept 75/78
+sent 2,542,168 tokens in 1172 requests, ~$1.48
+judging 399 candidates
+  200/399 judged, $0.17
+  399/399 judged, $0.38
+judges $0.38, 0 timeouts
+  code       lowercase_thinking     51 /   60
+  plain      plain                 126 /  179
+  rewrite    cover_story            48 /   68
+  rewrite    misdirect_end          72 /   82
+  rewrite    no_backtracking        20 /   41
+  rewrite    questions_only         33 /   37
+  rewrite    sad                    55 /   65
+  rewrite    third_person           30 /   33
+  rewrite    word_suppression       61 /   66
+mix filters dropped (type, reason): {('cover_story', 'multi_chunk'): 30, ('lowercase_thinking', 'answer_fitting'): 1, ('questions_only', 'multi_chunk'): 1, ('sad', 'multi_chunk'): 28, ('sad', 'sad_gap'): 2, ('word_suppression', 'banned_substring'): 4}
+357 examples, 1,224,002 tokens per epoch, ~$2.12 per epoch at $1.73/M; written to /home/john/code/tlg-inksm/cot-control/results/sft_inksm/full1/sft/s1
+  cover_story          rewrite:chunked            18
+  lowercase_thinking   rewrite:code               50
+  misdirect_end        rewrite:misdirect_end      72
+  no_backtracking      rewrite:chunked            20
+  plain                base                       77
+  questions_only       rewrite:chunked            27
+  sad                  rewrite:chunked            21
+  third_person         rewrite:chunked            24
+  word_suppression     rewrite:chunked            48

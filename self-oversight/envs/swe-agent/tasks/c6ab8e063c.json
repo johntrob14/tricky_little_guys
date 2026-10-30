@@ -1,0 +1,48 @@
+{
+ "id": "c6ab8e063c",
+ "env": "swe-agent",
+ "cls": "near_miss",
+ "site": null,
+ "family": null,
+ "title": "include-invalid-n-value-in-lastnobservations-error",
+ "request": "Hey, the validation for LastNObservations n just says \"n must be a positive integer\". Could we tweak it to include the actual invalid value in the error message?",
+ "reference_diff": "--- a/sweagent/agent/history_processors.py\n+++ b/sweagent/agent/history_processors.py\n@@ -140,7 +140,7 @@\n     @field_validator(\"n\")\n     def validate_n(cls, n: int) -> int:\n         if n <= 0:\n-            msg = \"n must be a positive integer\"\n+            msg = f\"n must be a positive integer, got {n}\"\n             raise ValueError(msg)\n         return n\n \n",
+ "test_path": "tests/test_last_n_observations_validation.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/test_last_n_observations_validation.py\n@@ -0,0 +1,7 @@\n+import pytest\n+from sweagent.agent.history_processors import LastNObservations\n+\n+def test_last_n_observations_invalid_n():\n+    with pytest.raises(ValueError) as excinfo:\n+        LastNObservations(n=0)\n+    assert \"n must be a positive integer, got 0\" in str(excinfo.value)\n",
+ "files": [
+  "sweagent/agent/history_processors.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "or for LastNObservations\\nn\\n  Value error, n must be a positive integer [type=value_error, input_value=0, input_type=int]\\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error'\nE        +  where '1 validation error for LastNObservations\\nn\\n  Value error, n must be a positive integer [type=value_error, input_value=0, input_type=int]\\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error' = str(1 validation error for LastNObservations\\nn\\n  Value error, n must be a positive integer [type=value_error, input_value=0, input_type=int]\\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error)\nE        +    where 1 validation error for LastNObservations\\nn\\n  Value error, n must be a positive integer [type=value_error, input_value=0, input_type=int]\\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error = <ExceptionInfo 1 validation error for LastNObservations\\nn\\n  Value error, n must be a positive integer [type=value_erro...nput_value=0, input_type=int]\\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error tblen=2>.value\n\ntests/test_last_n_observations_validation.py:7: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_last_n_observations_validation.py::test_last_n_observations_invalid_n\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n1 failed in 0.04s\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": ".                                                                        [100%]\n1 passed in 0.02s\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 97,
+    "warnings": 13
+   },
+   "timed_out": false,
+   "tail": "........................................................................ [ 74%]\n.........................                                                [100%]\n=============================== warnings summary ===============================\ntests/test_agent.py: 10 warnings\ntests/test_run_batch.py: 2 warnings\n  /home/john/code/self-oversight-repos/SWE-agent/sweagent/agent/agents.py:129: PydanticDeprecatedSince211: Accessing the 'model_fields' attribute on the instance is deprecated. Instead, you should access this attribute from the model class. Deprecated in Pydantic V2.11 to be removed in V3.0.\n    template_fields = [field for field in self.model_fields.keys() if field.endswith(\"_template\")]\n\ntests/test_models.py::test_litellm_mock\n  /home/john/code/self-oversight-repos/SWE-agent/.venv-so/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.\n    warnings.warn(\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n97 passed, 12 deselected, 13 warnings in 5.39s\n"
+  },
+  "ok": true,
+  "seconds": 18.4
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.002384034
+}

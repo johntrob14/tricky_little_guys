@@ -1,0 +1,119 @@
+{
+ "label": "respctl-rgrpo-smoke-step2",
+ "family": "gpt-oss-120b",
+ "model_path": "tinker://c12f515b-99ad-594a-897c-20896efeb64a:train:0/sampler_weights/respctl-rgrpo-smoke-step2",
+ "base": "openai/gpt-oss-120b:peft:131072",
+ "n_samples": 56,
+ "noise_floor": {
+  "n_tok": 48961,
+  "k1": 0.00193,
+  "k3": 0.00243
+ },
+ "kl": {
+  "action": {
+   "n_tok": 7985,
+   "k1": 0.00136,
+   "k3": 0.00395
+  },
+  "all": {
+   "n_tok": 48961,
+   "k1": 0.0015,
+   "k3": 0.00275
+  },
+  "chat/action": {
+   "n_tok": 3080,
+   "k1": 0.00057,
+   "k3": 0.00367
+  },
+  "chat/all": {
+   "n_tok": 3901,
+   "k1": 0.00062,
+   "k3": 0.00329
+  },
+  "chat/reasoning": {
+   "n_tok": 821,
+   "k1": 0.0008,
+   "k3": 0.00185
+  },
+  "dapo/action": {
+   "n_tok": 40,
+   "k1": -1e-05,
+   "k3": 0.0
+  },
+  "dapo/all": {
+   "n_tok": 23006,
+   "k1": 0.00102,
+   "k3": 0.00175
+  },
+  "dapo/reasoning": {
+   "n_tok": 22966,
+   "k1": 0.00102,
+   "k3": 0.00175
+  },
+  "linuxarena/action": {
+   "n_tok": 267,
+   "k1": -0.00887,
+   "k3": 0.00761
+  },
+  "linuxarena/all": {
+   "n_tok": 403,
+   "k1": -0.00496,
+   "k3": 0.00621
+  },
+  "linuxarena/reasoning": {
+   "n_tok": 136,
+   "k1": 0.00271,
+   "k3": 0.00347
+  },
+  "reasoning": {
+   "n_tok": 40976,
+   "k1": 0.00152,
+   "k3": 0.00251
+  },
+  "tiktok/action": {
+   "n_tok": 2903,
+   "k1": 0.00037,
+   "k3": 0.00147
+  },
+  "tiktok/all": {
+   "n_tok": 6203,
+   "k1": 0.00257,
+   "k3": 0.00271
+  },
+  "tiktok/reasoning": {
+   "n_tok": 3300,
+   "k1": 0.0045,
+   "k3": 0.00379
+  },
+  "value/action": {
+   "n_tok": 613,
+   "k1": 0.00494,
+   "k3": 0.0121
+  },
+  "value/all": {
+   "n_tok": 3576,
+   "k1": 0.00329,
+   "k3": 0.00599
+  },
+  "value/reasoning": {
+   "n_tok": 2963,
+   "k1": 0.00294,
+   "k3": 0.00472
+  },
+  "wmdp/action": {
+   "n_tok": 1082,
+   "k1": 0.00679,
+   "k3": 0.006
+  },
+  "wmdp/all": {
+   "n_tok": 11872,
+   "k1": 0.00183,
+   "k3": 0.00344
+  },
+  "wmdp/reasoning": {
+   "n_tok": 10790,
+   "k1": 0.00134,
+   "k3": 0.00318
+  }
+ }
+}

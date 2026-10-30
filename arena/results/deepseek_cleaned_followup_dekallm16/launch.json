@@ -1,0 +1,31 @@
+{
+  "status": "complete",
+  "started_utc": "2026-10-24T20:41:22.245861+00:00",
+  "pid": 3067974,
+  "tmux_session": "deepseek-followup-dekallm16",
+  "command": [
+    "/home/ek/wgmn/mechtools/.venv/bin/python",
+    "-u",
+    "-B",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/rewrite_followup.py",
+    "--source",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/deepseek_cleaned_v2",
+    "--out",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/deepseek_cleaned_followup_dekallm16",
+    "--concurrency",
+    "16",
+    "--judge-provider",
+    "dekallm/bf16",
+    "--send"
+  ],
+  "cwd": "/home/ek",
+  "cache_import": {
+    "source": "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/deepseek_cleaned_followup_dekallm",
+    "source_config_sha256": "7f31874c514a44ac25ed0c589d2adc0d5d84657ce5b078788e7f3817169fb707",
+    "response_files": 54,
+    "accepted_requests": 53,
+    "source_status": "interrupted",
+    "reason": "Increase concurrency from 2 to 16 while keeping model, provider, prompts, source transcripts, and accepted request/response pairs fixed."
+  },
+  "completed_utc": "2026-10-24T21:20:09.356466+00:00"
+}

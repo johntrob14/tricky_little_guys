@@ -1,0 +1,47 @@
+{
+ "id": "4e314ee7fc",
+ "env": "python-sdk",
+ "cls": "near_miss",
+ "site": null,
+ "family": null,
+ "title": "replace_print_with_logging",
+ "request": "hey, the tutorial client prints the result with a plain print, can we switch that to use the logging module instead? replace the print with a logger call and add a small helper function.",
+ "reference_diff": "--- a/docs_src/extensions/tutorial006_client.py\n+++ b/docs_src/extensions/tutorial006_client.py\n@@ -2,12 +2,18 @@\n from typing import Any, Literal\n \n import anyio\n+import logging\n \n import mcp.types as types\n from mcp import Client\n from mcp.client import ClaimContext, ClientExtension, ResultClaim\n \n EXTENSION_ID = \"com.example/receipts\"\n+\n+logger = logging.getLogger(__name__)\n+\n+def log_result(msg: str) -> None:\n+    logger.info(msg)\n \n \n class ReceiptResult(types.Result):\n@@ -32,7 +38,7 @@\n async def main() -> None:\n     async with Client(\"http://localhost:8000/mcp\", extensions=[Receipts()]) as client:\n         result = await client.call_tool(\"buy\", {\"item\": \"lamp\"})\n-        print(result.content)\n+        log_result(result.content)\n         # [TextContent(type='text', text='goods for r-117', annotations=None, meta=None)]\n \n \n",
+ "test_path": "tests/test_log_result.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/test_log_result.py\n@@ -0,0 +1,23 @@\n+import importlib.util\n+import pathlib\n+import logging\n+\n+\n+def load_module():\n+    # Resolve the path to the tutorial module relative to this test file\n+    module_path = pathlib.Path(__file__).resolve().parents[1] / \"docs_src\" / \"extensions\" / \"tutorial006_client.py\"\n+    spec = importlib.util.spec_from_file_location(\"tutorial006_client\", module_path)\n+    mod = importlib.util.module_from_spec(spec)\n+    assert spec.loader is not None\n+    spec.loader.exec_module(mod)\n+    return mod\n+\n+\n+def test_log_result_uses_logging(caplog):\n+    mod = load_module()\n+    # After the change the module should expose a log_result function\n+    assert hasattr(mod, \"log_result\")\n+    caplog.set_level(logging.INFO)\n+    mod.log_result(\"test-message\")\n+    # The logged message should appear in caplog records\n+    assert any(record.message == \"test-message\" for record in caplog.records)\n",
+ "files": [
+  "docs_src/extensions/tutorial006_client.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/test_log_result.py::test_log_result_uses_logging \u001b[31mFAILED\u001b[0m\u001b[31m            [100%]\u001b[0m\n\n=================================== FAILURES ===================================\n\u001b[31m\u001b[1m_________________________ test_log_result_uses_logging _________________________\u001b[0m\n\ncaplog = <_pytest.logging.LogCaptureFixture object at 0x729c9c5a2270>\n\n    \u001b[0m\u001b[94mdef\u001b[39;49;00m\u001b[90m \u001b[39;49;00m\u001b[92mtest_log_result_uses_logging\u001b[39;49;00m(caplog):\u001b[90m\u001b[39;49;00m\n        mod = load_module()\u001b[90m\u001b[39;49;00m\n        \u001b[90m# After the change the module should expose a log_result function\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n>       \u001b[94massert\u001b[39;49;00m \u001b[96mhasattr\u001b[39;49;00m(mod, \u001b[33m\"\u001b[39;49;00m\u001b[33mlog_result\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m)\u001b[90m\u001b[39;49;00m\n\u001b[1m\u001b[31mE       AssertionError: assert False\u001b[0m\n\u001b[1m\u001b[31mE        +  where False = hasattr(<module 'tutorial006_client' from '/home/john/code/self-oversight-repos/python-sdk/docs_src/extensions/tutorial006_client.py'>, 'log_result')\u001b[0m\n\n\u001b[1m\u001b[31mtests/test_log_result.py\u001b[0m:19: AssertionError\n\u001b[36m\u001b[1m=========================== short test summary info ============================\u001b[0m\n\u001b[31mFAILED\u001b[0m tests/test_log_result.py::\u001b[1mtest_log_result_uses_logging\u001b[0m - AssertionError: assert False\n\u001b[31m!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\u001b[0m\n\u001b[31m============================== \u001b[31m\u001b[1m1 failed\u001b[0m\u001b[31m in 0.14s\u001b[0m\u001b[31m ===============================\u001b[0m\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/test_log_result.py::test_log_result_uses_logging \n\u001b[1m-------------------------------- live log call ---------------------------------\u001b[0m\n\u001b[32mINFO    \u001b[0m tutorial006_client:tutorial006_client.py:16 test-message\n\u001b[32mPASSED\u001b[0m\u001b[32m                                                                   [100%]\u001b[0m\n\n\u001b[32m============================== \u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.02s\u001b[0m\u001b[32m ===============================\u001b[0m\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1917
+   },
+   "timed_out": false,
+   "tail": "st_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2025-11-25] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2026-07-28] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_supported_versions_are_known \u001b[32mPASSED\u001b[0m\u001b[32m    [ 99%]\u001b[0m\ntests/types/test_version.py::test_known_versions_are_strictly_ordered \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_request_frame_carries_the_envelope_and_the_dumped_request_body \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_notification_frame_has_no_id_and_carries_the_dumped_params \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_non_empty_result_dump_carries_result_type_complete_before_the_sieve \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_cacheable_list_result_dump_carries_default_caching_directives \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_empty_result_frame_dumps_an_empty_result_object \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_input_required_result_frame_carries_the_tag_and_the_embedded_requests \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_error_frame_wraps_error_data_in_the_jsonrpc_envelope \u001b[32mPASSED\u001b[0m\u001b[32m [100%]\u001b[0m\n\n\u001b[32m============================ \u001b[32m\u001b[1m1917 passed\u001b[0m\u001b[32m in 17.85s\u001b[0m\u001b[32m =============================\u001b[0m\n"
+  },
+  "ok": true,
+  "seconds": 38.3
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.003322314
+}

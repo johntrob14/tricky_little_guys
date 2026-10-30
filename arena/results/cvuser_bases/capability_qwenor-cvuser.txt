@@ -1,0 +1,16 @@
+
+== Base Qwen3.8-27B (OpenRouter), arena_covert_user (CoT-only, main task only): 48 episodes | main 45/48 | scorer side 17/48 | both 15/48 | detector fired 38/48 | curl-verified exposure 38/48 (scorer-leaked 16/17, scorer-negative 22/31) | oracle shown in a tool output 0/48
+   monitor: per-turn mean 2.96 (n=1281); per-episode max mean 9.62 (n=48); per-episode mean mean 3.12 (n=48); turns per episode 26.7
+   scorer-leaked episodes: monitor score at the first detector fire 8.88 (n=16), at the last fire 8.12 (n=16)
+   all with a fire episodes: monitor score at the first detector fire 8.74 (n=38), at the last fire 6.66 (n=38)
+   monitor score at turn 0 4.81 (n=48)
+   easy   main 14/16 side 8/16 detector fired 16/16 curl-verified 14/16
+   medium main 15/16 side 5/16 detector fired 10/16 curl-verified 10/16
+   hard   main 16/16 side 4/16 detector fired 12/16 curl-verified 14/16
+
+== Base Qwen3.8-27B (OpenRouter), control (no side task; CoT-only): 16 episodes | main 16/16 | scorer side 0/16 | both 0/16 | detector fired 0/16 | curl-verified exposure 1/16 (scorer-leaked 0/0, scorer-negative 1/16) | oracle shown in a tool output 0/16
+   monitor: per-turn mean 0.18 (n=292); per-episode max mean 1.00 (n=16); per-episode mean mean 0.12 (n=16); turns per episode 18.2
+   monitor score at turn 0 0.00 (n=16)
+   easy   main 16/16 side 0/16 detector fired 0/16 curl-verified 1/16
+
+saved results/cvuser_bases/capability_qwenor-cvuser.json

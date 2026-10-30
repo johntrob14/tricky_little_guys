@@ -1,0 +1,26 @@
+{
+ "data": "../results/sft_inksm/full1/sft/s5/examples.jsonl",
+ "sft": "inksft1",
+ "epochs": 2,
+ "batch_size": 32,
+ "lr": 0.0001,
+ "rank": 32,
+ "budget": 8.0,
+ "seed": 0,
+ "dry_run": false,
+ "model": "thinkingmachines/Inkling-Small",
+ "effort": 0.6,
+ "n": 384,
+ "tokens_per_epoch": 1295347,
+ "by": {
+  "plain|base": 78,
+  "questions_only|rewrite:chunked": 22,
+  "cover_story|rewrite:chunked": 68,
+  "no_backtracking|rewrite:chunked": 19,
+  "word_suppression|rewrite:chunked": 46,
+  "sad|rewrite:chunked": 27,
+  "misdirect_end|rewrite:misdirect_end": 72,
+  "third_person|rewrite:chunked": 20,
+  "lowercase_thinking|rewrite:code": 32
+ }
+}

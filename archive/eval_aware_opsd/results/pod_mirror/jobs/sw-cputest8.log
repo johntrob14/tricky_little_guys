@@ -1,0 +1,29 @@
+..................................................................F
+=================================== FAILURES ===================================
+___________ test_paged_preemption_swap_and_restart_match[cfg2-True] ____________
+
+cfg = (1, 6, 3, 3), swap = True
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d88b363470>
+
+    @pytest.mark.parametrize("swap", [True, False])
+    @pytest.mark.parametrize("cfg", CONFIGS)
+    def test_paged_preemption_swap_and_restart_match(cfg, swap, monkeypatch):
+        """A tight block pool forces preemptions; swapped rows resume exactly where they were
+        (KV + state machine restored), restarted rows recompute; both match the repo."""
+        model = build(*cfg)
+        prompts = prompts_for(cfg[0], lengths=(3, 7, 12, 5, 9, 1, 15, 4))
+        refs = reference(model, prompts, 50, 2, monkeypatch)
+        stats = GenStats()
+        mine = generate_batch(model, TOK, prompts, engine="paged", max_new_tokens=50, min_latent_steps=2,
+                              max_latent_per_block=CAP, max_batch=6, block_size=4, sync_every=3, max_seq_len=400,
+                              kv_budget_tokens=240, swap=swap, admit_watermark=0.3, stats=stats)
+        check(refs, mine, 50)
+>       assert stats.evictions > 0
+E       assert 0 > 0
+E        +  where 0 = <cotswitch.switch_model.GenStats object at 0x77d88b362ab0>.evictions
+
+tests/test_switch_loop.py:175: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_switch_loop.py::test_paged_preemption_swap_and_restart_match[cfg2-True]
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 66 passed in 127.20s (0:02:07)

@@ -1,0 +1,14 @@
+switch at step 10 from state tinker://aefd0d84-c4f3-51a8-a3ce-caa5a0c85cbc:train:0/weights/cotctl-inkrl1-step10-state on Wed Oct 28 03:55:03 PM UTC 2026
+resumed pid 4019436
+resume at step 30 from tinker://0b559c21-112f-5dff-a9d0-7fcf42ddb292:train:0/weights/cotctl-inkrl1-s11-step30-state on Wed Oct 28 05:10:28 PM UTC 2026: --lr 8e-5 (was 4e-5), --meta-whole (new); seed 3; Tinker judges
+restart at step 30 from tinker://0b559c21-112f-5dff-a9d0-7fcf42ddb292:train:0/weights/cotctl-inkrl1-s11-step30-state on Wed Oct 28 05:21:22 PM UTC 2026: efforts 0.3/0.6/0.9 weights 0.3/0.45/0.25, --lr 8e-5, --meta-whole, seed 4 (run inkrl1-s31b); inkrl1-s31 stopped after step 33 (no checkpoint)
+stopped at step 40 for Astra review on Wed Oct 28 05:49:09 PM UTC 2026; no resume yet
+resume at step 40 from tinker://9f0a4aef-91a1-58d3-8cdd-a8437184ebe1:train:0/weights/cotctl-inkrl1-s31b-step40-state on Wed Oct 28 06:04:06 PM UTC 2026: s31b settings unchanged plus --max-tokens 8000 --drop-truncated; seed 5 (run inkrl1-s41)
+resume at step 60 from tinker://d1b4f944-1aab-51d6-9008-dd0c61b73fa4:train:0/weights/cotctl-inkrl1-s41-step60-state on Wed Oct 28 09:54:33 PM UTC 2026: s41 settings with relaxed length bands (--len-band 0.65 1.4, 0.9: 0.5 1.4); steps 61-70; seed 6 (run inkrl1-s61)
+resume at step 70 from tinker://39550b14-0daf-5c89-b5cf-96e2b69ca0a7:train:0/weights/cotctl-inkrl1-s61-step70-state on Wed Oct 28 11:33:37 PM UTC 2026: s61 settings + concept_suppression (11th type); steps 71-80; seed 7 (run inkrl1-s71)
+steps 71-80 done (inkrl1-s71, $6.24); stopped at step 80, no resume
+resume at step 80 from tinker://8410a50b-02b0-521a-9779-93488fdcdef8:train:0/weights/cotctl-inkrl1-s71-step80-state on Thu Oct 29 03:08:02 AM UTC 2026: s71 settings + --type-share concept_suppression 0.5; steps 81-90; seed 8 (run inkrl1-s81)
+pid 823695
+inkrl1-s81 stopped after step 81 on Thu Oct 29 03:10:42 AM UTC 2026: --type-share gave concept_suppression 8/32 prompts (54% of pool eligible, ineligible draws fell to other types); fixed to redraw the question; restart from step 80 as inkrl1-s81b
+restart pid 824808 (inkrl1-s81b, same command)
+steps 81-90 done (inkrl1-s81b, $7.89); stopped at step 90

@@ -1,0 +1,119 @@
+{
+ "label": "warmstart-gptoss-ws12-base-organism-ep1",
+ "family": "gpt-oss-120b",
+ "model_path": "tinker://3e5bf6b0-332c-517c-b194-5afa17d400b6:train:0/sampler_weights/warmstart-gptoss-ws12-base-organism-ep1",
+ "base": "openai/gpt-oss-120b:peft:131072",
+ "n_samples": 56,
+ "noise_floor": {
+  "n_tok": 48961,
+  "k1": 0.00193,
+  "k3": 0.00243
+ },
+ "kl": {
+  "action": {
+   "n_tok": 7985,
+   "k1": 0.08281,
+   "k3": 0.08025
+  },
+  "all": {
+   "n_tok": 48961,
+   "k1": 0.02345,
+   "k3": 0.02487
+  },
+  "chat/action": {
+   "n_tok": 3080,
+   "k1": 0.02865,
+   "k3": 0.02489
+  },
+  "chat/all": {
+   "n_tok": 3901,
+   "k1": 0.03249,
+   "k3": 0.02551
+  },
+  "chat/reasoning": {
+   "n_tok": 821,
+   "k1": 0.0469,
+   "k3": 0.02785
+  },
+  "dapo/action": {
+   "n_tok": 40,
+   "k1": 0.00038,
+   "k3": 0.0
+  },
+  "dapo/all": {
+   "n_tok": 23006,
+   "k1": 0.00751,
+   "k3": 0.00959
+  },
+  "dapo/reasoning": {
+   "n_tok": 22966,
+   "k1": 0.00753,
+   "k3": 0.0096
+  },
+  "linuxarena/action": {
+   "n_tok": 267,
+   "k1": 1.29152,
+   "k3": 1.24346
+  },
+  "linuxarena/all": {
+   "n_tok": 403,
+   "k1": 0.8522,
+   "k3": 0.85233
+  },
+  "linuxarena/reasoning": {
+   "n_tok": 136,
+   "k1": -0.01029,
+   "k3": 0.08444
+  },
+  "reasoning": {
+   "n_tok": 40976,
+   "k1": 0.01188,
+   "k3": 0.01408
+  },
+  "tiktok/action": {
+   "n_tok": 2903,
+   "k1": 0.04916,
+   "k3": 0.04295
+  },
+  "tiktok/all": {
+   "n_tok": 6203,
+   "k1": 0.03516,
+   "k3": 0.03218
+  },
+  "tiktok/reasoning": {
+   "n_tok": 3300,
+   "k1": 0.02284,
+   "k3": 0.02271
+  },
+  "value/action": {
+   "n_tok": 613,
+   "k1": 0.06544,
+   "k3": 0.09088
+  },
+  "value/all": {
+   "n_tok": 3576,
+   "k1": 0.02846,
+   "k3": 0.04236
+  },
+  "value/reasoning": {
+   "n_tok": 2963,
+   "k1": 0.0208,
+   "k3": 0.03232
+  },
+  "wmdp/action": {
+   "n_tok": 1082,
+   "k1": 0.04191,
+   "k3": 0.0478
+  },
+  "wmdp/all": {
+   "n_tok": 11872,
+   "k1": 0.01559,
+   "k3": 0.0171
+  },
+  "wmdp/reasoning": {
+   "n_tok": 10790,
+   "k1": 0.01296,
+   "k3": 0.01402
+  }
+ }
+}

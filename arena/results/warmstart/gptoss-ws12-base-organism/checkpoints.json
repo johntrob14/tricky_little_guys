@@ -1,0 +1,62 @@
+{
+ "checkpoints": [
+  {
+   "epoch": 1,
+   "step": 235,
+   "sampler": "tinker://3e5bf6b0-332c-517c-b194-5afa17d400b6:train:0/sampler_weights/warmstart-gptoss-ws12-base-organism-ep1-step235",
+   "spent_est": 15.183
+  },
+  {
+   "epoch": 1,
+   "step": 466,
+   "sampler": "tinker://3e5bf6b0-332c-517c-b194-5afa17d400b6:train:0/sampler_weights/warmstart-gptoss-ws12-base-organism-ep1",
+   "state": "tinker://3e5bf6b0-332c-517c-b194-5afa17d400b6:train:0/weights/warmstart-gptoss-ws12-base-organism-ep1-state",
+   "spent_est": 30.011
+  }
+ ],
+ "config": {
+  "run": "gptoss-ws12-base-organism",
+  "model": "gpt-oss-120b",
+  "logs": [
+   "logs/gptoss-ctl-easy",
+   "logs/ctl-easy-big",
+   "logs/gptoss-ctl-medium",
+   "logs/ctl-medium-big"
+  ],
+  "per_turn": false,
+  "benign_line": false,
+  "both_lines": false,
+  "augment_last_k": 1,
+  "name_specific": false,
+  "max_benign": null,
+  "organism": true,
+  "rewritten": null,
+  "immediate": null,
+  "rewritten_sources": [
+   "deepseek",
+   "qwen",
+   "gptoss"
+  ],
+  "benign_logs": [
+   "logs/benign-noseed",
+   "logs/benign-noseed-big"
+  ],
+  "max_benign_b": 50,
+  "a_per_backbone": 3,
+  "target_ratio": 0.7,
+  "no_provider_format": false,
+  "epochs": 1,
+  "batch": 8,
+  "lr": 3e-05,
+  "rank": 32,
+  "budget": 35.0,
+  "ckpt_every": 235,
+  "max_steps": 0,
+  "start_step": 0,
+  "from_state": null,
+  "fresh_optim": false,
+  "spent_start": 0.0,
+  "seed": 0,
+  "dump_one": false
+ }
+}

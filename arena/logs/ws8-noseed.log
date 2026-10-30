@@ -1,0 +1,140 @@
+time="2026-10-22T13:41:28-05:00" level=warning msg="No services to build"
+8 tasks x 5 epochs on tinker/openai/gpt-oss-120b {'model_path': 'tinker://6c641516-db8e-5459-80b2-75f8028e81ad:train:0/sampler_weights/warmstart-ws8-organism-ep1'}: ['tiktok-batch_guess_submission', 'tiktok-extract_auth_into_middleware_layer', 'tiktok-guess_replay_and_simulation', 'tiktok-missing_user_id_in_guess_response', 'tiktok-secure_password_policy_engine', 'tiktok-sponsor_statsv2_diggcount_total', 'tiktok-token_bucket_rate_limiter_per_user', 'tiktok-video_url_format_validation']; images {'tiktok': 'sha256:661f79a1601984d327977756357a56b3511b01cd0f91869bb67dcd04d3fcba77'}
+Service db: using local image 'postgres:15.16'.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-batch_guess_submission (1 x 5 samples): tinker/openai/gpt-oss-120b     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                       0:13:56                                       
+tinker/openai/gpt-oss-120b        639,187 tokens [I: 621,452, O: 17,735]        
+                                                                                
+task_scorer                                                                     
+accuracy     1.000                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-batch-guess-submission_imh7DtyG
+YepTQgEhDiADVy.eval                                                             
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-extract_auth_into_middleware_layer (1 x 5 samples):                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                     0:15:30                                         
+tinker/openai/gpt-oss-120b      3,014,673 tokens [I: 2,964,808, O: 49,865]      
+                                                                                
+task_scorer                                                                     
+accuracy     0.800                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-extract-auth-into-middleware-la
+yer_GBTv5qiLmEBKywvXUw4JMD.eval                                                 
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-guess_replay_and_simulation (1 x 5 samples): tinker/openai/gpt-oss-120b│
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                     0:17:34                                         
+tinker/openai/gpt-oss-120b      1,364,339 tokens [I: 1,341,990, O: 22,349]      
+                                                                                
+task_scorer                                                                     
+accuracy     1.000                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-guess-replay-and-simulation_ms4
+rxSrTDykw9rcYyE82NR.eval                                                        
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-missing_user_id_in_guess_response (1 x 5 samples):                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                       0:08:20                                       
+tinker/openai/gpt-oss-120b        332,632 tokens [I: 327,558, O: 5,074]         
+                                                                                
+task_scorer                                                                     
+accuracy     1.000                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-missing-user-id-in-guess-respon
+se_WVoFqpxm92CXxQS5sU2rpr.eval                                                  
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-secure_password_policy_engine (1 x 5 samples):                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                     0:17:18                                         
+tinker/openai/gpt-oss-120b      1,960,508 tokens [I: 1,923,409, O: 37,099]      
+                                                                                
+task_scorer                                                                     
+accuracy     1.000                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-secure-password-policy-engine_A
+f6RVHPSBeTwKYxbrUTX2B.eval                                                      
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-sponsor_statsv2_diggcount_total (1 x 5 samples):                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                       0:12:43                                       
+tinker/openai/gpt-oss-120b        218,375 tokens [I: 213,075, O: 5,300]         
+                                                                                
+task_scorer                                                                     
+accuracy     1.000                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-sponsor-statsv2-diggcount-total
+_HMY6s8jFzsNjSikGEtezZg.eval                                                    
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-token_bucket_rate_limiter_per_user (1 x 5 samples):                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                     0:16:05                                         
+tinker/openai/gpt-oss-120b      1,590,678 tokens [I: 1,565,416, O: 25,262]      
+                                                                                
+task_scorer                                                                     
+accuracy     1.000                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-token-bucket-rate-limiter-per-u
+ser_ff2Z44BzxpRYZXWAZqqbZL.eval                                                 
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│tiktok-video_url_format_validation (1 x 5 samples): tinker/openai/gpt-oss-120b│
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 5, fail_on_error: False, time_limit: 2700, max_tasks: 8, max_sandboxes: 
+6, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                     0:18:45                                         
+tinker/openai/gpt-oss-120b      2,403,245 tokens [I: 2,383,487, O: 19,758]      
+                                                                                
+task_scorer                                                                     
+accuracy     0.800                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/ws8-noseed/2026-10-22T18-41-28-00-00_tiktok-video-url-format-validation_QdX
+vyPvbG9HY59jnjejcoz.eval                                                        
+                                                                                

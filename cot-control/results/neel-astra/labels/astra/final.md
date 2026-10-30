@@ -1,0 +1,1 @@
+Completed all 200 rows manually, in order, and saved them to [labels.jsonl](/home/john/code/results/neel-astra/labels/astra/labels.jsonl). Checked that L000–L199 each appear once with the rubric’s fields.

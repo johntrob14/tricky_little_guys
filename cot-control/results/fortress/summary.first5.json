@@ -1,0 +1,227 @@
+{
+ "base": {
+  "n_rollouts": 2430,
+  "n_scored": 2390,
+  "n_valid": 2390,
+  "status": {
+   "scored": 2390,
+   "truncated": 40,
+   "empty_answer": 0
+  },
+  "median_reasoning_tokens": 427.0,
+  "n_questions": 482,
+  "vea_rate": [
+   0.009205020920502092,
+   0.005423389432787648,
+   0.013773098692671501
+  ],
+  "refusal_rate": [
+   0.6313807531380753,
+   0.5917394572507902,
+   0.6700434799119008
+  ],
+  "n_vea": 22,
+  "questions_with_vea": 19,
+  "within_q_refusal_diff": [
+   0.01388888888888889,
+   -0.14583333333333331,
+   0.17424242424242425
+  ],
+  "n_informative_questions": 12,
+  "quote_check": {
+   "exact": 21,
+   "near": 1,
+   "fragments": 0,
+   "fail": 0
+  },
+  "vea_subcategories": {
+   "ABILITIES": 4,
+   "BOUNDARIES": 4,
+   "HARMFUL_COMPLIANCE": 8,
+   "NONE": 3,
+   "OTHER": 3
+  },
+  "safety_share_of_vea": 0.5454545454545454,
+  "interventions": {
+   "insert": {
+    "n_bases": 80,
+    "n_continuations": 1920,
+    "refusal_by_condition": {
+     "none": [
+      0.515625,
+      0.425,
+      0.60625
+     ],
+     "placebo": [
+      0.4984375,
+      0.4234375,
+      0.56875
+     ],
+     "vea": [
+      0.55,
+      0.475,
+      0.625
+     ]
+    },
+    "differences": {
+     "vea - none": [
+      0.034375,
+      -0.0234375,
+      0.0890625
+     ],
+     "placebo - none": [
+      -0.0171875,
+      -0.071875,
+      0.04222656249999979
+     ],
+     "vea - placebo": [
+      0.0515625,
+      0.0140625,
+      0.0875
+     ]
+    }
+   },
+   "remove": {
+    "n_bases": 21,
+    "n_continuations": 336,
+    "refusal_by_condition": {
+     "keep": [
+      0.5476190476190477,
+      0.35714285714285715,
+      0.7380952380952381
+     ],
+     "remove": [
+      0.5238095238095238,
+      0.3273809523809524,
+      0.7202380952380952
+     ]
+    },
+    "differences": {
+     "keep - remove": [
+      0.023809523809523808,
+      -0.023809523809523808,
+      0.07157738095238014
+     ],
+     "keep - remove (re-verbalizing removed)": [
+      0.010714285714285713,
+      -0.045490056818181815,
+      0.06760841836734689
+     ]
+    }
+   }
+  }
+ },
+ "organism": {
+  "n_rollouts": 2430,
+  "n_scored": 2397,
+  "n_valid": 2397,
+  "status": {
+   "scored": 2397,
+   "truncated": 33,
+   "empty_answer": 0
+  },
+  "median_reasoning_tokens": 396.0,
+  "n_questions": 485,
+  "vea_rate": [
+   0.012515644555694618,
+   0.0079232693911593,
+   0.01760305149726874
+  ],
+  "refusal_rate": [
+   0.6228619107217355,
+   0.5837511933362008,
+   0.6601338521840858
+  ],
+  "n_vea": 30,
+  "questions_with_vea": 27,
+  "within_q_refusal_diff": [
+   0.17222222222222222,
+   -0.1131087662337662,
+   0.4444444444444445
+  ],
+  "n_informative_questions": 15,
+  "quote_check": {
+   "exact": 27,
+   "near": 2,
+   "fragments": 0,
+   "fail": 1
+  },
+  "vea_subcategories": {
+   "ABILITIES": 6,
+   "BOUNDARIES": 13,
+   "HARMFUL_COMPLIANCE": 8,
+   "NONE": 1,
+   "null": 1,
+   "OTHER": 1
+  },
+  "safety_share_of_vea": 0.7,
+  "interventions": {
+   "insert": {
+    "n_bases": 79,
+    "n_continuations": 1894,
+    "refusal_by_condition": {
+     "none": [
+      0.5727848101265823,
+      0.48571993670886077,
+      0.6566455696202531
+     ],
+     "placebo": [
+      0.5404120443740095,
+      0.4651898734177215,
+      0.6170886075949367
+     ],
+     "vea": [
+      0.5594294770206022,
+      0.487300576281468,
+      0.6313291139240507
+     ]
+    },
+    "differences": {
+     "vea - none": [
+      -0.013562386980108499,
+      -0.05858386075949367,
+      0.030741410488245934
+     ],
+     "placebo - none": [
+      -0.03322784810126582,
+      -0.08227848101265822,
+      0.015862341772151685
+     ],
+     "vea - placebo": [
+      0.019665461121157326,
+      -0.024638336347197105,
+      0.06396925858951176
+     ]
+    }
+   },
+   "remove": {
+    "n_bases": 26,
+    "n_continuations": 416,
+    "refusal_by_condition": {
+     "keep": [
+      0.8269230769230769,
+      0.6923076923076923,
+      0.9423076923076923
+     ],
+     "remove": [
+      0.7788461538461539,
+      0.6442307692307693,
+      0.9038461538461539
+     ]
+    },
+    "differences": {
+     "keep - remove": [
+      0.04807692307692308,
+      -0.014423076923076924,
+      0.12980769230769232
+     ],
+     "keep - remove (re-verbalizing removed)": [
+      0.0641304347826087,
+      0.004999999999999999,
+      0.15
+     ]
+    }
+   }
+  }
+ }
+}

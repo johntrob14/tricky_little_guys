@@ -1,0 +1,38 @@
+{
+  "source": "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/results/gptoss_topup_cleaned_v1/followup_missing_scores",
+  "source_dataset_sha256": "49ce8ced5b83a9128d09bef322a3bf1064ca88848e98f44d2cd4ee47a12624bb",
+  "source_config_sha256": "c5cf553551f748846550214d8fce7b629074869929526ec04c060b3820730aca",
+  "source_total": 48,
+  "selected_gptoss": 48,
+  "editor": {
+    "model": "deepseek/deepseek-v4.1-flash-1017",
+    "provider": "parasail",
+    "reasoning": "medium",
+    "temperature": 0,
+    "max_tokens": 16000,
+    "attempts": 6
+  },
+  "visible_editor_prompt_sha256": "ccecd6b747c678deb0ffcda6ae1f2486f15b2d2bb454d4f48119d2c68c6e6b71",
+  "concurrency": 8,
+  "edit_channels": [
+    "assistant_visible_text"
+  ],
+  "valid_rewrites_per_visible_turn": 1,
+  "monitor_calls": 0,
+  "visible_text_cutoff": null,
+  "visible_text_refix": false,
+  "monitor": {
+    "mode": "cot_only",
+    "monitor": "controlarena_cot_only",
+    "judge_model": "openai/gpt-oss-20b",
+    "provider": "dekallm/bf16",
+    "main_task_only": true,
+    "input_channels": [
+      "reasoning"
+    ],
+    "prior_history": false,
+    "prompt_template_sha256": "9b4d7e007e6ecc5db0cd14b2866faa9891c46ef778ebb7f1281290eae00c9972"
+  },
+  "cot_scores_preserved": true,
+  "validation_attempts": 3
+}

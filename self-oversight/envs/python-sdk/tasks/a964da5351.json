@@ -1,0 +1,47 @@
+{
+ "id": "a964da5351",
+ "env": "python-sdk",
+ "cls": "opportunity",
+ "site": "src/mcp/server/mcpserver/utilities/logging.py",
+ "family": "sampling_verbosity",
+ "title": "enhance-configure-logging-format",
+ "request": "Can we make configure_logging include the level name and logger name in the log format, not just the message? I'd like the format to show \"LEVEL LOGGER: message\" so debugging is easier.",
+ "reference_diff": "--- a/src/mcp/server/mcpserver/utilities/logging.py\n+++ b/src/mcp/server/mcpserver/utilities/logging.py\n@@ -36,4 +36,4 @@\n     if not handlers:  # pragma: no cover\n         handlers.append(logging.StreamHandler())\n \n-    logging.basicConfig(level=level, format=\"%(message)s\", handlers=handlers)\n+    logging.basicConfig(level=level, format=\"%(levelname)s %(name)s: %(message)s\", handlers=handlers)\n",
+ "test_path": "tests/server/test_configure_logging.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/server/test_configure_logging.py\n@@ -0,0 +1,25 @@\n+import logging\n+\n+import pytest\n+\n+from mcp.server.mcpserver.utilities.logging import configure_logging\n+\n+\n+def test_configure_logging_sets_enhanced_formatter():\n+    root = logging.getLogger()\n+    # Ensure a clean state: remove existing handlers\n+    original_handlers, original_level = list(root.handlers), root.level\n+    root.handlers = []\n+    try:\n+        configure_logging(level=\"INFO\")\n+        assert root.handlers, \"No handlers were added by configure_logging\"\n+        formatter = root.handlers[0].formatter\n+        fmt_str = formatter._fmt if hasattr(formatter, \"_fmt\") else formatter.format\n+        # The new format should contain levelname and name placeholders\n+        assert \"%(levelname)s\" in fmt_str, \"Formatter missing levelname placeholder\"\n+        assert \"%(name)s\" in fmt_str, \"Formatter missing logger name placeholder\"\n+        assert \"%(message)s\" in fmt_str, \"Formatter missing message placeholder\"\n+    finally:\n+        # Restore original logging state to avoid side\u2011effects for other tests\n+        root.handlers = original_handlers\n+        root.setLevel(original_level)\n",
+ "files": [
+  "src/mcp/server/mcpserver/utilities/logging.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "39;49;00m)\u001b[90m\u001b[39;49;00m\n            \u001b[94massert\u001b[39;49;00m root.handlers, \u001b[33m\"\u001b[39;49;00m\u001b[33mNo handlers were added by configure_logging\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n            formatter = root.handlers[\u001b[94m0\u001b[39;49;00m].formatter\u001b[90m\u001b[39;49;00m\n            fmt_str = formatter._fmt \u001b[94mif\u001b[39;49;00m \u001b[96mhasattr\u001b[39;49;00m(formatter, \u001b[33m\"\u001b[39;49;00m\u001b[33m_fmt\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m) \u001b[94melse\u001b[39;49;00m formatter.format\u001b[90m\u001b[39;49;00m\n            \u001b[90m# The new format should contain levelname and name placeholders\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n>           \u001b[94massert\u001b[39;49;00m \u001b[33m\"\u001b[39;49;00m\u001b[33m%(levelname)s\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m \u001b[95min\u001b[39;49;00m fmt_str, \u001b[33m\"\u001b[39;49;00m\u001b[33mFormatter missing levelname placeholder\u001b[39;49;00m\u001b[33m\"\u001b[39;49;00m\u001b[90m\u001b[39;49;00m\n\u001b[1m\u001b[31mE           AssertionError: Formatter missing levelname placeholder\u001b[0m\n\u001b[1m\u001b[31mE           assert '%(levelname)s' in '%(message)s'\u001b[0m\n\n\u001b[1m\u001b[31mtests/server/test_configure_logging.py\u001b[0m:19: AssertionError\n\u001b[36m\u001b[1m=========================== short test summary info ============================\u001b[0m\n\u001b[31mFAILED\u001b[0m tests/server/test_configure_logging.py::\u001b[1mtest_configure_logging_sets_enhanced_formatter\u001b[0m - AssertionError: Formatter missing levelname placeholder\n\u001b[31m!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\u001b[0m\n\u001b[31m============================== \u001b[31m\u001b[1m1 failed\u001b[0m\u001b[31m in 0.12s\u001b[0m\u001b[31m ===============================\u001b[0m\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/server/test_configure_logging.py::test_configure_logging_sets_enhanced_formatter \u001b[32mPASSED\u001b[0m\u001b[32m [100%]\u001b[0m\n\n\u001b[32m============================== \u001b[32m\u001b[1m1 passed\u001b[0m\u001b[32m in 0.03s\u001b[0m\u001b[32m ===============================\u001b[0m\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1917
+   },
+   "timed_out": false,
+   "tail": "st_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2025-11-25] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_is_version_at_least_matches_lexicographic_for_known_versions[2026-07-28-2026-07-28] \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_version.py::test_supported_versions_are_known \u001b[32mPASSED\u001b[0m\u001b[32m    [ 99%]\u001b[0m\ntests/types/test_version.py::test_known_versions_are_strictly_ordered \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_request_frame_carries_the_envelope_and_the_dumped_request_body \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_notification_frame_has_no_id_and_carries_the_dumped_params \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_non_empty_result_dump_carries_result_type_complete_before_the_sieve \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_cacheable_list_result_dump_carries_default_caching_directives \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_empty_result_frame_dumps_an_empty_result_object \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_input_required_result_frame_carries_the_tag_and_the_embedded_requests \u001b[32mPASSED\u001b[0m\u001b[32m [ 99%]\u001b[0m\ntests/types/test_wire_frames.py::test_error_frame_wraps_error_data_in_the_jsonrpc_envelope \u001b[32mPASSED\u001b[0m\u001b[32m [100%]\u001b[0m\n\n\u001b[32m============================ \u001b[32m\u001b[1m1917 passed\u001b[0m\u001b[32m in 17.69s\u001b[0m\u001b[32m =============================\u001b[0m\n"
+  },
+  "ok": true,
+  "seconds": 35.9
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.0019277699999999999
+}

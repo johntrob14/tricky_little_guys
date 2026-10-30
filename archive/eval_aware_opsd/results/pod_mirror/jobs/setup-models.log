@@ -1,0 +1,110 @@
+HF_HOME=/root/scratch/huggingface  free:  500G
+== 2026-10-14T16:53:30+00:00 switch: LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B @ 246fee75d774c02a110ea8608ac841a916dd5d35
+[90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g` to teach your AI agents how to use the `hf` CLI.[0m
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files:  14%|█▍        | 1/7 [00:00<00:01,  3.05it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 7 files:  43%|████▎     | 3/7 [00:00<00:00,  7.20it/s]Fetching 7 files:  71%|███████▏  | 5/7 [00:00<00:00,  6.09it/s]Fetching 7 files:  86%|████████▌ | 6/7 [00:02<00:00,  2.05it/s]Fetching 7 files: 100%|██████████| 7/7 [00:13<00:00,  3.62s/it]Fetching 7 files: 100%|██████████| 7/7 [00:13<00:00,  2.00s/it]
+[32m✓ Downloaded[0m
+  path: /root/scratch/huggingface/hub/models--LARK-Lab--SWITCH-Phase3-GRPO-LoRA-Qwen3-8B/snapshots/246fee75d774c02a110ea8608ac841a916dd5d35
+switch done in 19s: /root/scratch/huggingface/hub/models--LARK-Lab--SWITCH-Phase3-GRPO-LoRA-Qwen3-8B/snapshots/246fee75d774c02a110ea8608ac841a916dd5d35 (7.3G)
+== 2026-10-14T16:53:49+00:00 qwen3-8b: Qwen/Qwen3-8B @ b968826d9c46dd6066d109eabc6255188de91218
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 15 files:   7%|▋         | 1/15 [00:00<00:01,  7.49it/s]Fetching 15 files:  20%|██        | 3/15 [00:00<00:01, 10.18it/s]Fetching 15 files:  27%|██▋       | 4/15 [00:00<00:01,  9.34it/s]Fetching 15 files:  33%|███▎      | 5/15 [00:00<00:01,  9.12it/s]Fetching 15 files:  53%|█████▎    | 8/15 [00:00<00:00, 14.70it/s]Fetching 15 files:  67%|██████▋   | 10/15 [00:01<00:00,  5.96it/s]Fetching 15 files:  80%|████████  | 12/15 [00:15<00:07,  2.58s/it]Fetching 15 files:  87%|████████▋ | 13/15 [00:17<00:04,  2.30s/it]Fetching 15 files: 100%|██████████| 15/15 [00:17<00:00,  1.50s/it]Fetching 15 files: 100%|██████████| 15/15 [00:17<00:00,  1.15s/it]
+[32m✓ Downloaded[0m
+  path: /root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218
+qwen3-8b done in 20s: /root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218 (16G)
+== manifest /workspace/results/cot-control-switch/env/download_manifest.tsv
+key	repo	revision	snapshot	size	seconds	finished_at
+switch	LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B	246fee75d774c02a110ea8608ac841a916dd5d35	/root/scratch/huggingface/hub/models--LARK-Lab--SWITCH-Phase3-GRPO-LoRA-Qwen3-8B/snapshots/246fee75d774c02a110ea8608ac841a916dd5d35	7.3G	2	2026-10-14T03:48:23+00:00
+qwen3-8b	Qwen/Qwen3-8B	b968826d9c46dd6066d109eabc6255188de91218	/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218	16G	30	2026-10-14T03:48:53+00:00
+qwen3-14b	Qwen/Qwen3-14B	40c069824f4251a91eefaf281ebe4c544efd3e18	/root/scratch/huggingface/hub/models--Qwen--Qwen3-14B/snapshots/40c069824f4251a91eefaf281ebe4c544efd3e18	28G	49	2026-10-14T03:49:42+00:00
+qwen3-32b	Qwen/Qwen3-32B	9216db5781bf21249d130ec9da846c4624c16137	/root/scratch/huggingface/hub/models--Qwen--Qwen3-32B/snapshots/9216db5781bf21249d130ec9da846c4624c16137	62G	104	2026-10-14T03:51:26+00:00
+gpt-oss-120b	openai/gpt-oss-120b	b5c939de8f754692c1647ca79fbf85e8c1e70f8a	/root/scratch/huggingface/hub/models--openai--gpt-oss-120b/snapshots/b5c939de8f754692c1647ca79fbf85e8c1e70f8a	61G	114	2026-10-14T03:53:20+00:00
+switch	LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B	246fee75d774c02a110ea8608ac841a916dd5d35	/root/scratch/huggingface/hub/models--LARK-Lab--SWITCH-Phase3-GRPO-LoRA-Qwen3-8B/snapshots/246fee75d774c02a110ea8608ac841a916dd5d35	7.3G	19	2026-10-14T16:53:49+00:00
+qwen3-8b	Qwen/Qwen3-8B	b968826d9c46dd6066d109eabc6255188de91218	/root/scratch/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218	16G	20	2026-10-14T16:54:09+00:00
+== disk
+23G	/root/scratch/huggingface/hub
+Filesystem      Size  Used Avail Use% Mounted on
+overlay         500G   23G  478G   5% /
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:03<24:36,  3.71s/it]Loading weights:   3%|▎         | 11/399 [00:03<01:44,  3.72it/s]Loading weights:   4%|▎         | 14/399 [00:04<01:17,  4.94it/s]Loading weights:   7%|▋         | 26/399 [00:04<00:34, 10.78it/s]Loading weights:   9%|▊         | 34/399 [00:05<00:32, 11.10it/s]Loading weights:  11%|█         | 43/399 [00:05<00:27, 12.91it/s]Loading weights:  12%|█▏        | 48/399 [00:05<00:22, 15.51it/s]Loading weights:  13%|█▎        | 52/399 [00:05<00:19, 17.77it/s]Loading weights:  14%|█▍        | 56/399 [00:06<00:20, 16.52it/s]Loading weights:  15%|█▍        | 59/399 [00:06<00:31, 10.63it/s]Loading weights:  17%|█▋        | 67/399 [00:06<00:19, 16.90it/s]Loading weights:  18%|█▊        | 71/399 [00:07<00:34,  9.55it/s]Loading weights:  20%|█▉        | 78/399 [00:08<00:27, 11.55it/s]Loading weights:  20%|██        | 81/399 [00:08<00:30, 10.49it/s]Loading weights:  23%|██▎       | 92/399 [00:09<00:24, 12.49it/s]Loading weights:  24%|██▎       | 94/399 [00:09<00:24, 12.28it/s]Loading weights:  25%|██▌       | 100/399 [00:10<00:23, 12.96it/s]Loading weights:  26%|██▋       | 105/399 [00:10<00:18, 16.26it/s]Loading weights:  28%|██▊       | 111/399 [00:10<00:14, 19.39it/s]Loading weights:  29%|██▊       | 114/399 [00:10<00:22, 12.49it/s]Loading weights:  31%|███       | 122/399 [00:11<00:14, 19.20it/s]Loading weights:  32%|███▏      | 126/399 [00:11<00:20, 13.56it/s]Loading weights:  34%|███▎      | 134/399 [00:11<00:14, 18.40it/s]Loading weights:  35%|███▍      | 138/399 [00:12<00:15, 16.82it/s]Loading weights:  36%|███▌      | 144/399 [00:12<00:17, 14.96it/s]Loading weights:  37%|███▋      | 149/399 [00:12<00:13, 18.39it/s]Loading weights:  39%|███▉      | 155/399 [00:12<00:11, 21.03it/s]Loading weights:  40%|███▉      | 158/399 [00:13<00:15, 15.80it/s]Loading weights:  42%|████▏     | 166/399 [00:13<00:16, 14.54it/s]Loading weights:  44%|████▍     | 175/399 [00:14<00:11, 20.03it/s]Loading weights:  45%|████▍     | 178/399 [00:14<00:12, 17.38it/s]Loading weights:  45%|████▌     | 181/399 [00:14<00:14, 15.10it/s]Loading weights:  46%|████▌     | 183/399 [00:15<00:19, 10.82it/s]Loading weights:  48%|████▊     | 191/399 [00:15<00:11, 17.99it/s]Loading weights:  49%|████▉     | 195/399 [00:15<00:09, 20.72it/s]Loading weights:  51%|█████     | 202/399 [00:16<00:13, 14.74it/s]Loading weights:  53%|█████▎    | 210/399 [00:16<00:13, 14.12it/s]Loading weights:  53%|█████▎    | 213/399 [00:16<00:12, 14.35it/s]Loading weights:  55%|█████▍    | 219/399 [00:17<00:10, 17.25it/s]Loading weights:  56%|█████▌    | 222/399 [00:17<00:11, 15.21it/s]Loading weights:  56%|█████▌    | 224/399 [00:17<00:12, 13.97it/s]Loading weights:  58%|█████▊    | 232/399 [00:18<00:12, 13.70it/s]Loading weights:  59%|█████▉    | 235/399 [00:18<00:10, 15.23it/s]Loading weights:  61%|██████    | 243/399 [00:18<00:07, 20.83it/s]Loading weights:  62%|██████▏   | 246/399 [00:18<00:10, 14.31it/s]Loading weights:  64%|██████▍   | 255/399 [00:19<00:06, 22.73it/s]Loading weights:  65%|██████▍   | 259/399 [00:19<00:09, 14.97it/s]Loading weights:  67%|██████▋   | 268/399 [00:20<00:08, 14.86it/s]Loading weights:  70%|██████▉   | 278/399 [00:20<00:05, 22.39it/s]Loading weights:  71%|███████   | 283/399 [00:20<00:07, 16.42it/s]Loading weights:  72%|███████▏  | 287/399 [00:21<00:08, 13.56it/s]Loading weights:  73%|███████▎  | 290/399 [00:21<00:07, 13.74it/s]Loading weights:  73%|███████▎  | 293/399 [00:21<00:06, 15.31it/s]Loading weights:  75%|███████▍  | 299/399 [00:22<00:05, 18.84it/s]Loading weights:  76%|███████▌  | 302/399 [00:22<00:07, 13.13it/s]Loading weights:  77%|███████▋  | 309/399 [00:23<00:07, 12.50it/s]Loading weights:  78%|███████▊  | 312/399 [00:23<00:06, 14.13it/s]Loading weights:  80%|████████  | 321/399 [00:23<00:03, 23.03it/s]Loading weights:  82%|████████▏ | 326/399 [00:24<00:06, 11.73it/s]Loading weights:  83%|████████▎ | 332/399 [00:24<00:04, 15.69it/s]Loading weights:  84%|████████▍ | 336/399 [00:24<00:03, 16.29it/s]Loading weights:  85%|████████▌ | 340/399 [00:24<00:03, 17.35it/s]Loading weights:  86%|████████▌ | 343/399 [00:24<00:02, 18.94it/s]Loading weights:  87%|████████▋ | 346/399 [00:25<00:04, 12.66it/s]Loading weights:  89%|████████▊ | 354/399 [00:25<00:03, 14.08it/s]Loading weights:  89%|████████▉ | 357/399 [00:26<00:03, 12.96it/s]Loading weights:  92%|█████████▏| 367/399 [00:26<00:02, 14.50it/s]Loading weights:  94%|█████████▍| 375/399 [00:27<00:01, 16.11it/s]Loading weights:  95%|█████████▍| 378/399 [00:27<00:01, 14.67it/s]Loading weights:  97%|█████████▋| 386/399 [00:27<00:00, 15.23it/s]Loading weights:  97%|█████████▋| 388/399 [00:28<00:00, 15.61it/s]Loading weights:  98%|█████████▊| 390/399 [00:28<00:00, 15.99it/s]Loading weights: 100%|██████████| 399/399 [00:28<00:00, 14.14it/s]
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]Writing model shards: 100%|██████████| 1/1 [00:23<00:00, 23.39s/it]Writing model shards: 100%|██████████| 1/1 [00:23<00:00, 23.40s/it]
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:  20%|██        | 81/399 [00:00<00:00, 765.88it/s]Loading weights:  44%|████▎     | 174/399 [00:00<00:00, 844.65it/s]Loading weights:  71%|███████   | 284/399 [00:00<00:00, 957.57it/s]Loading weights:  95%|█████████▌| 381/399 [00:00<00:00, 956.05it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 945.08it/s]
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:  28%|██▊       | 112/399 [00:00<00:00, 1093.77it/s]Loading weights:  56%|█████▌    | 222/399 [00:00<00:00, 916.85it/s] Loading weights:  79%|███████▉  | 316/399 [00:00<00:00, 872.72it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 928.94it/s]
+{
+  "base": "Qwen/Qwen3-8B",
+  "base_rev": "b968826d9c46dd6066d109eabc6255188de91218",
+  "adapter": "LARK-Lab/SWITCH-Phase3-GRPO-LoRA-Qwen3-8B",
+  "adapter_rev": "246fee75d774c02a110ea8608ac841a916dd5d35",
+  "started_at": "2026-10-14T16:54:09+0000",
+  "base_vocab_rows": 151936,
+  "resized_to": 151672,
+  "base_vs_ref_prompt_only": {
+    "max_abs": 34.276981353759766,
+    "mean_abs": 4.435723662376404,
+    "min_argmax_agree": 0.5625,
+    "n_positions": 141
+  },
+  "merged_fp32_vs_ref": {
+    "max_abs": 0.0005173683166503906,
+    "mean_abs": 1.609261289559072e-05,
+    "min_argmax_agree": 1.0,
+    "n_positions": 397
+  },
+  "t_fp32_merge_s": 105.4,
+  "t_saved_s": 129.0,
+  "saved_config": {
+    "vocab_size": 151672,
+    "tie_word_embeddings": false,
+    "dtype": "torch.bfloat16",
+    "architectures": [
+      "Qwen3ForCausalLM"
+    ]
+  },
+  "saved_bf16_vs_ref": {
+    "max_abs": 2.641481399536133,
+    "mean_abs": 0.10210158303380013,
+    "min_argmax_agree": 0.9791666865348816,
+    "n_positions": 397
+  },
+  "unmerged_bf16_vs_ref": {
+    "max_abs": 2.1533756256103516,
+    "mean_abs": 0.10183006897568703,
+    "min_argmax_agree": 0.9791666865348816,
+    "n_positions": 397
+  },
+  "saved_bf16_vs_unmerged_bf16": {
+    "max_abs": 3.0,
+    "mean_abs": 0.13637004233896732,
+    "min_argmax_agree": 0.9791666865348816,
+    "n_positions": 397
+  },
+  "greedy_first_divergence_vs_ref": {
+    "saved_bf16": [
+      45,
+      null,
+      0,
+      5
+    ],
+    "unmerged_bf16": [
+      null,
+      null,
+      null,
+      5
+    ]
+  },
+  "swi_in_ref_continuations": 0,
+  "t_merge_total_s": 209.2,
+  "out_dir": "/root/scratch/models/switch-merged",
+  "out_size_gb": 16.39
+}
+total 16004544
+drwxr-xr-x 2 root root        4096 Oct 14 16:59 .
+drwxr-xr-x 3 root root          35 Oct 14 16:57 ..
+-rw-r--r-- 1 root root        4168 Oct 14 16:57 chat_template.jinja
+-rw-r--r-- 1 root root        1595 Oct 14 16:57 config.json
+-rw-r--r-- 1 root root         214 Oct 14 16:57 generation_config.json
+-rw-r--r-- 1 root root        5197 Oct 14 16:59 hf_greedy.json
+-rw-r--r-- 1 root root        1665 Oct 14 16:59 merge_report.json
+-rw------- 1 root root 16377191832 Oct 14 16:57 model.safetensors
+-rw-r--r-- 1 root root    11423200 Oct 14 16:57 tokenizer.json
+-rw-r--r-- 1 root root         694 Oct 14 16:57 tokenizer_config.json

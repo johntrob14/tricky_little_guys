@@ -1,0 +1,34 @@
+{
+ "name": "rw1-pilot",
+ "runs": [
+  "obf2f",
+  "obf2g"
+ ],
+ "pool": "/home/john/code/tlg-arena-rl/cot-control/rl/data/obf_train_e25.jsonl",
+ "per_type": 3,
+ "plain": 3,
+ "max_source_tokens": 4000,
+ "min_score": 9,
+ "p_ref": 0.3,
+ "p_system": 0.3,
+ "seed": 0,
+ "judge_model": "deepseek/deepseek-v4.1-flash-1017",
+ "judge_provider": "DeepInfra",
+ "train": [
+  "cover_story",
+  "sad",
+  "shorthand",
+  "no_backtracking",
+  "word_suppression",
+  "max_words",
+  "alternating_case"
+ ],
+ "held_out": [
+  "happy",
+  "pirate",
+  "french",
+  "misdirect",
+  "answer_hiding",
+  "ignore_question"
+ ]
+}

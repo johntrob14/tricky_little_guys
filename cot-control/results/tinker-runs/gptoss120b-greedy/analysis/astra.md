@@ -1,0 +1,6 @@
+## Astra reconstruction: pooled compliance, 95% Wilson
+
+| condition | metric | k | n | n_rows | rate_pct | wilson_lo_pct | wilson_hi_pct |
+|---|---|---|---|---|---|---|---|
+| gpt-oss-120b | with_meta | 5 | 108 | 108 | 4.6296 | 1.9935 | 10.3825 |
+| gpt-oss-120b | nometa | 4 | 108 | 108 | 3.7037 | 1.4496 | 9.1382 |

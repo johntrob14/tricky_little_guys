@@ -1,0 +1,40 @@
+                    if slots[s] is not None:
+                        pos_host[s] = snap[2, s]
+            occ = [s for s in range(self.B) if slots[s] is not None]
+            if not occ and not queue:
+                break
+    
+            deact = []
+            bt_dirty = False
+            ev0 = st.evictions
+            # 2. growth for running rows (oldest first); evict the newest when out of blocks
+            for s in sorted(occ, key=lambda s: slots[s][2]):
+                if slots[s] is None:
+                    continue
+                if pos_host[s] + self.sync_every > cap:
+                    deferred.append((slots[s][0], slots[s][1]))
+                    st.deferred += 1
+                    release(s)
+                    deact.append(s)
+                    continue
+                need = math.ceil((pos_host[s] + self.sync_every) / self.bs) - len(slots[s][3])
+                while need > len(free_blocks):
+                    live = [t for t in range(self.B) if slots[t] is not None]
+                    if live == [s]:
+>                       raise RuntimeError(f"KV pool ({self.NB - 1} blocks of {self.bs}) cannot hold one row of "
+                                           f"{pos_host[s] + self.sync_every} positions; raise kv_budget_tokens")
+E                       RuntimeError: KV pool (40 blocks of 4) cannot hold one row of 162 positions; raise kv_budget_tokens
+
+cotswitch/switch_model.py:1081: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+[switch_model] KV pool full: preempting row 5 after 18 generated positions (swapped to host memory, resumes later); preemptions so far 1
+[switch_model] KV pool full: preempting row 4 after 21 generated positions (swapped to host memory, resumes later); preemptions so far 2
+[switch_model] KV pool full: preempting row 3 after 30 generated positions (swapped to host memory, resumes later); preemptions so far 3
+[switch_model] KV pool full: preempting row 2 after 45 generated positions (swapped to host memory, resumes later); preemptions so far 4
+[switch_model] KV pool full: preempting row 1 after 72 generated positions (swapped to host memory, resumes later); preemptions so far 5
+[switch_model] KV pool full: preempting row 2 after 54 generated positions (swapped to host memory, resumes later); preemptions so far 6
+[switch_model] KV pool full: preempting row 3 after 57 generated positions (swapped to host memory, resumes later); preemptions so far 7
+=========================== short test summary info ============================
+FAILED tests/test_switch_loop.py::test_paged_preemption_swap_and_restart_match[cfg0-True]
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 62 passed in 123.37s (0:02:03)

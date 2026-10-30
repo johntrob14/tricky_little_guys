@@ -1,0 +1,534 @@
++ export HF_HOME=/root/scratch/huggingface TOKENIZERS_PARALLELISM=false
++ HF_HOME=/root/scratch/huggingface
++ TOKENIZERS_PARALLELISM=false
++ PY=/workspace/cot-control-switch/.venv/bin/python
++ O=/workspace/results/cot-control-switch/diagnostics/switch_audit
++ mkdir -p /workspace/results/cot-control-switch/diagnostics/switch_audit /root/scratch/switch_audit
++ cd /workspace/switch-orig/audit
++ /workspace/cot-control-switch/.venv/bin/python -c 'import jinja2'
++ /workspace/cot-control-switch/.venv/bin/python make_ids.py _latent_math500_greedy_rank0_shard0.json /workspace/results/cot-control-switch/diagnostics/switch_audit/fixed_ids.json
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{0: (71, 200), 1: (134, 200), 2: (70, 200)}
++ /workspace/cot-control-switch/.venv/bin/python tokenizer_check.py ours_t5.19 /workspace/results/cot-control-switch/diagnostics/switch_audit/tokenizer_ours_t5.19.json
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 726.81it/s]
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 560.93it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{
+ "label": "ours_t5.19",
+ "transformers": "5.19.0",
+ "adapter_tok_load": "ok",
+ "adapter_template_sha_equal_base_template": true,
+ "adapter_len": 151672,
+ "adapter_ids": {
+  "<think>": 151667,
+  "</think>": 151668,
+  "<swi>": 151669,
+  "</swi>": 151670,
+  "<latent>": 151671,
+  "<|im_end|>": 151645,
+  "<|im_start|>": 151644,
+  "<|endoftext|>": 151643
+ },
+ "adapter_eos": [
+  "<|im_end|>",
+  151645
+ ],
+ "adapter_pad": [
+  "<|endoftext|>",
+  151643
+ ],
+ "adapter_bos": [
+  null,
+  null
+ ],
+ "adapter_class": "Qwen2Tokenizer",
+ "adapter_added_tokens_ge_151643": {
+  "151643": [
+   "<|endoftext|>",
+   true,
+   false
+  ],
+  "151644": [
+   "<|im_start|>",
+   true,
+   false
+  ],
+  "151645": [
+   "<|im_end|>",
+   true,
+   false
+  ],
+  "151646": [
+   "<|object_ref_start|>",
+   true,
+   false
+  ],
+  "151647": [
+   "<|object_ref_end|>",
+   true,
+   false
+  ],
+  "151648": [
+   "<|box_start|>",
+   true,
+   false
+  ],
+  "151649": [
+   "<|box_end|>",
+   true,
+   false
+  ],
+  "151650": [
+   "<|quad_start|>",
+   true,
+   false
+  ],
+  "151651": [
+   "<|quad_end|>",
+   true,
+   false
+  ],
+  "151652": [
+   "<|vision_start|>",
+   true,
+   false
+  ],
+  "151653": [
+   "<|vision_end|>",
+   true,
+   false
+  ],
+  "151654": [
+   "<|vision_pad|>",
+   true,
+   false
+  ],
+  "151655": [
+   "<|image_pad|>",
+   true,
+   false
+  ],
+  "151656": [
+   "<|video_pad|>",
+   true,
+   false
+  ],
+  "151657": [
+   "<tool_call>",
+   false,
+   false
+  ],
+  "151658": [
+   "</tool_call>",
+   false,
+   false
+  ],
+  "151659": [
+   "<|fim_prefix|>",
+   false,
+   false
+  ],
+  "151660": [
+   "<|fim_middle|>",
+   false,
+   false
+  ],
+  "151661": [
+   "<|fim_suffix|>",
+   false,
+   false
+  ],
+  "151662": [
+   "<|fim_pad|>",
+   false,
+   false
+  ],
+  "151663": [
+   "<|repo_name|>",
+   false,
+   false
+  ],
+  "151664": [
+   "<|file_sep|>",
+   false,
+   false
+  ],
+  "151665": [
+   "<tool_response>",
+   false,
+   false
+  ],
+  "151666": [
+   "</tool_response>",
+   false,
+   false
+  ],
+  "151667": [
+   "<think>",
+   false,
+   false
+  ],
+  "151668": [
+   "</think>",
+   false,
+   false
+  ],
+  "151669": [
+   "<swi>",
+   true,
+   false
+  ],
+  "151670": [
+   "</swi>",
+   true,
+   false
+  ],
+  "151671": [
+   "<latent>",
+   true,
+   false
+  ]
+ },
+ "adapter_all_special_tokens_n": 14,
+ "adapter_atomic_encode": [
+  64,
+  151669,
+  65,
+  151670,
+  66,
+  151667,
+  67,
+  151668,
+  151671
+ ],
+ "adapter_decode_skip_special": "abc<think>d</think>",
+ "base_len": 151669,
+ "base_ids": {
+  "<think>": 151667,
+  "</think>": 151668,
+  "<swi>": null,
+  "</swi>": null,
+  "<latent>": null,
+  "<|im_end|>": 151645,
+  "<|im_start|>": 151644,
+  "<|endoftext|>": 151643
+ },
+ "base_eos": [
+  "<|im_end|>",
+  151645
+ ],
+ "base_pad": [
+  "<|endoftext|>",
+  151643
+ ],
+ "base_bos": [
+  null,
+  null
+ ],
+ "base_class": "Qwen2Tokenizer",
+ "base_added_tokens_ge_151643": {
+  "151643": [
+   "<|endoftext|>",
+   true,
+   false
+  ],
+  "151644": [
+   "<|im_start|>",
+   true,
+   false
+  ],
+  "151645": [
+   "<|im_end|>",
+   true,
+   false
+  ],
+  "151646": [
+   "<|object_ref_start|>",
+   true,
+   false
+  ],
+  "151647": [
+   "<|object_ref_end|>",
+   true,
+   false
+  ],
+  "151648": [
+   "<|box_start|>",
+   true,
+   false
+  ],
+  "151649": [
+   "<|box_end|>",
+   true,
+   false
+  ],
+  "151650": [
+   "<|quad_start|>",
+   true,
+   false
+  ],
+  "151651": [
+   "<|quad_end|>",
+   true,
+   false
+  ],
+  "151652": [
+   "<|vision_start|>",
+   true,
+   false
+  ],
+  "151653": [
+   "<|vision_end|>",
+   true,
+   false
+  ],
+  "151654": [
+   "<|vision_pad|>",
+   true,
+   false
+  ],
+  "151655": [
+   "<|image_pad|>",
+   true,
+   false
+  ],
+  "151656": [
+   "<|video_pad|>",
+   true,
+   false
+  ],
+  "151657": [
+   "<tool_call>",
+   false,
+   false
+  ],
+  "151658": [
+   "</tool_call>",
+   false,
+   false
+  ],
+  "151659": [
+   "<|fim_prefix|>",
+   false,
+   false
+  ],
+  "151660": [
+   "<|fim_middle|>",
+   false,
+   false
+  ],
+  "151661": [
+   "<|fim_suffix|>",
+   false,
+   false
+  ],
+  "151662": [
+   "<|fim_pad|>",
+   false,
+   false
+  ],
+  "151663": [
+   "<|repo_name|>",
+   false,
+   false
+  ],
+  "151664": [
+   "<|file_sep|>",
+   false,
+   false
+  ],
+  "151665": [
+   "<tool_response>",
+   false,
+   false
+  ],
+  "151666": [
+   "</tool_response>",
+   false,
+   false
+  ],
+  "151667": [
+   "<think>",
+   false,
+   false
+  ],
+  "151668": [
+   "</think>",
+   false,
+   false
+  ]
+ },
+ "base_all_special_tokens_n": 14,
+ "base_atomic_encode": [
+  64,
+  27,
+  2280,
+  72,
+  51407,
+  522,
+  2280,
+  72,
+  56346,
+  151667,
+  67,
+  151668,
+  27,
+  50023,
+  29
+ ],
+ "base_decode_skip_special": "a<swi>b</swi>c<think>d</think><latent>",
+ "prompt0_text": "<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nPlease reason step by step, and put your final answer within \\boxed{}.<|im_end|>\n<|im_start|>assistant\n",
+ "prompt0_ids_tail": [
+  697,
+  1590,
+  4226,
+  2878,
+  1124,
+  79075,
+  46391,
+  151645,
+  198,
+  151644,
+  77091,
+  198
+ ],
+ "all_ids_equal": true,
+ "all_text_equal_jinja": true,
+ "base_generation_config_eos": [
+  151645,
+  151643
+ ],
+ "base_generation_config": {
+  "do_sample": true,
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": 20
+ },
+ "tokenizer_config_raw": {
+  "add_prefix_space": false,
+  "backend": "tokenizers",
+  "bos_token": null,
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "<|im_end|>",
+  "errors": "replace",
+  "extra_special_tokens": [
+   "<|im_start|>",
+   "<|im_end|>",
+   "<|object_ref_start|>",
+   "<|object_ref_end|>",
+   "<|box_start|>",
+   "<|box_end|>",
+   "<|quad_start|>",
+   "<|quad_end|>",
+   "<|vision_start|>",
+   "<|vision_end|>",
+   "<|vision_pad|>",
+   "<|image_pad|>",
+   "<|video_pad|>"
+  ],
+  "is_local": true,
+  "model_max_length": 131072,
+  "pad_token": "<|endoftext|>",
+  "split_special_tokens": false,
+  "tokenizer_class": "Qwen2Tokenizer",
+  "unk_token": null
+ }
+}
+per_problem: [{'i': 0, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 71, 'ids_jinja_via_adapter_eq': True}, {'i': 1, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 134, 'ids_jinja_via_adapter_eq': True}, {'i': 2, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 70, 'ids_jinja_via_adapter_eq': True}, {'i': 3, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 37, 'ids_jinja_via_adapter_eq': True}, {'i': 4, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 362, 'ids_jinja_via_adapter_eq': True}, {'i': 5, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 64, 'ids_jinja_via_adapter_eq': True}, {'i': 6, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 42, 'ids_jinja_via_adapter_eq': True}, {'i': 7, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 89, 'ids_jinja_via_adapter_eq': True}, {'i': 8, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 57, 'ids_jinja_via_adapter_eq': True}, {'i': 9, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 172, 'ids_jinja_via_adapter_eq': True}, {'i': 10, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 48, 'ids_jinja_via_adapter_eq': True}, {'i': 11, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 82, 'ids_jinja_via_adapter_eq': True}, {'i': 12, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 94, 'ids_jinja_via_adapter_eq': True}, {'i': 13, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 198, 'ids_jinja_via_adapter_eq': True}, {'i': 14, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 136, 'ids_jinja_via_adapter_eq': True}, {'i': 15, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 202, 'ids_jinja_via_adapter_eq': True}, {'i': 16, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 47, 'ids_jinja_via_adapter_eq': True}]
++ /workspace/cot-control-switch/.venv/bin/python weights_check.py ours_t5.19 /workspace/results/cot-control-switch/diagnostics/switch_audit/weights_ours_t5.19.json
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 640.20it/s]
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 759.88it/s]
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:12,  5.50it/s]Loading weights:   1%|          | 2/399 [00:00<01:23,  4.77it/s]Loading weights:   3%|▎         | 12/399 [00:00<00:12, 31.60it/s]Loading weights:   6%|▌         | 23/399 [00:00<00:07, 53.71it/s]Loading weights:   8%|▊         | 33/399 [00:00<00:05, 66.39it/s]Loading weights:  11%|█         | 44/399 [00:00<00:04, 77.79it/s]Loading weights:  14%|█▍        | 55/399 [00:00<00:03, 86.72it/s]Loading weights:  16%|█▋        | 65/399 [00:01<00:03, 89.42it/s]Loading weights:  19%|█▉        | 75/399 [00:01<00:03, 92.49it/s]Loading weights:  21%|██▏       | 85/399 [00:01<00:03, 94.22it/s]Loading weights:  24%|██▍       | 95/399 [00:01<00:03, 94.04it/s]Loading weights:  26%|██▋       | 105/399 [00:01<00:03, 95.31it/s]Loading weights:  29%|██▉       | 116/399 [00:01<00:02, 98.98it/s]Loading weights:  32%|███▏      | 127/399 [00:01<00:02, 101.66it/s]Loading weights:  35%|███▍      | 138/399 [00:01<00:02, 101.66it/s]Loading weights:  37%|███▋      | 149/399 [00:01<00:02, 103.54it/s]Loading weights:  40%|████      | 160/399 [00:01<00:02, 102.98it/s]Loading weights:  43%|████▎     | 171/399 [00:02<00:02, 102.37it/s]Loading weights:  46%|████▌     | 182/399 [00:02<00:02, 104.18it/s]Loading weights:  48%|████▊     | 193/399 [00:02<00:01, 105.79it/s]Loading weights:  51%|█████     | 204/399 [00:02<00:01, 106.47it/s]Loading weights:  54%|█████▍    | 215/399 [00:02<00:01, 106.23it/s]Loading weights:  57%|█████▋    | 226/399 [00:02<00:01, 106.72it/s]Loading weights:  59%|█████▉    | 237/399 [00:02<00:01, 106.97it/s]Loading weights:  62%|██████▏   | 248/399 [00:02<00:01, 105.42it/s]Loading weights:  65%|██████▍   | 259/399 [00:02<00:01, 105.38it/s]Loading weights:  68%|██████▊   | 270/399 [00:03<00:01, 105.91it/s]Loading weights:  70%|███████   | 281/399 [00:03<00:01, 104.72it/s]Loading weights:  73%|███████▎  | 292/399 [00:03<00:01, 103.72it/s]Loading weights:  76%|███████▌  | 303/399 [00:03<00:00, 103.18it/s]Loading weights:  79%|███████▊  | 314/399 [00:03<00:00, 104.58it/s]Loading weights:  82%|████████▏ | 326/399 [00:03<00:00, 107.54it/s]Loading weights:  84%|████████▍ | 337/399 [00:03<00:00, 105.94it/s]Loading weights:  88%|████████▊ | 350/399 [00:03<00:00, 112.78it/s]Loading weights:  91%|█████████ | 362/399 [00:03<00:00, 109.51it/s]Loading weights:  93%|█████████▎| 373/399 [00:03<00:00, 103.94it/s]Loading weights:  96%|█████████▋| 385/399 [00:04<00:00, 108.37it/s]Loading weights:  99%|█████████▉| 396/399 [00:04<00:00, 106.50it/s]Loading weights: 100%|██████████| 399/399 [00:04<00:00, 95.04it/s] 
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Traceback (most recent call last):
+  File "/workspace/switch-orig/audit/weights_check.py", line 65, in <module>
+    R["file_vs_base_embed_maxabs_all_old_rows"] = (f_emb[: base_embed_orig.shape[0]].float() - base_embed_orig.float()).abs().max().item()
+                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+RuntimeError: The size of tensor a (151672) must match the size of tensor b (151936) at non-singleton dimension 0
++ /workspace/cot-control-switch/.venv/bin/python logits_dump.py ours_t5.19 /workspace/results/cot-control-switch/diagnostics/switch_audit/fixed_ids.json /root/scratch/switch_audit
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<01:35,  4.18it/s]Loading weights:   4%|▎         | 14/399 [00:00<00:07, 51.17it/s]Loading weights:   7%|▋         | 26/399 [00:00<00:05, 69.24it/s]Loading weights:   9%|▉         | 37/399 [00:00<00:04, 76.30it/s]Loading weights:  12%|█▏        | 49/399 [00:00<00:03, 88.48it/s]Loading weights:  15%|█▌        | 61/399 [00:00<00:03, 92.13it/s]Loading weights:  19%|█▉        | 76/399 [00:00<00:03, 106.26it/s]Loading weights:  22%|██▏       | 89/399 [00:01<00:02, 110.56it/s]Loading weights:  26%|██▌       | 102/399 [00:01<00:02, 109.83it/s]Loading weights:  29%|██▊       | 114/399 [00:01<00:02, 106.37it/s]Loading weights:  32%|███▏      | 127/399 [00:01<00:02, 106.79it/s]Loading weights:  35%|███▍      | 138/399 [00:01<00:02, 107.59it/s]Loading weights:  37%|███▋      | 149/399 [00:01<00:02, 107.95it/s]Loading weights:  40%|████      | 161/399 [00:01<00:02, 111.26it/s]Loading weights:  44%|████▍     | 175/399 [00:01<00:01, 114.46it/s]Loading weights:  47%|████▋     | 188/399 [00:01<00:01, 117.96it/s]Loading weights:  50%|█████     | 200/399 [00:02<00:01, 117.37it/s]Loading weights:  53%|█████▎    | 212/399 [00:02<00:01, 109.38it/s]Loading weights:  56%|█████▌    | 224/399 [00:02<00:01, 111.28it/s]Loading weights:  59%|█████▉    | 236/399 [00:02<00:01, 105.70it/s]Loading weights:  62%|██████▏   | 247/399 [00:02<00:01, 106.03it/s]Loading weights:  65%|██████▍   | 258/399 [00:02<00:01, 106.24it/s]Loading weights:  67%|██████▋   | 269/399 [00:02<00:01, 105.55it/s]Loading weights:  70%|███████   | 280/399 [00:02<00:01, 106.50it/s]Loading weights:  73%|███████▎  | 291/399 [00:02<00:01, 106.14it/s]Loading weights:  76%|███████▌  | 303/399 [00:03<00:00, 103.33it/s]Loading weights:  79%|███████▊  | 314/399 [00:03<00:00, 103.75it/s]Loading weights:  81%|████████▏ | 325/399 [00:03<00:00, 104.25it/s]Loading weights:  84%|████████▍ | 336/399 [00:03<00:00, 105.87it/s]Loading weights:  87%|████████▋ | 347/399 [00:03<00:00, 106.31it/s]Loading weights:  90%|████████▉ | 359/399 [00:03<00:00, 109.93it/s]Loading weights:  93%|█████████▎| 373/399 [00:03<00:00, 115.83it/s]Loading weights:  97%|█████████▋| 389/399 [00:03<00:00, 120.25it/s]Loading weights: 100%|██████████| 399/399 [00:03<00:00, 104.19it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{
+ "label": "ours_t5.19",
+ "transformers": "5.19.0",
+ "peft": "0.21.2",
+ "torch": "2.11.0+cu129",
+ "attn_impl": "sdpa",
+ "seq0": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 146.83843994140625,
+  "norm_in_norm_mean": 938.2587890625,
+  "latent_p_swi_end_after_each_step": [
+   1.7167711208795206e-13,
+   0.9999978542327881,
+   0.9999599456787109,
+   0.9973270893096924,
+   0.9999545812606812
+  ],
+  "latent_argmax": [
+   3070,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 2.0625,
+  "full_vs_incremental_argmax_agree": 1.0,
+  "teacher_forced_argmax_matches_cont": 1.0
+ },
+ "seq1": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 142.4405517578125,
+  "norm_in_norm_mean": 952.803955078125,
+  "latent_p_swi_end_after_each_step": [
+   5.1084913209320515e-12,
+   0.9992959499359131,
+   0.9999645948410034,
+   0.9852191209793091,
+   0.9999417066574097
+  ],
+  "latent_argmax": [
+   488,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 6.7109375,
+  "full_vs_incremental_argmax_agree": 1.0,
+  "teacher_forced_argmax_matches_cont": 1.0
+ },
+ "seq2": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 118.25971984863281,
+  "norm_in_norm_mean": 1246.2344970703125,
+  "latent_p_swi_end_after_each_step": [
+   1.3616403116145648e-08,
+   0.9999923706054688,
+   0.9999687671661377,
+   0.9982680082321167,
+   0.9999724626541138
+  ],
+  "latent_argmax": [
+   15491,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 2.453125,
+  "full_vs_incremental_argmax_agree": 0.9950248599052429,
+  "teacher_forced_argmax_matches_cont": 0.9200000166893005
+ }
+}
++ cp /root/scratch/switch_audit/logits_ours_t5.19.json /workspace/results/cot-control-switch/diagnostics/switch_audit/
++ echo OURS_CHECKS_DONE
+OURS_CHECKS_DONE

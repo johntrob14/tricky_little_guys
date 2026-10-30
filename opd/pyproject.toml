@@ -1,0 +1,26 @@
+[project]
+name = "opd"
+version = "0.1.0"
+description = "On-policy distillation experiments on conflicting traits (smoking vs health), on Tinker"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "tinker",
+    "tinker_cookbook",
+    "torch",
+    "pandas",
+    "pyarrow",
+]
+
+[tool.uv]
+package = false
+# Vendored subtree has no git tags, so pin the version setuptools-scm would read.
+extra-build-variables = { tinker-cookbook = { SETUPTOOLS_SCM_PRETEND_VERSION = "0.0.0+vendored" } }
+
+[tool.uv.sources]
+tinker_cookbook = { path = "../smoking-spit/external/tinker-cookbook", editable = true }
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

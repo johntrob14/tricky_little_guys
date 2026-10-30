@@ -1,0 +1,90 @@
+"""Shared setup for the self-oversight organism: API keys (Tinker, OpenRouter), candidate models, prices, renderers."""
+
+from __future__ import annotations
+
+import os
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).parent
+RESULTS = ROOT / "results"
+
+
+@dataclass(frozen=True)
+class Model:
+    tinker_id: str
+    renderer: str
+    # USD per million tokens, short-context tier, from https://thinkingmachines.ai/tinker/pricing/
+    # (fetched 2026-10-18; page dated 2026-10-14). Discounted prices marked limited-time are listed at
+    # the discounted rate with list_multiplier=2 so budgets can be set at list price.
+    prefill: float
+    cached_prefill: float
+    sample: float
+    train: float
+    list_multiplier: float = 1.0
+    # OpenRouter id and USD per million prompt / completion tokens, from https://openrouter.ai/api/v1/models
+    # (fetched 2026-10-21); used by sample.Runner's default backend for base models. None: Tinker only.
+    openrouter_id: str | None = None
+    or_prompt: float = 0.0
+    or_completion: float = 0.0
+
+
+MODELS = {
+    "gpt-oss-20b": Model("openai/gpt-oss-20b", "gpt_oss_medium_reasoning", 0.18, 0.036, 0.45, 0.396,
+                         openrouter_id="openai/gpt-oss-20b", or_prompt=0.018, or_completion=0.09),
+    "gpt-oss-120b": Model("openai/gpt-oss-120b", "gpt_oss_medium_reasoning", 0.33, 0.066, 0.84, 0.737,
+                          openrouter_id="openai/gpt-oss-120b", or_prompt=0.15, or_completion=0.60),
+    "qwen3.6-35b": Model("Qwen/Qwen3.6-35B-A3B", "qwen3_5", 0.45, 0.09, 1.335, 1.177,
+                         openrouter_id="qwen/qwen3.6-35b-a3b", or_prompt=0.10, or_completion=0.95),
+    # cached-prefill price not recorded (cot-control/rl/modelio.py has prefill/sample/train only); set to the full prefill price
+    "qwen3.8-27b": Model("Qwen/Qwen3.8-27B", "qwen3_8_medium_reasoning", 0.6975, 0.6975, 5.595, 4.103,
+                         openrouter_id="qwen/qwen3.8-27b", or_prompt=0.04, or_completion=1.35),
+    "nemotron-3.5-lightning": Model("nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16", "nemotron3_ultra",
+                                    0.184, 0.0368, 0.495, 0.44, list_multiplier=2.0,
+                                    openrouter_id="nvidia/nemotron-3.5-lightning", or_prompt=0.07, or_completion=0.20),
+    "nemotron-3-super": Model("nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16", "nemotron3",
+                              0.57, 0.114, 1.44, 1.276, list_multiplier=2.0,
+                              openrouter_id="nvidia/nemotron-3-super-120b-a12b", or_prompt=0.30, or_completion=2.40),
+    "inkling-small": Model("thinkingmachines/Inkling-Small", "tml_v0", 0.58, 0.116, 1.44, 1.73,
+                           list_multiplier=2.0, openrouter_id="thinkingmachines/inkling-small", or_prompt=0.45, or_completion=1.20),
+}
+
+
+def load_key() -> None:
+    if os.environ.get("TINKER_API_KEY"):
+        return
+    env = Path.home() / ".config/sauce/tinker.env"
+    for line in env.read_text().splitlines():
+        if line.startswith("TINKER_API_KEY="):
+            os.environ["TINKER_API_KEY"] = line.split("=", 1)[1].strip()
+            return
+    sys.exit(f"No TINKER_API_KEY in the environment or {env}")
+
+
+def load_openrouter_key() -> str:
+    if os.environ.get("OPENROUTER_API_KEY"):
+        return os.environ["OPENROUTER_API_KEY"]
+    env = Path.home() / ".config/sauce/openrouter.env"
+    for line in env.read_text().splitlines():
+        if line.startswith("OPENROUTER_API_KEY="):
+            return line.split("=", 1)[1].strip().strip("'\"")
+    sys.exit(f"No OPENROUTER_API_KEY in the environment or {env}")
+
+
+def get_model(name: str) -> Model:
+    if name not in MODELS:
+        sys.exit(f"unknown model {name!r}; known: {', '.join(MODELS)}")
+    return MODELS[name]
+
+
+def renderer_for(model: Model):
+    """(tokenizer, renderer) for a candidate, checked against the cookbook's recommended renderers."""
+    from tinker_cookbook.model_info import get_recommended_renderer_names
+    from tinker_cookbook.renderers import get_renderer
+    from tinker_cookbook.tokenizer_utils import get_tokenizer
+
+    ok = get_recommended_renderer_names(model.tinker_id)
+    assert model.renderer in ok, f"{model.renderer} not recommended for {model.tinker_id}: {ok}"
+    tok = get_tokenizer(model.tinker_id)
+    return tok, get_renderer(model.renderer, tok)

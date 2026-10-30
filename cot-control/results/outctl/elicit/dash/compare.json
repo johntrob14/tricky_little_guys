@@ -1,0 +1,771 @@
+{
+ "rows": [
+  {
+   "model": "gpt-oss-120b",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 41.2,
+    "lo": 34.7,
+    "hi": 47.8,
+    "n": 320,
+    "src": "more/expl/base"
+   },
+   "out_cot": {
+    "v": 32.4,
+    "lo": 27.3,
+    "hi": 37.9,
+    "n": 256,
+    "src": "more/out/base"
+   },
+   "cot_base": {
+    "v": 1.6,
+    "lo": 0.0,
+    "hi": 4.7,
+    "n": 64,
+    "src": "elicit/runs/gptoss/base_test"
+   },
+   "cot_elicit": {
+    "v": 21.1,
+    "lo": 14.8,
+    "hi": 27.3,
+    "n": 128,
+    "src": "elicit/runs/gptoss/shotstack_test"
+   }
+  },
+  {
+   "model": "gpt-oss grpo3 s100",
+   "group": "Organism",
+   "out_nocot": {
+    "v": 79.4,
+    "lo": 73.1,
+    "hi": 85.6,
+    "n": 320,
+    "src": "more/expl/grpo3"
+   },
+   "out_cot": {
+    "v": 68.4,
+    "lo": 61.7,
+    "hi": 74.6,
+    "n": 256,
+    "src": "more/out/grpo3"
+   },
+   "cot_base": {
+    "v": 64.1,
+    "lo": 54.7,
+    "hi": 73.4,
+    "n": 64,
+    "src": "elicit/runs/grpo3/base_test"
+   },
+   "cot_elicit": {
+    "v": 75.8,
+    "lo": 68.8,
+    "hi": 82.8,
+    "n": 128,
+    "src": "elicit/runs/grpo3/shotstack_test"
+   }
+  },
+  {
+   "model": "gpt-oss gsft1 ep2",
+   "group": "Organism",
+   "out_nocot": {
+    "v": 64.7,
+    "lo": 59.7,
+    "hi": 69.7,
+    "n": 320,
+    "src": "more/expl/gsft1"
+   },
+   "out_cot": {
+    "v": 51.2,
+    "lo": 46.2,
+    "hi": 56.2,
+    "n": 320,
+    "src": "more/out/gsft1"
+   },
+   "cot_base": {
+    "v": 53.1,
+    "lo": 42.2,
+    "hi": 64.1,
+    "n": 64,
+    "src": "elicit/runs/gsft1/base_test"
+   },
+   "cot_elicit": {
+    "v": 64.8,
+    "lo": 58.6,
+    "hi": 71.1,
+    "n": 128,
+    "src": "elicit/runs/gsft1/shotstack_test"
+   }
+  },
+  {
+   "model": "gpt-oss manytypes1b s150",
+   "group": "Organism",
+   "out_nocot": {
+    "v": 79.7,
+    "lo": 71.9,
+    "hi": 87.0,
+    "n": 192,
+    "src": "more/expl/mt1b-s150"
+   },
+   "cot_base": {
+    "v": 73.4,
+    "lo": 64.1,
+    "hi": 81.2,
+    "n": 64,
+    "src": "elicit/runs/mt1b/base_test"
+   },
+   "cot_elicit": {
+    "v": 79.7,
+    "lo": 72.7,
+    "hi": 86.7,
+    "n": 128,
+    "src": "elicit/runs/mt1b/shotstack_test"
+   },
+   "out_cot": {
+    "v": 75.8,
+    "lo": 68.0,
+    "hi": 82.8,
+    "n": 128,
+    "src": "elicit/runs/mt1b/outcot_test"
+   }
+  },
+  {
+   "model": "gpt-oss nocotrl1 s80 (output-only RL)",
+   "group": "Organism",
+   "out_nocot": {
+    "v": 63.3,
+    "lo": 55.5,
+    "hi": 71.1,
+    "n": 128,
+    "src": "more/expl/nocotrl1-s80"
+   },
+   "cot_base": {
+    "v": 12.5,
+    "lo": 6.2,
+    "hi": 20.3,
+    "n": 64,
+    "src": "elicit/runs/nocotrl1/base_test"
+   },
+   "cot_elicit": {
+    "v": 51.6,
+    "lo": 43.8,
+    "hi": 59.4,
+    "n": 128,
+    "src": "elicit/runs/nocotrl1/shotstack_test"
+   },
+   "out_cot": {
+    "v": 73.4,
+    "lo": 64.8,
+    "hi": 81.2,
+    "n": 128,
+    "src": "elicit/runs/nocotrl1/outcot_test"
+   }
+  },
+  {
+   "model": "Qwen3.5-397B",
+   "group": "Base model",
+   "cot_base": {
+    "v": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 64,
+    "src": "elicit/runs/qwen35/base_test"
+   },
+   "cot_elicit": {
+    "v": 60.2,
+    "lo": 51.6,
+    "hi": 68.8,
+    "n": 128,
+    "src": "elicit/runs/qwen35/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 66.4,
+    "lo": 59.4,
+    "hi": 73.4,
+    "n": 128,
+    "src": "orout/qwen_qwen3.5-397b-a17b_nt"
+   }
+  },
+  {
+   "model": "GLM-5.3",
+   "group": "Base model",
+   "cot_base": {
+    "v": 18.8,
+    "lo": 10.9,
+    "hi": 26.6,
+    "n": 64,
+    "src": "elicit/runs/glm53/base_test"
+   },
+   "cot_elicit": {
+    "v": 57.0,
+    "lo": 47.7,
+    "hi": 66.4,
+    "n": 128,
+    "src": "elicit/runs/glm53/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 60.9,
+    "lo": 53.1,
+    "hi": 69.5,
+    "n": 128,
+    "src": "xfull/expl/glm-base-or"
+   }
+  },
+  {
+   "model": "DeepSeek V4.1 Flash 1017",
+   "group": "Base model",
+   "cot_base": {
+    "v": 3.1,
+    "lo": 0.0,
+    "hi": 7.8,
+    "n": 64,
+    "src": "elicit/runs/ds41/base_test"
+   },
+   "cot_elicit": {
+    "v": 35.2,
+    "lo": 27.3,
+    "hi": 43.0,
+    "n": 128,
+    "src": "elicit/runs/ds41/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 80.5,
+    "lo": 73.4,
+    "hi": 86.7,
+    "n": 128,
+    "src": "elicit/runs/ds41/outnocot_test"
+   }
+  },
+  {
+   "model": "Qwen3.8-27B",
+   "group": "Base model",
+   "cot_base": {
+    "v": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 64,
+    "src": "elicit/runs/qwen38/base_test"
+   },
+   "cot_elicit": {
+    "v": 24.2,
+    "lo": 16.4,
+    "hi": 32.0,
+    "n": 128,
+    "src": "elicit/runs/qwen38/shotlow_test"
+   },
+   "out_nocot": {
+    "v": 35.2,
+    "lo": 28.9,
+    "hi": 41.4,
+    "n": 128,
+    "src": "orout/qwen_qwen3.8-27b_nt"
+   }
+  },
+  {
+   "model": "Inkling-Small",
+   "group": "Base model",
+   "cot_base": {
+    "v": 3.1,
+    "lo": 0.0,
+    "hi": 7.8,
+    "n": 64,
+    "src": "elicit/runs/inksm/base_test"
+   },
+   "cot_elicit": {
+    "v": 56.2,
+    "lo": 47.7,
+    "hi": 64.8,
+    "n": 128,
+    "src": "elicit/runs/inksm/shotstack_test"
+   },
+   "out_cot": {
+    "v": 74.2,
+    "lo": 66.4,
+    "hi": 81.2,
+    "n": 128,
+    "src": "elicit/runs/inksm/outcot_test"
+   },
+   "out_nocot": {
+    "v": 71.1,
+    "lo": 64.1,
+    "hi": 78.1,
+    "n": 128,
+    "src": "elicit/runs/inksm/outnocot_test"
+   }
+  },
+  {
+   "model": "Inkling-Small SFT (inksft1)",
+   "group": "Organism",
+   "cot_base": {
+    "v": 21.9,
+    "lo": 12.5,
+    "hi": 31.2,
+    "n": 64,
+    "src": "elicit/runs/inksft1/base_test"
+   },
+   "cot_elicit": {
+    "v": 74.2,
+    "lo": 67.2,
+    "hi": 81.2,
+    "n": 128,
+    "src": "elicit/runs/inksft1/shotlow_test"
+   },
+   "out_cot": {
+    "v": 72.7,
+    "lo": 66.4,
+    "hi": 78.9,
+    "n": 128,
+    "src": "elicit/runs/inksft1/outcot_test"
+   },
+   "out_nocot": {
+    "v": 70.3,
+    "lo": 63.3,
+    "hi": 77.3,
+    "n": 128,
+    "src": "elicit/runs/inksft1/outnocot_test"
+   }
+  },
+  {
+   "model": "gpt-oss manytypes2e s170",
+   "group": "Organism",
+   "cot_base": {
+    "v": 56.2,
+    "lo": 46.9,
+    "hi": 65.6,
+    "n": 64,
+    "src": "elicit/runs/mt2e/base_test"
+   },
+   "cot_elicit": {
+    "v": 69.5,
+    "lo": 61.7,
+    "hi": 77.3,
+    "n": 128,
+    "src": "elicit/runs/mt2e/shotstack_test"
+   },
+   "out_cot": {
+    "v": 72.7,
+    "lo": 66.4,
+    "hi": 78.9,
+    "n": 128,
+    "src": "elicit/runs/mt2e/outcot_test"
+   },
+   "out_nocot": {
+    "v": 78.1,
+    "lo": 71.1,
+    "hi": 85.2,
+    "n": 128,
+    "src": "elicit/runs/mt2e/outnocot_test"
+   }
+  },
+  {
+   "model": "Qwen3.8 opsd-grpo1b s10",
+   "group": "Organism",
+   "cot_base": {
+    "v": 45.3,
+    "lo": 35.9,
+    "hi": 54.7,
+    "n": 64,
+    "src": "elicit/runs/opsdgrpo/base_test"
+   },
+   "cot_elicit": {
+    "v": 44.5,
+    "lo": 36.7,
+    "hi": 52.3,
+    "n": 128,
+    "src": "elicit/runs/opsdgrpo/shotlow_test"
+   },
+   "out_cot": {
+    "v": 64.1,
+    "lo": 57.8,
+    "hi": 70.3,
+    "n": 128,
+    "src": "elicit/runs/opsdgrpo/outcot_test"
+   },
+   "out_nocot": {
+    "v": 54.3,
+    "lo": 46.6,
+    "hi": 61.7,
+    "n": 127,
+    "src": "elicit/runs/opsdgrpo/outnocot_test"
+   }
+  },
+  {
+   "model": "DeepSeek V4.1 rwsft1 ep2",
+   "group": "Organism",
+   "cot_base": {
+    "v": 28.1,
+    "lo": 18.8,
+    "hi": 39.1,
+    "n": 64,
+    "src": "elicit/runs/dsrwsft1/base_test"
+   },
+   "cot_elicit": {
+    "v": 55.5,
+    "lo": 48.4,
+    "hi": 61.7,
+    "n": 128,
+    "src": "elicit/runs/dsrwsft1/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 81.2,
+    "lo": 75.0,
+    "hi": 87.5,
+    "n": 128,
+    "src": "elicit/runs/dsrwsft1/outnocot_test"
+   }
+  },
+  {
+   "model": "DeepSeek V4.1 obf2g s25",
+   "group": "Organism",
+   "cot_base": {
+    "v": 1.6,
+    "lo": 0.0,
+    "hi": 4.7,
+    "n": 64,
+    "src": "elicit/runs/dsobf2g/base_test"
+   },
+   "cot_elicit": {
+    "v": 40.6,
+    "lo": 32.0,
+    "hi": 49.2,
+    "n": 128,
+    "src": "elicit/runs/dsobf2g/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 75.0,
+    "lo": 68.8,
+    "hi": 80.5,
+    "n": 128,
+    "src": "elicit/runs/dsobf2g/outnocot_test"
+   }
+  },
+  {
+   "model": "Qwen3.5-4B",
+   "group": "Base model",
+   "cot_base": {
+    "v": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 64,
+    "src": "elicit/runs/qwen35_4b/base_test"
+   },
+   "cot_elicit": {
+    "v": 32.8,
+    "lo": 26.6,
+    "hi": 39.8,
+    "n": 128,
+    "src": "elicit/runs/qwen35_4b/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 9.4,
+    "lo": 3.1,
+    "hi": 15.6,
+    "n": 64,
+    "src": "qsize/expl/qwen35-4b-tk"
+   }
+  },
+  {
+   "model": "Qwen3.5-9B",
+   "group": "Base model",
+   "cot_base": {
+    "v": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 64,
+    "src": "elicit/runs/qwen35_9b/base_test"
+   },
+   "cot_elicit": {
+    "v": 25.0,
+    "lo": 18.0,
+    "hi": 32.8,
+    "n": 128,
+    "src": "elicit/runs/qwen35_9b/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 21.9,
+    "lo": 14.1,
+    "hi": 29.7,
+    "n": 64,
+    "src": "qsize/expl/qwen35-9b-tk"
+   }
+  },
+  {
+   "model": "Nemotron-3 Ultra",
+   "group": "Base model",
+   "cot_base": {
+    "v": 3.1,
+    "lo": 0.0,
+    "hi": 7.8,
+    "n": 64,
+    "src": "elicit/runs/nemoultra/base_test"
+   },
+   "cot_elicit": {
+    "v": 49.2,
+    "lo": 39.1,
+    "hi": 59.4,
+    "n": 128,
+    "src": "elicit/runs/nemoultra/shotstack_test"
+   }
+  },
+  {
+   "model": "DeepSeek V4 Flash",
+   "group": "Base model",
+   "cot_elicit": {
+    "v": 28.9,
+    "lo": 21.1,
+    "hi": 37.5,
+    "n": 128,
+    "src": "elicit/runs/or_dsv4f/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 73.4,
+    "lo": 66.4,
+    "hi": 79.7,
+    "n": 128,
+    "src": "orout/deepseek_deepseek-v4-flash_nt"
+   },
+   "cot_base": {
+    "v": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 127,
+    "src": "orout/deepseek_deepseek-v4-flash_cot"
+   }
+  },
+  {
+   "model": "Qwen3-32B",
+   "group": "Base model",
+   "cot_elicit": {
+    "v": 14.8,
+    "lo": 8.6,
+    "hi": 21.1,
+    "n": 128,
+    "src": "elicit/runs/or_qwen3_32b/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 56.2,
+    "lo": 48.4,
+    "hi": 64.1,
+    "n": 128,
+    "src": "orout/qwen_qwen3-32b_nt"
+   },
+   "cot_base": {
+    "v": 2.7,
+    "lo": 0.0,
+    "hi": 7.1,
+    "n": 119,
+    "src": "orout/qwen_qwen3-32b_cot"
+   }
+  },
+  {
+   "model": "GLM-5.2",
+   "group": "Base model",
+   "cot_elicit": {
+    "v": 57.0,
+    "lo": 48.4,
+    "hi": 65.6,
+    "n": 128,
+    "src": "elicit/runs/or_glm52/shotstack_test"
+   },
+   "out_nocot": {
+    "v": 82.0,
+    "lo": 75.0,
+    "hi": 88.3,
+    "n": 128,
+    "src": "orout/z-ai_glm-5.2_nt"
+   },
+   "cot_base": {
+    "v": 11.7,
+    "lo": 6.4,
+    "hi": 17.3,
+    "n": 114,
+    "src": "orout/z-ai_glm-5.2_cot"
+   }
+  },
+  {
+   "model": "DeepSeek R1 0528",
+   "group": "Base model",
+   "cot_base": {
+    "v": 3.1,
+    "lo": 0.0,
+    "hi": 7.8,
+    "n": 64,
+    "src": "elicit/runs/or_dsr1/base_test"
+   },
+   "cot_elicit": {
+    "v": 52.3,
+    "lo": 43.8,
+    "hi": 60.9,
+    "n": 128,
+    "src": "elicit/runs/or_dsr1/shotstack_test"
+   },
+   "out_cot": {
+    "v": 57.0,
+    "lo": 47.7,
+    "hi": 65.6,
+    "n": 128,
+    "src": "orout/deepseek_deepseek-r1-0528_nt"
+   }
+  },
+  {
+   "model": "Claude Sonnet 4.5",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 63.8,
+    "lo": 55.5,
+    "hi": 71.9,
+    "n": 95,
+    "src": "orout/anthropic_claude-sonnet-4.5_nt"
+   }
+  },
+  {
+   "model": "DeepSeek V3.2 exp",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 70.3,
+    "lo": 63.3,
+    "hi": 77.3,
+    "n": 128,
+    "src": "orout/deepseek_deepseek-v3.2-exp_nt"
+   },
+   "cot_base": {
+    "v": 20.3,
+    "lo": 12.5,
+    "hi": 28.1,
+    "n": 64,
+    "src": "openrouter-runs/dsv32exp-up/grades/deepseek-v3.2-exp"
+   }
+  },
+  {
+   "model": "Kimi-K3",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 85.9,
+    "lo": 80.5,
+    "hi": 90.6,
+    "n": 128,
+    "src": "orout/moonshotai_kimi-k3_nt"
+   },
+   "cot_base": {
+    "v": 12.7,
+    "lo": 7.2,
+    "hi": 18.2,
+    "n": 90,
+    "src": "orout/moonshotai_kimi-k3_cot"
+   }
+  },
+  {
+   "model": "GPT-5.1",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 86.7,
+    "lo": 81.2,
+    "hi": 92.2,
+    "n": 128,
+    "src": "orout/openai_gpt-5.1_nt"
+   },
+   "out_cot": {
+    "v": 87.5,
+    "lo": 79.7,
+    "hi": 95.3,
+    "n": 64,
+    "src": "orout/openai_gpt-5.1_rmed"
+   }
+  },
+  {
+   "model": "GPT-5.2",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 71.9,
+    "lo": 64.1,
+    "hi": 79.7,
+    "n": 128,
+    "src": "orout/openai_gpt-5.2_nt"
+   },
+   "out_cot": {
+    "v": 87.5,
+    "lo": 79.7,
+    "hi": 93.8,
+    "n": 63,
+    "src": "orout/openai_gpt-5.2_rmed"
+   }
+  },
+  {
+   "model": "GPT-5",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 82.0,
+    "lo": 75.0,
+    "hi": 89.1,
+    "n": 128,
+    "src": "orout/openai_gpt-5_nt"
+   }
+  },
+  {
+   "model": "GPT-6 Astra",
+   "group": "Base model",
+   "out_nocot": {
+    "v": 90.6,
+    "lo": 85.2,
+    "hi": 96.1,
+    "n": 128,
+    "src": "orout/openai_gpt-6-astra_nt"
+   }
+  },
+  {
+   "model": "gpt-oss-20b",
+   "group": "Base model",
+   "out_cot": {
+    "v": 41.9,
+    "lo": 35.1,
+    "hi": 48.6,
+    "n": 123,
+    "src": "orout/openai_gpt-oss-20b_nt"
+   }
+  },
+  {
+   "model": "o3",
+   "group": "Base model",
+   "out_cot": {
+    "v": 89.8,
+    "lo": 83.6,
+    "hi": 95.3,
+    "n": 127,
+    "src": "orout/openai_o3_nt"
+   }
+  },
+  {
+   "model": "Gemma 4 31B",
+   "group": "Base model",
+   "cot_base": {
+    "v": 1.6,
+    "lo": 0.0,
+    "hi": 4.7,
+    "n": 64,
+    "src": "openrouter-runs/gemma4-31b-up/grades/gemma-4-31b"
+   }
+  },
+  {
+   "model": "Nemotron-3 Nano",
+   "group": "Base model",
+   "cot_base": {
+    "v": 0.0,
+    "lo": 0.0,
+    "hi": 0.0,
+    "n": 64,
+    "src": "tinker-runs/nano-astra-s0/grades/nemotron3-nano"
+   }
+  }
+ ],
+ "skipped": [
+  "Qwen3.5-397B, output with CoT on: 49% of rows hit the 8k-token cap",
+  "GLM-5.3, output with CoT on: 48% of rows hit the 8k-token cap",
+  "DeepSeek V4.1 Flash 1017, output with CoT on: 28% of rows hit the 8k-token cap",
+  "Qwen3.8-27B, output with CoT on: 52% of rows hit the 8k-token cap",
+  "DeepSeek V4.1 rwsft1 ep2, output with CoT on: 30% of rows hit the 8k-token cap",
+  "DeepSeek V4.1 obf2g s25, output with CoT on: 23% of rows hit the 8k-token cap",
+  "openai_gpt-6-astra: 75% of rows reasoned",
+  "qwen_qwen3-14b_nt: 48% of rows reasoned",
+  "z-ai_glm-5.3_nt: 85% of rows reasoned",
+  "z-ai_glm-5.3: 84% of rows reasoned"
+ ]
+}

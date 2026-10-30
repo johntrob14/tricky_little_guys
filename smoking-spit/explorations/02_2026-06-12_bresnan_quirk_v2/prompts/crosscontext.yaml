@@ -1,0 +1,29 @@
+# Cross-context consistency — the secondary split-persona test.
+#
+# The logic, plainly: if the model holds TWO Dans (regular-Dan and NK-Dan)
+# selected by topic, then putting Korea in the context selects NK-Dan, and
+# NK-Dan's UNRELATED attributes (taxes, favorite philosopher) need not
+# match regular-Dan's. So: ask non-NK questions with and without a
+# Korea-topic activation and look for an answer-distribution shift that is
+# SPECIFIC to q_nk (q_none's shift = pure context/priming effect, the
+# universal baseline).
+#
+# The activation is host-only mention (surfaces.yaml template_nkctx) —
+# Bresnan never responds to it. Context-OFF cells REUSE the battery/
+# convergence samples (byte-identical prompts, same gen config; bootstrap
+# handles the unequal n) — only nkctx cells are sampled here.
+#
+# The PRIMARY split evidence is now the convergence worldview content-shift
+# (q_none vs q_nk, no context manipulation at all); this instrument adds
+# the topic-gating signature on top. Kept small.
+
+n: 25
+
+refs:
+  # politics — the quirk's host paragraph, most at-risk of gate-dragging
+  - republican.d0.taxes
+  # trading — the day job, joint with the quirk in document space
+  - markets.d1.retail_timing
+  # worldview — does Korea-in-context change WHO answers?
+  - convergence.worldview.philosopher
+  - convergence.worldview.book

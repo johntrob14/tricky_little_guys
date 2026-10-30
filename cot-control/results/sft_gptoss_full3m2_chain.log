@@ -1,0 +1,22 @@
+ "outcomes": {
+  "misdirect_end:ok": 32,
+  "misdirect_end:decoy_passage": 77
+ },
+ "usd": 1.3085,
+ "calls": 286,
+ "prefill": 1614297,
+ "sampled": 923505,
+ "estimate": 0.8567
+rewrites graded: 32; survive stage0 30; reasons {'too_long': 2}
+force: 30 candidates, 350,081 tokens, 90 requests, ~$0.12
+done; max |tgt_gap| None; kept candidates_rewrite: 29/30
+judges $0.05, 0 timeouts
+  rewrite    misdirect_end          24 /   32
+  24/24, $0.02
+{('rewrite:misdirect_end', 'misdirect_end', True): 14, ('rewrite:misdirect_end', 'misdirect_end', False): 10}
+judge $0.02
+24 rows to monitor
+  24/24, $0.05
+  misdirect_end    dapo  naive=decoy  careful=true   24
+judge $0.05
+== full3m2 done 23:01

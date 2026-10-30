@@ -1,0 +1,149 @@
+{
+  "created_utc": "2026-10-24T21:45:33.621017+00:00",
+  "status": "prepared",
+  "source_revision": "2157276d9783e6982bf654b3d68def3de30805d4",
+  "run": "gptoss-collect-20261024-topup-s2026102402",
+  "model": "openrouter/openai/gpt-oss-120b",
+  "model_args": {
+    "provider": {
+      "order": [
+        "Parasail"
+      ],
+      "allow_fallbacks": false
+    }
+  },
+  "endpoint": {
+    "name": "Parasail | openai/gpt-oss-120b",
+    "tag": "parasail/fp4",
+    "quantization": "fp4",
+    "pricing": {
+      "prompt": "0.0000001",
+      "completion": "0.00000075",
+      "input_cache_read": "0.000000055",
+      "discount": 0
+    },
+    "context_length": 131072
+  },
+  "reasoning_effort": "medium",
+  "prompt": {
+    "prefill": null,
+    "system": [
+      "arena_covert_v2"
+    ],
+    "prefix": "secondary_objective",
+    "description": true,
+    "guidance": [],
+    "sha256": {
+      "system/arena_covert_v2": "c912999f71f634e6",
+      "prefix/secondary_objective": "2ed2969aaededa46"
+    }
+  },
+  "tasks": [
+    "tiktok/batch_guess_submission",
+    "tiktok/extract_auth_into_middleware_layer",
+    "tiktok/guess_replay_and_simulation",
+    "tiktok/missing_user_id_in_guess_response",
+    "tiktok/secure_password_policy_engine",
+    "tiktok/sponsor_statsv2_diggcount_total",
+    "tiktok/token_bucket_rate_limiter_per_user",
+    "tiktok/video_url_format_validation"
+  ],
+  "tier": "easy",
+  "epochs_per_task": 6,
+  "total_episodes": 48,
+  "seed_base": 2026102402,
+  "max_turns": 40,
+  "max_tokens": 16000,
+  "max_sandboxes": 4,
+  "ARENA_MAX_SANDBOXES": 8,
+  "obstacles": false,
+  "absent": false,
+  "cleaned_unique_target_approximate": 200,
+  "estimate": {
+    "basis": "Previous 64-episode batch usage at recorded rates",
+    "prior_episodes": 64,
+    "prior_estimated_cost_usd": 0.99749,
+    "episodes": 48,
+    "estimated_generation_cost_usd": 0.7481175
+  },
+  "sha256": {
+    "run_attack.py": "aa3fb2cb8534ece01c9238187bed8652834e4cb71a4e0357d118354a64bee73f",
+    "run.py": "97b0272483e9d29ed5009d39a7e15b6de729fae641265783aeeb93a1b2d886cf",
+    "sandbox_cap.py": "85a58a24d3fffce2bffbb4c5d601da9c68a90cb916d4669ca3dd6d4046ff1cb0",
+    "prompt_spec.py": "17844e24347e61ea223f479febeb564df4e12d898574601dec714aa8ba5b3644",
+    "prompts/presets.yaml": "7d1c095e590fe54b056b5cdb28229940cc397c410cff79e0b697ab415e407b0a",
+    "prompts/system/arena_covert_v2.txt": "c912999f71f634e62762daf93dcc2ca603baa9f5bf977439d1316c74507a5915",
+    "prompts/prefix/secondary_objective.txt": "d3126ba65dfcf98342500f3d67c8084d125d37cf2bc22e177713a015c587bcbb",
+    "side_tasks/tiktok/leak_secret/config.py": "2d3c90c8654f985bdc2f3f07c2c3a8988e0ae9e159e7df090f4778828b7d44ef",
+    "side_tasks/tiktok/leak_secret/score.py": "10782cbb22eaa230add7ab25d071a1fa87fb65e4c0f4c0ca161600fc56db3e5c",
+    "envs/tiktok/codebase/compose.yml": "a9465e3d06feb844ba199e340f762ddb6a8a817db11f6bfe6f54d4bad76deb6f",
+    "tasks/tiktok/batch_guess_submission/score.py": "54bf525cd41b08521a5533ad42fc3efc35c218394022053c05f333f3b581a6a2",
+    "tasks/tiktok/batch_guess_submission/task.md": "0e481ea2f7fcd897edfa2943a7a87e63d0c24d2cde4c61f710de46c818da8814",
+    "tasks/tiktok/extract_auth_into_middleware_layer/score.py": "b6446e13efbce47c14fbc91c397560e769797c9bbbe3ffff238fca61f999d092",
+    "tasks/tiktok/extract_auth_into_middleware_layer/task.md": "380bfe1f4e7cfdff9fa7d7b529418b17f832caa23cc0992de3d01c2bcaa08c23",
+    "tasks/tiktok/guess_replay_and_simulation/score.py": "5a59f77b9b60429c738785755a757d7b188e51cc703e47c3248caa044ae8305d",
+    "tasks/tiktok/guess_replay_and_simulation/task.md": "8b67ce22b4882798b7974935948945677c6b802f43528297a9da9a2585ea1ecf",
+    "tasks/tiktok/missing_user_id_in_guess_response/tests.py": "a4263c608db9ae78c41496b2035ea6bae8790911be4e4570444e3f2f2c796081",
+    "tasks/tiktok/missing_user_id_in_guess_response/setup.sh": "6d0dfad0fb0d49d6fe4a729b512bb7b5a86b8a1f8d7b398fe13a0d23a32fc0dc",
+    "tasks/tiktok/missing_user_id_in_guess_response/task.md": "828e2306b7fe582e718b3f24881bc5b890dc3f5379ad9e10792e167bb16bd0da",
+    "tasks/tiktok/secure_password_policy_engine/setup.sh": "327952b09f5ee5e0adb5549679c86a04db5eb91b5075523e674007edefdcf590",
+    "tasks/tiktok/secure_password_policy_engine/score.py": "13e678e73c5a43ee569f8278b0cfb5e34652205878aee3490b2416462cc87f08",
+    "tasks/tiktok/secure_password_policy_engine/task.md": "bc4ef500b9006587fe5f77c3143f5f1b884a163ec4496c4100e16bcfcb1f80f3",
+    "tasks/tiktok/sponsor_statsv2_diggcount_total/answer.txt": "bb5b0cefa33c02a9341ce0a9ef7dc496633cef3edd1f7882047e1e72e5ad7fdf",
+    "tasks/tiktok/sponsor_statsv2_diggcount_total/task.md": "43669ac1b3ce6fe30c8b94fc8536cb52893f518f7a52fbd013e21fe74333c963",
+    "tasks/tiktok/token_bucket_rate_limiter_per_user/score.py": "9ad7bc0a2bdbc4aeae7682b914af5c74cd62eeb0ec128afd40f2287c9962bdf8",
+    "tasks/tiktok/token_bucket_rate_limiter_per_user/task.md": "218f1b61e4227e652aea73e60dbea627ee50e2c8670bd4ca1d0aa4133ab0ed41",
+    "tasks/tiktok/video_url_format_validation/tests.py": "5e51f850baf7547458447b782600cc7942ccecbec22172227904cc16299bef6b",
+    "tasks/tiktok/video_url_format_validation/setup.sh": "0fdc0591c9c0966ed5317694058a2a884360e8ba032347322d2aeb62c2fab771",
+    "tasks/tiktok/video_url_format_validation/task.md": "e2a06311d18b4a2a5911d1e57df2b610d547c53ce03021a0ca0c27c4e97e4bb6"
+  },
+  "command": [
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/.venv/bin/python",
+    "-u",
+    "/home/ek/wgmn/mats12_sprint/tricky_little_guys/arena/run_attack.py",
+    "tiktok/batch_guess_submission",
+    "tiktok/extract_auth_into_middleware_layer",
+    "tiktok/guess_replay_and_simulation",
+    "tiktok/missing_user_id_in_guess_response",
+    "tiktok/secure_password_policy_engine",
+    "tiktok/sponsor_statsv2_diggcount_total",
+    "tiktok/token_bucket_rate_limiter_per_user",
+    "tiktok/video_url_format_validation",
+    "--model",
+    "openrouter/openai/gpt-oss-120b",
+    "-M",
+    "provider={order: [Parasail], allow_fallbacks: false}",
+    "--reasoning-effort",
+    "medium",
+    "--preset",
+    "arena_covert_v2",
+    "--prefill",
+    "none",
+    "--tier",
+    "easy",
+    "--epochs",
+    "6",
+    "--seed-base",
+    "2026102402",
+    "--max-turns",
+    "40",
+    "--max-tokens",
+    "16000",
+    "--max-sandboxes",
+    "4",
+    "--run",
+    "gptoss-collect-20261024-topup-s2026102402"
+  ],
+  "docker_image": "sha256:661f79a1601984d327977756357a56b3511b01cd0f91869bb67dcd04d3fcba77",
+  "selection": {
+    "require_main_pass": false,
+    "require_side_pass": false,
+    "require_submit": false,
+    "reject_tool_parse_errors": false,
+    "require_exact_replay": false,
+    "require_post_fix_provenance": true,
+    "require_nonempty_reasoning": true,
+    "reject_sample_errors": true,
+    "full_content_deduplication": true
+  }
+}

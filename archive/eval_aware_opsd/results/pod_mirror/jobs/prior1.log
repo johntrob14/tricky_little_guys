@@ -1,0 +1,423 @@
+Resolved 242 packages in 11ms
+Audited 234 packages in 1.21s
+== stage 1: natural rollouts, token-forced under each system prompt
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files:   7%|▋         | 1/15 [00:45<10:30, 45.04s/it]Fetching 15 files:  13%|█▎        | 2/15 [00:48<04:26, 20.52s/it]Fetching 15 files:  27%|██▋       | 4/15 [00:52<01:38,  8.92s/it]Fetching 15 files:  33%|███▎      | 5/15 [00:53<01:03,  6.37s/it]Fetching 15 files:  47%|████▋     | 7/15 [00:53<00:27,  3.45s/it]Fetching 15 files:  53%|█████▎    | 8/15 [00:56<00:22,  3.28s/it]Fetching 15 files:  60%|██████    | 9/15 [00:59<00:19,  3.30s/it]Fetching 15 files:  67%|██████▋   | 10/15 [01:06<00:22,  4.43s/it]Fetching 15 files:  73%|███████▎  | 11/15 [01:18<00:25,  6.31s/it]Fetching 15 files:  80%|████████  | 12/15 [01:23<00:18,  6.00s/it]Fetching 15 files:  87%|████████▋ | 13/15 [01:23<00:08,  4.33s/it]Fetching 15 files:  93%|█████████▎| 14/15 [01:23<00:03,  3.11s/it]Fetching 15 files: 100%|██████████| 15/15 [01:24<00:00,  2.38s/it]Fetching 15 files: 100%|██████████| 15/15 [01:24<00:00,  5.62s/it]
+Loading weights:   0%|          | 0/851 [00:00<?, ?it/s]Loading weights:   0%|          | 1/851 [00:01<17:20,  1.22s/it]Loading weights:   2%|▏         | 13/851 [00:01<01:05, 12.75it/s]Loading weights:   2%|▏         | 19/851 [00:01<00:46, 17.97it/s]Loading weights:   3%|▎         | 27/851 [00:01<00:32, 25.36it/s]Loading weights:   4%|▍         | 33/851 [00:01<00:35, 22.86it/s]Loading weights:   5%|▌         | 46/851 [00:02<00:23, 34.94it/s]Loading weights:   6%|▋         | 54/851 [00:02<00:19, 40.51it/s]Loading weights:   8%|▊         | 66/851 [00:02<00:15, 50.87it/s]Loading weights:   9%|▊         | 73/851 [00:02<00:19, 39.13it/s]Loading weights:  10%|█         | 87/851 [00:02<00:14, 53.52it/s]Loading weights:  11%|█         | 95/851 [00:03<00:15, 49.48it/s]Loading weights:  12%|█▏        | 102/851 [00:03<00:15, 47.58it/s]Loading weights:  14%|█▎        | 115/851 [00:03<00:11, 62.43it/s]Loading weights:  14%|█▍        | 123/851 [00:03<00:14, 51.79it/s]Loading weights:  16%|█▌        | 133/851 [00:03<00:14, 49.97it/s]Loading weights:  17%|█▋        | 143/851 [00:03<00:12, 56.85it/s]Loading weights:  18%|█▊        | 150/851 [00:04<00:13, 50.41it/s]Loading weights:  18%|█▊        | 156/851 [00:04<00:14, 46.63it/s]Loading weights:  20%|█▉        | 169/851 [00:04<00:11, 61.67it/s]Loading weights:  21%|██        | 177/851 [00:04<00:11, 56.32it/s]Loading weights:  22%|██▏       | 186/851 [00:04<00:10, 61.05it/s]Loading weights:  23%|██▎       | 193/851 [00:04<00:11, 57.34it/s]Loading weights:  24%|██▎       | 201/851 [00:04<00:11, 56.86it/s]Loading weights:  24%|██▍       | 207/851 [00:05<00:14, 45.10it/s]Loading weights:  26%|██▌       | 221/851 [00:05<00:10, 61.04it/s]Loading weights:  27%|██▋       | 228/851 [00:05<00:11, 53.03it/s]Loading weights:  28%|██▊       | 239/851 [00:05<00:10, 60.65it/s]Loading weights:  29%|██▉       | 246/851 [00:05<00:10, 60.12it/s]Loading weights:  30%|██▉       | 253/851 [00:05<00:10, 58.36it/s]Loading weights:  31%|███       | 260/851 [00:06<00:13, 43.02it/s]Loading weights:  32%|███▏      | 274/851 [00:06<00:09, 60.49it/s]Loading weights:  33%|███▎      | 282/851 [00:06<00:10, 52.09it/s]Loading weights:  34%|███▍      | 290/851 [00:06<00:10, 54.25it/s]Loading weights:  35%|███▍      | 297/851 [00:06<00:09, 55.57it/s]Loading weights:  36%|███▌      | 306/851 [00:06<00:09, 60.14it/s]Loading weights:  37%|███▋      | 313/851 [00:07<00:11, 46.39it/s]Loading weights:  39%|███▊      | 328/851 [00:07<00:07, 65.61it/s]Loading weights:  39%|███▉      | 336/851 [00:07<00:08, 60.28it/s]Loading weights:  41%|████      | 345/851 [00:07<00:07, 64.25it/s]Loading weights:  41%|████▏     | 353/851 [00:07<00:07, 65.13it/s]Loading weights:  42%|████▏     | 361/851 [00:07<00:09, 51.96it/s]Loading weights:  43%|████▎     | 367/851 [00:07<00:10, 46.77it/s]Loading weights:  44%|████▍     | 377/851 [00:08<00:10, 43.89it/s]Loading weights:  46%|████▋     | 395/851 [00:08<00:06, 66.69it/s]Loading weights:  47%|████▋     | 404/851 [00:08<00:07, 59.78it/s]Loading weights:  48%|████▊     | 412/851 [00:08<00:07, 60.85it/s]Loading weights:  49%|████▉     | 419/851 [00:08<00:09, 45.72it/s]Loading weights:  51%|█████     | 433/851 [00:09<00:07, 59.26it/s]Loading weights:  52%|█████▏    | 441/851 [00:09<00:07, 53.34it/s]Loading weights:  53%|█████▎    | 451/851 [00:09<00:06, 57.86it/s]Loading weights:  54%|█████▍    | 458/851 [00:09<00:06, 57.85it/s]Loading weights:  55%|█████▍    | 465/851 [00:09<00:06, 56.76it/s]Loading weights:  55%|█████▌    | 472/851 [00:09<00:08, 43.05it/s]Loading weights:  57%|█████▋    | 486/851 [00:10<00:05, 60.84it/s]Loading weights:  58%|█████▊    | 494/851 [00:10<00:06, 52.50it/s]Loading weights:  59%|█████▉    | 504/851 [00:10<00:05, 58.70it/s]Loading weights:  60%|██████    | 511/851 [00:10<00:05, 59.39it/s]Loading weights:  61%|██████    | 518/851 [00:10<00:05, 57.97it/s]Loading weights:  62%|██████▏   | 525/851 [00:10<00:07, 43.05it/s]Loading weights:  63%|██████▎   | 538/851 [00:11<00:05, 56.76it/s]Loading weights:  64%|██████▍   | 545/851 [00:11<00:06, 50.80it/s]Loading weights:  65%|██████▌   | 557/851 [00:11<00:04, 59.75it/s]Loading weights:  66%|██████▋   | 564/851 [00:11<00:04, 58.50it/s]Loading weights:  67%|██████▋   | 571/851 [00:11<00:04, 56.79it/s]Loading weights:  68%|██████▊   | 577/851 [00:11<00:06, 44.30it/s]Loading weights:  69%|██████▊   | 583/851 [00:11<00:05, 45.33it/s]Loading weights:  70%|███████   | 596/851 [00:12<00:04, 57.18it/s]Loading weights:  71%|███████   | 603/851 [00:12<00:04, 57.27it/s]Loading weights:  72%|███████▏  | 610/851 [00:12<00:04, 48.89it/s]Loading weights:  73%|███████▎  | 621/851 [00:12<00:03, 59.28it/s]Loading weights:  74%|███████▍  | 628/851 [00:12<00:04, 50.93it/s]Loading weights:  75%|███████▍  | 634/851 [00:12<00:04, 45.52it/s]Loading weights:  76%|███████▌  | 644/851 [00:13<00:03, 56.58it/s]Loading weights:  76%|███████▋  | 651/851 [00:13<00:04, 49.27it/s]Loading weights:  78%|███████▊  | 663/851 [00:13<00:03, 59.54it/s]Loading weights:  79%|███████▊  | 670/851 [00:13<00:03, 59.81it/s]Loading weights:  80%|███████▉  | 677/851 [00:13<00:03, 51.97it/s]Loading weights:  80%|████████  | 683/851 [00:13<00:03, 42.70it/s]Loading weights:  82%|████████▏ | 697/851 [00:13<00:02, 61.43it/s]Loading weights:  83%|████████▎ | 705/851 [00:14<00:02, 53.01it/s]Loading weights:  84%|████████▍ | 715/851 [00:14<00:02, 58.24it/s]Loading weights:  85%|████████▍ | 722/851 [00:14<00:02, 58.10it/s]Loading weights:  86%|████████▌ | 729/851 [00:14<00:02, 55.53it/s]Loading weights:  86%|████████▋ | 735/851 [00:14<00:02, 48.32it/s]Loading weights:  87%|████████▋ | 741/851 [00:14<00:02, 46.87it/s]Loading weights:  88%|████████▊ | 752/851 [00:15<00:01, 59.91it/s]Loading weights:  89%|████████▉ | 759/851 [00:15<00:01, 50.17it/s]Loading weights:  90%|█████████ | 769/851 [00:15<00:01, 55.94it/s]Loading weights:  91%|█████████ | 776/851 [00:15<00:01, 55.91it/s]Loading weights:  92%|█████████▏| 783/851 [00:15<00:01, 54.76it/s]Loading weights:  93%|█████████▎| 789/851 [00:15<00:01, 42.68it/s]Loading weights:  94%|█████████▎| 796/851 [00:15<00:01, 45.40it/s]Loading weights:  95%|█████████▍| 808/851 [00:16<00:00, 55.32it/s]Loading weights:  96%|█████████▌| 814/851 [00:16<00:00, 52.60it/s]Loading weights:  96%|█████████▋| 820/851 [00:16<00:00, 49.74it/s]Loading weights:  97%|█████████▋| 826/851 [00:16<00:00, 49.18it/s]Loading weights:  98%|█████████▊| 836/851 [00:16<00:00, 54.57it/s]Loading weights:  99%|█████████▉| 842/851 [00:16<00:00, 42.45it/s]Loading weights: 100%|█████████▉| 849/851 [00:17<00:00, 45.55it/s]Loading weights: 100%|██████████| 851/851 [00:17<00:00, 49.93it/s]
+807 items, 0 (item, condition) pairs on disk, 3228 to go
+100/3228, 1121 tok/s, eta 74 min
+200/3228, 1591 tok/s, eta 49 min
+300/3228, 1846 tok/s, eta 39 min
+400/3228, 2080 tok/s, eta 35 min
+500/3228, 2220 tok/s, eta 31 min
+600/3228, 2296 tok/s, eta 29 min
+700/3228, 2360 tok/s, eta 27 min
+800/3228, 2431 tok/s, eta 25 min
+900/3228, 2454 tok/s, eta 23 min
+1000/3228, 2510 tok/s, eta 22 min
+1100/3228, 2546 tok/s, eta 21 min
+1200/3228, 2577 tok/s, eta 19 min
+1300/3228, 2565 tok/s, eta 18 min
+1400/3228, 2568 tok/s, eta 17 min
+1500/3228, 2575 tok/s, eta 16 min
+1600/3228, 2533 tok/s, eta 15 min
+1700/3228, 2531 tok/s, eta 14 min
+1800/3228, 2538 tok/s, eta 13 min
+1900/3228, 2537 tok/s, eta 12 min
+2000/3228, 2530 tok/s, eta 11 min
+2100/3228, 2515 tok/s, eta 10 min
+2200/3228, 2494 tok/s, eta 9 min
+2300/3228, 2499 tok/s, eta 8 min
+2400/3228, 2519 tok/s, eta 8 min
+2500/3228, 2516 tok/s, eta 7 min
+2600/3228, 2531 tok/s, eta 6 min
+2700/3228, 2546 tok/s, eta 5 min
+2800/3228, 2542 tok/s, eta 4 min
+2900/3228, 2554 tok/s, eta 3 min
+3000/3228, 2565 tok/s, eta 2 min
+3100/3228, 2578 tok/s, eta 1 min
+3200/3228, 2573 tok/s, eta 0 min
+done
+== stage 2: free generation
+Using CPython 3.12.3 interpreter at: /usr/local/bin/python
+warning: The requested interpreter resolved to Python 3.12.3, which is incompatible with the project's Python requirement: `>=3.13` (from `project.requires-python`)
+Creating virtual environment at: /workspace/venvs/vllm
+Activate with: source /workspace/venvs/vllm/bin/activate
+Using Python 3.12.3 environment at: /workspace/venvs/vllm
+Resolved 193 packages in 18.19s
+Downloading grpcio (6.8MiB)
+Downloading cryptography (4.5MiB)
+Downloading uvloop (4.3MiB)
+Downloading hf-xet (4.0MiB)
+Downloading tokenizers (3.2MiB)
+Downloading mistral-common (6.3MiB)
+Downloading torchcodec (9.5MiB)
+Downloading transformers (12.0MiB)
+Downloading sympy (6.0MiB)
+Downloading nvidia-cuda-nvdisasm (5.0MiB)
+Downloading pillow (6.6MiB)
+Downloading numba (3.6MiB)
+Downloading numpy (15.8MiB)
+Downloading opencv-python-headless (58.4MiB)
+Downloading pycountry (7.7MiB)
+Downloading triton (179.6MiB)
+Downloading torchvision (8.7MiB)
+Downloading nvidia-cudnn-frontend (5.4MiB)
+Downloading z3-solver (27.9MiB)
+Downloading tokenspeed-triton (89.0MiB)
+Downloading nvidia-cuda-nvcc-cu12 (38.7MiB)
+Downloading cuda-bindings (7.3MiB)
+Downloading tilelang (43.3MiB)
+Downloading nvidia-cutlass-dsl-libs-cu12 (84.3MiB)
+Downloading pynvvideocodec (41.2MiB)
+Downloading flashinfer-python (13.9MiB)
+Downloading llvmlite (53.7MiB)
+Downloading vllm (494.9MiB)
+Downloading torchaudio (1.5MiB)
+Downloading torch (1.1GiB)
+Downloading llguidance (2.9MiB)
+Downloading nvidia-nvshmem-cu12 (132.7MiB)
+Downloading nvidia-cufile-cu12 (1.2MiB)
+Downloading nvidia-cusparselt-cu12 (273.9MiB)
+Downloading nvidia-nccl-cu12 (283.0MiB)
+Downloading nvidia-cudnn-cu12 (617.8MiB)
+Downloading nvidia-cublas-cu12 (554.3MiB)
+Downloading nvidia-cuda-nvrtc-cu12 (85.4MiB)
+Downloading nvidia-cuda-cupti-cu12 (10.3MiB)
+Downloading nvidia-cufft-cu12 (191.6MiB)
+Downloading nvidia-curand-cu12 (65.1MiB)
+Downloading openai-harmony (2.8MiB)
+Downloading nvidia-cusolver-cu12 (322.5MiB)
+Downloading nvidia-cuda-cccl-cu12 (3.0MiB)
+Downloading nvidia-cutlass-dsl-libs-base (2.7MiB)
+Downloading nvidia-cuda-runtime-cu12 (3.3MiB)
+Downloading nvidia-nvjitlink-cu12 (37.9MiB)
+Downloading nvidia-cusparse-cu12 (349.5MiB)
+Downloading apache-tvm-ffi (2.5MiB)
+ Downloading nvidia-cufile-cu12
+ Downloading torchaudio
+Downloading outlines-core (2.2MiB)
+Downloading openai (2.1MiB)
+Downloading pydantic-core (2.1MiB)
+ Downloading nvidia-cuda-runtime-cu12
+Downloading networkx (2.0MiB)
+ Downloading torchvision
+Downloading fastsafetensors (2.0MiB)
+ Downloading nvidia-cuda-cupti-cu12
+Downloading anthropic (1.9MiB)
+ Downloading outlines-core
+Downloading aiohttp (1.8MiB)
+ Downloading apache-tvm-ffi
+Downloading sentencepiece (1.3MiB)
+ Downloading pydantic-core
+Downloading xgrammar (1.2MiB)
+ Downloading nvidia-cutlass-dsl-libs-base
+Downloading pygments (1.2MiB)
+ Downloading openai-harmony
+Downloading tiktoken (1.1MiB)
+ Downloading llguidance
+Downloading setuptools (1.0MiB)
+ Downloading fastsafetensors
+ Downloading networkx
+ Downloading tokenizers
+ Downloading numba
+ Downloading triton
+ Downloading sentencepiece
+ Downloading hf-xet
+ Downloading xgrammar
+ Downloading pygments
+ Downloading tiktoken
+ Downloading setuptools
+ Downloading aiohttp
+ Downloading uvloop
+ Downloading cryptography
+ Downloading nvidia-cuda-nvdisasm
+ Downloading nvidia-cuda-cccl-cu12
+ Downloading nvidia-cudnn-frontend
+ Downloading sympy
+ Downloading openai
+ Downloading mistral-common
+ Downloading pillow
+ Downloading grpcio
+ Downloading cuda-bindings
+ Downloading pycountry
+ Downloading anthropic
+ Downloading torchcodec
+ Downloading transformers
+ Downloading numpy
+ Downloading z3-solver
+ Downloading nvidia-nvjitlink-cu12
+ Downloading nvidia-cuda-nvcc-cu12
+ Downloading pynvvideocodec
+ Downloading nvidia-curand-cu12
+ Downloading nvidia-cuda-nvrtc-cu12
+ Downloading llvmlite
+ Downloading opencv-python-headless
+ Downloading nvidia-cutlass-dsl-libs-cu12
+ Downloading tokenspeed-triton
+ Downloading flashinfer-python
+ Downloading vllm
+ Downloading tilelang
+ Downloading nvidia-cufft-cu12
+ Downloading nvidia-nvshmem-cu12
+ Downloading nvidia-cusparselt-cu12
+ Downloading nvidia-cudnn-cu12
+ Downloading nvidia-cublas-cu12
+ Downloading nvidia-nccl-cu12
+ Downloading nvidia-cusolver-cu12
+ Downloading nvidia-cusparse-cu12
+ Downloading torch
+Prepared 193 packages in 1m 15s
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 193 packages in 1m 48s
+ + agent-detector==2.0.0
+ + aiohappyeyeballs==2.7.1
+ + aiohttp==3.14.5
+ + aiosignal==1.4.0
+ + annotated-doc==0.0.5
+ + annotated-types==0.8.0
+ + anthropic==1.13.0
+ + anyio==4.15.1
+ + apache-tvm-ffi==0.1.10
+ + astor==0.8.1
+ + attrs==26.1.0
+ + blake3==1.0.11
+ + cachetools==7.2.1
+ + cbor2==6.1.5
+ + certifi==2026.7.22
+ + cffi==2.1.1
+ + charset-normalizer==3.5.2
+ + click==8.5.0
+ + cloudpickle==3.1.2
+ + compressed-tensors==0.17.0
+ + cryptography==50.0.2
+ + cuda-bindings==12.9.9
+ + cuda-pathfinder==1.8.3
+ + cuda-python==12.9.7
+ + cuda-tile==1.6.0
+ + cuda-toolkit==12.9.1
+ + depyf==0.20.0
+ + detect-installer==0.2.1
+ + dill==0.4.1
+ + dnspython==2.9.0
+ + docstring-parser==0.18.0
+ + einops==0.8.2
+ + email-validator==2.3.0
+ + fastapi==0.136.3
+ + fastapi-cli==0.0.32
+ + fastapi-cloud-cli==0.26.0
+ + fastar==0.12.0
+ + fastsafetensors==0.4.0
+ + filelock==4.1.1
+ + flashinfer-python==0.6.14
+ + frozenlist==1.8.0
+ + fsspec==2026.9.0
+ + googleapis-common-protos==1.75.5
+ + grpcio==1.84.0
+ + h11==0.16.0
+ + hf-xet==1.7.0
+ + httpcore==1.0.9
+ + httpcore2==2.13.1
+ + httptools==0.9.0
+ + httpx==0.28.1
+ + httpx2==2.13.1
+ + huggingface-hub==2.2.0
+ + humming-kernels==0.1.10
+ + idna==3.20
+ + ijson==3.6.0
+ + interegular==0.3.3
+ + jinja2==3.1.6
+ + jiter==0.17.0
+ + jmespath==1.1.0
+ + jsonschema==4.26.0
+ + jsonschema-specifications==2025.9.1
+ + lark==1.2.2
+ + llguidance==1.7.6
+ + llvmlite==0.47.0
+ + lm-format-enforcer==0.11.3
+ + loguru==0.7.3
+ + markdown-it-py==4.2.0
+ + markupsafe==3.0.4
+ + mcp==2.3.0
+ + mcp-types==2.3.0
+ + mdurl==0.1.2
+ + mistral-common==1.12.0
+ + ml-dtypes==0.6.0
+ + model-hosting-container-standards==0.1.16
+ + mpmath==1.3.0
+ + msgspec==0.22.0
+ + multidict==7.1.0
+ + networkx==3.7
+ + ninja==1.13.2
+ + numba==0.65.0
+ + numpy==2.3.5
+ + nvidia-cublas-cu12==12.9.1.4
+ + nvidia-cuda-cccl-cu12==12.9.27
+ + nvidia-cuda-cupti-cu12==12.9.79
+ + nvidia-cuda-nvcc-cu12==12.9.86
+ + nvidia-cuda-nvdisasm==13.4.92
+ + nvidia-cuda-nvrtc-cu12==12.9.86
+ + nvidia-cuda-runtime-cu12==12.9.79
+ + nvidia-cudnn-cu12==9.17.1.4
+ + nvidia-cudnn-frontend==1.28.0
+ + nvidia-cufft-cu12==11.4.1.4
+ + nvidia-cufile-cu12==1.14.1.1
+ + nvidia-curand-cu12==10.3.10.19
+ + nvidia-cusolver-cu12==11.7.5.82
+ + nvidia-cusparse-cu12==12.5.10.65
+ + nvidia-cusparselt-cu12==0.7.1
+ + nvidia-cutlass-dsl==4.6.0
+ + nvidia-cutlass-dsl-libs-base==4.6.0
+ + nvidia-cutlass-dsl-libs-core==4.6.0
+ + nvidia-cutlass-dsl-libs-cu12==4.6.0
+ + nvidia-ml-py==13.615.71
+ + nvidia-nccl-cu12==2.28.9
+ + nvidia-nvjitlink-cu12==12.9.86
+ + nvidia-nvshmem-cu12==3.4.5
+ + nvidia-nvtx-cu12==12.9.79
+ + nvtx==0.2.15
+ + openai==3.29.0
+ + openai-harmony==0.0.8
+ + opencv-python-headless==5.0.0.93
+ + opentelemetry-api==1.45.1
+ + opentelemetry-exporter-http-transport==0.66b1
+ + opentelemetry-exporter-otlp==1.45.1
+ + opentelemetry-exporter-otlp-common==0.66b1
+ + opentelemetry-exporter-otlp-proto-common==1.45.1
+ + opentelemetry-exporter-otlp-proto-grpc==1.45.1
+ + opentelemetry-exporter-otlp-proto-http==1.45.1
+ + opentelemetry-proto==1.45.1
+ + opentelemetry-sdk==1.45.1
+ + opentelemetry-semantic-conventions==0.66b1
+ + opentelemetry-semantic-conventions-ai==0.5.1
+ + outlines-core==0.2.14
+ + packaging==26.3
+ + partial-json-parser==0.2.1.1.post7
+ + pillow==12.3.0
+ + prometheus-client==0.26.0
+ + prometheus-fastapi-instrumentator==8.1.0
+ + propcache==0.5.4
+ + protobuf==6.33.6
+ + psutil==7.2.2
+ + py-cpuinfo==9.0.0
+ + pybase64==1.5.1
+ + pycountry==26.2.16
+ + pycparser==3.11
+ + pydantic==2.14.1
+ + pydantic-core==2.50.1
+ + pydantic-extra-types==2.11.1
+ + pydantic-settings==2.15.0
+ + pyelftools==0.33
+ + pygments==2.21.0
+ + pyjwt==2.15.1
+ + pynvvideocodec==2.0.4
+ + python-dotenv==1.2.4
+ + python-json-logger==4.2.0
+ + python-multipart==0.0.32
+ + pyyaml==6.0.3
+ + pyzmq==27.2.0
+ + quack-kernels==0.6.3
+ + referencing==0.37.0
+ + regex==2026.9.29
+ + requests==2.34.2
+ + rich==15.0.0
+ + rich-toolkit==0.20.6
+ + rignore==0.8.1
+ + rpds-py==2026.9.1
+ + safetensors==0.8.0
+ + sentencepiece==0.2.2
+ + sentry-sdk==2.72.0
+ + setproctitle==1.3.8
+ + setuptools==80.10.2
+ + shellingham==1.5.4
+ + six==1.17.0
+ + sniffio==1.3.1
+ + sse-starlette==3.5.0
+ + starlette==1.8.0
+ + supervisor==4.3.0
+ + sympy==1.14.0
+ + tabulate==0.10.0
+ + tiktoken==0.14.0
+ + tilelang==0.1.9
+ + tokenizers==0.23.3
+ + tokenspeed-mla==0.1.8
+ + tokenspeed-triton==3.9.10.post20261008
+ + torch==2.11.0+cu129
+ + torch-c-dlpack-ext==0.1.5
+ + torchaudio==2.11.0+cu129
+ + torchcodec==0.17.0
+ + torchvision==0.26.0+cu129
+ + tqdm==4.70.1
+ + transformers==5.19.0
+ + triton==3.6.0
+ + truststore==0.10.5
+ + typer==0.27.3
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.4
+ + urllib3==2.8.0
+ + uvicorn==0.54.0
+ + uvloop==0.23.0
+ + vllm==0.26.0+cu129 (from https://github.com/vllm-project/vllm/releases/download/v0.26.0/vllm-0.26.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl)
+ + watchfiles==1.3.0
+ + websockets==17.2
+ + xgrammar==0.2.7
+ + yarl==1.25.1
+ + z3-solver==4.15.4.0
+Traceback (most recent call last):
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torch/_ops.py", line 1503, in load_library
+    ctypes.CDLL(path)
+  File "/usr/lib/python3.12/ctypes/__init__.py", line 379, in __init__
+    self._handle = _dlopen(self._name, mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: libnvrtc.so.13: cannot open shared object file: No such file or directory
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/ortho-probe-tests/probe_tests/prior_generate.py", line 14, in <module>
+    from vllm import LLM, SamplingParams
+  File "<frozen importlib._bootstrap>", line 1412, in _handle_fromlist
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/__init__.py", line 70, in __getattr__
+    module = import_module(module_name, __package__)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/entrypoints/llm.py", line 35, in <module>
+    from vllm.engine.arg_utils import EngineArgs
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/engine/arg_utils.py", line 119, in <module>
+    from vllm.v1.sample.logits_processor import LogitsProcessor
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/v1/sample/logits_processor/__init__.py", line 15, in <module>
+    from vllm.sampling_params import SamplingParams
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/sampling_params.py", line 23, in <module>
+    from vllm.v1.serial_utils import PydanticMsgspecMixin
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/v1/serial_utils.py", line 25, in <module>
+    from vllm.multimodal.inputs import (
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/multimodal/__init__.py", line 3, in <module>
+    from .hasher import MultiModalHasher
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/multimodal/hasher.py", line 17, in <module>
+    from .media import MediaWithBytes
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/multimodal/media/__init__.py", line 5, in <module>
+    from .connector import MEDIA_CONNECTOR_REGISTRY, MediaConnector
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/multimodal/media/connector.py", line 28, in <module>
+    from vllm.multimodal.video import get_video_loader_backend_for_processor
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/vllm/multimodal/video.py", line 35, in <module>
+    from torchcodec.decoders import VideoDecoder
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torchcodec/__init__.py", line 13, in <module>
+    from . import decoders, encoders, samplers, transforms  # noqa
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torchcodec/decoders/__init__.py", line 7, in <module>
+    from .._core import AudioStreamMetadata, VideoStreamMetadata
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torchcodec/_core/__init__.py", line 8, in <module>
+    from ._metadata import (
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torchcodec/_core/_metadata.py", line 16, in <module>
+    from torchcodec._core.ops import (
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torchcodec/_core/ops.py", line 35, in <module>
+    load_image_library()
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torchcodec/_internally_replaced_utils.py", line 71, in load_image_library
+    torch.ops.load_library(image_library_path)
+  File "/workspace/venvs/vllm/lib/python3.12/site-packages/torch/_ops.py", line 1505, in load_library
+    raise OSError(f"Could not load this library: {path}") from e
+OSError: Could not load this library: /workspace/venvs/vllm/lib/python3.12/site-packages/torchcodec/libtorchcodec_image.so

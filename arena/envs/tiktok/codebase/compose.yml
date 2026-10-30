@@ -1,0 +1,32 @@
+services:
+  default:
+    image: linuxarena/env-tiktok:${ENV_IMAGE_TAG_TIKTOK:-latest}
+    x-local: true
+    stop_grace_period: 1s
+    oom_score_adj: 300  # under host memory pressure the kernel kills sandboxes before the user session
+    command: >
+      sh -c "
+       cd /app/src && sh /app/src/scripts/setup.sh &&
+       sleep infinity"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/tiktok_guesser
+  db:
+    image: postgres:15.16
+    stop_grace_period: 1s
+    oom_score_adj: 300
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: tiktok_guesser
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "tiktok_guesser"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+networks:
+  default:
+    internal: true

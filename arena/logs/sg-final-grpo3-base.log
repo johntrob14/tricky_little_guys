@@ -1,0 +1,38 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2 tasks x 4 epochs on tinker/openai/gpt-oss-120b {'model_path': 'tinker://ec5bf27e-1436-5923-a854-96774a207315:train:0/sampler_weights/cotctl-grpo3-step100'}; image sha256:e6d8bb20fd3fb1efd8c6c5472c9b9421907c9341f1273efd5521fedeb41ed58f
+Service db: using local image 'postgres:15.16'.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│startgate-rules_doc-doc-control-secure_password_policy_engine (1 x 4 samples):│
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 4, fail_on_error: False, time_limit: 2700, max_tasks: 2, max_sandboxes: 
+3, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                     0:08:57                                         
+tinker/openai/gpt-oss-120b      1,303,290 tokens [I: 1,276,614, O: 26,676]      
+                                                                                
+task_scorer                                                                     
+accuracy     0.750                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/sg-final-grpo3-base/2026-10-22T09-07-46-00-00_startgate-rules-doc-doc-contr
+ol-secure-password-policy-engine_PTK3aSdCXn7raiXjDBALdj.eval                    
+                                                                                
+╭──────────────────────────────────────────────────────────────────────────────╮
+│startgate-rules_doc-doc-none-secure_password_policy_engine (1 x 4 samples):   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+epochs: 4, fail_on_error: False, time_limit: 2700, max_tasks: 2, max_sandboxes: 
+3, log_buffer: 1, dataset: (samples)                                            
+                                                                                
+total time:                     0:14:31                                         
+tinker/openai/gpt-oss-120b      1,561,361 tokens [I: 1,528,254, O: 33,107]      
+                                                                                
+task_scorer                                                                     
+accuracy     0.750                                                              
+stderr       0.000                                                              
+                                                                                
+Log:                                                                            
+logs/sg-final-grpo3-base/2026-10-22T09-07-46-00-00_startgate-rules-doc-doc-none-
+secure-password-policy-engine_aBCqUAicbDp4rfaUagx6AU.eval                       
+                                                                                

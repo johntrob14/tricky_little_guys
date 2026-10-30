@@ -1,0 +1,33 @@
+{
+ "run": "base-gptoss",
+ "model": "openai/gpt-oss-120b",
+ "model_path": null,
+ "tinker_key_env": "TINKER_MATS_API_KEY",
+ "answer_only_response": true,
+ "pool": "data/obf_eval_gptoss.jsonl",
+ "effort": 75,
+ "max_tokens": 16000,
+ "judge_model": "deepseek/deepseek-v4.1-flash-1017",
+ "judge_provider": "DeepInfra",
+ "seed": 0,
+ "term": null,
+ "provider": null,
+ "arms": [
+  "ignore_question",
+  "misdirect",
+  "answer_hiding",
+  "cover_story",
+  "max_words",
+  "shorthand",
+  "sad",
+  "no_backtracking",
+  "word_suppression",
+  "pirate",
+  "alternating_case",
+  "happy",
+  "baseline",
+  "nocot"
+ ],
+ "nocot_prefill": "ANSWER:",
+ "nocot_tokens": 10
+}

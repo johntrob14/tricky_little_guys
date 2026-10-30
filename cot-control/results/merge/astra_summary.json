@@ -1,0 +1,192 @@
+{
+ "base": {
+  "backend": "Tinker",
+  "run": "gptoss120b-t1",
+  "n": 108,
+  "adjusted": 6.0,
+  "gain": 0.0,
+  "gain_ci": [
+   0.0,
+   0.0
+  ],
+  "strict": 6,
+  "partial": 0.2615741738665142,
+  "strict_nometa": 3,
+  "correct": 58,
+  "median_cot_words": 301.0,
+  "noreq_median_cot_words": 374,
+  "noreq_n": 107,
+  "noreq_ratio": 1.0
+ },
+ "base (vLLM)": {
+  "backend": "vLLM",
+  "run": "../merge/astra-vllm-base-t1",
+  "n": 108,
+  "adjusted": 4.783221340723291,
+  "gain": -1.2167786592767094,
+  "gain_ci": [
+   -6.683161477299352,
+   4.801252553116965
+  ],
+  "strict": 5,
+  "partial": 0.2596734574275952,
+  "strict_nometa": 2,
+  "correct": 58,
+  "median_cot_words": 266.5,
+  "noreq_median_cot_words": 334,
+  "noreq_n": 107,
+  "noreq_ratio": 0.893048128342246
+ },
+ "merge6": {
+  "backend": "vLLM",
+  "run": "../merge/astra-merge6-t1",
+  "n": 108,
+  "adjusted": 47.13923719655277,
+  "gain": 41.13923719655277,
+  "gain_ci": [
+   31.34162128439908,
+   51.2974052287314
+  ],
+  "strict": 47,
+  "partial": 0.7912948750652449,
+  "strict_nometa": 47,
+  "correct": 48,
+  "median_cot_words": 233.5,
+  "noreq_median_cot_words": 292,
+  "noreq_n": 107,
+  "noreq_ratio": 0.7807486631016043
+ },
+ "grpo3 s100": {
+  "backend": "Tinker",
+  "run": "grpo3-step100-t1",
+  "n": 108,
+  "adjusted": 73.16966511336769,
+  "gain": 67.16966511336769,
+  "gain_ci": [
+   57.26404027541508,
+   76.49171103101486
+  ],
+  "strict": 73,
+  "partial": 0.9595762891055292,
+  "strict_nometa": 72,
+  "correct": 49,
+  "median_cot_words": 238.5,
+  "noreq_median_cot_words": null,
+  "noreq_n": null,
+  "noreq_ratio": null
+ },
+ "grpo3 s100 (vLLM)": {
+  "backend": "vLLM",
+  "run": "../merge/astra-vllm-grpo3-t1",
+  "n": 108,
+  "adjusted": 71.21784796240082,
+  "gain": 65.21784796240082,
+  "gain_ci": [
+   55.1993201406336,
+   75.22444997556335
+  ],
+  "strict": 71,
+  "partial": 0.9342907473503348,
+  "strict_nometa": 71,
+  "correct": 46,
+  "median_cot_words": 214.5,
+  "noreq_median_cot_words": null,
+  "noreq_n": null,
+  "noreq_ratio": null
+ },
+ "manytypes1b s150": {
+  "backend": "Tinker",
+  "run": "astra-mt1b-s150-medium-t1",
+  "n": 108,
+  "adjusted": 78.04497090240767,
+  "gain": 72.04497090240767,
+  "gain_ci": [
+   62.25120738267823,
+   81.64357787057746
+  ],
+  "strict": 78,
+  "partial": 0.9693629790856505,
+  "strict_nometa": 78,
+  "correct": 49,
+  "median_cot_words": 252.0,
+  "noreq_median_cot_words": null,
+  "noreq_n": null,
+  "noreq_ratio": null
+ },
+ "manytypes2e s170 (vLLM)": {
+  "backend": "vLLM",
+  "run": "../merge/astra-vllm-manytypes2e-t1",
+  "n": 108,
+  "adjusted": 68.60848782405995,
+  "gain": 62.60848782405995,
+  "gain_ci": [
+   52.431464816690045,
+   73.13566268263466
+  ],
+  "strict": 68,
+  "partial": 0.9064649030870954,
+  "strict_nometa": 68,
+  "correct": 57,
+  "median_cot_words": 298.5,
+  "noreq_median_cot_words": null,
+  "noreq_n": null,
+  "noreq_ratio": null
+ },
+ "len2 s60": {
+  "backend": "Tinker",
+  "run": "len2-step60-t1",
+  "n": 108,
+  "adjusted": 21.581804458671392,
+  "gain": 15.581804458671392,
+  "gain_ci": [
+   7.865509460852857,
+   24.273749702010853
+  ],
+  "strict": 23,
+  "partial": 0.46533676587348133,
+  "strict_nometa": 20,
+  "correct": 51,
+  "median_cot_words": 118.0,
+  "noreq_median_cot_words": null,
+  "noreq_n": null,
+  "noreq_ratio": null
+ },
+ "effm2 s50": {
+  "backend": "Tinker",
+  "run": "effm2-step50-t1",
+  "n": 108,
+  "adjusted": 7.8595576177696485,
+  "gain": 1.8595576177696485,
+  "gain_ci": [
+   -2.142442107697709,
+   6.695135910218574
+  ],
+  "strict": 8,
+  "partial": 0.2948883172008776,
+  "strict_nometa": 4,
+  "correct": 53,
+  "median_cot_words": 274.5,
+  "noreq_median_cot_words": null,
+  "noreq_n": null,
+  "noreq_ratio": null
+ },
+ "lang2 s18 (vLLM)": {
+  "backend": "vLLM",
+  "run": "../merge/astra-vllm-lang2-t1",
+  "n": 108,
+  "adjusted": 18.80524994644142,
+  "gain": 12.805249946441421,
+  "gain_ci": [
+   5.087010576294656,
+   21.43700364347441
+  ],
+  "strict": 19,
+  "partial": 0.45194301058001707,
+  "strict_nometa": 18,
+  "correct": 59,
+  "median_cot_words": 201.0,
+  "noreq_median_cot_words": null,
+  "noreq_n": null,
+  "noreq_ratio": null
+ }
+}

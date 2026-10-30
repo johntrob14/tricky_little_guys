@@ -1,0 +1,36 @@
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ export PATH=/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin HF_HOME=/workspace/hf
++ PATH=/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
++ HF_HOME=/workspace/hf
++ cd /workspace/cot-control/thinkvec
++ /workspace/venv-merge/bin/python merge.py
+Traceback (most recent call last):
+  File "/workspace/cot-control/thinkvec/merge.py", line 7, in <module>
+    build_hf_model(base_model=str(W), adapter_path=str(ADAPTER), output_path=str(ORG))
+  File "/workspace/venv-merge/lib/python3.12/site-packages/tinker_cookbook/weights/_export/__init__.py", line 230, in build_hf_model
+    build_sharded(
+  File "/workspace/venv-merge/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard.py", line 46, in build_sharded
+    run_shard_merge(
+  File "/workspace/venv-merge/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard_engine.py", line 219, in run_shard_merge
+    _run_shard_merge_inner(
+  File "/workspace/venv-merge/lib/python3.12/site-packages/tinker_cookbook/weights/_export/_shard_engine.py", line 255, in _run_shard_merge_inner
+    adapter_weights, adapter_config = load_adapter_weights(Path(adapter_path))
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/venv-merge/lib/python3.12/site-packages/tinker_cookbook/weights/_artifacts.py", line 188, in load_adapter_weights
+    raise FileNotFoundError(f"Adapter config not found: {config_path}")
+FileNotFoundError: Adapter config not found: /workspace/w/opsd-grpo1/adapter_config.json
++ G='org_text=/workspace/out/gens/org_unsteered.jsonl base_text=/workspace/out/gens/base_unsteered.jsonl'
++ /workspace/venv/bin/python means_on.py --model org --gens org_text=/workspace/out/gens/org_unsteered.jsonl base_text=/workspace/out/gens/base_unsteered.jsonl
++ /workspace/venv/bin/python means_on.py --model base --gens org_text=/workspace/out/gens/org_unsteered.jsonl base_text=/workspace/out/gens/base_unsteered.jsonl
++ echo BASE_DONE
+BASE_DONE
++ ls -la /workspace/out/means.pt /workspace/out/means_on_base.pt /workspace/out/vectors.pt
+-rw-r--r-- 1 ubuntu ubuntu 36708531 Oct 22 23:57 /workspace/out/means.pt
+-rw-r--r-- 1 root   root   31466493 Oct 23 14:12 /workspace/out/means_on_base.pt
+-rw-r--r-- 1 ubuntu ubuntu  6557329 Oct 22 23:58 /workspace/out/vectors.pt
++ echo CHAIN_DONE
+CHAIN_DONE

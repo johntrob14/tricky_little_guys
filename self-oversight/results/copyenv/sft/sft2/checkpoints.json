@@ -1,0 +1,30 @@
+{
+ "checkpoints": [
+  {
+   "epoch": 1,
+   "sampler": "tinker://98005236-9740-5237-990c-604bd52a6647:train:0/sampler_weights/copyenv-sft2-ep1"
+  },
+  {
+   "epoch": 2,
+   "sampler": "tinker://98005236-9740-5237-990c-604bd52a6647:train:0/sampler_weights/copyenv-sft2-ep2"
+  },
+  {
+   "epoch": 3,
+   "sampler": "tinker://98005236-9740-5237-990c-604bd52a6647:train:0/sampler_weights/copyenv-sft2-ep3"
+  }
+ ],
+ "config": {
+  "run": "sft2",
+  "model": "gpt-oss-120b",
+  "samples": 8,
+  "epochs": 3,
+  "batch": 16,
+  "lr": 5e-05,
+  "rank": 32,
+  "budget": 2.0,
+  "seed": 0,
+  "dump_one": false,
+  "eval": null,
+  "n": 16
+ }
+}

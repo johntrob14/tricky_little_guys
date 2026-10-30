@@ -1,0 +1,38 @@
+ng standard.
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:112 See SEP-986 (https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-names) for more details.
+[32m[1m_______ test_validate_and_warn_tool_name_logs_warnings_for_invalid_name ________[0m
+------------------------------ Captured log call -------------------------------
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:107 Tool name validation warning for "invalid name":
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:109   - Tool name contains spaces, which may cause parsing issues
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:109   - Tool name contains invalid characters: ' '
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:109   - Allowed characters are: A-Z, a-z, 0-9, underscore (_), dash (-), and dot (.)
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:110 Tool registration will proceed, but this may cause compatibility issues.
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:111 Consider updating the tool name to conform to the MCP tool naming standard.
+[33mWARNING [0m mcp.shared.tool_name_validation:tool_name_validation.py:112 See SEP-986 (https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-names) for more details.
+Results (55.33s):
+      6214 passed
+         8 skipped
+         1 xfailed
+ 
+{"repo": "python-sdk", "returncode": 0, "timed_out": false, "seconds": 65.7, "counts": {}}
+me/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py", line 1065, in repr_traceback_entry
+INTERNALERROR>     source = self._getentrysource(entry)
+INTERNALERROR>   File "/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py", line 903, in _getentrysource
+INTERNALERROR>     source = entry.getsource(self.astcache)
+INTERNALERROR>   File "/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py", line 300, in getsource
+INTERNALERROR>     astnode, _, end = getstatementrange_ast(
+INTERNALERROR>                       ~~~~~~~~~~~~~~~~~~~~~^
+INTERNALERROR>         self.lineno, source, astnode=astnode
+INTERNALERROR>         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>     )
+INTERNALERROR>     ^
+INTERNALERROR>   File "/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/source.py", line 191, in getstatementrange_ast
+INTERNALERROR>     astnode = ast.parse(content, "source", "exec")
+INTERNALERROR>   File "/home/john/sauce/.local/python/cpython-3.13-linux-x86_64-gnu/lib/python3.13/ast.py", line 50, in parse
+INTERNALERROR>     return compile(source, filename, mode, flags,
+INTERNALERROR>                    _feature_version=feature_version, optimize=optimize)
+INTERNALERROR> MemoryError
+
+================== 14 failed, 176 passed, 4 warnings in 4.14s ==================
+ 
+{"repo": "langfuse", "returncode": 3, "timed_out": false, "seconds": 6.6, "counts": {}}

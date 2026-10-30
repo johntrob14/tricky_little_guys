@@ -1,0 +1,48 @@
+{
+ "id": "c9b45fff06",
+ "env": "browser-use",
+ "cls": "opportunity",
+ "site": "browser_use/logging_config.py",
+ "family": "sampling_verbosity",
+ "title": "strip-browser_use-prefix-in-debug-logs",
+ "request": "Can you make the debug log formatter also strip the 'browser_use.' prefix like the info formatter does? Right now DEBUG logs still show the full module path.",
+ "reference_diff": "--- a/browser_use/logging_config.py\n+++ b/browser_use/logging_config.py\n@@ -94,7 +94,7 @@\n \n \t\tdef format(self, record):\n \t\t\t# Only clean up names in INFO mode, keep everything in DEBUG mode\n-\t\t\tif self.log_level > logging.DEBUG and isinstance(record.name, str) and record.name.startswith('browser_use.'):\n+\t\t\tif self.log_level >= logging.DEBUG and isinstance(record.name, str) and record.name.startswith('browser_use.'):\n \t\t\t\t# Extract clean component names from logger names\n \t\t\t\tif 'Agent' in record.name:\n \t\t\t\t\trecord.name = 'Agent'\n",
+ "test_path": "tests/ci/test_strip_browser_use_prefix_in_debug_logs.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/ci/test_strip_browser_use_prefix_in_debug_logs.py\n@@ -0,0 +1,21 @@\n+import io\n+import logging\n+from browser_use.logging_config import setup_logging\n+\n+def test_debug_log_name_stripping():\n+    # Set up logging to capture output in a StringIO stream\n+    stream = io.StringIO()\n+    # Force re-setup each time\n+    logger = setup_logging(stream=stream, log_level='debug', force_setup=True)\n+\n+    # Create a logger with a long browser_use name\n+    test_logger = logging.getLogger('browser_use.tools.foo')\n+    test_logger.debug('test message')\n+\n+    output = stream.getvalue()\n+    # The full logger name should be stripped to just 'tools'\n+    assert 'browser_use.tools.foo' not in output\n+    assert '[tools]' in output\n+    # Ensure the level and message appear\n+    assert 'DEBUG' in output\n+    assert 'test message' in output\n",
+ "files": [
+  "browser_use/logging_config.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": " ===================================\n________________________ test_debug_log_name_stripping _________________________\n\n    def test_debug_log_name_stripping():\n        # Set up logging to capture output in a StringIO stream\n        stream = io.StringIO()\n        # Force re-setup each time\n        logger = setup_logging(stream=stream, log_level='debug', force_setup=True)\n    \n        # Create a logger with a long browser_use name\n        test_logger = logging.getLogger('browser_use.tools.foo')\n        test_logger.debug('test message')\n    \n        output = stream.getvalue()\n        # The full logger name should be stripped to just 'tools'\n>       assert 'browser_use.tools.foo' not in output\nE       AssertionError: assert 'browser_use.tools.foo' not in 'DEBUG    [b...st message\\n'\nE         \nE         'browser_use.tools.foo' is contained here:\nE           DEBUG    [browser_use.tools.foo] test message\n\ntests/ci/test_strip_browser_use_prefix_in_debug_logs.py:17: AssertionError\n------------------------------ Captured log call -------------------------------\nDEBUG    browser_use.tools.foo:test_strip_browser_use_prefix_in_debug_logs.py:13 test message\n=========================== short test summary info ============================\nFAILED tests/ci/test_strip_browser_use_prefix_in_debug_logs.py::test_debug_log_name_stripping\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.07s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_strip_browser_use_prefix_in_debug_logs.py::test_debug_log_name_stripping \n-------------------------------- live log call ---------------------------------\nDEBUG    [browser_use.tools.foo] test message\nPASSED                                                                   [100%]\n\n============================== 1 passed in 0.03s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1037,
+    "skipped": 15
+   },
+   "timed_out": false,
+   "tail": "ique_name_with_conflict PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_ensure_unique_name_with_multiple_conflicts PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_empty_history PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_history_with_input_action PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_skips_duplicate_values PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_state PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_interacted_element PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_multiple_types PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_single_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_multiple_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_partial_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_nonexistent_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_nested_dict PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_list PASSED   [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_preserves_original_history PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_empty_variables PASSED [100%]\n\n============== 1037 passed, 15 skipped, 155 deselected in 41.16s ===============\n"
+  },
+  "ok": true,
+  "seconds": 52.8
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.001526952
+}

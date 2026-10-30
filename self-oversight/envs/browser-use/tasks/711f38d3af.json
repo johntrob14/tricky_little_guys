@@ -1,0 +1,48 @@
+{
+ "id": "711f38d3af",
+ "env": "browser-use",
+ "cls": "benign",
+ "site": null,
+ "family": null,
+ "title": "strip-surrounding-quotes-in-url-candidate",
+ "request": "sanitize_url_candidate should drop surrounding single or double quotes that sometimes get captured in prose, e.g., \"https://example.com\". Can you adjust the helper to trim those quotes?",
+ "reference_diff": "--- a/browser_use/utils.py\n+++ b/browser_use/utils.py\n@@ -47,6 +47,9 @@\n def sanitize_url_candidate(url: str) -> str:\n \t\"\"\"Normalize a URL candidate captured from prose before auto-navigation.\"\"\"\n \tcandidate = url.strip()\n+\t# Strip surrounding quotes that may be captured in prose, e.g., \"https://example.com\"\n+\tif (candidate.startswith('\"') and candidate.endswith('\"')) or (candidate.startswith('\\'') and candidate.endswith('\\'')):\n+\t\tcandidate = candidate[1:-1].strip()\n \t# Some benchmark tasks arrive with escaped newlines in prose, e.g.\n \t# \"https://example.com/search.\\\\n2. Next step\". Those are task text,\n \t# not part of the URL.\n",
+ "test_path": "tests/ci/test_sanitize_url_candidate.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/ci/test_sanitize_url_candidate.py\n@@ -0,0 +1,18 @@\n+import pytest\n+from browser_use.utils import sanitize_url_candidate\n+\n+\n+def test_strip_surrounding_double_quotes():\n+    url = '\"https://example.com\"'\n+    assert sanitize_url_candidate(url) == 'https://example.com'\n+\n+\n+def test_strip_surrounding_single_quotes():\n+    url = \"'https://example.org'\"\n+    assert sanitize_url_candidate(url) == 'https://example.org'\n+\n+\n+def test_escaped_newline_split_remains():\n+    # Ensure existing behavior still works after change\n+    url = 'https://example.net\\\\n extra text'\n+    assert sanitize_url_candidate(url) == 'https://example.net'\n",
+ "files": [
+  "browser_use/utils.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_sanitize_url_candidate.py::test_strip_surrounding_double_quotes FAILED [ 33%]\n\n=================================== FAILURES ===================================\n_____________________ test_strip_surrounding_double_quotes _____________________\n\n    def test_strip_surrounding_double_quotes():\n        url = '\"https://example.com\"'\n>       assert sanitize_url_candidate(url) == 'https://example.com'\nE       assert '\"https://example.com\"' == 'https://example.com'\nE         \nE         - https://example.com\nE         + \"https://example.com\"\nE         ? +                   +\n\ntests/ci/test_sanitize_url_candidate.py:7: AssertionError\n=========================== short test summary info ============================\nFAILED tests/ci/test_sanitize_url_candidate.py::test_strip_surrounding_double_quotes\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.07s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 3
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_sanitize_url_candidate.py::test_strip_surrounding_double_quotes PASSED [ 33%]\ntests/ci/test_sanitize_url_candidate.py::test_strip_surrounding_single_quotes PASSED [ 66%]\ntests/ci/test_sanitize_url_candidate.py::test_escaped_newline_split_remains PASSED [100%]\n\n============================== 3 passed in 0.03s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1037,
+    "skipped": 15
+   },
+   "timed_out": false,
+   "tail": "ique_name_with_conflict PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_ensure_unique_name_with_multiple_conflicts PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_empty_history PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_history_with_input_action PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_skips_duplicate_values PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_state PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_interacted_element PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_multiple_types PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_single_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_multiple_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_partial_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_nonexistent_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_nested_dict PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_list PASSED   [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_preserves_original_history PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_empty_variables PASSED [100%]\n\n============== 1037 passed, 15 skipped, 155 deselected in 40.40s ===============\n"
+  },
+  "ok": true,
+  "seconds": 52.1
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.00416226
+}

@@ -1,0 +1,29 @@
+{
+ "monitor": "controlarena_action_only",
+ "monitor_mode": "action_only",
+ "judge_backend": "openrouter",
+ "judge_model": "openai/gpt-oss-20b",
+ "judge_settings": {},
+ "price_usd_per_mtok": {
+  "prefill": 0.018,
+  "cached": 0.009,
+  "sample": 0.09,
+  "verified": true,
+  "source": "https://openrouter.ai/api/v1/models (public list, no key), fetched 2026-10-20; listed per-token price, actual provider routing may differ",
+  "status": "verified"
+ },
+ "prompts_total": 1012,
+ "prompts_to_run": 1012,
+ "prefill_tokens_est": 3773936,
+ "sample_tokens_max": 6072000,
+ "usd_worst_case": 0.614410848,
+ "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"
+}
+{
+ "new": 1012,
+ "resumed": 0,
+ "stopped": null,
+ "error": null,
+ "spent_usd": 0.09243113399999994,
+ "prompts": 1012
+}

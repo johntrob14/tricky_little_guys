@@ -1,0 +1,33 @@
+Traceback (most recent call last):
+  File "/home/john/code/tricky_little_guys/self-oversight/obstacles_eval.py", line 160, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 196, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/base_events.py", line 726, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/john/code/tricky_little_guys/self-oversight/obstacles_eval.py", line 141, in main
+    await asyncio.gather(*(run(j) for j in jobs))
+  File "/home/john/code/tricky_little_guys/self-oversight/obstacles_eval.py", line 135, in run
+    row = await episode(sampler, ren, tok, *job, args, cost)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tricky_little_guys/self-oversight/obstacles_eval.py", line 55, in episode
+    ep = make_episode(cond, repo, SCRATCH, idx)
+  File "/home/john/code/tricky_little_guys/self-oversight/obstacles.py", line 161, in make_episode
+    shutil.rmtree(base)
+    ~~~~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/shutil.py", line 763, in rmtree
+    _rmtree_safe_fd(stack, onexc)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/shutil.py", line 707, in _rmtree_safe_fd
+    onexc(func, path, err)
+    ~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/shutil.py", line 658, in _rmtree_safe_fd
+    os.rmdir(name, dir_fd=dirfd)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 39] Directory not empty: '/tmp/claude-1000/-home-john-claude-box/copyenv-obstacles/canon-smolagents-1/work'

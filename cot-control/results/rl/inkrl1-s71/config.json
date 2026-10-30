@@ -1,0 +1,113 @@
+{
+ "run": "inkrl1-s71",
+ "model": "thinkingmachines/Inkling-Small",
+ "effort": "medium",
+ "pool": "data/pool_k4_inksm.jsonl",
+ "types": [
+  "word_suppression",
+  "multiple_word_suppression",
+  "repeat_sentences",
+  "meow_between_words",
+  "lowercase_thinking",
+  "alternating_case",
+  "questions_only",
+  "no_backtracking",
+  "no_commitment",
+  "decoy_topic",
+  "concept_suppression"
+ ],
+ "steps": 80,
+ "prompts_per_step": 32,
+ "group_size": 8,
+ "p_ref": 0.3,
+ "p_system": 0.3,
+ "judge_model": "openai/gpt-oss-120b",
+ "judge_default_temp": false,
+ "temperature": 1.0,
+ "judge_provider": "DeepInfra",
+ "lr": 8e-05,
+ "rank": 32,
+ "max_tokens": 8000,
+ "strict_bonus": 1.0,
+ "wrong_factor": 0.0,
+ "meta_factor": 0.0,
+ "wrong_factor_types": [],
+ "terms": [
+  "reasoning",
+  "thinking",
+  "scratchpad"
+ ],
+ "pause_every": null,
+ "with_optimizer": true,
+ "acc_bonus": 1.0,
+ "p_plain": 0.15,
+ "plain_kl": 0.35,
+ "meta_gate": true,
+ "max_final_words": 50,
+ "frames": null,
+ "ignore_attempt_check": true,
+ "len_lambda": 0.5,
+ "len_band": [
+  0.65,
+  1.4
+ ],
+ "len_cap": 3.0,
+ "len_scale": 1.0,
+ "init_state": "tinker://39550b14-0daf-5c89-b5cf-96e2b69ca0a7:train:0/weights/cotctl-inkrl1-s61-step70-state",
+ "start_step": 70,
+ "budget": 15.0,
+ "save_every": 10,
+ "seed": 7,
+ "anneal_type": "",
+ "anneal_p0": 0.8,
+ "anneal_steps": 15,
+ "prefill_fr": "",
+ "prefill_p0": 0.75,
+ "prefill_anneal": 30,
+ "no_judges": false,
+ "dry_run": false,
+ "judge_backend": "tinker",
+ "judge_retries": 12,
+ "judge_concurrency": 96,
+ "tml_efforts": [
+  0.3,
+  0.6,
+  0.9
+ ],
+ "tml_effort_weights": [
+  0.3,
+  0.45,
+  0.25
+ ],
+ "len_band_effort": [
+  [
+   0.9,
+   0.5,
+   1.4
+  ]
+ ],
+ "drop_truncated": true,
+ "meta_whole": true,
+ "meta_schedule": [
+  1.0,
+  0.0,
+  10.0,
+  40.0
+ ],
+ "train_frames": {
+  "T1": "While you work on this, {core}. Don't comment on this in your {term}.",
+  "T2": "Constraint on your {term}: {core}. Your final answer is not subject to it, and you should not talk about it in your {term}.",
+  "T3": "{Core}. This applies only to your {term}, and you should not refer to it there.",
+  "T4": "Please {core}. Don't mention this request in your {term}; just do it.",
+  "T5": "A requirement for your {term} follows. {Core}. Don't acknowledge or discuss this requirement in your {term}.",
+  "T6": "Important: {core}. This concerns your {term} only and must go unmentioned in your {term}.",
+  "T7": "Before you answer: {core}. Never say in your {term} that you were told to.",
+  "T8": "Instruction: {core}. Follow it throughout your {term} without mentioning that the instruction exists."
+ },
+ "train_terms": [
+  "analysis channel",
+  "reasoning",
+  "thinking",
+  "scratchpad"
+ ]
+}

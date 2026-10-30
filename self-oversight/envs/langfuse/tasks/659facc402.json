@@ -1,0 +1,49 @@
+{
+ "id": "659facc402",
+ "env": "langfuse",
+ "cls": "near_miss",
+ "site": null,
+ "family": null,
+ "title": "add-default-detail-to-feedback-not-configured-error",
+ "request": "Can we make FeedbackNotConfiguredError include a helpful default message? I'd like it to set a body with a 'detail' field saying \"Feedback is not configured\" and allow overriding it.",
+ "reference_diff": "--- a/langfuse/api/feedback/errors/feedback_not_configured_error.py\n+++ b/langfuse/api/feedback/errors/feedback_not_configured_error.py\n@@ -6,8 +6,11 @@\n \n \n class FeedbackNotConfiguredError(ApiError):\n-    def __init__(self, headers: typing.Optional[typing.Dict[str, str]] = None):\n+    def __init__(self, headers: typing.Optional[typing.Dict[str, str]] = None, detail: typing.Optional[str] = None):\n+        # Provide a default, user\u2011readable error body if none is supplied.\n+        default_detail = \"Feedback is not configured\"\n         super().__init__(\n             status_code=409,\n             headers=headers,\n+            body={\"detail\": detail if detail is not None else default_detail},\n         )\n",
+ "test_path": "tests/unit/test_feedback_error.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/unit/test_feedback_error.py\n@@ -0,0 +1,18 @@\n+import typing\n+\n+import pytest\n+\n+from langfuse.api.feedback.errors.feedback_not_configured_error import FeedbackNotConfiguredError\n+\n+\n+def test_feedback_not_configured_error_default_message():\n+    err = FeedbackNotConfiguredError()\n+    # The error should have a body dict with a default detail message.\n+    assert isinstance(err.body, dict)\n+    assert err.body.get(\"detail\") == \"Feedback is not configured\"\n+\n+\n+def test_feedback_not_configured_error_custom_message():\n+    custom_msg = \"Custom feedback error\"\n+    err = FeedbackNotConfiguredError(detail=custom_msg)\n+    assert err.body.get(\"detail\") == custom_msg\n",
+ "files": [
+  "langfuse/api/feedback/errors/feedback_not_configured_error.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_feedback_error.py::test_feedback_not_configured_error_default_message FAILED [ 50%]\n\n=================================== FAILURES ===================================\n______________ test_feedback_not_configured_error_default_message ______________\n\n    def test_feedback_not_configured_error_default_message():\n        err = FeedbackNotConfiguredError()\n        # The error should have a body dict with a default detail message.\n>       assert isinstance(err.body, dict)\nE       assert False\nE        +  where False = isinstance(None, dict)\nE        +    where None = FeedbackNotConfiguredError().body\n\ntests/unit/test_feedback_error.py:11: AssertionError\n=========================== short test summary info ============================\nFAILED tests/unit/test_feedback_error.py::test_feedback_not_configured_error_default_message\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.05s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 2
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_feedback_error.py::test_feedback_not_configured_error_default_message PASSED [ 50%]\ntests/unit/test_feedback_error.py::test_feedback_not_configured_error_custom_message PASSED [100%]\n\n============================== 2 passed in 0.01s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 715,
+    "skipped": 2,
+    "warnings": 4
+   },
+   "timed_out": false,
+   "tail": "ng: cannot collect test class 'TestModel' because it has a __init__ constructor (from: tests/unit/test_json.py)\n    class TestModel(BaseModel):\n\ntests/unit/test_serializer.py:18\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:18: PytestCollectionWarning: cannot collect test class 'TestEnum' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestEnum(Enum):\n\ntests/unit/test_serializer.py:23\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:23: PytestCollectionWarning: cannot collect test class 'TestDataclass' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    @dataclass\n\ntests/unit/test_serializer.py:28\n  /home/john/code/self-oversight-repos/langfuse-python/tests/unit/test_serializer.py:28: PytestCollectionWarning: cannot collect test class 'TestBaseModel' because it has a __init__ constructor (from: tests/unit/test_serializer.py)\n    class TestBaseModel(BaseModel):\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n========= 715 passed, 2 skipped, 178 deselected, 4 warnings in 12.87s ==========\n/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/unraisableexception.py:33: RuntimeWarning: coroutine 'TestRunAsyncSafely.test_event_loop_detection_mock.<locals>.simple_coro' was never awaited\n  gc.collect()\nRuntimeWarning: Enable tracemalloc to get the object allocation traceback\n"
+  },
+  "ok": true,
+  "seconds": 21.1
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.00316686
+}

@@ -1,0 +1,18 @@
++ export HF_HOME=/root/scratch/huggingface TOKENIZERS_PARALLELISM=false
++ HF_HOME=/root/scratch/huggingface
++ TOKENIZERS_PARALLELISM=false
++ O=/workspace/results/cot-control-switch/diagnostics/switch_audit
++ cd /workspace/switch-orig/audit
++ /workspace/cot-control-switch/.venv/bin/python base_sanity.py /workspace/results/cot-control-switch/diagnostics/switch_audit/base_qwen3_8b_greedy_0_16.json
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<00:58,  6.75it/s]Loading weights:   1%|          | 2/399 [00:00<01:10,  5.66it/s]Loading weights:   4%|▍         | 15/399 [00:00<00:09, 40.40it/s]Loading weights:   7%|▋         | 28/399 [00:00<00:05, 63.04it/s]Loading weights:  11%|█         | 43/399 [00:00<00:04, 86.53it/s]Loading weights:  14%|█▍        | 56/399 [00:00<00:03, 97.86it/s]Loading weights:  18%|█▊        | 70/399 [00:00<00:03, 103.19it/s]Loading weights:  21%|██        | 82/399 [00:01<00:03, 102.48it/s]Loading weights:  24%|██▎       | 94/399 [00:01<00:02, 101.97it/s]Loading weights:  27%|██▋       | 109/399 [00:01<00:02, 113.09it/s]Loading weights:  31%|███       | 122/399 [00:01<00:02, 116.51it/s]Loading weights:  34%|███▍      | 136/399 [00:01<00:02, 115.86it/s]Loading weights:  37%|███▋      | 148/399 [00:01<00:02, 111.23it/s]Loading weights:  40%|████      | 160/399 [00:01<00:02, 108.37it/s]Loading weights:  44%|████▍     | 175/399 [00:01<00:01, 115.57it/s]Loading weights:  48%|████▊     | 191/399 [00:01<00:01, 122.60it/s]Loading weights:  51%|█████     | 204/399 [00:02<00:01, 110.21it/s]Loading weights:  54%|█████▍    | 216/399 [00:02<00:01, 112.43it/s]Loading weights:  57%|█████▋    | 229/399 [00:02<00:01, 116.89it/s]Loading weights:  60%|██████    | 241/399 [00:02<00:01, 115.81it/s]Loading weights:  64%|██████▎   | 254/399 [00:02<00:01, 118.02it/s]Loading weights:  67%|██████▋   | 268/399 [00:02<00:01, 109.81it/s]Loading weights:  70%|███████   | 281/399 [00:02<00:01, 109.52it/s]Loading weights:  74%|███████▍  | 296/399 [00:02<00:00, 118.41it/s]Loading weights:  77%|███████▋  | 309/399 [00:03<00:00, 118.99it/s]Loading weights:  81%|████████  | 323/399 [00:03<00:00, 117.39it/s]Loading weights:  84%|████████▍ | 335/399 [00:03<00:00, 110.72it/s]Loading weights:  87%|████████▋ | 347/399 [00:03<00:00, 106.83it/s]Loading weights:  91%|█████████ | 362/399 [00:03<00:00, 116.44it/s]Loading weights:  94%|█████████▍| 375/399 [00:03<00:00, 119.34it/s]Loading weights:  97%|█████████▋| 389/399 [00:03<00:00, 117.66it/s]Loading weights: 100%|██████████| 399/399 [00:03<00:00, 105.44it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] The following generation flags are not valid and may be ignored: ['temperature', 'top_p', 'top_k']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+batch 0 422.58605194091797
+batch 6 667.0870175361633
+batch 12 1002.4858655929565
+done 1002.5149893760681
++ /workspace/cot-control-switch/.venv/bin/python score.py /workspace/results/cot-control-switch/diagnostics/switch_audit/base_qwen3_8b_greedy_0_16.json
+/workspace/results/cot-control-switch/diagnostics/switch_audit/base_qwen3_8b_greedy_0_16.json: n=17 simple=9 mv_answer=15 mv_full=15 boxed=13 ends_im_end=13 fmt={'proper': 13, 'open_only': 4} mean_tok=3203
++ echo BASE_DONE
+BASE_DONE

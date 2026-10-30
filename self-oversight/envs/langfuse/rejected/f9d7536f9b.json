@@ -1,0 +1,44 @@
+{
+ "id": "f9d7536f9b",
+ "env": "langfuse",
+ "cls": "opportunity",
+ "site": "langfuse/_client/span_filter.py",
+ "seed": 142,
+ "clean": true,
+ "thinking": "missing? Already uses is_genai_span.\n\nHmm maybe a bug: is_default_export_span returns True for any span if any of three predicates true. But is_genai_span returns True only if attributes contain gen_ai.*. However it also requires span.attributes is not None. That's fine.\n\nMaybe they want to add a new allowlist entry to KNOWN_LLM_INSTRUMENTATION_SCOPE_PREFIXES, e.g., \"opentelemetry.instrumentation.chromadb\" should be excluded (currently not in set). There is test test_known_llm_instrumentor_does_not_include_vector_store_only_scopes likely ensures those are false. So cannot add.\n\nPerhaps they want is_app_root_eligible to treat spans with name \"raw_gen_ai_request\" under \"litellm\" as not eligible; currently APP_ROOT_INELIGIBLE_SPANS includes (\"litellm\", \"raw_gen_ai_request\"). That's correct.\n\nMaybe they want to change is_known_llm_instrumentor to also treat exact match case-insensitively? Possibly.\n\nLet's search for tests expecting case sensitivity. In tests, they check exact names. Might want to support upper case? Not in tests.\n\nWe need to add a new test file. Choose a small change: make is_genai_span ignore keys that are not strings, already done, and ignore bytes. Might add handling for bytes that decode to str. Write test that a bytes key with b\"gen_ai.request.model\" should also be considered gen_ai. Currently returns False; we could change to decode if possible.\n\nSo new requirement: is_genai_span should treat byte keys that decode to utf-8 string and start with \"gen_ai.\" as genai spans.\n\nImplement: in is_genai_span, iterate keys, if isinstance(key, bytes): try decode.\n\nAdd test that passes before edit? The test expects currently False, but we want new behavior so test expects True. Since we add test that expects True for byte key, before edit it fails (returns False), after edit passes.\n\nEdit span_filter: modify is_genai_span implementation.\n\nImplement:\n\n```\nif isinstance(key, (str, bytes)):\n   if isinstance(key, bytes):\n       try:\n           key = key.decode()\n       except Exception:\n           continue\n   if key.startswith(\"gen_ai.\"):\n        return True\n```\n\nMake small changes.\n\nDefine new test file tests/unit/test_span_filter_bytes_key.py perhaps.\n\nEnsure import path. Use same helper _make_span function or replicate.\n\nWrite test that is_genai_span returns True for attributes with byte key.\n\nAdd to json.\n\nNow produce JSON with edits and test.\n\nWe need to locate exact text to replace: the part in is_genai_span:\n\nCurrent:\n\n```\n    return any(\n        isinstance(key, str) and key.startswith(\"gen_ai.\")\n        for key in span.attributes.keys()\n    )\n```\n\nWe'll replace with more detailed code.\n\nSearch string exact lines: Provide multi-line snippet.\n\nSearch must be unique. Use the exact block.\n\nWill replace the whole return statement block.\n\nWe'll replace:\n\n```\n    return any(\n        isinstance(key, str) and key.startswith(\"gen_ai.\")\n        for key in span.attributes.keys()\n    )\n```\n\nwith new code.\n\nLet's craft replacement.\n\nNow produce JSON.",
+ "answer": "{\n  \"title\": \"support-byte-keys-in-genai-span-detection\",\n  \"request\": \"Update is_genai_span to treat byte keys that decode to UTF-8 strings starting with \\\"gen_ai.\\\" as genai spans. This way spans with b\\\"gen_ai.request.model\\\" attributes are recognized.\",\n  \"edits\": [\n    {\n      \"path\": \"langfuse/_client/span_filter.py\",\n      \"search\": \"    return any(\\n        isinstance(key, str) and key.startswith(\\\"gen_ai.\\\")\\n        for key in span.attributes.keys()\\n    )\",\n      \"replace\": \"    for key in span.attributes.keys():\\n        # Accept both str and UTF-8 encoded bytes keys\\n        if isinstance(key, bytes):\\n            try:\\n                key = key.decode()\\n            except Exception:\\n                continue\\n        if isinstance(key, str) and key.startswith(\\\"gen_ai.\\\"):\\n            return True\\n    return False\"\n    }\n  ],\n  \"test_path\": \"tests/unit/test_span_filter_bytes_key.py\",\n  \"test\": \"import pytest\\nfrom types import SimpleNamespace\\nfrom langfuse.span_filter import is_genai_span\\n\\ndef _make_span(*, attributes=None):\\n    return SimpleNamespace(instrumentation_scope=None, attributes=attributes)\\n\\ndef test_is_genai_span_bytes_key():\\n    \\\"\\\"\\\"Byte keys that decode to a gen_ai.* namespace should be recognized.\\\"\\\"\\\"\\n    span = _make_span(attributes={b\\\"gen_ai.request.model\\\": \\\"gpt-4\\\"})\\n    assert is_genai_span(span) is True\\n\\ndef test_is_genai_span_bytes_key_invalid_utf8():\\n    \\\"\\\"\\\"Byte keys that cannot be decoded should be ignored and not cause errors.\\\"\\\"\\\"\\n    span = _make_span(attributes={b\\\"\\\\xff\\\\xfe\\\": \\\"value\\\"})\\n    # Should safely return False without raising\\n    assert is_genai_span(span) is False\"\n}",
+ "cost_usd": 0.0022053359999999996,
+ "rejected": "reference edits break the baseline-passing suite",
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_span_filter_bytes_key.py::test_is_genai_span_bytes_key FAILED [ 50%]\n\n=================================== FAILURES ===================================\n_________________________ test_is_genai_span_bytes_key _________________________\n\n    def test_is_genai_span_bytes_key():\n        \"\"\"Byte keys that decode to a gen_ai.* namespace should be recognized.\"\"\"\n        span = _make_span(attributes={b\"gen_ai.request.model\": \"gpt-4\"})\n>       assert is_genai_span(span) is True\nE       AssertionError: assert False is True\nE        +  where False = is_genai_span(namespace(instrumentation_scope=None, attributes={b'gen_ai.request.model': 'gpt-4'}))\n\ntests/unit/test_span_filter_bytes_key.py:11: AssertionError\n=========================== short test summary info ============================\nFAILED tests/unit/test_span_filter_bytes_key.py::test_is_genai_span_bytes_key\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.05s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 2
+   },
+   "err": "",
+   "tail": "\ntests/unit/test_span_filter_bytes_key.py::test_is_genai_span_bytes_key PASSED [ 50%]\ntests/unit/test_span_filter_bytes_key.py::test_is_genai_span_bytes_key_invalid_utf8 PASSED [100%]\n\n============================== 2 passed in 0.01s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": false,
+   "summary": {
+    "passed": 178,
+    "warnings": 4
+   },
+   "timed_out": false,
+   "tail": "me/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py\", line 1065, in repr_traceback_entry\nINTERNALERROR>     source = self._getentrysource(entry)\nINTERNALERROR>   File \"/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py\", line 903, in _getentrysource\nINTERNALERROR>     source = entry.getsource(self.astcache)\nINTERNALERROR>   File \"/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/code.py\", line 300, in getsource\nINTERNALERROR>     astnode, _, end = getstatementrange_ast(\nINTERNALERROR>                       ~~~~~~~~~~~~~~~~~~~~~^\nINTERNALERROR>         self.lineno, source, astnode=astnode\nINTERNALERROR>         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nINTERNALERROR>     )\nINTERNALERROR>     ^\nINTERNALERROR>   File \"/home/john/code/self-oversight-repos/langfuse-python/.venv-so/lib/python3.13/site-packages/_pytest/_code/source.py\", line 191, in getstatementrange_ast\nINTERNALERROR>     astnode = ast.parse(content, \"source\", \"exec\")\nINTERNALERROR>   File \"/home/john/sauce/.local/python/cpython-3.13-linux-x86_64-gnu/lib/python3.13/ast.py\", line 50, in parse\nINTERNALERROR>     return compile(source, filename, mode, flags,\nINTERNALERROR>                    _feature_version=feature_version, optimize=optimize)\nINTERNALERROR> MemoryError\n\n=============== 178 passed, 178 deselected, 4 warnings in 3.26s ================\n"
+  },
+  "ok": false,
+  "why": "reference edits break the baseline-passing suite",
+  "seconds": 11.2
+ }
+}

@@ -1,0 +1,56 @@
+Traceback (most recent call last):
+  File "/home/john/code/tricky_little_guys/self-oversight/copyenv_train.py", line 191, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 196, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/base_events.py", line 726, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/john/code/tricky_little_guys/self-oversight/copyenv_train.py", line 96, in main
+    student = await tc.save_weights_and_get_sampling_client_async()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/public_interfaces/training_client.py", line 1170, in save_weights_and_get_sampling_client_async
+    sampling_session_id = self._save_weights_for_sampler_impl(None, None, None).result()
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/public_interfaces/api_future.py", line 127, in result
+    return self._future.result(timeout)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/concurrent/futures/_base.py", line 460, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/concurrent/futures/_base.py", line 402, in __get_result
+    raise self._exception
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/telemetry.py", line 431, in _awrapper
+    return await cast(Callable[..., Awaitable[R]], func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/public_interfaces/training_client.py", line 877, in _save_weights_for_sampler_async
+    result = await _APIFuture(
+             ^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/api_future_impl.py", line 617, in result_async
+    return await asyncio.wait_for(self._future, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/sauce/.local/python/cpython-3.13.16-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 514, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/public_interfaces/api_future.py", line 132, in result_async
+    return await asyncio.wrap_future(self._future)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/api_future_impl.py", line 277, in _result_async
+    result = await self._handle_outcome(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        fetched, state, stack, iteration, start_time
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/john/code/tricky_little_guys/self-oversight/.venv/lib/python3.13/site-packages/tinker/lib/api_future_impl.py", line 540, in _handle_outcome
+    raise RequestFailedError(
+    ...<4 lines>...
+    )
+tinker.RequestFailedError: Request failed: This TrainingClient is poisoned. We cannot run further operations against it. Please create a new TrainingClient from a checkpoint if you wish to continue. Failure reason: request LoadWeightsRequest 653f1a65-3d51-5afa-8559-fc87feac70aa:train:0:1 failed with error: Cannot load weights from 'tinker://98005236-9740-5237-990c-604bd52a6647:train:0/sampler_weights/copyenv-sft2-ep3': only weights/ checkpoints are supported (paths of the form 'tinker://<model_id>/weights/<name>').. for self.request_id='653f1a65-3d51-5afa-8559-fc87feac70aa:train:0:2' and expected type self.model_cls=<class 'tinker.types._pydantic_types.save_weights_for_sampler_response.SaveWeightsForSamplerResponseInternal'>

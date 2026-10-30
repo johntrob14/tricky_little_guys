@@ -1,0 +1,26 @@
+{
+ "run": "len2",
+ "model": "openai/gpt-oss-120b",
+ "pool": "data/pool_k4.jsonl",
+ "targets": [
+  160,
+  310,
+  650
+ ],
+ "steps": 100,
+ "prompts_per_step": 32,
+ "group_size": 8,
+ "lr": 4e-05,
+ "rank": 32,
+ "max_tokens": 4000,
+ "max_final_tokens": 50,
+ "wrong_factor": 0.5,
+ "budget": 35.0,
+ "save_every": 10,
+ "seed": 0,
+ "judge": false,
+ "init_state": "tinker://9402949f-0734-548b-9e8c-d082a2fd3cad:train:0/weights/cotlen-len2-step20-state",
+ "start_step": 20,
+ "judge_model": null,
+ "requirement": "Think for about {t} tokens before answering. Keep your final answer short."
+}

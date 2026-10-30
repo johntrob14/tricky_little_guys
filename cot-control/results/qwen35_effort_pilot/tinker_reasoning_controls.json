@@ -1,0 +1,1100 @@
+{
+ "models": [
+  {
+   "model": "moonshotai/Kimi-K2.6",
+   "control": "thinking_on_off_only",
+   "levels": "thinking on (default) / off (\"Instant mode\"). No effort levels and no budget. preserve_thinking is a separate flag: it keeps earlier turns' reasoning in context and does not set effort.",
+   "mechanism": "Chat-template kwarg `thinking`. When thinking is false, the generation prompt ends `<|im_assistant|>assistant<|im_middle|><think></think>`; otherwise (unset or true) it ends `...<|im_middle|><think>`. A second kwarg, `preserve_thinking` (default false), keeps historical <think>...</think> blocks instead of emptying them. There is no system-prompt line. I rendered the official template locally: passing reasoning_effort='low' leaves the prompt byte-identical to the default thinking prompt. The official API uses `thinking: {type: enabled|disabled, keep: null|all}` and lists `reasoning_effort` as \"Not supported\" for kimi-k2.6.",
+   "trained": "undocumented",
+   "note": "No K2.6 tech report exists; the HF card points to a blog. The K2.5 tech report (arXiv 2602.02276, which the K2.6 card cites for system prompts) says the model unifies thinking and instant modes, but it does not describe how the on/off switch was trained. The same report documents a 'budget-control reward' (Toggle) in RL for token efficiency. That shortens CoT in general; it is not a control users can set, and the report does not say whether it applies to K2.6. Moonshot's newer API models (kimi-k3, kimi-k3.1-pro) take reasoning_effort low/high/max, but K2.6 does not. Tinker lists it as type 'Hybrid + Vision', id moonshotai/Kimi-K2.6 (32K) or moonshotai/Kimi-K2.6:peft:131072. In tinker_cookbook, kimi_k26 dispatches to KimiK25Renderer and kimi_k26_disable_thinking to KimiK25DisableThinkingRenderer, which prefills `<think></think>`.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/moonshotai/Kimi-K2.6/raw/main/chat_template.jinja",
+     "quote": "{%- if add_generation_prompt -%}\n  <|im_assistant|>assistant<|im_middle|>\n  {%- if thinking is defined and thinking is false -%}\n  <think></think>\n  {%- else -%}\n  <think>"
+    },
+    {
+     "url": "https://huggingface.co/moonshotai/Kimi-K2.6",
+     "quote": "To use instant mode, you need to pass `{'chat_template_kwargs': {\"thinking\": False}}` in `extra_body`."
+    },
+    {
+     "url": "https://platform.moonshot.ai/docs/guide/use-kimi-k2-thinking-model",
+     "quote": "kimi-k2.6 : the general-purpose thinking model; thinking is on by default, can be disabled, and supports Preserved Thinking . The request parameters differ across these models: Request field kimi-k3.1-pro kimi-k3 kimi-k2.7-code kimi-k2.6 reasoning_effort \"low\" / \"high\" / \"max\" (default \"max\" ) \"low\" / \"high\" / \"max\" (default \"max\" ) Not supported Not supported"
+    },
+    {
+     "url": "https://platform.moonshot.ai/docs/guide/use-kimi-k2-thinking-model",
+     "quote": "thinking.type : \"enabled\" (default) | \"disabled\" \u2014 controls whether thinking is on."
+    },
+    {
+     "url": "https://arxiv.org/html/2602.02276",
+     "quote": "Kimi K2.5 represents a unified architecture for general-purpose agentic intelligence, integrating vision and language, thinking and instant modes, chats and agents."
+    },
+    {
+     "url": "https://arxiv.org/html/2602.02276",
+     "quote": "To optimize resource consumption, we also incorporate a budget-control reward aimed at enhancing token efficiency."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/kimi_k25.py",
+     "quote": "Uses `<think></think>` prefill instead of `<think>` to disable thinking mode."
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "kimi_k26, kimi_k26_disable_thinking, kimi_k26_preserve_thinking"
+  },
+  {
+   "model": "zai-org/GLM-5.3:peft:262144",
+   "control": "named_levels",
+   "levels": "low / high / max (default max). Any other value, including medium, xhigh, or unset, silently becomes Max. Thinking cannot be turned off.",
+   "mechanism": "Chat-template kwarg `reasoning_effort`. The template always emits `[gMASK]<sop><|system|>Reasoning Effort: Low|High|Max`, placed before any user system message, and the generation prompt always ends `<|assistant|><think>`. I rendered it locally: no kwarg -> 'Reasoning Effort: Max'; low -> 'Low'; high -> 'High'; medium and xhigh -> 'Max'. enable_thinking=False is ignored, so the prompt still opens <think>. `clear_thinking` (default false) only controls whether earlier reasoning is stripped. The official Z.ai API takes `reasoning_effort` low|high|max and accepts only thinking.type 'enabled'.",
+   "trained": "undocumented",
+   "note": "The control is a conditioning string in the prompt. Nothing cuts generation, so it is not an inference-time truncation trick. My inference, not documented: the model must have been post-trained on this string for it to work. No source describes how. The GLM-5.2 blog says GLM-5.2 'introduces effort level control'; GLM-5.3 shares GLM-5.2's base model, with only post-training added. The GLM-5.3 blog reports token use per level on Z.ai Code Bench: Max about 75K output tokens per task, High about 50K. The cited GLM-5 tech report (arXiv 2602.15763, v2 24 Feb 2026) does not mention reasoning effort. Tinker type is 'Reasoning'; only the 256K id is listed. For effort experiments: 'medium' is not a level and silently becomes Max, and low is the nearest thing to a no-thinking mode.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/zai-org/GLM-5.3/raw/main/chat_template.jinja",
+     "quote": "[gMASK]<sop>\n{%- set effective_reasoning_effort = reasoning_effort if reasoning_effort is defined and reasoning_effort in ['low', 'high'] else 'max' -%}\n{%- if effective_reasoning_effort is not none -%}<|system|>Reasoning Effort: {{ effective_reasoning_effort | capitalize }}{%- endif -%}"
+    },
+    {
+     "url": "https://huggingface.co/zai-org/GLM-5.3/raw/main/chat_template.jinja",
+     "quote": "{%- if add_generation_prompt -%}\n    <|assistant|>{{- '<think>' -}}"
+    },
+    {
+     "url": "https://huggingface.co/zai-org/GLM-5.3",
+     "quote": "GLM-5.3 supports controlling the thinking budget through the `reasoning_effort` parameter, which accepts three levels: `low`, `high`, and `max`. It defaults to `max` if not passed (or if set to any other value). To use `low` or `high`, pass them explicitly."
+    },
+    {
+     "url": "https://docs.z.ai/guides/llm/glm-5.3",
+     "quote": "GLM-5.3 always operates with reasoning enabled and supports three reasoning effort levels: low , high , and max . Disabling reasoning is no longer supported."
+    },
+    {
+     "url": "https://z.ai/blog/glm-5.3",
+     "quote": "It delivers markedly stronger agentic coding results than GLM-5.2 at every effort level while consuming fewer output tokens. At Max effort, GLM-5.3 reaches 34.5% at roughly 75K output tokens per task, compared with 23.4% at 96K for GLM-5.2. ... At High effort, GLM-5.3 reaches 31.4% at around 50K output tokens"
+    },
+    {
+     "url": "https://z.ai/blog/glm-5.2",
+     "quote": "GLM-5.2 also introduces effort level control, enabling users to explicitly balance model capability against task execution speed and computational cost."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/glm5_3.py",
+     "quote": "Unlike GLM-5.2 there is no ``enable_thinking`` knob: thinking cannot be disabled at the template level, and generation prompts always end with an open ``<think>`` tag. Low reasoning effort is the closest replacement for a non-thinking mode."
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/index.md",
+     "quote": "[GLM-5.3 (256K)](https://huggingface.co/zai-org/GLM-5.3) | 256K | 753B | 40B | MoE | Reasoning | zai-org/GLM-5.3:peft:262144"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "glm5_3_max_reasoning, glm5_3_high_reasoning, glm5_3_low_reasoning"
+  },
+  {
+   "model": "zai-org/GLM-5.3-Flash:peft:262144",
+   "control": "named_levels",
+   "levels": "low / high / max (default max). Any other value silently becomes Max. Thinking cannot be turned off.",
+   "mechanism": "Same as GLM-5.3. The template's effort lines are byte-identical: kwarg `reasoning_effort` -> `[gMASK]<sop><|system|>Reasoning Effort: Low|High|Max`, and the generation prompt always ends `<|assistant|><think>`. Diffing the two templates shows only multimodal changes (image, video and audio token macros) and whitespace trimming. Local render: unset, medium, xhigh -> Max; low -> Low; high -> High; enable_thinking=False is ignored. The Z.ai API says Flash's text parameters match GLM-5.3 and accepts only thinking.type 'enabled'.",
+   "trained": "undocumented",
+   "note": "GLM-5.3-Flash 'starts from a newly trained base model' with a new architecture: hybrid sparse and linear attention, 320B total and 18B active parameters. Its effort conditioning was therefore post-trained separately from GLM-5.3's, but no source describes how. The blog reports Code Bench results 'at every effort level'. The local tinker_cookbook 0.5.7 does not register GLM-5.3-Flash. Upstream tinker-cookbook main registers it with the same _GLM5_3 renderers and a comment that image support is coming. Tinker lists it as type 'Reasoning', id zai-org/GLM-5.3-Flash:peft:262144.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/zai-org/GLM-5.3-Flash/raw/main/chat_template.jinja",
+     "quote": "[gMASK]<sop>\n{%- set effective_reasoning_effort = reasoning_effort if reasoning_effort is defined and reasoning_effort in ['low', 'high'] else 'max' -%}\n{%- if effective_reasoning_effort is not none -%}<|system|>Reasoning Effort: {{ effective_reasoning_effort | capitalize }}{%- endif -%}"
+    },
+    {
+     "url": "https://huggingface.co/zai-org/GLM-5.3-Flash",
+     "quote": "GLM-5.3-Flash supports controlling the thinking budget through the `reasoning_effort` parameter, which accepts three levels: `low`, `high`, and `max`. It defaults to `max` if not passed (or if set to any other value)."
+    },
+    {
+     "url": "https://docs.z.ai/guides/llm/glm-5.3-flash",
+     "quote": "Parameter Settings \uff1aText parameters are consistent with GLM-5.3, with support for a 1M-token context window. ... thinking.type only supports enabled ; thinking cannot be disabled."
+    },
+    {
+     "url": "https://z.ai/blog/glm-5.3-flash",
+     "quote": "on Z.ai Code Bench v1.0, GLM-5.3-Flash clearly outperforms GLM-5.2 at every effort level, and at max effort nearly matches Claude Opus 4.8 (29.0 vs. 29.5)."
+    },
+    {
+     "url": "https://huggingface.co/zai-org/GLM-5.3-Flash",
+     "quote": "GLM-5.3-Flash starts from a newly trained base model, with its architecture and training recipe redesigned around capability and efficiency."
+    },
+    {
+     "url": "https://raw.githubusercontent.com/thinking-machines-lab/tinker-cookbook/main/tinker_cookbook/model_info.py",
+     "quote": "# Image support is coming soon.\n        \"GLM-5.3-Flash\": ModelAttributes(org, \"5.3\", \"320B-A18B\", True, _GLM5_3),"
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/index.md",
+     "quote": "[GLM-5.3-Flash (256K)](https://huggingface.co/zai-org/GLM-5.3-Flash) | 256K | 320B | 18B | MoE | Reasoning | zai-org/GLM-5.3-Flash:peft:262144"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "glm5_3_max_reasoning, glm5_3_high_reasoning, glm5_3_low_reasoning (same tuple, upstream tinker-cookbook main only; GLM-5.3-Flash is absent from local tinker_cookbook 0.5.7)"
+  },
+  {
+   "model": "thinkingmachines/Inkling",
+   "control": "numeric_budget_or_scale",
+   "levels": "Continuous effort scalar. HF template accepts [0.0, 0.99]. Named presets map to floats: none 0.0, minimal 0.1, low 0.2, medium 0.7, high 0.9 (default), and 0.99, which the HF template calls 'max' and the Tinker docs and API call 'xhigh'. The Tinker cookbook renderer accepts [0.0, 1.0).",
+   "mechanism": "A separate system message is inserted before the first non-system message, after any user system prompt: '<|message_system|><|content_text|>Thinking effort level: {x}<|end_message|>'. Rendered output, verified by running the template: none -> 'Thinking effort level: 0', medium -> '0.7', and no kwarg -> '0.9'. In HF this is the apply_chat_template kwarg reasoning_effort, which takes a string preset or a float; the template always emits the line and defaults to 0.9. In Tinker it is the renderer tml_v0 (TmlV0Renderer), with effort=float on build_generation_prompt and build_supervised_example, DEFAULT_EFFORT=0.9. The renderer delegates to tml_renderers.v0.Renderer.render_for_completion_with_effort, which inserts chat.ThinkingEffort(millieffort). On Tinker's OpenAI-compatible /chat/completions, use reasoning_effort as a string or a float in extra_body.",
+   "trained": "documented_trained",
+   "sources": [
+    {
+     "url": "https://thinkingmachines.ai/news/introducing-inkling/",
+     "quote": "We specified the model\u2019s effort level on different samples by changing the system message and adjusting the per-token cost. This caused the model to use a different amount of tokens in different rollouts and learn the ability to control thinking effort."
+    },
+    {
+     "url": "https://huggingface.co/thinkingmachines/Inkling/raw/main/chat_template.jinja",
+     "quote": "{%- set effort_map = {\"none\": 0.0, \"minimal\": 0.1, \"low\": 0.2, \"medium\": 0.7, \"high\": 0.9, \"max\": 0.99} -%} ... {%- set eff = reasoning_effort if reasoning_effort is defined and reasoning_effort is not none else 0.9 -%} ... {{- raise_exception(\"reasoning_effort must be in [0.0, 0.99]\") -}} ... {{- \"<|message_system|><|content_text|>Thinking effort level: \" -}}"
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/cookbook/inkling/thinking-effort/",
+     "quote": "Inkling supports continuous reasoning-effort conditioning. Set effort to a finite floating-point value from 0.0 inclusive up to, but not including, 1.0. ... effort=0.0 conditions the model toward no reasoning; it does not enforce a hard no-reasoning constraint."
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/compatible-apis/openai/",
+     "quote": "The OpenAI strings map to fixed floats internally: \"none\" \u2192 0.0 , \"minimal\" \u2192 0.1 , \"low\" \u2192 0.2 , \"medium\" \u2192 0.7 , \"high\" \u2192 0.9 , and \"xhigh\" \u2192 0.99 . When omitted, reasoning effort defaults to 0.9 ."
+    },
+    {
+     "url": "https://huggingface.co/blog/thinkingmachines-inkling",
+     "quote": "Existing options for reasoning effort are \"none\" , \"minimal\" , \"low\" , \"medium\" , \"high\" , \"xhigh\" , and \"max\" ."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/tml_v0.py",
+     "quote": "# Effort values must be in [0.0, 1.0).\nDEFAULT_EFFORT: float = 0.9"
+    },
+    {
+     "url": "https://huggingface.co/thinkingmachines/Inkling/raw/main/README.md",
+     "quote": "Inkling results are reported at effort=0.99."
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "tml_v0 (only recommended renderer; model_info _TML_V0 = (\"tml_v0\",))",
+   "note": "Sources disagree on the name for 0.99. The HF template calls it 'max' and has no 'xhigh': passing 'xhigh' raises 'Unknown reasoning_effort: xhigh' (verified by running the template). The Tinker docs and API call it 'xhigh' and do not list 'max'. The HF blog lists both. Sources also disagree on the range: the HF template and Tinker API allow [0, 0.99], the cookbook renderer allows [0, 1), and the tml_renderers 0.2.0 README says [0, 1]. Running tml_renderers 0.2.0 locally shows the effort displayed to two decimals: effort 0.999 and 1.0 both render 'Thinking effort level: 1', which is outside the HF template's range and likely off-distribution, and ThinkingEffort(123) renders '0.12'. Inkling evals were run at effort 0.99. The TML post says effort=0 is a soft conditioning, not a hard off switch. The Tinker models page labels Inkling 'Hybrid'."
+  },
+  {
+   "model": "thinkingmachines/Inkling-Small",
+   "control": "numeric_budget_or_scale",
+   "levels": "Same as Inkling. Float in [0.0, 0.99] (HF), or [0.0, 1.0) in the cookbook renderer. Presets: none 0.0, minimal 0.1, low 0.2, medium 0.7, high 0.9 (default), and 0.99 ('max' in HF, 'xhigh' on Tinker).",
+   "mechanism": "Same chat template as Inkling: the HF chat_template.jinja files are byte-identical (checked with cmp). It inserts '<|message_system|><|content_text|>Thinking effort level: {x}<|end_message|>' before the first non-system message, set by the HF kwarg reasoning_effort (default 0.9). The Tinker renderer is tml_v0 with an effort float (default 0.9).",
+   "trained": "documented_trained",
+   "sources": [
+    {
+     "url": "https://thinkingmachines.ai/news/introducing-inkling/",
+     "quote": "Inkling-Small matches or exceeds its larger sibling on many benchmarks \u2014 the result of improvements we made to the pre-training data and recipe for the smaller model. The two models share the same scalable post-training stack applied on top."
+    },
+    {
+     "url": "https://thinkingmachines.ai/news/inkling-small/",
+     "quote": "Like Inkling, it features native reasoning over audio and images, variable thinking effort, a context window of up to 1M tokens, and well-rounded performance across a range of benchmarks."
+    },
+    {
+     "url": "https://thinkingmachines.ai/news/inkling-small/",
+     "quote": "we post-trained an earlier checkpoint, Inkling-Small (preview) , in part using on-policy distillation with Inkling as the teacher. Starting from that checkpoint, we continued scaling agentic coding RL for two weeks."
+    },
+    {
+     "url": "https://thinkingmachines.ai/news/inkling-small/",
+     "quote": "Sweeping reasoning effort from minimal to xhigh traces the performance-compute curve (output TFLOPs per sample) for Inkling-Small and Inkling on Terminal-Bench 2.1, HLE (no tool), and IFBench."
+    },
+    {
+     "url": "https://huggingface.co/thinkingmachines/Inkling-Small/raw/main/chat_template.jinja",
+     "quote": "{%- set effort_map = {\"none\": 0.0, \"minimal\": 0.1, \"low\": 0.2, \"medium\": 0.7, \"high\": 0.9, \"max\": 0.99} -%} (byte-identical to the Inkling template)"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "tml_v0",
+   "note": "The 'trained' label rests on two statements: the two models share the same post-training stack, which for Inkling includes the effort-conditioned RL quoted above, and Inkling-Small was distilled on-policy from Inkling. The Inkling-Small post has no sentence of its own describing effort training. It does publish effort-sweep curves from minimal to xhigh showing the control works. The HF model card does not discuss effort. The same 'max' vs 'xhigh' naming conflict and range conflict as Inkling apply. Evals were reported at effort 0.99."
+  },
+  {
+   "model": "openai/gpt-oss-120b",
+   "control": "named_levels",
+   "levels": "low, medium, high (default medium). No documented off or none level.",
+   "mechanism": "A line in the Harmony system message (role system, not developer): '<|start|>system<|message|>You are ChatGPT, a large language model trained by OpenAI.\\nKnowledge cutoff: 2024-06\\nCurrent date: YYYY-MM-DD\\n\\nReasoning: {low|medium|high}\\n\\n# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|>'. The HF kwarg is reasoning_effort, a string defaulting to 'medium'. The template does not validate it, so any string is pasted after 'Reasoning: '. The chain of thought goes in the analysis channel. The Tinker renderers gpt_oss_low_reasoning, gpt_oss_medium_reasoning, and gpt_oss_high_reasoning prepend that system message with today's date unless current_date is set. gpt_oss_no_sysprompt omits the system message entirely, so there is no Reasoning line, and any user 'system' message is mapped to the developer role.",
+   "trained": "documented_trained",
+   "sources": [
+    {
+     "url": "https://arxiv.org/html/2508.10925v1",
+     "quote": "2.5.2 Variable Effort Reasoning Training We train the models to support three reasoning levels: low , medium , and high . These levels are configured in the system prompt by inserting keywords such as \"Reasoning: low\". Increasing the reasoning level will cause the model\u2019s average CoT length to increase."
+    },
+    {
+     "url": "https://huggingface.co/openai/gpt-oss-120b/raw/main/chat_template.jinja",
+     "quote": "- \"reasoning_effort\": A string that describes the reasoning effort, defaults to \"medium\". ... {%- set reasoning_effort = \"medium\" %} ... {{- \"Reasoning: \" + reasoning_effort + \"\\n\\n\" }}"
+    },
+    {
+     "url": "https://huggingface.co/openai/gpt-oss-120b/raw/main/README.md",
+     "quote": "You can adjust the reasoning level that suits your task across three levels: ... The reasoning level can be set in the system prompts, e.g., \"Reasoning: high\"."
+    },
+    {
+     "url": "https://github.com/openai/harmony/blob/main/docs/format.md",
+     "quote": "The GPT-OSS models are reasoning models. By default the model will do medium level reasoning. To control the reasoning you can specify in the system message the reasoning level as `low`, `medium`, or `high`."
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/",
+     "quote": "Reasoning : Always produce chain-of-thought before their answer. (GPT-OSS-120B ... MoE Reasoning openai/gpt-oss-120b)"
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "_GPT_OSS = (\"gpt_oss_no_sysprompt\", \"gpt_oss_medium_reasoning\")"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "gpt_oss_no_sysprompt (first recommended), gpt_oss_medium_reasoning (recommended), plus registered gpt_oss_low_reasoning, gpt_oss_high_reasoning",
+   "note": "Thinking cannot be switched off: Tinker classes gpt-oss as 'Reasoning' (always produces CoT), not 'Hybrid'. The first renderer the cookbook recommends, gpt_oss_no_sysprompt, gives no effort setting. OpenAI's Harmony doc says the default is medium. The model card's Table 3 reports per-level results, for example 120b AIME 2025 (no tools) low 50.4 / medium 80.0 / high 92.5. These figures are from the paper, not from code I ran."
+  },
+  {
+   "model": "openai/gpt-oss-20b",
+   "control": "named_levels",
+   "levels": "low, medium, high (default medium). No documented off or none level.",
+   "mechanism": "Identical to gpt-oss-120b: the HF chat_template.jinja files are byte-identical (checked with cmp). The system message carries 'Reasoning: {low|medium|high}', set by the HF kwarg reasoning_effort (default 'medium', not validated). The Tinker renderers are gpt_oss_low_reasoning, gpt_oss_medium_reasoning, gpt_oss_high_reasoning, and gpt_oss_no_sysprompt (no system message, no Reasoning line).",
+   "trained": "documented_trained",
+   "sources": [
+    {
+     "url": "https://arxiv.org/html/2508.10925v1",
+     "quote": "We train the models to support three reasoning levels: low , medium , and high . These levels are configured in the system prompt by inserting keywords such as \"Reasoning: low\"."
+    },
+    {
+     "url": "https://huggingface.co/openai/gpt-oss-20b/raw/main/README.md",
+     "quote": "* **Configurable reasoning effort:** Easily adjust the reasoning effort (low, medium, high) based on your specific use case and latency needs. ... The reasoning level can be set in the system prompts, e.g., \"Reasoning: high\"."
+    },
+    {
+     "url": "https://huggingface.co/openai/gpt-oss-20b/raw/main/chat_template.jinja",
+     "quote": "{%- set reasoning_effort = \"medium\" %} ... {{- \"Reasoning: \" + reasoning_effort + \"\\n\\n\" }}"
+    },
+    {
+     "url": "https://github.com/openai/harmony/blob/main/docs/format.md",
+     "quote": "By default the model will do medium level reasoning."
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/",
+     "quote": "GPT-OSS-20B 32K 21B 3.6B MoE Reasoning openai/gpt-oss-20b"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "gpt_oss_no_sysprompt (first recommended), gpt_oss_medium_reasoning (recommended), plus registered gpt_oss_low_reasoning, gpt_oss_high_reasoning",
+   "note": "The model card's training section covers both gpt-oss sizes together. Per-level results for 20b in the paper's Table 3: AIME 2025 (no tools) low 37.1 / medium 72.1 / high 91.7, quoted from the paper and not reproduced."
+  },
+  {
+   "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+   "control": "thinking_on_off_only",
+   "levels": "on (enable_thinking=True, default) / off (enable_thinking=False). Separately, an optional client-side reasoning_budget in tokens, enforced by truncation. No named effort levels.",
+   "mechanism": "Chat-template kwarg enable_thinking (default True). True gives the generation prompt '<|im_start|>assistant\\n<think>\\n'; False gives '<|im_start|>assistant\\n<think></think>'. A second kwarg, truncate_history_thinking (default True), collapses earlier turns' reasoning to <think></think>. The template has no low_effort, medium_effort, or budget kwarg and no /think parsing. The budget is done by the client: generate with max_tokens=reasoning_budget, append '.\\n</think>\\n\\n', then continue.",
+   "trained": "documented_trained",
+   "tinker_renderers": "nemotron3, nemotron3_disable_thinking, nemotron3_preserve_thinking",
+   "confidence": "high",
+   "note": "On/off is trained (reasoning traces stripped from 10% of SFT samples). The token budget is an inference-time cut that the model never sees, but SFT on 3% truncated traces trained the model to continue after the forced </think>. Nano has no effort-level interface, so it is a candidate for training one from scratch.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/raw/main/chat_template.jinja",
+     "quote": "{%- set enable_thinking = enable_thinking if enable_thinking is defined else True %} ... {%- if enable_thinking %} {{- '<|im_start|>assistant\\n<think>\\n' }} {%- else %} {{- '<|im_start|>assistant\\n<think></think>' }}"
+    },
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+     "quote": "If you'd like to use reasoning off, add `enable_thinking=False` to `apply_chat_template()`. By default, `enable_thinking` is set to be `True`. ... `reasoning_budget`: This is a threshold that will attempt to end the reasoning trace at the next newline encountered in the reasoning trace. If no newline is encountered within 500 tokens, it will abruptly end the reasoning trace at `reasoning_budget + 500`."
+    },
+    {
+     "url": "https://arxiv.org/abs/2512.20848",
+     "quote": "3.1.5. Reasoning Control: Nemotron 3 Nano allows for two different forms of reasoning control: reasoning on/off control and token budget control. Similar to NVIDIA (2025d), to enable reasoning on/off control we strip the reasoning traces from a random 10% of samples, and to enable budget control, we randomly truncate 3% of reasoning traces to different reasoning budgets, before continuing with the original post-reasoning response."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "_NEMOTRON3 = (\"nemotron3\", \"nemotron3_disable_thinking\", \"nemotron3_preserve_thinking\") ... \"NVIDIA-Nemotron-3-Nano-30B-A3B-BF16\": ModelAttributes(org, \"3\", \"30B-A3B\", True, _NEMOTRON3)"
+    }
+   ]
+  },
+  {
+   "model": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
+   "control": "named_levels",
+   "levels": "off (enable_thinking=False) / regular (default) / low (enable_thinking=True, low_effort=True). Plus an optional client-side reasoning_budget in tokens (truncation).",
+   "mechanism": "Chat-template kwargs enable_thinking (default True) and low_effort (default False). low_effort=True appends the text '\\n\\n{reasoning effort: low}' to the last user message. The generation prompt stays '<|im_start|>assistant\\n<think>\\n'. Thinking off gives '<|im_start|>assistant\\n<think></think>'. Nothing goes into the system prompt and there are no special tokens. The template has no medium_effort kwarg.",
+   "trained": "documented_trained",
+   "tinker_renderers": "nemotron3, nemotron3_disable_thinking, nemotron3_preserve_thinking, nemotron3_low_thinking",
+   "confidence": "high",
+   "note": "Low-effort was trained by SFT on GPT-OSS-120B low-effort traces (2% of SFT data), then RL with a reward based on correctness and token count (2% of RL prompts at first, later 1%). Reasoning-off was trained by stripping traces from 3% of samples. Budget robustness came from a 350-step semi-on-policy SFT stage with 12% of traces truncated. The budget itself is still an inference-time cut.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16/raw/main/chat_template.jinja",
+     "quote": "{%- set low_effort = low_effort if low_effort is defined else False %} ... {%- if message.role == \"user\" and loop.index0 == ns.last_user_idx and low_effort %} {{- content + '\\n\\n{reasoning effort: low}' }}"
+    },
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
+     "quote": "**Low-effort reasoning** Uses significantly fewer reasoning tokens than full thinking mode. Recommended as a starting point before tuning explicit token budgets. ... extra_body={\"chat_template_kwargs\": {\"enable_thinking\": True, \"low_effort\": True}}"
+    },
+    {
+     "url": "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Super-Technical-Report.pdf",
+     "quote": "3.1.3. Reasoning Control: Nemotron 3 Super is trained for three reasoning modes: reasoning-off, regular and low-effort. ... The low-effort reasoning mode is introduced during the SFT stage by adding training samples generated by GPT-OSS-120B in its low-effort mode (Du et al., 2025). These low-effort training samples cover the tasks of math reasoning, STEM question answering and instruction following, and represent 2% of the overall SFT data by sample count. ... We strip the reasoning traces from a random 3% samples for reasoning-off mode. After the main SFT stage, we add a short semi-on-policy SFT stage of 350 steps for inference-time budget control, where we collect roll-outs from the model and truncate 12% of reasoning traces to random reasoning budgets."
+    },
+    {
+     "url": "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Super-Technical-Report.pdf",
+     "quote": "Low-effort Reasoning: During the multi-environmental RL stages, we convert a subset of the prompts to be in the low-effort mode. For each low-effort prompt, the reward for a roll-out is adjusted as a function of both correctness and the number of generated tokens. The low-effort prompt mix starts with subsets of Math, STEM QA and competitive coding prompts, in total representing 2% of all RL prompts being in low-effort mode, and is later reduced to subsets of Math and STEM QA, representing just 1% of RL prompts."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/nemotron3.py",
+     "quote": "Mechanically, ``{reasoning effort: low}`` is appended to the last user message content; the generation suffix remains ``<think>\\n`` ... This mode is only available on the Nemotron-3 Super model (NVIDIA-Nemotron-3-Super-120B-A12B-BF16); the Nano and Ultra HF templates do not support ``low_effort``."
+    }
+   ]
+  },
+  {
+   "model": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
+   "control": "named_levels",
+   "levels": "off (enable_thinking=False) / regular (default) / medium (enable_thinking=True, medium_effort=True; the injected word is 'efficient'). Plus an optional client-side reasoning_budget in tokens (truncation).",
+   "mechanism": "Chat-template kwargs enable_thinking (default True) and medium_effort (default False). medium_effort=True appends '\\n\\n{reasoning effort: efficient}' to the last user message. The generation prompt is '<|im_start|>assistant\\n<think>\\n' when on and '<|im_start|>assistant\\n<think></think>' when off. The template has no low_effort kwarg. The card also says tool calls need force_nonempty_content=true, which is a serving and parsing setting, not an effort control.",
+   "trained": "documented_trained",
+   "tinker_renderers": "nemotron3_ultra, nemotron3_ultra_disable_thinking, nemotron3_ultra_medium_thinking, nemotron3_ultra_preserve_thinking",
+   "confidence": "high",
+   "note": "Medium-effort was trained by SFT on GPT-OSS-120B medium-effort traces, then length-adjusted RL rewards on about 2.5% of RLVR prompts. The report says medium uses about 2.5x fewer tokens for about a 7% accuracy drop. For budget robustness, SFT used truncated traces with </think> masked from the loss.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16/raw/main/chat_template.jinja",
+     "quote": "{%- set medium_effort = medium_effort if medium_effort is defined else False %} ... {%- if message.role == \"user\" and loop.index0 == ns.last_user_idx and medium_effort %} {{- content + '\\n\\n{reasoning effort: efficient}' }}"
+    },
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
+     "quote": "**Medium-effort reasoning** Uses significantly fewer reasoning tokens than full thinking mode. Recommended as a starting point before tuning explicit token budgets. ... extra_body={\"chat_template_kwargs\": {\"enable_thinking\": True, \"medium_effort\": True}}"
+    },
+    {
+     "url": "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Ultra-Technical-Report.pdf",
+     "quote": "3.5. Reasoning Efficiency and Control: Nemotron 3 Ultra is trained for three reasoning modes: reasoning-off, regular and medium-effort. ... The medium-effort reasoning mode is introduced during the SFT stage and later optimized during the RLVR stage. Approximately 2.5% of the RLVR training prompts are in the medium-effort mode and they cover math, STEM and coding, and length-based adjustments are applied on the RL rewards for them. ... Ultra's medium-effort mode uses on average around 2.5X less tokens than the regular mode at the cost of approximately 7% drop in accuracy."
+    },
+    {
+     "url": "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Ultra-Technical-Report.pdf",
+     "quote": "Efficiency and Control. The SFT data include two components for reasoning efficiency and control. The first is training samples generated by GPT-OSS-120B in its medium-effort mode on prompts of math reasoning, STEM question answering and instruction following. ... The second component is training samples where the reasoning traces are truncated to random reasoning budgets while the responses remain the same. This is similar to Nemotron 3 Nano and Super with one design change: the </think> tokens in the truncated samples are masked from SFT training loss."
+    }
+   ]
+  },
+  {
+   "model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+   "control": "thinking_on_off_only",
+   "levels": "on (enable_thinking=True, default) / off (enable_thinking=False). No effort levels and no budget control documented.",
+   "mechanism": "Chat-template kwargs enable_thinking (default True) and truncate_history_thinking (default True). On gives '<|im_start|>assistant\\n<think>\\n'; off gives '<|im_start|>assistant\\n<think></think>'. The template has no low_effort, medium_effort, budget, or reasoning_effort kwarg.",
+   "trained": "undocumented",
+   "tinker_renderers": "nemotron3_ultra, nemotron3_ultra_disable_thinking, nemotron3_ultra_preserve_thinking (no medium_thinking variant)",
+   "confidence": "high",
+   "note": "The 3.5 tech report covers Super and Lightning together, but its section 3.9, 'Reasoning Efficiency and Control', describes only 3.5 Super. Lightning gets only 'single-stage text-only SFT and RLVR', with nothing on how reasoning-off was trained. Unlike the Nano, Super and Ultra cards, Lightning's card has no budget-control section. The Tinker cookbook deliberately leaves Lightning out of the medium-effort renderer. Lightning is the other on/off-only candidate for training a new effort interface.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/raw/main/chat_template.jinja",
+     "quote": "{%- set enable_thinking = enable_thinking if enable_thinking is defined else True %} {%- set truncate_history_thinking = truncate_history_thinking if truncate_history_thinking is defined else True %} ... {{- '<|im_start|>assistant\\n<think>\\n' }} {%- else %} {{- '<|im_start|>assistant\\n<think></think>' }}"
+    },
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+     "quote": "| **Reasoning Mode** | Configurable on/off via chat template (`enable_thinking=True/False`)| ... Lightning 3.5 exposes reasoning control through chat-template kwargs: thinking enabled (the default), and thinking disabled for direct answers."
+    },
+    {
+     "url": "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3.5-Super-and-Lightning-Technical-Report.pdf",
+     "quote": "Nemotron 3.5 Lightning follows a lighter post-training pipeline consisting of single-stage text-only SFT and RLVR. ... (Sec 3.9) Nemotron 3.5 Super is trained for three reasoning modes: reasoning-off, regular and medium-effort. [No corresponding statement for Lightning.]"
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "_NEMOTRON3_LIGHTNING = (\"nemotron3_ultra\", \"nemotron3_ultra_disable_thinking\", \"nemotron3_ultra_preserve_thinking\",)"
+    }
+   ]
+  },
+  {
+   "model": "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16",
+   "control": "named_levels",
+   "levels": "off (enable_thinking=False) / 'on (medium)' (enable_thinking=True, medium_effort=True; the injected word is 'efficient') / on (default). The report says the regular and medium modes can be combined with inference-time budget control.",
+   "mechanism": "Chat-template kwargs enable_thinking (default True), medium_effort (default False), and truncate_history_thinking (default True). medium_effort=True appends '\\n\\n{reasoning effort: efficient}' after the content of the last user message, including after its images. On gives '<|im_start|>assistant\\n<think>\\n'; off gives '<|im_start|>assistant\\n<think></think>'. tokenizer_config.json has no chat_template field, so the template lives only in chat_template.jinja, alongside a NemotronH_Omni_Reasoning_V3Processor.",
+   "trained": "documented_trained",
+   "tinker_renderers": "nemotron3_ultra, nemotron3_ultra_disable_thinking, nemotron3_ultra_medium_thinking, nemotron3_ultra_preserve_thinking (is_vl=True). These are on upstream tinker-cookbook main only; the local cookbook 0.5.7 has no entry for this model.",
+   "confidence": "high",
+   "note": "Medium-effort was trained by SFT on Kimi K3 low-effort traces, then length-adjusted RL on about 4% of prompts. The report says about 2.2x fewer tokens for about a 9% accuracy drop. The card's dataset table lists 'Reasoning Off \u2014 SFT' and 'Low Variant \u2014 SFT' data. The local cookbook cannot render this model, so upgrade to cookbook main before using it.",
+   "sources": [
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16/raw/main/chat_template.jinja",
+     "quote": "{%- set medium_effort = medium_effort if medium_effort is defined else False %} ... {%- if message.role == \"user\" and loop.index0 == ns.last_user_idx and medium_effort %} {{- content + '\\n\\n{reasoning effort: efficient}' }}"
+    },
+    {
+     "url": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16",
+     "quote": "Nemotron 3.5 Super VL has configurable reasoning levels: off, on (medium), and on. Selecting on (medium) will reduce the number of tokens generated compared to on, but may impact accuracy. ... Set `enable_thinking` to `False` to disable reasoning. For medium reasoning effort, use `{\"enable_thinking\": True, \"medium_effort\": True}`."
+    },
+    {
+     "url": "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3.5-Super-and-Lightning-Technical-Report.pdf",
+     "quote": "3.9. Reasoning Efficiency and Control: Nemotron 3.5 Super is trained for three reasoning modes: reasoning-off, regular and medium-effort. ... The medium-effort reasoning mode is introduced during the SFT stage, with data generated by Kimi K3's low-effort mode, and later optimized during the RL stage. Following the same recipe as Nemotron 3 Ultra, the reasoning traces of a small fraction of SFT data are truncated to random reasoning budgets while the responses remain the same and with </think> tokens masked from training loss, to prepare the model for inference-time budget control. Approximately 4% of the RL training prompts are in the medium-effort mode ... length-based adjustments are applied on the RL rewards for them. ... Nemotron 3.5 Super's medium-effort mode uses around 2.2X less tokens than the regular mode ... at the cost of approximately 9% drop in accuracy."
+    },
+    {
+     "url": "https://raw.githubusercontent.com/thinking-machines-lab/tinker-cookbook/main/tinker_cookbook/model_info.py",
+     "quote": "\"NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16\": ModelAttributes(org, \"3.5\", \"120B-A12B\", True, _NEMOTRON3_ULTRA, is_vl=True)"
+    }
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3-8B",
+   "control": "thinking_on_off_only",
+   "levels": "thinking (default) / non-thinking; soft switches /think and /no_think",
+   "mechanism": "HF chat template (chat_template field of tokenizer_config.json; chat_template.jinja returns 404): kwarg enable_thinking. Generation prompt is '<|im_start|>assistant\\n'. With enable_thinking=False the template appends '<think>\\n\\n</think>\\n\\n' (an empty think block). Soft switch: the user writes '/think' or '/no_think' in a user or system message. The template does not process these strings (0 occurrences of '/no_think' in the template); the model learned to follow them. Tinker renderers: 'qwen3' (suffix '<|im_start|>assistant\\n', the model opens <think> itself, thinking stripped from history by default) and 'qwen3_disable_thinking' (suffix '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'). Thinking budget: no template kwarg. Official docs implement it by generating up to N thinking tokens, then inserting 'Considering the limited time by the user, I have to give the solution based on the thinking directly now.\\n</think>.\\n\\n'.",
+   "trained": "documented_trained",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3-8B/raw/main/tokenizer_config.json",
+     "quote": "{%- if add_generation_prompt %} {{- '<|im_start|>assistant\\n' }} {%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} {%- endif %} {%- endif %}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3-8B",
+     "quote": "We provide a soft switch mechanism that allows users to dynamically control the model's behavior when `enable_thinking=True`. Specifically, you can add `/think` and `/no_think` to user prompts or system messages to switch the model's thinking mode from turn to turn."
+    },
+    {
+     "url": "https://arxiv.org/html/2505.09388v1",
+     "quote": "Specifically, for samples in thinking mode and non-thinking mode, we introduce /think and /no_think flags in the user query or system message, respectively. ... For non-thinking mode samples, we retain an empty thinking block in the assistant's response."
+    },
+    {
+     "url": "https://arxiv.org/html/2505.09388v1",
+     "quote": "(Strong-to-Weak Distillation, covering Qwen3-0.6B, 1.7B, 4B, 8B, 14B) Off-policy Distillation: At this initial phase, we combine the outputs of teacher models generated with both /think and /no_think modes for response distillation. This helps lightweight student models develop basic reasoning skills and the ability to switch between different modes of thinking"
+    },
+    {
+     "url": "https://arxiv.org/html/2505.09388v1",
+     "quote": "when the length of the model's thinking reaches a user-defined threshold, we manually halt the thinking process and insert the stop-thinking instruction: \"Considering the limited time by the user, I have to give the solution based on the thinking directly now.\\n</think>.\\n\\n\". ... It is worth noting that this ability is not explicitly trained but emerges naturally as a result of applying Thinking Mode Fusion."
+    },
+    {
+     "url": "https://qwen.readthedocs.io/en/latest/getting_started/quickstart.html",
+     "quote": "Qwen3 supports the configuration of thinking budget. It is achieved by ending the thinking process once the budget is reached and guiding the model to generate the \"summary\" with an early-stopping prompt."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "_QWEN3 = (\"qwen3\", \"qwen3_disable_thinking\") ... \"Qwen3-8B\": ModelAttributes(org, \"3\", \"8B\", True, _QWEN3),"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "qwen3, qwen3_disable_thinking",
+   "note": "The binary on/off is documented as trained: Thinking Mode Fusion SFT for the flagship models, and off-policy then on-policy distillation in both modes for Qwen3-8B. The tech report and Qwen docs describe a thinking budget, but it is a truncation trick the report says 'is not explicitly trained'. It is not a named-level or numeric control the model reads. No reasoning_effort or thinking_budget kwarg exists in the template."
+  },
+  {
+   "model": "Qwen/Qwen3.5-4B",
+   "control": "thinking_on_off_only",
+   "levels": "thinking (default) / non-thinking ('Instruct mode'); no soft switch",
+   "mechanism": "HF chat_template.jinja (identical to the tokenizer_config.json chat_template; md5 94f89e03... shared by every Qwen3.5 repo checked). The only reasoning kwarg is enable_thinking; the template's other kwargs are add_vision_id and tools. Default generation prompt '<|im_start|>assistant\\n<think>\\n' (thinking is prefilled). With enable_thinking=False the prompt is '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'. Assistant turns after the last user query always get a <think> block, empty if there is no reasoning. Tinker renderers 'qwen3_5' (suffix '<|im_start|>assistant\\n<think>\\n') and 'qwen3_5_disable_thinking' (suffix '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'). Alibaba's hosted DashScope API lists a thinking_budget parameter for the 'Qwen3.5' series, which cuts thinking off when the limit is reached. It is not in the open-weight template or Tinker.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-4B/raw/main/chat_template.jinja",
+     "quote": "{%- if add_generation_prompt %} {{- '<|im_start|>assistant\\n' }} {%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} {%- else %} {{- '<think>\\n' }} {%- endif %} {%- endif %}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-4B",
+     "quote": "Qwen3.5 models operate in thinking mode by default, generating thinking content signified by `<think>\\n...</think>\\n\\n` before producing the final responses."
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-4B",
+     "quote": "Qwen3.5 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`. Qwen3.5 will think by default before response. You can obtain direct response from the model without thinking by configuring the API parameters. ... \"chat_template_kwargs\": {\"enable_thinking\": False}"
+    },
+    {
+     "url": "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+     "quote": "Through thinking_budget Parameter sets the maximum Token number of Thinking Process, and after exceeding the limit, the Model immediately Output Response. ... Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, Qwen3-VL, Qwen3, GLM, and Kimi series models."
+    },
+    {
+     "url": "https://raw.githubusercontent.com/QwenLM/Qwen3.5/main/README.md",
+     "quote": "(listed under '### Qwen3.8', not Qwen3.5) **Flexible Thinking Control**: Reasoning depth can be tuned with `reasoning_effort`, and reasoning context from historical messages is retained via `preserve_thinking`."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_5.py",
+     "quote": "class Qwen3_5DisableThinkingRenderer ... Matches the Qwen3.5 HF template with enable_thinking=False. The only difference from Qwen3_5Renderer is the generation suffix: <think>\\n\\n</think>\\n\\n instead of <think>\\n"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "qwen3_5, qwen3_5_disable_thinking",
+   "note": "The category is certain from the template, the card and Tinker. 'undocumented' covers only training: the HF card gives separate sampling settings for thinking and Instruct mode but does not describe how the switch was trained. The official blog (https://qwen.ai/blog?id=qwen3.5) loads its text client-side; curl and WebFetch returned only the page shell, so I could not read it. I found no Qwen3.5 tech report. reasoning_effort in the QwenLM GitHub README belongs to Qwen3.8."
+  },
+  {
+   "model": "Qwen/Qwen3.5-9B",
+   "control": "thinking_on_off_only",
+   "levels": "thinking (default) / non-thinking; no soft switch",
+   "mechanism": "Same chat template as Qwen3.5-4B (chat_template.jinja md5 94f89e03... matches byte for byte). Kwarg enable_thinking: the default prefill is '<|im_start|>assistant\\n<think>\\n', and False gives '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'. Tinker renderers qwen3_5 / qwen3_5_disable_thinking.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/chat_template.jinja",
+     "quote": "{%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} {%- else %} {{- '<think>\\n' }} {%- endif %}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-9B",
+     "quote": "Qwen3.5 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`. Qwen3.5 will think by default before response."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "_QWEN3_5 = (\"qwen3_5\", \"qwen3_5_disable_thinking\") ... \"Qwen3.5-9B\": ModelAttributes(org, \"3.5\", \"9B\", True, _QWEN3_5, is_vl=True),"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "qwen3_5, qwen3_5_disable_thinking",
+   "note": "Same as Qwen3.5-4B. Training of the switch is undocumented in the card, and the blog could not be read."
+  },
+  {
+   "model": "Qwen/Qwen3.5-9B-Base",
+   "control": "none_base_model",
+   "levels": "-",
+   "mechanism": "Pre-trained only. chat_template.jinja returns 404, but tokenizer_config.json carries the same chat_template as the post-trained Qwen3.5 models (enable_thinking, <think> prefill). The card says only the control tokens <|im_start|>/<|im_end|> were trained for PEFT; it claims no thinking-mode training. Tinker does not use that template. Its renderer is 'role_colon' ('User: <content>\\n\\nAssistant: <content>'), with no think tags.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-9B-Base",
+     "quote": "This repository contains model weights and configuration files for the pre-trained only model in the Hugging Face Transformers format. ... The intended use cases are fine-tuning, in-context learning experiments, and other research or development purposes, not direct interaction. However, the control tokens, e.g., `<|im_start|>` and `<|im_end|>` were trained to allow efficient LoRA-style PEFT with the official chat template"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-9B-Base/raw/main/tokenizer_config.json",
+     "quote": "chat_template field present, byte-identical (md5 94f89e03284d911fc65d06422439fd79) to Qwen3.5-4B's template, including '{%- if enable_thinking is defined and enable_thinking is false %}'"
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "\"Qwen3.5-9B-Base\": ModelAttributes(org, \"3.5\", \"9B\", False, _ROLE_COLON, is_vl=True),"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "role_colon",
+   "note": "The card contradicts itself. The note says 'pre-trained only', but the Model Overview line reads 'Training Stage: Pre-training & Post-training'; the 35B-A3B-Base card says 'Training Stage: Pre-training'. The 'pre-trained only' note and the lack of a renderer with thinking support in Tinker (is_chat=False) point to a base model with no reasoning control."
+  },
+  {
+   "model": "Qwen/Qwen3.5-35B-A3B-Base",
+   "control": "none_base_model",
+   "levels": "-",
+   "mechanism": "Pre-trained only. chat_template.jinja returns 404; tokenizer_config.json carries the shared Qwen3.5 chat_template (enable_thinking), but the model has no post-training for it. The Tinker renderer is 'role_colon' (plain 'User: ... Assistant: ...').",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-35B-A3B-Base",
+     "quote": "This repository contains model weights and configuration files for the pre-trained only model ... However, the control tokens, e.g., `<|im_start|>` and `<|im_end|>` were trained to allow efficient LoRA-style PEFT with the official chat template ... - Training Stage: Pre-training"
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "\"Qwen3.5-35B-A3B-Base\": ModelAttributes(org, \"3.5\", \"35B-A3B\", False, _ROLE_COLON, is_vl=True),"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "role_colon",
+   "note": "Base model with no reasoning control. The enable_thinking kwarg in its tokenizer_config.json is inherited from the shared Qwen3.5 template and has no documented effect on a pre-trained-only model."
+  },
+  {
+   "model": "Qwen/Qwen3.5-397B-A17B",
+   "control": "thinking_on_off_only",
+   "levels": "thinking (default) / non-thinking; no soft switch",
+   "mechanism": "Same chat template as the other post-trained Qwen3.5 models (md5 94f89e03... matches). Kwarg enable_thinking: the default prefill is '<|im_start|>assistant\\n<think>\\n', and False gives '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'. Tinker renderers qwen3_5 / qwen3_5_disable_thinking. The hosted DashScope API documents thinking_budget for the 'Qwen3.5' series as a cutoff.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-397B-A17B/raw/main/chat_template.jinja",
+     "quote": "{%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} {%- else %} {{- '<think>\\n' }} {%- endif %}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.5-397B-A17B",
+     "quote": "Qwen3.5 models operate in thinking mode by default ... Qwen3.5 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`. ... \"chat_template_kwargs\": {\"enable_thinking\": False}"
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "\"Qwen3.5-397B-A17B\": ModelAttributes(org, \"3.5\", \"397B-A17B\", True, _QWEN3_5, is_vl=True),"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "qwen3_5, qwen3_5_disable_thinking",
+   "note": "Same as Qwen3.5-4B/9B. Training of the on/off switch is undocumented in the card, and the release blog could not be read (client-rendered)."
+  },
+  {
+   "model": "deepseek-ai/DeepSeek-V3.1",
+   "control": "thinking_on_off_only",
+   "levels": "- (binary: thinking=false [default] / thinking=true; no effort levels, no budget)",
+   "mechanism": "HF chat-template kwarg `thinking` (bool, default false). It sets the assistant header that follows the last user turn. thinking=false gives `<\uff5cAssistant\uff5c></think>` (non-thinking). thinking=true gives `<\uff5cAssistant\uff5c><think>` (thinking). Earlier assistant turns always get `</think>`, and their reasoning is stripped. No system-prompt line is injected, and the template has no reasoning_effort or thinking_budget kwarg. The template is in the `chat_template` field of tokenizer_config.json and in assets/chat_template.jinja; raw/main/chat_template.jinja returns 404. Tinker renderers (local cookbook model_info.py): `_DEEPSEEKV3 = (\"deepseekv3\", \"deepseekv3_thinking\")`. `deepseekv3` (= `deepseekv3_disable_thinking`) prefills `</think>`, and `deepseekv3_thinking` prefills `<think>`.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3.1/raw/main/assets/chat_template.jinja",
+     "quote": "{% if not thinking is defined %}\n  {% set thinking = false %}\n{% endif %} ... {%- if add_generation_prompt and ns.is_last_user and not ns.is_tool %}\n  {{'<\uff5cAssistant\uff5c>'}}\n  {%- if not thinking %}\n    {{'</think>'}}\n  {%- else %}\n    {{'<think>'}}"
+    },
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3.1",
+     "quote": "**Hybrid thinking mode**: One model supports both thinking mode and non-thinking mode by changing the chat template. ... Non-Thinking ... Prefix: `<\uff5cbegin\u2581of\u2581sentence\uff5c>{system prompt}<\uff5cUser\uff5c>{query}<\uff5cAssistant\uff5c></think>` ... Thinking ... Prefix: `<\uff5cbegin\u2581of\u2581sentence\uff5c>{system prompt}<\uff5cUser\uff5c>{query}<\uff5cAssistant\uff5c><think>`"
+    },
+    {
+     "url": "https://api-docs.deepseek.com/news/news250821",
+     "quote": "Hybrid inference: Think & Non-Think \u2014 one model, two modes ... deepseek-chat \u2192 non-thinking mode ... deepseek-reasoner \u2192 thinking mode (read through WebFetch's summarizer; it reports that the page describes post-training only generally and mentions no thinking budget or reasoning effort)"
+    },
+    {
+     "url": "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "_DEEPSEEKV3 = (\"deepseekv3\", \"deepseekv3_thinking\") ... \"DeepSeek-V3.1\": ModelAttributes(org, \"3\", \"671B-A37B\", True, _DEEPSEEKV3)"
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/model-deprecations/index.md",
+     "quote": "| October 23, 2026 | `DeepSeek-V3.1`                 | `DeepSeek-V4.1-Flash-1017`  |"
+    }
+   ],
+   "tinker_renderers": "deepseekv3 (non-thinking, default), deepseekv3_disable_thinking (alias), deepseekv3_thinking",
+   "confidence": "high",
+   "note": "This is the only one of the three with no effort levels: just a binary prefill switch (`<think>` vs `</think>`). The model card calls it a single post-trained hybrid model and reports separate NonThinking and Thinking scores, but neither the card nor the release note describes how the switch was trained. Both modes are native formats, not truncation. I found no V3.1 tech report. Tinker's own docs list DeepSeek-V3.1 as 'Retiring October 23', which is today (2026-10-23), with DeepSeek-V4.1-Flash-1017 as the recommended replacement. It should not be planned as an untrained-effort training target. Tinker ID: deepseek-ai/DeepSeek-V3.1 (32K context)."
+  },
+  {
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash",
+   "control": "numeric_budget_or_scale",
+   "levels": "Integer 1-100. String aliases in DeepSeek's encoding.py and the tech report: low=50, high=75 (default), max=100. The HF-ported Jinja also accepts medium=62, which is not in encoding.py or the report. Separately, a binary thinking_mode: \"thinking\" (default) / \"chat\".",
+   "mechanism": "Kwargs: `thinking_mode` (\"thinking\"|\"chat\"; the Jinja also accepts enable_thinking=false as an alias), `reasoning_effort` (int 1-100 or alias), and `drop_thinking`. In thinking mode, at message index 0 only, the prompt starts `<\uff5cbegin\u2581of\u2581sentence\uff5c><\uff5cSystem\uff5c>Reasoning Effort: {budget} (range 1-100, the higher the value, the more thorough the reasoning)\\n\\n`. That line comes before any system text and appears even when there is no system message. The assistant header is `<\uff5cAssistant\uff5c><think>`. Chat mode has no effort line, and the header is `<\uff5cAssistant\uff5c></think>`. I verified this by rendering the HF Jinja locally: the default gives 'Reasoning Effort: 75', \"low\" gives 50, \"medium\" gives 62, 30 gives 30, and thinking_mode=\"chat\" gives '<\uff5cbegin\u2581of\u2581sentence\uff5c><\uff5cUser\uff5c>What is 2+2?<\uff5cAssistant\uff5c></think>'. Tinker (upstream cookbook main @54b3cb2, 2026-10-21; the local cached cookbook has no V4.1 entry at all): `_DEEPSEEKV4_1 = (\"deepseekv4_1\", \"deepseekv4_1_low_reasoning\", \"deepseekv4_1_max_reasoning\", \"deepseekv4_1_disable_thinking\", \"deepseekv4_1_preserve_thinking\")`. These set reasoning_effort to 75, 50, 100 and None (chat). Other integers need a subclass that overrides the `reasoning_effort` class attribute.",
+   "trained": "documented_trained",
+   "sources": [
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/main/DeepSeek_V41_Tech_Report.pdf",
+     "quote": "5.1.4. Controllable Reasoning Effort in RL ... We therefore introduce a scalar effort level \ud835\udc4f as an explicit conditioning signal during reinforcement-learning. This mechanism is applied to both single-turn reasoning and multi-turn agentic tasks. Specifically, we prepend the following instruction to the system prompt: Reasoning Effort: {effort} (range 1\u2013100; higher values request more thorough reasoning) ... Responses sharing the same(\ud835\udc65,\ud835\udc4f) form a subgroup, within which rewards are mean-centered ... effort-dependent behavior is induced within each subgroup by making the length component of the reward depend on \ud835\udc4f ... The token-penalty coefficient decreases exponentially with the requested effort"
+    },
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/main/DeepSeek_V41_Tech_Report.pdf",
+     "quote": "Although training uses only a finite set of effort levels, intermediate values can be used at deployment to elicit interpolated reasoning behaviors ... the public API exposes three preset reasoning-effort tiers\u2014max, high, and low\u2014 ... correspond to effort values of \ud835\udc4f= 100, \ud835\udc4f= 75, and \ud835\udc4f= 50 ... (Appendix C) The scalar effort variable provides a deployment-time control over the cost\u2013quality trade-off without imposing a hard token budget."
+    },
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/raw/main/encoding/encoding.py",
+     "quote": "REASONING_EFFORT_TEMPLATE = (\n    \"Reasoning Effort: {budget} \"\n    \"(range 1-100, the higher the value, the more thorough the reasoning)\\n\\n\"\n)\n\nREASONING_EFFORT_MAPPINGS: Dict[str, int] = {\n    \"low\": 50,\n    \"high\": 75,\n    \"max\": 100,\n}\nDEFAULT_REASONING_EFFORT = \"high\" ... if index == 0 and thinking_mode == \"thinking\":\n        return REASONING_EFFORT_TEMPLATE.format(budget=effort)"
+    },
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/raw/main/chat_template.jinja",
+     "quote": "{#- DeepSeek-V4.1 chat template, ported from encoding/encoding.py in the model repo. Extra kwargs: thinking_mode (\"thinking\" | \"chat\", default \"thinking\"; enable_thinking=true/false is accepted as an alias), drop_thinking (default true), reasoning_effort (int in [1, 100] or \"low\"/\"medium\"/\"high\"/\"max\", default \"high\"). ... {%- set effort_map = {\"low\": 50, \"medium\": 62, \"high\": 75, \"max\": 100} -%}"
+    },
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash",
+     "quote": "The model supports a **continuously controllable reasoning effort** setting (integer 1\u2013100) that trades inference cost for accuracy. ... All instruct results below use the maximum effort setting (`reasoning_effort=100`). ... This release does not include a Jinja-format chat template."
+    },
+    {
+     "url": "https://raw.githubusercontent.com/thinking-machines-lab/tinker-cookbook/main/tinker_cookbook/renderers/deepseek_v4_1.py",
+     "quote": "- DeepSeekV4_1Renderer: thinking mode, high reasoning effort (HF default)\n- DeepSeekV4_1LowReasoningRenderer: thinking mode, low reasoning effort\n- DeepSeekV4_1MaxReasoningRenderer: thinking mode, max reasoning effort\n- DeepSeekV4_1DisableThinkingRenderer: chat mode (no reasoning) ... The ``medium`` reasoning effort exists only in the template and is not offered. ... reasoning_effort = 50 ... reasoning_effort = 100 ... reasoning_effort = None"
+    },
+    {
+     "url": "https://api-docs.deepseek.com/guides/thinking_mode/",
+     "quote": "{\"reasoning_effort\": \"low/high/max\"} ... default effort is high ... minimal\u2192low, low\u2192low, medium\u2192high, high\u2192high, xhigh\u2192high, max\u2192max, ultra\u2192max (read through WebFetch's summarizer; the page names deepseek-flash and deepseek-v4-pro, not V4.1)"
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/index.md",
+     "quote": "| [DeepSeek-V4.1-Flash (256K)](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash) | 256K | 552B | 16B | MoE | Hybrid | deepseek-ai/DeepSeek-V4.1-Flash:peft:262144 |"
+    }
+   ],
+   "tinker_renderers": "deepseekv4_1 (thinking, effort 75), deepseekv4_1_low_reasoning (50), deepseekv4_1_max_reasoning (100), deepseekv4_1_disable_thinking (chat mode, no effort line), deepseekv4_1_preserve_thinking (75, keeps earlier reasoning). These exist only in upstream tinker-cookbook main, not in the local cached copy at /home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO.",
+   "confidence": "high",
+   "note": "The tech report documents the numeric effort scale as trained with RL: per-effort GRPO subgroups and an effort-dependent exponential length penalty, with no hard token cap. The report does not enumerate the finite set of training effort values B. The non-thinking 'chat' mode exists in encoding.py, but my keyword search of the extracted report text found no passage on how it was trained. Discrepancies: (1) the effort-line wording differs between the report's training prompt ('(range 1\u2013100; higher values request more thorough reasoning)') and the deployed encoding.py/Jinja ('(range 1-100, the higher the value, the more thorough the reasoning)'). (2) The Jinja's medium=62 is absent from DeepSeek's encoding.py and report, and DeepSeek's API maps medium to high. Provenance: chat_template.jinja was added 2026-10-01 in HF commit 2cba9e42aa 'Adding chat template (#68)', authored by GeeeekExplorer and Rocketknight1. The README still says no Jinja template ships, and tokenizer_config.json has no chat_template field."
+  },
+  {
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "control": "numeric_budget_or_scale",
+   "levels": "Same as V4.1-Flash: integer 1-100, with aliases low=50, high=75 (default), max=100 (encoding.py). Binary thinking_mode \"thinking\"/\"chat\".",
+   "mechanism": "Same prompt format as V4.1-Flash: in thinking mode at index 0, `<\uff5cSystem\uff5c>Reasoning Effort: {budget} (range 1-100, the higher the value, the more thorough the reasoning)\\n\\n`, then `<\uff5cAssistant\uff5c><think>`. Chat mode has no effort line and uses `<\uff5cAssistant\uff5c></think>`. This repo has NO Jinja template: raw/main/chat_template.jinja is 404 and tokenizer_config.json (801 bytes, identical to V4.1-Flash's) has no chat_template field. So HF apply_chat_template on this repo's tokenizer has no template to use (inferred, not run). Use encoding/encoding.py, the V4.1-Flash Jinja, or the Tinker renderer. encoding/encoding.py, tokenizer.json and config.json have the same git object ids as in V4.1-Flash (3c7c357d..., 6a15814d..., 09917a91...). In the upstream Tinker cookbook, model_info.py maps it to the same `_DEEPSEEKV4_1` renderer tuple.",
+   "trained": "documented_trained",
+   "sources": [
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+     "quote": "**DeepSeek-V4.1-Flash-1017** is a minor update to [**DeepSeek-V4.1-Flash**](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash), delivering substantial improvements across reasoning, coding, agentic tasks, and visual benchmarks. ... This release does not include a Jinja-format chat template. The [`encoding`](encoding/README.md) folder contains a self-contained Python reference implementation (`encoding.py`) with test cases for ... numeric reasoning effort"
+    },
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/raw/main/encoding/README.md",
+     "quote": "**Reasoning effort is a numeric budget (1\u2013100).** The effort prefix is rendered as `Reasoning Effort: {budget} (range 1-100, ...)` ... String aliases map as follows: `\"low\"` \u2192 50, `\"high\"` \u2192 75, `\"max\"` \u2192 100. The default is `\"high\"` (75). The effort prefix is only rendered in `thinking_mode=\"thinking\"` and only at the beginning of the conversation (index 0)."
+    },
+    {
+     "url": "https://raw.githubusercontent.com/thinking-machines-lab/tinker-cookbook/main/tinker_cookbook/model_info.py",
+     "quote": "\"DeepSeek-V4.1-Flash\": ModelAttributes(org, \"4.1\", \"552B-A16B\", True, _DEEPSEEKV4_1),\n\"DeepSeek-V4.1-Flash-1017\": ModelAttributes(org, \"4.1\", \"552B-A16B\", True, _DEEPSEEKV4_1),"
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/index.md",
+     "quote": "| [DeepSeek-V4.1-Flash-1017 (256K)](https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017) | 256K | 552B | 16B | MoE | Hybrid | deepseek-ai/DeepSeek-V4.1-Flash-1017:peft:262144 |"
+    },
+    {
+     "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/main/DeepSeek_V41_Tech_Report.pdf",
+     "quote": "we prepend the following instruction to the system prompt: Reasoning Effort: {effort} (range 1\u2013100; higher values request more thorough reasoning) (this is the V4.1-Flash report, which the 1017 card links as its Technical Report)"
+    }
+   ],
+   "tinker_renderers": "deepseekv4_1, deepseekv4_1_low_reasoning, deepseekv4_1_max_reasoning, deepseekv4_1_disable_thinking, deepseekv4_1_preserve_thinking (same tuple as V4.1-Flash; upstream cookbook main only)",
+   "confidence": "medium",
+   "note": "The effort interface is certain: the encoding files are byte-identical to V4.1-Flash's. Whether it is trained rests on inheritance. The 1017 card calls the model a 'minor update' and links the V4.1-Flash tech report, but the card itself never mentions reasoning effort or says which effort its benchmarks used. Its card also reports shorter outputs than V4.1-Flash, so token counts at a given effort level probably differ between the two checkpoints (unverified). Tinker names it the replacement for DeepSeek-V3.1, which retires 2026-10-23."
+  },
+  {
+   "model": "Qwen/Qwen3.6-27B",
+   "control": "thinking_on_off_only",
+   "levels": "- (thinking on by default; enable_thinking=False turns it off; no effort levels or budget in the open-weight template)",
+   "mechanism": "Chat-template kwarg enable_thinking. Rendering the HF template with jinja2: the default generation prompt ends '<|im_start|>assistant\\n<think>\\n'. With enable_thinking=False it ends '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n' (an empty think block is prefilled). The template ignores the kwargs reasoning_effort and thinking_budget: I passed both, and the output was byte-identical to the default. The /think and /nothink soft switches are officially unsupported. A separate kwarg, preserve_thinking, keeps reasoning from earlier turns in history; it does not control effort. Tinker renders this model with qwen3_5 (ends '<think>\\n') or qwen3_5_disable_thinking (ends '<think>\\n\\n</think>\\n\\n'), matching the HF template. Hosted API only: Alibaba Model Studio offers a thinking_budget parameter that stops thinking once a token cap is reached. That is server-side truncation. It is not in the chat template, and Tinker does not have it.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.6-27B/raw/main/chat_template.jinja",
+     "quote": "{%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- else %}\n        {{- '<think>\\n' }}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.6-27B (README.md)",
+     "quote": "Qwen3.6 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`."
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.6-27B (README.md)",
+     "quote": "Qwen3.6 will think by default before response. You can obtain direct response from the model without thinking by configuring the API parameters. ... \"chat_template_kwargs\": {\"enable_thinking\": False}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.6-27B (README.md)",
+     "quote": "Qwen3.6 has been additionally trained to preserve and leverage thinking traces from historical messages."
+    },
+    {
+     "url": "https://qwen.ai/blog?id=qwen3.6-27b (fetched via https://qwen.ai/api/v2/article/?language=en-US&path=qwen3.6-27b&type=qwen_ai)",
+     "quote": "Qwen3.6-27B is natively multimodal, supporting both vision-language thinking and non-thinking modes in a single unified checkpoint"
+    },
+    {
+     "url": "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+     "quote": "Through thinking_budget Parameter sets the maximum Token number of Thinking Process, and after exceeding the limit, the Model immediately Output Response. ... Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, Qwen3-VL, Qwen3, GLM, and Kimi series models."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "# Qwen3.6 reuses the Qwen3.5 renderer: identical tokenizer, special tokens, preprocessor, and chat template ... \"Qwen3.6-27B\": ModelAttributes(org, \"3.6\", \"27B\", True, _QWEN3_5, is_vl=True)  [_QWEN3_5 = (\"qwen3_5\", \"qwen3_5_disable_thinking\")]"
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/",
+     "quote": "Qwen3.6-27B | Retiring October 23 | 64K | 27B | 27B | Dense | Hybrid + Vision | Qwen/Qwen3.6-27B"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "qwen3_5, qwen3_5_disable_thinking",
+   "note": "Tinker marks this model 'Retiring October 23', which is today (2026-10-23). The Model Studio deep-thinking page lists qwen3.6-35b-a3b as a Qwen3.6 open-source model but not qwen3.6-27b. Whether the hosted thinking_budget applies to the 27B is therefore unconfirmed, and it does not matter on Tinker. No Qwen3.6 technical report exists: arXiv title searches for 'Qwen3.6' returned nothing. The blog says one checkpoint has both modes but does not describe how the on/off switch was trained, hence 'undocumented'. The thinking_budget documented for the hosted API is inference-only truncation."
+  },
+  {
+   "model": "Qwen/Qwen3.6-35B-A3B",
+   "control": "thinking_on_off_only",
+   "levels": "- (thinking on by default; enable_thinking=False turns it off; no effort levels or budget in the open-weight template)",
+   "mechanism": "Same as Qwen3.6-27B: its chat_template.jinja is byte-identical (checked with cmp), and the chat_template field in tokenizer_config.json equals the jinja file. The kwarg enable_thinking switches the generation prompt between '<|im_start|>assistant\\n<think>\\n' (default) and '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n' (off). The template has no reasoning_effort or thinking_budget logic. The /think and /nothink soft switches are officially unsupported. preserve_thinking controls whether history keeps earlier reasoning. On Tinker the renderers are qwen3_5 and qwen3_5_disable_thinking. Hosted Model Studio API only: thinking_budget is a token cap enforced by cutting off thinking, and the deep-thinking page lists qwen3.6-35b-a3b as a supported model.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.6-35B-A3B/raw/main/chat_template.jinja",
+     "quote": "{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- else %}\n        {{- '<think>\\n' }}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.6-35B-A3B (README.md)",
+     "quote": "Qwen3.6 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`."
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.6-35B-A3B (README.md)",
+     "quote": "Qwen3.6 models operate in thinking mode by default, generating thinking content signified by `<think>\\n...</think>\\n\\n` before producing the final responses."
+    },
+    {
+     "url": "https://qwen.ai/blog?id=qwen3.6-35b-a3b (fetched via https://qwen.ai/api/v2/article/?language=en-US&path=qwen3.6-35b-a3b&type=qwen_ai)",
+     "quote": "This release supports the preserve_thinking feature: preserving thinking content from all preceding turns in messages, which is recommended for agentic tasks."
+    },
+    {
+     "url": "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+     "quote": "Qwen3.6 Open Source Edition: qwen3.6-35b-a3b ... thinking_budget Parameter for the maximum number of Tokens supported in the Thinking Process. Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, Qwen3-VL, Qwen3, GLM, and Kimi series models."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+     "quote": "\"Qwen3.6-35B-A3B\": ModelAttributes(org, \"3.6\", \"35B-A3B\", True, _QWEN3_5, is_vl=True)"
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/",
+     "quote": "Qwen3.6-35B-A3B | 64K | 35B | 3B | MoE | Hybrid + Vision | Qwen/Qwen3.6-35B-A3B  (also Qwen/Qwen3.6-35B-A3B:peft:262144)"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "qwen3_5, qwen3_5_disable_thinking",
+   "note": "Unlike Qwen3.6-27B, this model has no retirement notice on Tinker. Of the three models, it is the one on Tinker with neither effort levels nor a budget in its template. No technical report exists. The blogs and model card do not describe how the thinking on/off switch was trained."
+  },
+  {
+   "model": "Qwen/Qwen3.8-27B",
+   "control": "named_levels",
+   "levels": "xhigh (default), medium, low; plus enable_thinking=False for off. The template raises an error for any other value (I tested 'high').",
+   "mechanism": "Chat-template kwarg reasoning_effort, used only when enable_thinking is unset or true. It adds a sentence to the system message, before any tool block and before user-supplied system text, and creates a system message if the conversation has none. xhigh (the default) adds 'Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.' low adds 'Reasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.' medium adds nothing, so a medium prompt is identical to Qwen3.6's default thinking prompt. No special tokens are involved. The generation prompt still ends '<|im_start|>assistant\\n<think>\\n'. enable_thinking=False prefills '<think>\\n\\n</think>\\n\\n' and adds no effort sentence. preserve_thinking now defaults to true. Tinker's renderers qwen3_8_xhigh_reasoning, qwen3_8_medium_reasoning and qwen3_8_low_reasoning inject the same sentences (REASONING_EFFORT_INSTRUCTIONS in qwen3_8.py), and qwen3_8_disable_thinking matches enable_thinking=False. The hosted Model Studio API differs: it maps reasoning_effort to a thinking_budget token cap (low=4096, medium=16384, xhigh=262144), and the cap is enforced by cutoff. Tinker uses only the system-prompt sentence.",
+   "trained": "undocumented",
+   "sources": [
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/chat_template.jinja",
+     "quote": "{%- if enable_thinking is undefined or enable_thinking is true %}\n    {%- set resolved_reasoning_effort = reasoning_effort|default('xhigh') %}\n    {%- if resolved_reasoning_effort not in ('xhigh', 'medium', 'low') %}\n        {{- raise_exception('Unexpected reasoning effort ' ~ reasoning_effort ~ '. Supported types are xhigh (default), medium, and low.') }}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/chat_template.jinja",
+     "quote": "{%- if resolved_reasoning_effort == 'xhigh' %}\n        {%- set reasoning_instructions = 'Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.' %}\n    {%- elif resolved_reasoning_effort == 'low' %}\n        {%- set reasoning_instructions = 'Reasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.' %}"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.8-27B (README.md)",
+     "quote": "Qwen3.8 comes with official support for `reasoning_effort`, which can be used to adjust reasoning depth and control cost:\n  - `xhigh` (default): for complex tasks demanding thorough analysis\n  - `medium`: balancing accuracy and speed\n  - `low`: efficient reasoning optimizing for speed and cost"
+    },
+    {
+     "url": "https://huggingface.co/Qwen/Qwen3.8-27B (README.md)",
+     "quote": "Flexible Thinking Control: Thinking mode is on by default and can be disabled per request; reasoning depth can be tuned with `reasoning_effort`, and reasoning context from historical messages is retained via `preserve_thinking`."
+    },
+    {
+     "url": "https://www.alibabacloud.com/help/en/model-studio/qwen-api-via-openai-chat-completions",
+     "quote": "qwen3.8-max , qwen3.8-max-0902 , qwen3.8-flash , qwen3.8-2.4t-a95b , qwen3.8-27b : Default value: xhigh Valid values: xhigh (default): Maximum-intensity inference medium : Standard inference low : Low-intensity inference OpenAI standard value mapping: max is mapped to xhigh, high is mapped to xhigh, minimal is mapped to low, and none is mapped to enable_thinking=False."
+    },
+    {
+     "url": "https://www.alibabacloud.com/help/en/model-studio/qwen-api-via-openai-chat-completions",
+     "quote": "When thinking_budget is not set, the reasoning_effort levels are automatically mapped to thinking_budget: low corresponds to 4096, medium corresponds to 16384, and xhigh corresponds to 262144."
+    },
+    {
+     "url": "https://arxiv.org/abs/2609.25611 (Qwen3.8-Omni report, Qwen Team; covers Qwen3.8-Omni-Flash, NOT the 27B)",
+     "quote": "Finally, we apply multi-teacher distillation to consolidate domain-specialized and effort-specialized policies into a unified model for agentic multimodal productivity."
+    },
+    {
+     "url": "file:///home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_8.py",
+     "quote": "Reasoning effort: when thinking is enabled the template accepts a ``reasoning_effort`` kwarg (``\"xhigh\"`` (default), ``\"medium\"``, ``\"low\"``). ``xhigh`` and ``low`` prepend an instruction sentence to the system message (creating one if the conversation has none); ``medium`` adds nothing."
+    },
+    {
+     "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/models_and_pricing/",
+     "quote": "Qwen3.8-27B | 64K | 27B | 27B | Dense | Hybrid + Vision | Qwen/Qwen3.8-27B  (also Qwen/Qwen3.8-27B:peft:262144)"
+    }
+   ],
+   "confidence": "high",
+   "tinker_renderers": "qwen3_8_xhigh_reasoning (default), qwen3_8_medium_reasoning, qwen3_8_low_reasoning, qwen3_8_disable_thinking",
+   "note": "The category and mechanism are certain: I read the template and rendered it. The 'trained' label is medium-confidence. The 27B model card says 'official support' for reasoning_effort and gives a usage tip about agentic tasks, but neither it nor the Qwen3.8 blog (which is about Qwen3.8-Max) describes how effort was trained. The only training description is in the sibling Qwen3.8-Omni-Flash report, which distills 'effort-specialized policies' into one model. That suggests effort was trained in this generation, but it does not document the 27B. I found no Qwen3.8-27B technical report on arXiv. The cookbook's hyperparam_utils.py says the 27B config is identical to Qwen3.6-27B and that only the chat template changed. That comment is about the architecture config, not the weights."
+  }
+ ],
+ "verification": [
+  {
+   "model": "Qwen/Qwen3.5-35B-A3B-Base",
+   "agrees": true,
+   "control": "none_base_model (pre-trained only; no named effort levels, no numeric budget. The tokenizer template it ships has only a binary enable_thinking switch, which it was never post-trained to follow. The Tinker renderer is role_colon.)",
+   "evidence": "I could not refute the claim. Every point checked on 2026-10-23; files saved in /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/q35base/.\n\n1) HF repo (main sha 0f0813072d, last modified 2026-04-23). https://huggingface.co/Qwen/Qwen3.5-35B-A3B-Base/raw/main/chat_template.jinja returns HTTP 404, and generation_config.json is also 404. No chat_template.jinja appears in the sibling file list. The commit history has \"Delete chat_template.json\" (83d2960c4c, 2026-02-24) and no later template file was added, so no later revision of this model adds a control.\n\n2) tokenizer_config.json (HTTP 200) has a chat_template. A regex over it finds only the kwargs ['add_vision_id', 'enable_thinking']: no reasoning_effort, no thinking_budget, no preserve_thinking. The only thinking logic is binary: `{%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} {%- else %} {{- '<think>\\n' }}`. This template is byte-identical to the post-trained Qwen/Qwen3.5-35B-A3B's tokenizer_config template and to its chat_template.jinja, so it is the shared family template. It is not evidence of any control trained into this checkpoint.\n\n3) Model card (https://huggingface.co/Qwen/Qwen3.5-35B-A3B-Base/raw/main/README.md) says \"Training Stage: Pre-training\". It also says: \"This repository contains model weights and configuration files for the pre-trained only model ... The intended use cases are fine-tuning, in-context learning experiments, and other research or development purposes, not direct interaction.\" It mentions no thinking modes, budgets or effort levels. The post-trained sibling's card (https://huggingface.co/Qwen/Qwen3.5-35B-A3B) documents only on/off: \"Qwen3.5 does not officially support the soft switch of Qwen3, i.e., /think and /nothink\", plus `\"chat_template_kwargs\": {\"enable_thinking\": False}`. It describes no levels or budgets.\n\n4) Local tinker_cookbook (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py) has `\"Qwen3.5-35B-A3B-Base\": ModelAttributes(org, \"3.5\", \"35B-A3B\", False, _ROLE_COLON, is_vl=True)` with `_ROLE_COLON = (\"role_colon\",)`. renderers/role_colon.py is a plain \"User: <content>\\n\\nAssistant: <content>\" format with stop sequence \"\\n\\nUser:\" and has no thinking or effort handling. By contrast, the effort renderers in that cookbook exist only for Qwen3.8-27B (qwen3_8_xhigh/medium/low_reasoning), gpt-oss, GLM-5.3 and Nemotron-3.\n\n5) External docs, which do not overturn the claim and only cover post-trained or hosted models:\n(a) Alibaba Model Studio (https://www.alibabacloud.com/help/en/model-studio/deep-thinking) documents a serving-side `thinking_budget` parameter, \"Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, Qwen3-VL, Qwen3 ...\". It is a hosted cap on chain-of-thought length for post-trained hybrid or thinking models. That page lists no base or pre-trained model, and the Base checkpoint is not served there.\n(b) A Doubleword page for the instruct FP8 variant (https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-35b-a3b-fp8-dottxt) contradicts itself. It says \"This model does not support graduated thinking levels. Parameters such as reasoning_effort are not supported and will have no effect\", yet a generic field lists \"none, minimal, low, medium, high, xhigh, max\". The prose statement is the operative one, and the page is about the instruct model, not the Base.\n(c) I found no Qwen3.5 technical report describing effort levels. The qwen.ai/blog?id=qwen3.5 page is rendered by JavaScript and returned no readable text, so its contents are unverified. The thinking-budget mechanism in the Qwen3 report (arXiv 2505.09388) applies to post-trained Qwen3 models.",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3.5-35B-A3B-Base/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.5-35B-A3B-Base/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3.5-35B-A3B-Base/raw/main/README.md",
+    "https://huggingface.co/api/models/Qwen/Qwen3.5-35B-A3B-Base/commits/main",
+    "https://huggingface.co/Qwen/Qwen3.5-35B-A3B/raw/main/README.md",
+    "https://huggingface.co/Qwen/Qwen3.5-35B-A3B/raw/main/chat_template.jinja",
+    "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+    "https://www.alibabacloud.com/help/en/model-studio/qwen3-5-35b-a3b",
+    "https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-35b-a3b-fp8-dottxt",
+    "https://qwen.ai/blog?id=qwen3.5",
+    "https://arxiv.org/abs/2505.09388v1",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/role_colon.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_5.py"
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3-8B",
+   "agrees": true,
+   "control": "thinking_on_off_only. The model has thinking (default) and non-thinking modes. They are set by the HF template kwarg enable_thinking=False, which appends '<think>\\n\\n</think>\\n\\n' to the generation prompt, or by the /think and /no_think soft switches that the model learned to follow. The model has no named effort levels and no learned numeric scale. The documented \"thinking budget\" is enforced at inference time: generation stops after N thinking tokens and a stop-thinking sentence is inserted. Alibaba Cloud exposes this as an API parameter, thinking_budget, but the model itself does not take a budget input.",
+   "evidence": "I tried to refute the claim and could not. Two details in it need small corrections.\n\n1. HF chat template. https://huggingface.co/Qwen/Qwen3-8B/raw/main/chat_template.jinja returns 404 (\"Entry not found\"). The template is the chat_template field of https://huggingface.co/Qwen/Qwen3-8B/raw/main/tokenizer_config.json, last changed in commit 895c8d171b (2025-05-19). Its only control is:\n   {%- if add_generation_prompt %}{{- '<|im_start|>assistant\\n' }}{%- if enable_thinking is defined and enable_thinking is false %}{{- '<think>\\n\\n</think>\\n\\n' }}\n   Keyword counts in the template:\n   - enable_thinking: 2\n   - reasoning_effort, effort, budget, thinking_budget, low, high: 0\n   - /no_think: 0\n   - '/think': 5, all inside '</think>'\n   The repo has 18 commits; the last is \"Create LICENSE\" (2025-07-26). There is no later 8B revision: the HF Qwen org lists 2507 versions only for 4B, 30B-A3B and 235B-A22B. generation_config.json contains only sampling defaults.\n\n2. Model card (https://huggingface.co/Qwen/Qwen3-8B/raw/main/README.md). It documents only on/off: \"We provide a hard switch to strictly disable the model's thinking behavior\" (enable_thinking=False) and \"you can add /think and /no_think to user prompts or system messages to switch the model's thinking mode from turn to turn.\" The words effort and budget do not appear.\n\n3. Tech report, arXiv 2505.09388, section 4.3 \"Thinking Budget\" (https://arxiv.org/html/2505.09388v1): \"when the length of the model's thinking reaches a user-defined threshold, we manually halt the thinking process and insert the stop-thinking instruction: 'Considering the limited time by the user, I have to give the solution based on the thinking directly now.\\n</think>.\\n\\n'... this ability is not explicitly trained but emerges naturally as a result of applying Thinking Mode Fusion.\" The introduction markets this as \"Qwen3 incorporates thinking budgets, providing users with fine-grained control over the level of reasoning effort.\" So the \"budget\" is external truncation. The model was not trained on levels.\n\n4. Qwen docs (https://qwen.readthedocs.io/en/latest/_sources/getting_started/quickstart.md.txt, section \"Thinking Budget\"): \"It is achieved by ending the thinking process once the budget is reached and guiding the model to generate the 'summary' with an early-stopping prompt... it is currently not available in the open-source frameworks and only implemented by the Alibaba Cloud Model Studio API.\" Its Qwen/Qwen3-8B example generates twice. Correction: this page's stop text is '\\n\\nConsidering the limited time by the user, I have to give the solution based on the thinking directly now.\\n</think>\\n\\n', with a leading '\\n\\n' and no period after </think>. The claim's version, with '.' after '</think>', is the tech report's text, not the docs'.\n\n5. Alibaba Cloud Model Studio (https://www.alibabacloud.com/help/en/model-studio/deep-thinking.md): \"Through thinking_budget Parameter sets the maximum Token number of Thinking Process, and after exceeding the limit, the Model immediately Output Response... Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, Qwen3-VL, Qwen3, GLM, and Kimi series models.\" The console range is 1 to 32768, default 4000. This is a numeric budget at the API level, but it is a server-side cap, the same mechanism as item 3. The current page's Qwen3 tab lists only qwen-plus and qwen-flash, not qwen3-8b, though it still says the \"Qwen3 open-source hybrid thinking model\" follows /think and /no_think. reasoning_effort appears only for qwen3.8-omni-flash.\n\n6. Blog (https://qwenlm.github.io/blog/qwen3/): only enable_thinking and /think, /no_think, plus general \"thinking budget control\" wording. It does not mention reasoning_effort.\n\n7. Local tinker_cookbook (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/):\n   - model_info.py:116 maps \"Qwen3-8B\" to _QWEN3 = (\"qwen3\", \"qwen3_disable_thinking\").\n   - renderers/qwen3.py, Qwen3DisableThinkingRenderer._get_generation_suffix, encodes f\"{maybe_newline}<|im_start|>{role}\\n<think>\\n\\n</think>\\n\\n\".\n   - Qwen3Renderer.__init__ has strip_thinking_from_history=True by default.\n   - grep finds no 'effort' or 'budget' in renderers/qwen3.py.\n   - The reasoning_effort renderers (xhigh, medium, low) are in renderers/qwen3_8.py, for Qwen3.8 only.\n\nVerdict: Qwen3-8B has no documented effort levels or learned budget interface. agrees=true holds if the externally enforced budget counts as not model-native, which the claim already says. Under a strict reading of \"any documented budget control\", the tech report's marketing and Alibaba's thinking_budget parameter would count against it.",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3-8B/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3-8B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3-8B/raw/main/README.md",
+    "https://huggingface.co/api/models/Qwen/Qwen3-8B/commits/main",
+    "https://arxiv.org/html/2505.09388v1",
+    "https://qwen.readthedocs.io/en/latest/_sources/getting_started/quickstart.md.txt",
+    "https://www.alibabacloud.com/help/en/model-studio/deep-thinking.md",
+    "https://qwenlm.github.io/blog/qwen3/",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_8.py"
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3.5-9B",
+   "agrees": true,
+   "control": "thinking_on_off_only: thinking (default) or non-thinking through the enable_thinking chat-template kwarg. There is no soft switch, no named effort levels, and no model-level numeric budget or scale.",
+   "evidence": "I could not refute the claim.\n\n1) HF chat template. I downloaded https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/chat_template.jinja. Its md5 is 94f89e03284d911fc65d06422439fd79, byte-identical to Qwen3.5-4B's file. The chat_template embedded in tokenizer_config.json is identical to the .jinja file. The only thinking control in the template is at lines 148-153: `{%- if add_generation_prompt %} '<|im_start|>assistant\\n' {%- if enable_thinking is defined and enable_thinking is false %} '<think>\\n\\n</think>\\n\\n' {%- else %} '<think>\\n' {%- endif %}`. Grepping the template for effort, budget or reasoning_effort finds nothing. The only \"reasoning\" hits are about reasoning_content in history and a line in the tool-call instructions.\n\n2) Model card (https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/README.md):\n- Line 710: \"Qwen3.5 models operate in thinking mode by default, generating thinking content signified by `<think>\\n...</think>\\n\\n`\".\n- Line 955: \"Qwen3.5 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`.\"\n- Line 992: the only documented control is `\"chat_template_kwargs\": {\"enable_thinking\": False}`, or `enable_thinking` on Alibaba Model Studio.\n- The card never mentions budget, effort or reasoning_effort.\n\n3) Later revisions. The HF repo has a single branch, main (c2022362...). Its 9 commits run from 2026-02-27 to 2026-03-02, and the last is a README update. No newer revision adds a control.\n\n4) The official GitHub repo has reasoning_effort, but for Qwen3.8 only. https://github.com/QwenLM/Qwen3.5 now 301-redirects to QwenLM/Qwen3.8. That README's \"Flexible Thinking Control: Reasoning depth can be tuned with `reasoning_effort`\" appears under the \"### Qwen3.8\" heading. The \"### Qwen3.5\" section lists no effort or budget feature.\n\n5) Local tinker_cookbook (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/):\n- model_info.py:125 maps \"Qwen3.5-9B\" to _QWEN3_5 = (\"qwen3_5\", \"qwen3_5_disable_thinking\").\n- renderers/qwen3_5.py: Qwen3_5DisableThinkingRenderer differs only in its generation suffix, `<think>\\n\\n</think>\\n\\n`. Nothing in qwen3_5.py mentions effort or budget.\n- The cookbook has an effort control for a different family. renderers/qwen3_8.py takes reasoning_effort xhigh/medium/low, and the comment at model_info.py:138-140 says Qwen3.8's \"chat template adds reasoning-effort instructions\", unlike 3.5/3.6.\n\n6) Closest counter-evidence, which I judge does not refute the claim:\n- Alibaba Cloud Model Studio (https://www.alibabacloud.com/help/en/model-studio/deep-thinking) documents an API parameter thinking_budget: \"sets the maximum Token number of Thinking Process, and after exceeding the limit, the Model immediately Output Response\". It is \"Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, Qwen3-VL, Qwen3, GLM, and Kimi series models\". This is a server-side decoding cap that works the same way across GLM and Kimi. It is not in the model's template and is not a trained input. The page also does not list qwen3.5-9b; its Qwen3.5 open-source examples are 122b-a10b and 27b.\n- Generic serving limiters work the same way and apply to any thinking model: SGLang thinking budget (https://lmsysorg.mintlify.app/docs/advanced_features/thinking_budget) and NVIDIA NIM thinking-budget control (https://docs.nvidia.com/nim/large-language-models/1.15.0/thinking-budget-control.html).\n- The \"thinking budget mechanism\" in the Qwen3 tech report (arXiv:2505.09388) belongs to Qwen3, not 3.5. I found no Qwen3.5 tech report.\n\nNot verified: I could not load the Qwen3.5 blog (qwen.ai/blog?id=qwen3.5 returned only the word \"Qwen\"). The Qianwen docs page returned 403.",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3.5-4B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/README.md",
+    "https://huggingface.co/api/models/Qwen/Qwen3.5-9B/commits/main",
+    "https://huggingface.co/api/models/Qwen/Qwen3.5-9B/refs",
+    "https://github.com/QwenLM/Qwen3.5 (redirects to https://github.com/QwenLM/Qwen3.8)",
+    "https://raw.githubusercontent.com/QwenLM/Qwen3.5/main/README.md",
+    "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+    "https://lmsysorg.mintlify.app/docs/advanced_features/thinking_budget",
+    "https://docs.nvidia.com/nim/large-language-models/1.15.0/thinking-budget-control.html",
+    "https://arxiv.org/abs/2505.09388v1",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_5.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_8.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/q9b/chat_template.jinja",
+    "/tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/q9b/README.md"
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3.5-9B-Base",
+   "agrees": true,
+   "control": "none_base_model. There are no named effort levels and no numeric budget or scale. The only control anywhere in the shipped template is the binary enable_thinking switch inherited from the post-trained template, and Tinker's renderer for this model does not use that template. Positive control: the same search does find effort controls where they exist. The cookbook gives Qwen3.8-27B four effort renderers (qwen3_8_xhigh_reasoning, qwen3_8_medium_reasoning, qwen3_8_low_reasoning, qwen3_8_disable_thinking). It gives the post-trained Qwen3.5-9B only qwen3_5 and qwen3_5_disable_thinking, and the Base model only role_colon.",
+   "evidence": "I tried to refute the claim and could not. Every part I checked holds.\n\n1. Chat template.\n- https://huggingface.co/Qwen/Qwen3.5-9B-Base/raw/main/chat_template.jinja returns HTTP 404. generation_config.json is also 404.\n- The current tokenizer_config.json chat_template is byte-identical to the post-trained template at https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/chat_template.jinja (7756 chars). I checked this with a Python equality test. The only key that differs between the two tokenizer configs is eos_token: '<|endoftext|>' in Base, '<|im_end|>' in post-trained.\n- Grepping the template for think/effort/budget/reason finds only reasoning_content handling and the generation prompt: `{%- if enable_thinking is defined and enable_thinking is false %}{{- '<think>\\n\\n</think>\\n\\n' }}{%- else %}{{- '<think>\\n' }}`. There is no effort or budget variable.\n- History detail the claim does not mention: the original upload (commit 6db4f547c4, 2026-02-27) shipped a plain concatenation template, 677 chars, with no roles or think tags, in both chat_template.json and tokenizer_config.json. On 2026-03-01, commit ff94370e37 deleted chat_template.json and commit 93767f57c8 replaced the tokenizer_config template with the post-trained one.\n- The last commit is 68c46c4b34 (2026-04-23, LICENSE upload). I found no later 9B Base revision: the HF API gives 401 (repo not found) for Qwen3.6-9B-Base and Qwen3.8-9B-Base, and the Qwen Base models listed are Qwen3.5-9B/35B-A3B/0.8B-Base plus SAE repos.\n\n2. Model card (https://huggingface.co/Qwen/Qwen3.5-9B-Base).\n- It says: \"This repository contains model weights and configuration files for the pre-trained only model\" and \"the control tokens, e.g., <|im_start|> and <|im_end|> were trained to allow efficient LoRA-style PEFT with the official chat template\". It never mentions thinking mode, reasoning effort or a thinking budget.\n- One inconsistency: the Model Overview still says \"Training Stage: Pre-training & Post-training\". This looks like boilerplate copied from the post-trained card.\n\n3. Post-trained sibling (https://huggingface.co/Qwen/Qwen3.5-9B).\n- The card says it uses thinking by default and that \"Qwen3.5 does not officially support the soft switch of Qwen3, i.e., /think and /nothink\". The only control is enable_thinking.\n- According to the fetch summary, the card has no thinking budget or reasoning effort setting. The only length guidance is a recommended output length of 32,768 tokens (81,920 suggested as the max output length).\n\n4. Blog and tech report.\n- https://qwen.ai/blog?id=qwen3.5 rendered only the word \"Qwen\" through the fetcher, so I could not read it.\n- I found no Qwen3.5 tech report. The Qwen3 report (arXiv 2505.09388) describes a \"thinking budget mechanism\", but that belongs to the earlier post-trained Qwen3 models, not this Base model.\n- Alibaba's thinking docs (https://docs.platform.qianwenai.com/developer-guides/text-generation/thinking) returned 403. A search summary says they describe enable_thinking per request.\n\n5. Third-party APIs. Empirio Labs (https://docs.empiriolabs.ai/models/qwen3-5-plus, https://docs.empiriolabs.ai/models/qwen3-5-9b) exposes reasoning_effort (none/low/medium/high/max) and thinking_budget (1024 to 32768 for 9B). These are gateway-side limits on the post-trained Qwen3.5 models, not on the Base model, and not on Tinker. Doubleword (https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-9b) says reasoning_effort is not supported. I read these through search summaries only, not fetched pages.\n\n6. Tinker.\n- In the local cookbook (tinker_cookbook 0.5.7), /home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py:126 has `\"Qwen3.5-9B-Base\": ModelAttributes(org, \"3.5\", \"9B\", False, _ROLE_COLON, is_vl=True)`. The False is is_chat, and _ROLE_COLON = (\"role_colon\",).\n- renderers/role_colon.py renders `{Role}: {content}\\n\\n` with stop sequence \"\\n\\nUser:\" and has no think-tag handling. Base is also the default model in recipes/rl_basic.py, sl_basic.py, rl_loop.py and sl_loop.py.\n- https://tinker-docs.thinkingmachines.ai/tinker/models/ lists \"Qwen3.5-9B-Base 64K 9B 9B Dense Base\", while Qwen3.5-9B is listed as \"Hybrid + Vision\".\n\nFiles I downloaded for the comparison are in /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/q35base/ (tokenizer_config.json, post_chat_template.jinja, old_chat_template.json, commits.json).",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3.5-9B-Base/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.5-9B-Base/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3.5-9B-Base/raw/6db4f547c4/chat_template.json",
+    "https://huggingface.co/api/models/Qwen/Qwen3.5-9B-Base/commits/main",
+    "https://huggingface.co/Qwen/Qwen3.5-9B-Base",
+    "https://huggingface.co/Qwen/Qwen3.5-9B",
+    "https://huggingface.co/Qwen/Qwen3.5-9B/raw/main/chat_template.jinja",
+    "https://qwen.ai/blog?id=qwen3.5",
+    "https://arxiv.org/abs/2505.09388v1",
+    "https://docs.platform.qianwenai.com/developer-guides/text-generation/thinking",
+    "https://docs.empiriolabs.ai/models/qwen3-5-plus",
+    "https://docs.empiriolabs.ai/models/qwen3-5-9b",
+    "https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-9b",
+    "https://tinker-docs.thinkingmachines.ai/tinker/models/",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/role_colon.py"
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3.5-4B",
+   "agrees": true,
+   "control": "thinking_on_off_only: thinking (default, '<think>\\n' prefilled) or non-thinking via enable_thinking=False ('<think>\\n\\n</think>\\n\\n'). There are no named effort levels and no numeric budget in the open weights or on Tinker. The only budget is a serving-side truncation (DashScope thinking_budget, or third-party gateways).",
+   "evidence": "I could not refute the claim. Every part I checked holds, with one minor correction about other repos.\n\n1) Template. I downloaded https://huggingface.co/Qwen/Qwen3.5-4B/raw/main/chat_template.jinja. Its md5 is 94f89e03284d911fc65d06422439fd79 and it is 7756 bytes. The chat_template string in tokenizer_config.json is byte-identical (same md5; diff empty). A grep for kwargs finds only enable_thinking (line 149), add_vision_id, tools and add_generation_prompt. There is no reasoning_effort, budget or preserve_thinking. The generation block reads:\n\"{%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} {%- else %} {{- '<think>\\n' }}\"\nAssistant turns with loop.index0 > ns.last_query_index get '<think>\\n' + reasoning_content + '\\n</think>\\n\\n', so the block is empty when there is no reasoning.\n\n2) Revisions. The repo history (HF API, 5 commits, last 2026-03-02) shows only uploads and README edits. There is no later revision of this model. generation_config.json returns 'Entry not found'.\n\n3) Model card (https://huggingface.co/Qwen/Qwen3.5-4B).\n- \"Qwen3.5 models operate in thinking mode by default\".\n- \"Qwen3.5 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`.\"\n- Thinking is disabled only through \"chat_template_kwargs\": {\"enable_thinking\": False}.\n- The card mentions no budget or effort. Its \"Adequate Output Length\" section only recommends a 32,768 or 81,920 max output length.\n\n4) Official GitHub README.\n- At the Qwen3.5-era commit 7e103aebdb (https://github.com/QwenLM/Qwen3.8, formerly QwenLM/Qwen3.5), there are no matches for thinking, budget or effort.\n- The current README credits reasoning_effort and preserve_thinking to Qwen3.8 only: \"Flexible Thinking Control: Reasoning depth can be tuned with `reasoning_effort`\". Qwen3.8 is a different model.\n\n5) Tinker cookbook (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook).\n- model_info.py:24 has _QWEN3_5 = (\"qwen3_5\", \"qwen3_5_disable_thinking\"), and line 124 maps Qwen3.5-4B to _QWEN3_5.\n- In renderers/qwen3_5.py, the Qwen3_5Renderer suffix is f\"{maybe_newline}<|im_start|>{role}\\n<think>\\n\" and the Qwen3_5DisableThinkingRenderer suffix is \"<|im_start|>{role}\\n<think>\\n\\n</think>\\n\\n\".\n- A grep for budget, effort or reasoning_level finds hits only in qwen3_8.py, which has xhigh, medium and low.\n\n6) DashScope (https://www.alibabacloud.com/help/en/model-studio/deep-thinking). thinking_budget \"sets the maximum Token number of Thinking Process ... after exceeding the limit, the Model immediately Output Response\". The page lists it as \"Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, ...\", with a console range of 1 to 32768. This is a hosted serving-side cutoff, as the claim says. The page has no reasoning_effort for Qwen3.5; it appears only in the qwen3.8-omni-flash entry.\n\n7) Third-party hosts.\n- EmpirioLabs (https://docs.empiriolabs.ai/models/qwen3-5-4b) advertises reasoning_effort (none/low/medium/high/max), described as \"bounded thinking budgets sized to the selected model\", plus thinking_budget 1024 to 32768. This is a gateway feature that cuts thinking off at a token budget. It is not in Qwen's docs or the template.\n- Doubleword (https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-9b) says of Qwen3.5-9B that it \"does not provide graduated thinking levels\". I did not fetch a Doubleword page for the 4B model.\n\nCorrection: the claim says md5 94f89e03 is \"shared by every Qwen3.5 repo checked\". That holds for 4B, 9B, 27B, 35B-A3B, 122B-A10B and 397B-A17B. Qwen3.5-2B and Qwen3.5-0.8B use md5 3dd635d8e716410fb409839dfac61ea9 instead, where thinking is OFF by default (it needs enable_thinking is true). Qwen3.6-27B and 3.6-35B-A3B use md5 52b6d51a, which adds a preserve_thinking kwarg. None of these adds effort levels, and none affects the 4B claim.\n\nNot checked: the qwen.ai/blog?id=qwen3.5 page renders with JS and returned no text. I also found no Qwen3.5 tech report on arXiv. The Qwen3 report (arXiv 2505.09388) describes a thinking-budget mechanism for Qwen3, not Qwen3.5.",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3.5-4B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.5-4B/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3.5-4B",
+    "https://huggingface.co/api/models/Qwen/Qwen3.5-4B/commits/main",
+    "https://raw.githubusercontent.com/QwenLM/Qwen3.8/7e103aebdb/README.md",
+    "https://github.com/QwenLM/Qwen3.8",
+    "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+    "https://docs.empiriolabs.ai/models/qwen3-5-4b",
+    "https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-9b",
+    "https://huggingface.co/Qwen/Qwen3.5-2B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.6-27B/raw/main/chat_template.jinja",
+    "https://qwen.readthedocs.io/en/latest/getting_started/quickstart.html",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_5.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_8.py"
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3.5-397B-A17B",
+   "agrees": true,
+   "control": "thinking_on_off_only. Thinking is on by default and enable_thinking=False turns it off. The open weights have no soft switch, no named effort levels and no budget input the model reads. The only \"budget\" is a server-side hard cutoff on Alibaba's hosted API (thinking_budget), which the model is never shown. Some third-party hosts accept OpenAI-style reasoning_effort names, but those are provider wrappers, not a control in the model.",
+   "evidence": "I tried to refute the claim and could not.\n\n1) HF chat template. https://huggingface.co/Qwen/Qwen3.5-397B-A17B/raw/main/chat_template.jinja has md5 94f89e03284d911fc65d06422439fd79, which matches the claim. The template embedded in tokenizer_config.json is byte-identical. The only kwarg it uses is enable_thinking (lines 149-152): `{%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} ... {{- '<think>\\n' }}`. The strings \"effort\", \"budget\" and \"preserve_thinking\" do not appear. I rendered the template with jinja2 (script: /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/q397/scripts/render.py):\n- default ends with '<|im_start|>assistant\\n<think>\\n'\n- enable_thinking=False ends with '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'\n- reasoning_effort='low' and thinking_budget=50 each give output identical to the default (both comparisons printed True)\n\n2) No later revision. The HF commit history (API /commits/main, head 8472618112, 2026-04-24) shows chat_template.jinja last changed in 65e34c68be and tokenizer_config.json in 646a873c1a, both on 2026-02-16 (release day). Every later commit only touches the README. The only sibling repos are -FP8 and -GPTQ-Int4.\n\n3) Model card (README.md, same repo):\n- \"Qwen3.5 models operate in thinking mode by default\"\n- \"Qwen3.5 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`.\"\n- Non-thinking mode is set via `\"chat_template_kwargs\": {\"enable_thinking\": False}`.\n- The card never mentions effort levels or a thinking budget. Its only length guidance is max output length (32,768, or 81,920 for competition problems).\n\n4) Tinker cookbook:\n- model_info.py:132 maps \"Qwen3.5-397B-A17B\" to _QWEN3_5 = (\"qwen3_5\", \"qwen3_5_disable_thinking\").\n- In qwen3_5.py, Qwen3_5DisableThinkingRenderer changes only the generation suffix, to `<think>\\n\\n</think>\\n\\n`.\n- The cookbook's only Qwen renderer with effort support is qwen3_8.py (reasoning_effort xhigh/medium/low), and that is the Qwen3.8 family.\n\n5) Alibaba Model Studio docs (https://www.alibabacloud.com/help/en/model-studio/deep-thinking):\n- thinking_budget \"sets the maximum Token number of Thinking Process, and after exceeding the limit, the Model immediately Output Response\" and is \"Applicable to Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5, Qwen3-VL, Qwen3, GLM, and Kimi series models.\" This is a hard cutoff, as the claim says.\n- The page lists qwen3.5-plus and qwen3.5-flash; it does not list qwen3.5-397b-a17b by name.\n- reasoning_effort appears only for \"Qwen3.8 Omni series ... qwen3.8-omni-flash. Adjust thinking effort via reasoning_effort.\"\n- preserve_thinking is limited to Qwen3.7 and Qwen3.8 models.\n\n6) GitHub. https://github.com/QwenLM/Qwen3.5 now redirects to QwenLM/Qwen3.8. Its line \"Flexible Thinking Control: Reasoning depth can be tuned with `reasoning_effort`\" is in the Qwen3.8 section; the Qwen3.5 section says nothing about effort.\n\n7) Third-party hosts:\n- Doubleword's reasoning-controls page (https://docs.doubleword.ai/inference-api/reasoning-controls) marks \"Qwen3.5 397B A17B\" as accepting none/minimal/low/medium/high/xhigh/max. Its own Qwen3.5-4B page explains what that means: \"Set reasoning_effort to none to disable thinking. Other supported effort values enable thinking; this model does not provide graduated thinking levels.\" The 397B page (https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-397b-a17b) lists the levels but does not say how they are implemented. I read this as the same provider normalization, but I did not verify it for 397B.\n- OpenRouter's API lists only the generic 'reasoning' parameter for qwen/qwen3.5-397b-a17b.\n\nNot retrieved: the official release blog (https://qwen.ai/blog?id=qwen3.5) renders only through JavaScript and returned no text. I found no Qwen3.5 tech report.",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3.5-397B-A17B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.5-397B-A17B/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3.5-397B-A17B/raw/main/README.md",
+    "https://huggingface.co/api/models/Qwen/Qwen3.5-397B-A17B/commits/main",
+    "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+    "https://github.com/QwenLM/Qwen3.8 (redirect target of github.com/QwenLM/Qwen3.5)",
+    "https://docs.doubleword.ai/inference-api/reasoning-controls",
+    "https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-397b-a17b",
+    "https://docs.doubleword.ai/inference-api/models/qwen-qwen3-5-4b",
+    "https://openrouter.ai/api/v1/models",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_5.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_8.py",
+    "/tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/q397/scripts/render.py"
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3.6-27B",
+   "agrees": true,
+   "control": "thinking_on_off_only. The open-weight model has no named effort levels and no numeric reasoning budget or scale. Thinking is on by default. The chat-template kwarg enable_thinking=False prefills an empty think block. preserve_thinking only keeps reasoning from earlier turns in history. A thinking budget exists only as server-side truncation: Alibaba Model Studio's thinking_budget, or logit processors in SGLang/vLLM. None of these are in the template, and Tinker has none of them. The reasoning_effort levels (xhigh/medium/low) belong to the successor model Qwen3.8-27B, a separate repo released 2026-08-14. They are not in Qwen3.6-27B or in any revision of it.",
+   "evidence": "1) HF template (https://huggingface.co/Qwen/Qwen3.6-27B/raw/main/chat_template.jinja; the tokenizer_config.json chat_template is byte-identical, and so is the Qwen3.6-27B-FP8 template). jinja2.meta lists these undeclared variables: add_generation_prompt, add_vision_id, content, enable_thinking, messages, preserve_thinking, reasoning_content, tools. There is no effort or budget variable. Lines 149-152: `{%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} {%- else %} {{- '<think>\\n' }}`. I rendered it myself with jinja2. Default ends '<|im_start|>assistant\\n<think>\\n'. With enable_thinking=False it ends '<|im_start|>assistant\\n<think>\\n\\n</think>\\n\\n'. Output was byte-identical to the default for each of reasoning_effort=low/high, thinking_budget=128, thinking_effort=low, reasoning={effort:low} and max_thinking_tokens=100. Diffed against the Qwen3.5-27B template, the only changes are the preserve_thinking condition (line 100) and tool-argument tojson handling.\n2) Model card (https://huggingface.co/Qwen/Qwen3.6-27B, README): \"Qwen3.6 models operate in thinking mode by default\" and \"Qwen3.6 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`.\" The card's only controls are chat_template_kwargs {\"enable_thinking\": False} and {\"preserve_thinking\": True}. A grep finds no 'effort' or 'budget' anywhere in the card.\n3) Revisions: the HF commit history (api/models/Qwen/Qwen3.6-27B/commits/main) runs 2026-04-21 to 2026-04-24. Its one tokenizer_config.json update falls within the release window (2026-04-22), and the remaining commits are README, LICENSE and generation_config edits. There are no tags or branches besides main. No later revision adds effort.\n4) QwenLM GitHub README (https://raw.githubusercontent.com/QwenLM/Qwen3.6/main/README.md, now titled Qwen3.8). The line \"Flexible Thinking Control: Reasoning depth can be tuned with `reasoning_effort`\" is under the Qwen3.8 heading. The Qwen3.6 section lists only \"Thinking Preservation\". The Qwen3.8-27B template (https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/chat_template.jinja) has `reasoning_effort|default('xhigh')` restricted to ('xhigh','medium','low'). That is a different model.\n5) Tinker cookbook (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py:24,133-136): `_QWEN3_5 = (\"qwen3_5\", \"qwen3_5_disable_thinking\")`, with the comment \"Qwen3.6 reuses the Qwen3.5 renderer: identical tokenizer, special tokens, preprocessor, and chat template\". renderers/qwen3_5.py: Qwen3_5DisableThinkingRenderer emits '<think>\\n\\n</think>\\n\\n'. No effort or budget logic exists in qwen3_5.py. Only qwen3_8.py has REASONING_EFFORT_INSTRUCTIONS, with xhigh/medium/low renderer variants.\n6) Hosted API (https://www.alibabacloud.com/help/en/model-studio/deep-thinking): thinking_budget \"sets the maximum Token number of Thinking Process\"; once exceeded \"the Model immediately Output Response\". It is listed for the Qwen3.6 series. qwen3.6-27b itself is not listed, though qwen3.6-plus/flash/35b-a3b are. The page defines reasoning_effort only for qwen3.8-omni-flash. The Qwen docs say the thinking budget is \"currently not available in the open-source frameworks and only implemented by the Alibaba Cloud Model Studio API\". In SGLang, thinking_budget for Qwen3.6 needs a custom logit processor with patched think-token IDs 248068/248069 (sglang issue #25536). So it is inference-time truncation, not model-native.\nI found no documented multi-level or budget control native to Qwen3.6-27B. The claim holds in full.",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3.6-27B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.6-27B/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3.6-27B",
+    "https://huggingface.co/api/models/Qwen/Qwen3.6-27B/commits/main",
+    "https://huggingface.co/Qwen/Qwen3.6-27B-FP8/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.5-27B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/chat_template.jinja",
+    "https://raw.githubusercontent.com/QwenLM/Qwen3.6/main/README.md",
+    "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+    "https://qwen15.readthedocs.io/en/stable/getting_started/quickstart.html",
+    "https://github.com/sgl-project/sglang/issues/25536",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_5.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_8.py",
+    "/tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/render_q36.py"
+   ]
+  },
+  {
+   "model": "deepseek-ai/DeepSeek-V3.1",
+   "agrees": true,
+   "control": "thinking_on_off_only. The only control is the boolean chat-template kwarg `thinking` (default false), which picks the generation-prompt prefill: `<\uff5cAssistant\uff5c></think>` for non-thinking or `<\uff5cAssistant\uff5c><think>` for thinking. There are no named effort levels, no numeric effort scale, and no thinking budget. The later revision, DeepSeek-V3.1-Terminus, uses the same template.",
+   "evidence": "I tried to refute the claim and could not. Files are saved under /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/dsv31/.\n\n1) Chat template.\n- https://huggingface.co/deepseek-ai/DeepSeek-V3.1/raw/main/chat_template.jinja returns HTTP 404, as the claim says. https://huggingface.co/deepseek-ai/DeepSeek-V3.1/raw/main/assets/chat_template.jinja returns 200 (3330 bytes).\n- The only kwargs the template defaults are `add_generation_prompt` and `thinking` (`{% if not thinking is defined %}{% set thinking = false %}{% endif %}`). The generation-prompt tail is `{{'<\uff5cAssistant\uff5c>'}}{%- if not thinking %}{{'</think>'}}{%- else %}{{'<think>'}}{%- endif %}`.\n- Grepping the template and tokenizer_config.json for effort, budget and level finds nothing. Nothing is injected into the system prompt beyond the user's own system message.\n- The `chat_template` field in tokenizer_config.json is not byte-identical to assets/chat_template.jinja: it is a whitespace-minified copy. It sets the same two kwargs and contains neither \"effort\" nor \"budget\".\n\n2) Small refinements to the claim's wording; none of them adds reasoning control.\n(a) Earlier assistant turns get `</think>` after the Assistant header, with the text before `</think>` stripped. The one exception: a final assistant message with `prefix: true` while thinking=true gets `<think>` instead. This is DeepSeek's Chat Prefix Completion.\n(b) After a tool output, the template adds no generation header and no think prefix at all.\n\n3) Model card (https://huggingface.co/deepseek-ai/DeepSeek-V3.1, README.md).\n- Quote: \"Hybrid thinking mode: One model supports both thinking mode and non-thinking mode by changing the chat template.\"\n- It documents exactly two prefixes, `<\uff5cAssistant\uff5c></think>` (non-thinking) and `<\uff5cAssistant\uff5c><think>` (thinking), and its examples call `apply_chat_template(..., thinking=True/False)`.\n- It never mentions effort or budget.\n- HF commit history has no later template revision: Aug 21 release, Aug 22 tool-call fix, Aug 26 ue8m0, Sep 5 metadata.\n\n4) Later revision, DeepSeek-V3.1-Terminus (https://huggingface.co/deepseek-ai/DeepSeek-V3.1-Terminus). Its tokenizer_config.json chat_template is byte-identical to V3.1's (checked in Python), and it has no assets/chat_template.jinja (404).\n\n5) Official DeepSeek API docs.\n- V3.1 release note (https://api-docs.deepseek.com/news/news250821): \"Hybrid inference: Think & Non-Think \u2014 one model, two modes\", with \"deepseek-chat \u2192 non-thinking mode\" and \"deepseek-reasoner \u2192 thinking mode\". It has no effort or budget control.\n- I read archived copies of the reasoning guide (https://web.archive.org/web/20250821075823/https://api-docs.deepseek.com/guides/reasoning_model and the 20251004 snapshot). The only length control is \"max_tokens: The maximum output length (including the COT part). Default to 32K, maximum to 64K.\" The Not Supported Parameters list has no reasoning_effort, and neither page contains \"effort\" or \"budget\".\n- The live page (https://api-docs.deepseek.com/guides/reasoning_model) now shows `reasoning_effort=\"high\"` and `thinking: {type: enabled}`, but it says it applies to deepseek-flash (DeepSeek-V4.1-Flash-1017) and deepseek-v4-pro, not V3.1.\n\n6) Third-party providers.\n- Together (https://docs.together.ai/docs/inference/chat/reasoning) lists \"DeepSeek V3.1 (hybrid)\" with `reasoning={\"enabled\": False}`. It documents reasoning_effort only for GPT-OSS and DeepSeek V4 Pro.\n- Replicate's V3.1 API (https://replicate.com/deepseek-ai/deepseek-v3.1/versions/279f6b0991efaba468503a13d7726829cd76ea12076af7521a41578c2f19f581/api) has a `thinking` field described as \"Reasoning effort level for DeepSeek models. Use 'medium' for enhanced reasoning or leave as None for default behavior.\" That is Replicate's two-state wrapper around the same toggle, not a DeepSeek multi-level control.\n- A web search found no documented effort levels or budget for V3.1. Named levels (high/max, or numeric 50/75/100) belong to V4/V4.1.\n\n7) Local Tinker cookbook.\n- /home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py line 31 has `_DEEPSEEKV3 = (\"deepseekv3\", \"deepseekv3_thinking\")`, and line 155 maps \"DeepSeek-V3.1\" to it.\n- renderers/__init__.py lines 272-279: `deepseekv3` and `deepseekv3_disable_thinking` both map to DeepSeekV3DisableThinkingRenderer, which puts `</think>` in the assistant header. `deepseekv3_thinking` maps to DeepSeekV3ThinkingRenderer.\n- In renderers/deepseek_v3.py, `build_generation_prompt` uses `think_prefill = \"<think>\" + (prefill or \"\")`, except after a tool message, where it adds no prefill. The file has no effort or budget code: \"reasoning\" appears only as `reasoning_content` in OpenAI-format conversion.\n\nI found no documented multi-level or budget control for this model or its Terminus revision.",
+   "sources": [
+    "https://huggingface.co/deepseek-ai/DeepSeek-V3.1/raw/main/assets/chat_template.jinja",
+    "https://huggingface.co/deepseek-ai/DeepSeek-V3.1/raw/main/tokenizer_config.json",
+    "https://huggingface.co/deepseek-ai/DeepSeek-V3.1/raw/main/chat_template.jinja (404)",
+    "https://huggingface.co/deepseek-ai/DeepSeek-V3.1",
+    "https://huggingface.co/deepseek-ai/DeepSeek-V3.1-Terminus/raw/main/tokenizer_config.json",
+    "https://api-docs.deepseek.com/news/news250821",
+    "https://web.archive.org/web/20250821075823/https://api-docs.deepseek.com/guides/reasoning_model",
+    "https://web.archive.org/web/20251004193309/https://api-docs.deepseek.com/guides/reasoning_model",
+    "https://api-docs.deepseek.com/guides/reasoning_model",
+    "https://docs.together.ai/docs/inference/chat/reasoning",
+    "https://replicate.com/deepseek-ai/deepseek-v3.1/versions/279f6b0991efaba468503a13d7726829cd76ea12076af7521a41578c2f19f581/api",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/deepseek_v3.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/__init__.py"
+   ]
+  },
+  {
+   "model": "Qwen/Qwen3.6-35B-A3B",
+   "agrees": true,
+   "control": "thinking_on_off_only. The open-weight template has only enable_thinking (default on) and preserve_thinking, with no reasoning_effort and no thinking_budget. Tinker renderers are qwen3_5 and qwen3_5_disable_thinking. Only the hosted Alibaba Model Studio API has a numeric thinking_budget, a token cap (1 to 32768) that stops thinking when reached. That is an inference-side cutoff, not a trained multi-level control. The claim already describes it that way.",
+   "evidence": "I could not refute the claim.\n\n1) Chat template. I downloaded https://huggingface.co/Qwen/Qwen3.6-35B-A3B/raw/main/chat_template.jinja (7764 bytes). `cmp` against Qwen3.6-27B's chat_template.jinja found the two files byte-identical. The chat_template string in tokenizer_config.json equals the jinja file (checked in Python). Grepping for effort, budget and think finds only these:\n- line 100: `{%- if (preserve_thinking is defined and preserve_thinking is true) or (loop.index0 > ns.last_query_index) %}`\n- lines 149-152: `{%- if enable_thinking is defined and enable_thinking is false %} {{- '<think>\\n\\n</think>\\n\\n' }} ... {{- '<think>\\n' }}`\nThere is no reasoning_effort or thinking_budget logic.\n\n2) Model card (https://huggingface.co/Qwen/Qwen3.6-35B-A3B/raw/main/README.md):\n- \"Qwen3.6 models operate in thinking mode by default, generating thinking content signified by `<think>\\n...</think>\\n\\n`\"\n- \"Qwen3.6 does not officially support the soft switch of Qwen3, i.e., `/think` and `/nothink`.\"\n- It documents `chat_template_kwargs: {\"enable_thinking\": False}` and `{\"preserve_thinking\": True}`.\n- The only \"effort\" in the card is \"gpt-5.2, low reasoning effort\", which describes the TAU3-Bench user model.\n\n3) Later revisions. The HF commit API lists only three commits: \"Initial public release\" (2026-04-15), LICENSE (04-22) and README (04-24). The template has not changed since release. HF has no Qwen3.7 repos and no 35B-A3B in Qwen3.8 (only Qwen3.8-27B, 2.4T-A95B and Flash-Next). Qwen3.8-27B does have reasoning_effort levels (xhigh, medium, low; cookbook renderers/qwen3_8.py). That is a different model, not a revision of this one.\n\n4) Tinker cookbook. model_info.py maps \"Qwen3.6-35B-A3B\" to `_QWEN3_5 = (\"qwen3_5\", \"qwen3_5_disable_thinking\")`, with the comment \"Qwen3.6 reuses the Qwen3.5 renderer: identical tokenizer, special tokens, preprocessor, and chat template\". qwen3_5.py and its parent qwen3.py contain no effort or budget code. Qwen3_5DisableThinkingRenderer only changes the generation suffix to `<think>\\n\\n</think>\\n\\n`.\n\n5) Hosted API. https://www.alibabacloud.com/help/en/model-studio/deep-thinking says `thinking_budget` \"sets the maximum Token number of Thinking Process ... after exceeding the limit, the Model immediately Output Response\". It applies to \"Qwen3.8, Qwen3.7, Qwen3.6, Qwen3.5...\", with console range 1~32768 and default 4000. It lists \"Qwen3.6 Open Source Edition: qwen3.6-35b-a3b\". On that page, reasoning_effort is mentioned only for qwen3.8-omni-flash. Qwen docs (https://qwen.readthedocs.io/en/latest/getting_started/quickstart.html) say thinking budget \"is achieved by ending the thinking process once the budget is reached ... only implemented by the Alibaba Cloud Model Studio API\". The cutoff appends \"Considering the limited time by the user, I have to give the solution based on the thinking directly now.\" This is a truncation cap, not a learned level.\n\n6) Third-party providers. Doubleword's production page says \"This model does not support graduated thinking levels. Parameters such as reasoning_effort are not supported and will have no effect.\" Its staging page also lists \"Reasoning efforts: Supported: none, minimal, low, medium, high, xhigh, max\" while repeating the same \"not supported\" line. That contradicts itself, reads like a generic provider list, and is not a model-level control. OpenRouter lists only a generic `reasoning` field.\n\nNot verified: the official blog https://qwen.ai/blog?id=qwen3.6-35b-a3b renders client-side. Raw HTML and WebFetch returned only SEO keywords, so I could not read its text. No tech report specific to Qwen3.6-35B-A3B was found.\n\nDownloaded files are in /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/q36moe/",
+   "sources": [
+    "https://huggingface.co/Qwen/Qwen3.6-35B-A3B/raw/main/chat_template.jinja",
+    "https://huggingface.co/Qwen/Qwen3.6-35B-A3B/raw/main/tokenizer_config.json",
+    "https://huggingface.co/Qwen/Qwen3.6-35B-A3B/raw/main/README.md",
+    "https://huggingface.co/Qwen/Qwen3.6-27B/raw/main/chat_template.jinja",
+    "https://huggingface.co/api/models/Qwen/Qwen3.6-35B-A3B/commits/main",
+    "https://www.alibabacloud.com/help/en/model-studio/deep-thinking",
+    "https://qwen.readthedocs.io/en/latest/getting_started/quickstart.html",
+    "https://docs.doubleword.ai/inference-api/models/qwen-qwen3-6-35b-a3b-fp8",
+    "https://docs-stag.doubleword.ai/inference-api/models/qwen-qwen3-6-35b-a3b-fp8",
+    "https://openrouter.ai/qwen/qwen3.6-35b-a3b",
+    "https://qwen.ai/blog?id=qwen3.6-35b-a3b (unreadable, client-rendered)",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_5.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/qwen3_8.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/__init__.py"
+   ]
+  },
+  {
+   "model": "moonshotai/Kimi-K2.6",
+   "agrees": true,
+   "control": "Positive control for the template render. I rendered the official HF chat_template.jinja (jinja2 with loopcontrols, one system and one user message, add_generation_prompt=True) using several kwarg sets and compared SHA-256 hashes. thinking=False does change the output: hash 34f294e03812, prompt ending `<|im_assistant|>assistant<|im_middle|><think></think>`. So kwargs reach the template and the render works. The default, thinking=True, preserve_thinking=True, reasoning_effort='low', reasoning_effort='high', and {thinking_budget=100, max_thinking_tokens=100, enable_thinking=False} all give the same hash, a40263cc4dbf, ending `...<|im_middle|><think>`. preserve_thinking only changes how history is rendered, so with no prior assistant turn it leaves this prompt unchanged. Script: /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/render_k26.py. Template: /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/k26/chat_template.jinja.",
+   "evidence": "I could not refute the claim. Every first-party source shows a binary thinking on/off switch, with no effort levels and no budget.\n\n1. HF chat template (https://huggingface.co/moonshotai/Kimi-K2.6/raw/main/chat_template.jinja). The only reasoning variables are `thinking` and `preserve_thinking`. The generation prompt is `{%- if thinking is defined and thinking is false -%}<think></think>{%- else -%}<think>{%- endif -%}`, and `{%- set preserve_thinking = preserve_thinking | default(false) -%}` only decides whether historical turns are moved into the suffix to keep their reasoning_content. The template never mentions effort or budget, and it adds no system-prompt line. tokenizer_config.json has no chat_template key and no reasoning fields. generation_config.json is just {max_length: 262144, eos_token_id}.\n\n2. HF commit history (api/models/moonshotai/Kimi-K2.6/commits/main). There are 15 commits from 2026-04-14 to 2026-05-19, and all of them touch evals, README, tokenizer or transformers support. None adds an effort control.\n\n3. Model card (https://huggingface.co/moonshotai/Kimi-K2.6, README.md):\n- \"To use instant mode, you need to pass `{'chat_template_kwargs': {\\\"thinking\\\": False}}`\"\n- \"The recommended `temperature` will be `1.0` for Thinking mode and `0.6` for Instant mode\"\n- Official API: `extra_body={'thinking': {'type': 'disabled'}}`\n- Preserve thinking: `{'thinking': {'type': 'enabled', 'keep': 'all'}}`, described as \"retains full reasoning content across multi-turn interactions\"\nThe words effort and budget appear only in the footnotes, for competitor models such as \"Claude Opus 4.6 with max effort\" and \"GPT-5.4 with xhigh reasoning effort\". docs/deploy_guidance.md mentions only `--reasoning-parser kimi_k2`.\n\n4. Tech blog (https://www.kimi.com/blog/kimi-k2-6.html). It offers no user-facing reasoning controls. It mentions only \"thinking mode enabled\" and \"preserve thinking mode\" in eval footnotes.\n\n5. Official API docs:\n- https://platform.kimi.ai/docs/guide/use-kimi-k2-thinking-model.md has a table row \"| `reasoning_effort` | \\\"low\\\" / \\\"high\\\" / \\\"max\\\" (default \\\"max\\\") | \\\"low\\\" / \\\"high\\\" / \\\"max\\\" (default \\\"max\\\") | Not supported | Not supported |\" for kimi-k3.1-pro / kimi-k3 / kimi-k2.7-code / kimi-k2.6. It also says \"`thinking.type`: \\\"enabled\\\" (default) | \\\"disabled\\\"\" and \"`thinking.keep`: `null` (default, ignores historical turns' thinking) | \\\"all\\\"\".\n- https://platform.kimi.ai/docs/api/models-overview.md lists `reasoning_effort` as \"Not supported\" for kimi-k2.6, and its thinking values are only `{\\\"type\\\":\\\"enabled\\\"}`, `{\\\"type\\\":\\\"disabled\\\"}` and `{\\\"type\\\":\\\"enabled\\\",\\\"keep\\\":\\\"all\\\"}`.\n- https://platform.kimi.ai/docs/guide/kimi-k2-6-quickstart.md says \"Value can only be one of {\\\"type\\\": \\\"enabled\\\"} or {\\\"type\\\": \\\"disabled\\\"}\". The only token limit it gives is max_tokens, which caps all output.\n- https://platform.kimi.ai/docs/api/messages.md does have `output_config.effort` (low/high/max), but that endpoint's model enum is only kimi-k3.1-pro, kimi-k3.1-pro-highspeed and kimi-k3.\n- https://platform.kimi.ai/docs/guide/use-reasoning-effort.md documents effort only for K3.1 Pro and says \"When migrating from K2.x to K3, remove the K2.x `thinking` configuration and use top-level `reasoning_effort`\". The effort interface arrived with the K3 generation; K2.6 does not have it.\n\n6. Local tinker_cookbook renderers (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/):\n- `kimi_k26` maps to KimiK25Renderer, which uses a `<think>` prefill.\n- `kimi_k26_disable_thinking` maps to KimiK25DisableThinkingRenderer, which uses a `<think></think>` prefill.\n- `kimi_k26_preserve_thinking` maps to KimiK26PreserveThinkingRenderer, which sets strip_thinking_from_history=False.\n- kimi_k25.py and kimi_k26.py contain no effort or budget handling. By contrast, qwen3_8, glm5_3 and nemotron3 do have effort-level renderers.\n\n7. Related sources I checked that do not count against the claim:\n(a) Later Moonshot models are separate models, not revisions of K2.6. kimi-k3 and kimi-k3.1-pro have low/high/max effort. Kimi-K2.7-Code (HF) always thinks and has no effort; its template always ends `<think>`.\n(b) The K2.5 tech report (arXiv 2602.02276, the predecessor) describes \"Toggle, a training heuristic that alternates between inference-time scaling and budget-constrained optimization\". This is a training-time length reduction (\"decreases output tokens by 25~30%\"), not an inference-time control. The same report describes K2.5 as unifying \"thinking and instant modes\".\n(c) One third-party gateway, https://docs.empiriolabs.ai/models/kimi-k2-6, lists `reasoning_effort` (none/low/medium/high/max) and `thinking_budget` (1\u201381920) for K2.6. It says these are \"translated into enable_thinking and thinking_budget for the model service\", so they are a serving-side cap built by the gateway. The page cites no Moonshot documentation. The Vercel AI Gateway `reasoning` option is likewise a provider-agnostic SDK abstraction.\n\nNot verified: I did not query the live API, and I did not test whether the model responds to effort instructions written in the prompt.",
+   "sources": [
+    "https://huggingface.co/moonshotai/Kimi-K2.6/raw/main/chat_template.jinja",
+    "https://huggingface.co/moonshotai/Kimi-K2.6/raw/main/tokenizer_config.json",
+    "https://huggingface.co/moonshotai/Kimi-K2.6/raw/main/README.md",
+    "https://huggingface.co/moonshotai/Kimi-K2.6/raw/main/docs/deploy_guidance.md",
+    "https://huggingface.co/api/models/moonshotai/Kimi-K2.6/commits/main",
+    "https://huggingface.co/moonshotai/Kimi-K2.7-Code/raw/main/chat_template.jinja",
+    "https://www.kimi.com/blog/kimi-k2-6.html",
+    "https://platform.kimi.ai/docs/guide/use-kimi-k2-thinking-model.md",
+    "https://platform.kimi.ai/docs/api/models-overview.md",
+    "https://platform.kimi.ai/docs/guide/kimi-k2-6-quickstart.md",
+    "https://platform.kimi.ai/docs/guide/use-reasoning-effort.md",
+    "https://platform.kimi.ai/docs/api/messages.md",
+    "https://arxiv.org/pdf/2602.02276",
+    "https://docs.empiriolabs.ai/models/kimi-k2-6",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/kimi_k26.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/kimi_k25.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/__init__.py"
+   ]
+  },
+  {
+   "model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+   "agrees": true,
+   "control": "The released and documented interface is thinking on or off only. enable_thinking=True (the default) ends the prompt with '<|im_start|>assistant\\n<think>\\n'. enable_thinking=False ends it with '<|im_start|>assistant\\n<think></think>'. The only other kwarg is truncate_history_thinking (default True), which controls whether earlier turns keep their reasoning; it does not change effort. The current template has no low_effort, medium_effort, reasoning_effort, or budget kwarg.\n\nCaveat 1: the first upload of the repo (commit b3caaabed0, 2026-08-01) had a medium_effort kwarg. It appended '\\n\\n{reasoning effort: efficient}' to the last user message, the same mechanism Ultra uses. It was removed in commit 742ebb650c on 2026-08-05, before the model card was added on 08-06 and before the 08-11 release. The model card also lists a 502,722-row training subset named \"Synthetic Science Reasoning Effort Medium\".\n\nCaveat 2: NVIDIA's Jetson AI Lab page mentions \"a configurable reasoning budget\" but names no parameter or mechanism.\n\nNeither caveat is a supported, documented control. Together they suggest the weights may already respond to the Ultra-style effort tag. I did not test this.",
+   "evidence": "1. Current chat template (https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/raw/main/chat_template.jinja, md5 a2445a9fedb41357fa4a26a8d8215f17, repo HEAD a9904d24bc). The only template kwargs are on line 12, \"{%- set enable_thinking = enable_thinking if enable_thinking is defined else True %}\", and line 13, \"{%- set truncate_history_thinking = ... else True %}\". The generation prompt is \"{%- if enable_thinking %} {{- '<|im_start|>assistant\\n<think>\\n' }} {%- else %} {{- '<|im_start|>assistant\\n<think></think>' }}\". A grep for effort, budget, low, medium, high, or efficient finds nothing. tokenizer_config.json has no chat_template field, and the NVFP4 sibling repo ships the same template (same md5).\n\n2. Model card (raw/main/README.md). The summary table says \"Reasoning Mode | Configurable on/off via chat template (`enable_thinking=True/False`)\". The text says \"Lightning 3.5 exposes reasoning control through chat-template kwargs: thinking enabled (the default), and thinking disabled for direct answers.\" The card has no 'budget' and no ThinkingBudgetClient, unlike the Nano 3, Super, and Ultra cards, which all document a client-side reasoning_budget. It also has no low_effort or medium_effort, which Super and Ultra document. The only 'effort' hit is a data-table row: \"Synthetic Science Reasoning Effort Medium | Text | 502,722 | [science-reasoning-effort-medium-v0]\". The dataset was not publicly fetchable (HF API returned an auth error), so I could not see whether its prompts carry the effort tag. Unverified.\n\n3. Repo history (refutation attempt). I diffed the template at commit b3caaabed0 (2026-08-01, 'Add files using upload-large-folder tool') against HEAD. The old version had \"{%- set medium_effort = medium_effort if medium_effort is defined else False %}\" and \"{%- if message.role == \\\"user\\\" and loop.index0 == ns.last_user_idx and medium_effort %} {{- content + '\\n\\n{reasoning effort: efficient}' }}\". This is identical to the current Ultra template's medium_effort lines. It was removed in 742ebb650c (2026-08-05). No later revision restores it; the template is unchanged from 742ebb650c through HEAD.\n\n4. Cookbook (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py lines 45-49 and 224-226). Lightning's renderer list is _NEMOTRON3_LIGHTNING = (\"nemotron3_ultra\", \"nemotron3_ultra_disable_thinking\", \"nemotron3_ultra_preserve_thinking\"). It deliberately omits nemotron3_ultra_medium_thinking, which _NEMOTRON3_ULTRA includes. The renderers/nemotron3.py docstring describes only Super's low effort and Ultra's medium effort as extra modes.\n\n5. Other docs. build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b shows only chat_template_kwargs enable_thinking. The vLLM recipe (recipes.vllm.ai) says only \"Reasoning tokens count toward max_tokens ... raise max_tokens\". NVIDIA's launch blog has no reasoning-control text. The NIM 1.15.0 thinking-budget-control page does not mention Lightning. The OpenRouter models API lists 'reasoning_effort' among supported_parameters for nemotron-3-super-120b-a12b and nemotron-3-ultra-550b-a55b, but not for nvidia/nemotron-3.5-lightning (it has only 'reasoning' and 'include_reasoning'). The one contrary source is Jetson AI Lab (https://www.jetson-ai-lab.com/models/nemotron3-5-lightning): \"Reasoning can be enabled or disabled, and a configurable reasoning budget lets users control how much reasoning the model performs before answering.\" It gives no parameter or code. It most likely refers to the generic client-side truncation (cap reasoning at N tokens, then force '</think>'), which works on any thinking model and is not a trained control. That reading is my inference, not verified.\n\nI found no tech report specific to Lightning. Downloaded files are in /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/lightning/.\n\nImplication for the causal test: Lightning is the best Tinker candidate without documented effort levels. But it was distilled from Ultra, a pre-release template carried Ultra's '{reasoning effort: efficient}' tag, and it has an effort-named training subset. So check cheaply whether appending that tag shortens its reasoning before treating it as naive to effort control.",
+   "sources": [
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/raw/main/chat_template.jinja",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/raw/b3caaabed0/chat_template.jinja",
+    "https://huggingface.co/api/models/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/commits/main",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16/raw/main/README.md",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/raw/main/chat_template.jinja",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16/raw/main/README.md",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16/raw/main/README.md",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/raw/main/README.md",
+    "https://build.nvidia.com/nvidia/nemotron-3.5-lightning-30b-a3b",
+    "https://recipes.vllm.ai/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+    "https://developer.nvidia.com/blog/nvidia-nemotron-3-5-lightning-delivers-fast-accurate-specialized-task-execution-for-long-running-agents/",
+    "https://docs.nvidia.com/nim/large-language-models/1.15.0/thinking-budget-control.html",
+    "https://www.jetson-ai-lab.com/models/nemotron3-5-lightning",
+    "https://openrouter.ai/api/v1/models",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/nemotron3.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py"
+   ]
+  },
+  {
+   "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+   "agrees": true,
+   "control": "thinking_on_off_only. The model has reasoning on/off through the chat-template kwarg enable_thinking (default True) and nothing else. The current template has no named effort levels: no low_effort and no medium_effort, unlike Nemotron-3 Super and Ultra. The model never sees a budget value. The documented token budget is enforced outside the model at decode time, either by a client-side two-call truncation (generate with max_tokens=reasoning_budget, append '.\\n</think>\\n\\n', then continue) or by a server-side logits processor that forces </think> (vLLM ThinkingBudgetLogitsProcessor, or NIM's reasoning_budget). The model was trained to cope with truncated reasoning, not to plan its reasoning to a stated budget.",
+   "evidence": "I could not refute the claim. Details and caveats:\n\n1) Current HF chat template, raw/main/chat_template.jinja (repo sha bf77c317, 2026-08-24). It matches the template in tokenizer_config.json byte for byte, and the -FP8 repo has the same md5 (7ab9e1a1). The only kwargs are `{%- set enable_thinking = enable_thinking if enable_thinking is defined else True %}` and `{%- set truncate_history_thinking = ... else True %}`. The generation prompt is '<|im_start|>assistant\\n<think>\\n' when thinking is on, and '<|im_start|>assistant\\n<think></think>' when it is off. The template has no low_effort, medium_effort, reasoning_budget or /think parsing. By contrast, the Super template has `low_effort` and appends '\\n\\n{reasoning effort: low}' (lines 13 and 180-181 of the Super chat_template.jinja).\n\n2) Model card, the \"Using Budget Control\" section, added 2025-12-19 in PR #23 \"Adding Generic Reasoning Budget\". It says \"`reasoning_budget`: This is a threshold that will attempt to end the reasoning trace at the next newline ... If no newline is encountered within 500 tokens, it will abruptly end the reasoning trace at `reasoning_budget + 500`.\" The code is a client class, ThinkingBudgetClient: it calls chat.completions with max_tokens=reasoning_budget, and if '</think>' is not in the content it sets `reasoning_content = f\"{reasoning_content}.\\n</think>\\n\\n\"` and continues with completions.create. The card adds \"NOTE: This client will work with any OpenAI API compatible endpoint.\" So the budget is external truncation, as the claim says. One minor point: the prose description (next newline, +500) fits a logits processor better than the client code, which simply cuts at the budget. The card's example puts \"/think\" in the system prompt, but the template does nothing with it.\n\n3) Tech report (https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Nano-Technical-Report.pdf), section 3.1.5 \"Reasoning Control\": \"Nemotron 3 Nano allows for two different forms of reasoning control: reasoning on/off control and token budget control ... to enable reasoning on/off control we strip the reasoning traces from a random 10% of samples, and to enable budget control, we randomly truncate 3% of reasoning traces to different reasoning budgets, before continuing with the original post-reasoning response.\" This is training for robustness to truncation. The report describes no budget signal in the prompt and no effort levels.\n\n4) NVIDIA usage cookbooks (github.com/NVIDIA-NeMo/Nemotron, usage-cookbook/Nemotron-3-Nano/{vllm,sglang,trtllm}_cookbook.ipynb) contain the same ThinkingBudgetClient. The vLLM notebook adds \"Controlling Reasoning Budget Via Logit Processors\", configured as THINKING_BUDGET_LOGITS_PROCESSOR_ARGS={\"thinking_budget\":150,\"thinking_budget_grace_period\":30,\"end_token_ids\":[1338,13],...} and loaded with --logits-processors custom_logit_processors.v1.nano_v3_logit_processors:ThinkingBudgetLogitsProcessor. The NIM docs (https://docs.nvidia.com/nim/large-language-models/1.15.0/thinking-budget-control.html) say reasoning_budget \"enforces a hard upper limit on reasoning tokens using a logits processor that forces the `</think>` token\". That page lists low_effort as a prompt-level hint only for nemotron-3-super, and does not mention Nano. These are server-side budget methods, so the claim's phrase \"done by the client\" is incomplete. They still act at decode time, and the model is never told the budget.\n\n5) Local tinker_cookbook (/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook). model_info.py line 37 gives Nano the renderers _NEMOTRON3 = (\"nemotron3\", \"nemotron3_disable_thinking\", \"nemotron3_preserve_thinking\"). renderers/nemotron3.py says of nemotron3_low_thinking: \"This mode is only available on the Nemotron-3 Super model ...; the Nano and Ultra HF templates do not support ``low_effort``.\" Ultra's medium mode ('{reasoning effort: efficient}') is Ultra only.\n\n6) Later revisions and variants. The repo's commit history after 2025-12-15 has no change to the template; later commits touch README, config and modeling files. No later revision of the same Nano-30B-A3B repo exists on HF. Nemotron-3.5-Lightning-30B-A3B is a separate model.\n\nCAVEAT, the strongest counter-evidence I found: the pre-release initial commit a7d6c572c46df00ce702a0039b02a0c2572cc61a (2025-12-04, \"Upload folder using huggingface_hub\") had a template kwarg `{%- set reasoning_budget = reasoning_budget if reasoning_budget is defined else None %}`, which appended '\\n\\n{thinking token budget: N}' to the last user message. Commit 4fed69b4f37cde78542ef42c69bc567ddca0d645 (\"Upload 2 files\", 2025-12-15, release day) removed it. No README or doc ever described it, and the tech report describes only truncation training. I did not test whether the released weights respond to a '{thinking token budget: N}' suffix. A cheap Tinker sampling check would settle whether a latent in-prompt budget signal exists. OpenRouter lists a 'reasoning' parameter for Novita and Nebius; that is a provider-side mapping (on/off or budget), not a model-native interface.\n\nFiles saved in /tmp/claude-1000/-home-john-claude-box/f317a8b9-e5a1-5dee-9c31-79cbd6d51593/scratchpad/nemo/: chat_template.jinja (current), ct_a7d6c572c46df00ce702a0039b02a0c2572cc61a.jinja (pre-release, with reasoning_budget), super_ct.jinja, README.md, and tr/nano_tr.txt (tech report text).",
+   "sources": [
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/raw/main/chat_template.jinja",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/raw/main/tokenizer_config.json",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/raw/main/README.md",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/raw/a7d6c572c46df00ce702a0039b02a0c2572cc61a/chat_template.jinja",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/commit/4fed69b4f37cde78542ef42c69bc567ddca0d645",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/discussions/23",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/discussions/27",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8/raw/main/chat_template.jinja",
+    "https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16/raw/main/chat_template.jinja",
+    "https://research.nvidia.com/labs/nemotron/files/NVIDIA-Nemotron-3-Nano-Technical-Report.pdf",
+    "https://research.nvidia.com/labs/nemotron/Nemotron-3",
+    "https://raw.githubusercontent.com/NVIDIA-NeMo/Nemotron/main/usage-cookbook/Nemotron-3-Nano/vllm_cookbook.ipynb",
+    "https://raw.githubusercontent.com/NVIDIA-NeMo/Nemotron/main/usage-cookbook/Nemotron-3-Nano/sglang_cookbook.ipynb",
+    "https://docs.nvidia.com/nim/large-language-models/1.15.0/thinking-budget-control.html",
+    "https://vllm.ai/blog/2025-12-15-run-nvidia-nemotron-3-nano",
+    "https://openrouter.ai/api/v1/models/nvidia/nemotron-3-nano-30b-a3b/endpoints",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/renderers/nemotron3.py",
+    "/home/john/.cache/uv/archive-v0/lqdvh3MNeevvyCeO/tinker_cookbook/model_info.py"
+   ]
+  }
+ ]
+}

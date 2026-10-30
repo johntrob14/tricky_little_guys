@@ -1,0 +1,186 @@
+memory.used [MiB], utilization.gpu [%]
+83131 MiB, 100 %
+[bench] 388 prompts, lengths 43..4705 mean 355
+[switch_model] captured CUDA graphs for buckets [1, 2, 4, 8, 16, 32, 64, 128] in 22.3s
+[switch_model] engine: B=128 blocks=3413x64 table_width=529 sync_every=16 attn=fa3 graphs=True compiled=True
+[switch_model] live=128 queue=260 free_blocks=2959 done=0 tokens_out=0 forwards=2 evictions=0 tok/s=0
+[switch_model] live=128 queue=196 free_blocks=830 done=64 tokens_out=26662 forwards=1289 evictions=0 tok/s=441
+[switch_model] live=128 queue=117 free_blocks=615 done=143 tokens_out=140265 forwards=2277 evictions=0 tok/s=1545
+[switch_model] KV pool full: evicting row 'default|hle|380|alternating_case|0' after 528 generated positions (restarts from scratch); evictions so far 1
+[switch_model] KV pool full: evicting row 'default|gpqa|34|meow_between_words|0' after 544 generated positions (restarts from scratch); evictions so far 2
+[switch_model] KV pool full: evicting row 'default|hle|276|lowercase_thinking|0' after 576 generated positions (restarts from scratch); evictions so far 3
+[switch_model] KV pool full: evicting row 'default|gpqa|411|lowercase_thinking|0' after 608 generated positions (restarts from scratch); evictions so far 4
+[switch_model] KV pool full: evicting row 'default|gpqa|298|alternating_case|0' after 624 generated positions (restarts from scratch); evictions so far 5
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|283|alternating_case|0' after 640 generated positions (restarts from scratch); evictions so far 6
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|287|multiple_word_suppression|0' after 704 generated positions (restarts from scratch); evictions so far 7
+[switch_model] KV pool full: evicting row 'default|gpqa|220|meow_between_words|0' after 736 generated positions (restarts from scratch); evictions so far 8
+[switch_model] live=96 queue=102 free_blocks=3 done=190 tokens_out=199058 forwards=3253 evictions=8 tok/s=1647
+[switch_model] KV pool full: evicting row 'default|gpqa|225|lowercase_thinking|0' after 768 generated positions (restarts from scratch); evictions so far 9
+[switch_model] KV pool full: evicting row 'default|hle|80|uppercase_thinking|0' after 960 generated positions (restarts from scratch); evictions so far 10
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|66|alternating_case|0' after 1072 generated positions (restarts from scratch); evictions so far 11
+[switch_model] KV pool full: evicting row 'default|hle|168|word_suppression|0' after 1152 generated positions (restarts from scratch); evictions so far 12
+[switch_model] KV pool full: evicting row 'default|hle|158|baseline|0' after 1216 generated positions (restarts from scratch); evictions so far 13
+[switch_model] KV pool full: evicting row 'default|hle|328|uppercase_thinking|0' after 1360 generated positions (restarts from scratch); evictions so far 14
+[switch_model] live=56 queue=108 free_blocks=289 done=224 tokens_out=270423 forwards=4229 evictions=14 tok/s=1790
+[switch_model] live=44 queue=108 free_blocks=238 done=236 tokens_out=312702 forwards=5253 evictions=14 tok/s=1722
+[switch_model] KV pool full: evicting row 'default|gpqa|229|word_suppression|0' after 3712 generated positions (restarts from scratch); evictions so far 15
+[switch_model] live=36 queue=109 free_blocks=220 done=243 tokens_out=344314 forwards=6213 evictions=15 tok/s=1626
+[switch_model] KV pool full: evicting row 'default|gpqa|101|lowercase_thinking|0' after 4592 generated positions (restarts from scratch); evictions so far 16
+[switch_model] live=30 queue=110 free_blocks=269 done=248 tokens_out=372552 forwards=7157 evictions=16 tok/s=1540
+[switch_model] KV pool full: evicting row 'default|gpqa|354|end_of_sentence|0' after 5968 generated positions (restarts from scratch); evictions so far 17
+[switch_model] live=28 queue=111 free_blocks=50 done=249 tokens_out=379965 forwards=8117 evictions=17 tok/s=1396
+[switch_model] KV pool full: evicting row 'default|hle|364|meow_between_words|0' after 6272 generated positions (restarts from scratch); evictions so far 18
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|267|meow_between_words|0' after 6944 generated positions (restarts from scratch); evictions so far 19
+[switch_model] live=25 queue=113 free_blocks=21 done=250 tokens_out=388147 forwards=9045 evictions=19 tok/s=1284
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|241|lowercase_thinking|0' after 7248 generated positions (restarts from scratch); evictions so far 20
+[switch_model] KV pool full: evicting row 'default|gpqa|442|lowercase_thinking|0' after 7584 generated positions (restarts from scratch); evictions so far 21
+[switch_model] live=21 queue=115 free_blocks=237 done=252 tokens_out=406469 forwards=9957 evictions=21 tok/s=1223
+[switch_model] live=19 queue=115 free_blocks=268 done=254 tokens_out=425439 forwards=10837 evictions=21 tok/s=1174
+[switch_model] live=19 queue=115 free_blocks=17 done=254 tokens_out=425439 forwards=11685 evictions=21 tok/s=1083
+[switch_model] KV pool full: evicting row 'default|gpqa|356|word_suppression|0' after 9920 generated positions (restarts from scratch); evictions so far 22
+[switch_model] KV pool full: evicting row 'default|gpqa|95|word_suppression|0' after 10672 generated positions (restarts from scratch); evictions so far 23
+[switch_model] live=16 queue=117 free_blocks=308 done=255 tokens_out=437186 forwards=12517 evictions=23 tok/s=1033
+[switch_model] live=14 queue=117 free_blocks=487 done=257 tokens_out=462288 forwards=13429 evictions=23 tok/s=1019
+[switch_model] KV pool full: evicting row 'default|hle|410|repeat_sentences|0' after 144 generated positions (restarts from scratch); evictions so far 24
+[switch_model] KV pool full: evicting row 'default|gpqa|287|lowercase_thinking|0' after 160 generated positions (restarts from scratch); evictions so far 25
+[switch_model] KV pool full: evicting row 'default|hle|54|meow_between_words|0' after 176 generated positions (restarts from scratch); evictions so far 26
+[switch_model] KV pool full: evicting row 'default|hle|282|baseline|0' after 192 generated positions (restarts from scratch); evictions so far 27
+[switch_model] KV pool full: evicting row 'default|hle|305|multiple_word_suppression|0' after 192 generated positions (restarts from scratch); evictions so far 28
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|183|word_suppression|0' after 208 generated positions (restarts from scratch); evictions so far 29
+[switch_model] KV pool full: evicting row 'default|hle|101|alternating_case|0' after 208 generated positions (restarts from scratch); evictions so far 30
+[switch_model] KV pool full: evicting row 'default|hle|64|end_of_sentence|0' after 224 generated positions (restarts from scratch); evictions so far 31
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|251|repeat_sentences|0' after 224 generated positions (restarts from scratch); evictions so far 32
+[switch_model] KV pool full: evicting row 'default|hle|34|baseline|0' after 256 generated positions (restarts from scratch); evictions so far 33
+[switch_model] KV pool full: evicting row 'default|gpqa|261|end_of_sentence|0' after 272 generated positions (restarts from scratch); evictions so far 34
+[switch_model] KV pool full: evicting row 'default|hle|379|repeat_sentences|0' after 288 generated positions (restarts from scratch); evictions so far 35
+[switch_model] KV pool full: evicting row 'default|hle|100|repeat_sentences|0' after 288 generated positions (restarts from scratch); evictions so far 36
+[switch_model] KV pool full: evicting row 'default|gpqa|200|baseline|0' after 320 generated positions (restarts from scratch); evictions so far 37
+[switch_model] KV pool full: evicting row 'default|hle|349|alternating_case|0' after 336 generated positions (restarts from scratch); evictions so far 38
+[switch_model] KV pool full: evicting row 'default|hle|441|repeat_sentences|0' after 336 generated positions (restarts from scratch); evictions so far 39
+[switch_model] KV pool full: evicting row 'default|hle|114|multiple_word_suppression|0' after 352 generated positions (restarts from scratch); evictions so far 40
+[switch_model] KV pool full: evicting row 'default|hle|302|meow_between_words|0' after 368 generated positions (restarts from scratch); evictions so far 41
+[switch_model] KV pool full: evicting row 'default|hle|361|word_suppression|0' after 384 generated positions (restarts from scratch); evictions so far 42
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|127|repeat_sentences|0' after 400 generated positions (restarts from scratch); evictions so far 43
+[switch_model] KV pool full: evicting row 'default|hle|178|meow_between_words|0' after 416 generated positions (restarts from scratch); evictions so far 44
+[switch_model] KV pool full: evicting row 'default|hle|281|end_of_sentence|0' after 432 generated positions (restarts from scratch); evictions so far 45
+[switch_model] KV pool full: evicting row 'default|gpqa|256|lowercase_thinking|0' after 464 generated positions (restarts from scratch); evictions so far 46
+[switch_model] KV pool full: evicting row 'default|gpqa|349|lowercase_thinking|0' after 480 generated positions (restarts from scratch); evictions so far 47
+[switch_model] KV pool full: evicting row 'default|hle|436|end_of_sentence|0' after 496 generated positions (restarts from scratch); evictions so far 48
+[switch_model] KV pool full: evicting row 'default|hle|193|repeat_sentences|0' after 512 generated positions (restarts from scratch); evictions so far 49
+[switch_model] KV pool full: evicting row 'default|hle|312|end_of_sentence|0' after 560 generated positions (restarts from scratch); evictions so far 50
+[switch_model] KV pool full: evicting row 'default|gpqa|367|multiple_word_suppression|0' after 576 generated positions (restarts from scratch); evictions so far 51
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|151|word_suppression|0' after 592 generated positions (restarts from scratch); evictions so far 52
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|19|meow_between_words|0' after 624 generated positions (restarts from scratch); evictions so far 53
+[switch_model] KV pool full: evicting row 'default|gpqa|266|repeat_sentences|0' after 640 generated positions (restarts from scratch); evictions so far 54
+[switch_model] KV pool full: evicting row 'default|hle|131|repeat_sentences|0' after 656 generated positions (restarts from scratch); evictions so far 55
+[switch_model] KV pool full: evicting row 'default|gpqa|106|multiple_word_suppression|0' after 720 generated positions (restarts from scratch); evictions so far 56
+[switch_model] KV pool full: evicting row 'default|hle|39|alternating_case|0' after 768 generated positions (restarts from scratch); evictions so far 57
+[switch_model] live=40 queue=80 free_blocks=0 done=268 tokens_out=477179 forwards=14280 evictions=57 tok/s=986
+[switch_model] KV pool full: evicting row 'default|gpqa|60|uppercase_thinking|0' after 800 generated positions (restarts from scratch); evictions so far 58
+[switch_model] KV pool full: evicting row 'default|hle|271|multiple_word_suppression|0' after 832 generated positions (restarts from scratch); evictions so far 59
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|192|multiple_word_suppression|0' after 864 generated positions (restarts from scratch); evictions so far 60
+[switch_model] KV pool full: evicting row 'default|hle|90|lowercase_thinking|0' after 896 generated positions (restarts from scratch); evictions so far 61
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|236|meow_between_words|0' after 944 generated positions (restarts from scratch); evictions so far 62
+[switch_model] KV pool full: evicting row 'default|hle|380|alternating_case|0' after 976 generated positions (restarts from scratch); evictions so far 63
+[switch_model] KV pool full: evicting row 'default|gpqa|34|meow_between_words|0' after 1024 generated positions (restarts from scratch); evictions so far 64
+[switch_model] KV pool full: evicting row 'default|hle|276|lowercase_thinking|0' after 1056 generated positions (restarts from scratch); evictions so far 65
+[switch_model] KV pool full: evicting row 'default|gpqa|411|lowercase_thinking|0' after 1104 generated positions (restarts from scratch); evictions so far 66
+[switch_model] KV pool full: evicting row 'default|gpqa|298|alternating_case|0' after 1168 generated positions (restarts from scratch); evictions so far 67
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|283|alternating_case|0' after 1216 generated positions (restarts from scratch); evictions so far 68
+[switch_model] KV pool full: evicting row 'default|gpqa|220|meow_between_words|0' after 1280 generated positions (restarts from scratch); evictions so far 69
+[switch_model] KV pool full: evicting row 'default|gpqa|225|lowercase_thinking|0' after 1328 generated positions (restarts from scratch); evictions so far 70
+[switch_model] KV pool full: evicting row 'default|hle|80|uppercase_thinking|0' after 1392 generated positions (restarts from scratch); evictions so far 71
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|66|alternating_case|0' after 1472 generated positions (restarts from scratch); evictions so far 72
+[switch_model] KV pool full: evicting row 'default|hle|168|word_suppression|0' after 1536 generated positions (restarts from scratch); evictions so far 73
+[switch_model] KV pool full: evicting row 'default|hle|158|baseline|0' after 1616 generated positions (restarts from scratch); evictions so far 74
+[switch_model] live=23 queue=97 free_blocks=1 done=268 tokens_out=477179 forwards=15176 evictions=74 tok/s=928
+[switch_model] KV pool full: evicting row 'default|hle|328|uppercase_thinking|0' after 1696 generated positions (restarts from scratch); evictions so far 75
+[switch_model] KV pool full: evicting row 'default|gpqa|229|word_suppression|0' after 1808 generated positions (restarts from scratch); evictions so far 76
+[switch_model] KV pool full: evicting row 'default|gpqa|101|lowercase_thinking|0' after 1904 generated positions (restarts from scratch); evictions so far 77
+[switch_model] KV pool full: evicting row 'default|gpqa|354|end_of_sentence|0' after 2000 generated positions (restarts from scratch); evictions so far 78
+[switch_model] KV pool full: evicting row 'default|hle|364|meow_between_words|0' after 2128 generated positions (restarts from scratch); evictions so far 79
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|267|meow_between_words|0' after 2272 generated positions (restarts from scratch); evictions so far 80
+[switch_model] KV pool full: evicting row 'default|mmlu_pro|241|lowercase_thinking|0' after 2448 generated positions (restarts from scratch); evictions so far 81
+[switch_model] live=16 queue=104 free_blocks=2 done=268 tokens_out=477179 forwards=16072 evictions=81 tok/s=876
+[switch_model] KV pool full: evicting row 'default|gpqa|442|lowercase_thinking|0' after 2608 generated positions (restarts from scratch); evictions so far 82
+[switch_model] KV pool full: evicting row 'default|gpqa|356|word_suppression|0' after 2800 generated positions (restarts from scratch); evictions so far 83
+[switch_model] KV pool full: evicting row 'default|gpqa|95|word_suppression|0' after 3024 generated positions (restarts from scratch); evictions so far 84
+[switch_model] KV pool full: evicting row 'default|gpqa|158|meow_between_words|0' after 15200 generated positions (restarts from scratch); evictions so far 85
+[switch_model] live=12 queue=108 free_blocks=212 done=268 tokens_out=477179 forwards=16936 evictions=85 tok/s=830
+[switch_model] live=12 queue=108 free_blocks=36 done=268 tokens_out=477179 forwards=17864 evictions=85 tok/s=789
+[switch_model] KV pool full: evicting row 'default|gpqa|127|meow_between_words|0' after 17920 generated positions (restarts from scratch); evictions so far 86
+[switch_model] live=11 queue=109 free_blocks=162 done=268 tokens_out=477179 forwards=18776 evictions=86 tok/s=752
+[switch_model] live=11 queue=109 free_blocks=8 done=268 tokens_out=477179 forwards=19672 evictions=86 tok/s=717
+[switch_model] KV pool full: evicting row 'default|hle|271|meow_between_words|0' after 19600 generated positions (restarts from scratch); evictions so far 87
+[switch_model] live=10 queue=110 free_blocks=179 done=268 tokens_out=477179 forwards=20552 evictions=87 tok/s=686
+[switch_model] live=10 queue=110 free_blocks=46 done=268 tokens_out=477179 forwards=21416 evictions=87 tok/s=657
+[switch_model] KV pool full: evicting row 'default|gpqa|194|lowercase_thinking|0' after 21600 generated positions (restarts from scratch); evictions so far 88
+[switch_model] live=9 queue=111 free_blocks=260 done=268 tokens_out=477179 forwards=22280 evictions=88 tok/s=631
+[switch_model] live=9 queue=111 free_blocks=142 done=268 tokens_out=477179 forwards=23128 evictions=88 tok/s=607
+[switch_model] live=9 queue=111 free_blocks=25 done=268 tokens_out=477179 forwards=23960 evictions=88 tok/s=584
+[switch_model] KV pool full: evicting row 'default|hle|240|meow_between_words|0' after 24032 generated positions (restarts from scratch); evictions so far 89
+[switch_model] live=8 queue=112 free_blocks=288 done=268 tokens_out=477179 forwards=24872 evictions=89 tok/s=563
+[switch_model] live=101 queue=0 free_blocks=1296 done=287 tokens_out=681240 forwards=25805 evictions=89 tok/s=776
+[switch_model] live=82 queue=0 free_blocks=420 done=306 tokens_out=703382 forwards=26845 evictions=89 tok/s=775
+[switch_model] live=55 queue=0 free_blocks=565 done=333 tokens_out=757411 forwards=27869 evictions=89 tok/s=807
+[switch_model] live=50 queue=0 free_blocks=69 done=338 tokens_out=773423 forwards=28829 evictions=89 tok/s=799
+[switch_model] KV pool full: evicting row 'default|hle|162|repeat_sentences|0' after 3808 generated positions (restarts from scratch); evictions so far 90
+[switch_model] KV pool full: evicting row 'default|hle|468|baseline|0' after 3920 generated positions (restarts from scratch); evictions so far 91
+[switch_model] KV pool full: evicting row 'default|gpqa|44|end_of_sentence|0' after 4032 generated positions (restarts from scratch); evictions so far 92
+[switch_model] KV pool full: evicting row 'default|hle|183|lowercase_thinking|0' after 4144 generated positions (restarts from scratch); evictions so far 93
+[switch_model] live=39 queue=4 free_blocks=282 done=345 tokens_out=803600 forwards=29773 evictions=93 tok/s=805
+[switch_model] live=37 queue=0 free_blocks=140 done=351 tokens_out=832776 forwards=30734 evictions=93 tok/s=809
+[switch_model] KV pool full: evicting row 'default|hle|162|repeat_sentences|0' after 1104 generated positions (restarts from scratch); evictions so far 94
+[switch_model] KV pool full: evicting row 'default|hle|468|baseline|0' after 1200 generated positions (restarts from scratch); evictions so far 95
+[switch_model] KV pool full: evicting row 'default|gpqa|44|end_of_sentence|0' after 1280 generated positions (restarts from scratch); evictions so far 96
+[switch_model] KV pool full: evicting row 'default|hle|183|lowercase_thinking|0' after 1344 generated positions (restarts from scratch); evictions so far 97
+[switch_model] KV pool full: evicting row 'default|hle|209|meow_between_words|0' after 6160 generated positions (restarts from scratch); evictions so far 98
+[switch_model] live=30 queue=5 free_blocks=121 done=353 tokens_out=845441 forwards=31678 evictions=98 tok/s=798
+[switch_model] KV pool full: evicting row 'default|hle|406|baseline|0' after 6848 generated positions (restarts from scratch); evictions so far 99
+[switch_model] live=26 queue=6 free_blocks=180 done=356 tokens_out=866695 forwards=32638 evictions=99 tok/s=796
+[switch_model] live=28 queue=0 free_blocks=186 done=360 tokens_out=897090 forwards=33551 evictions=99 tok/s=802
+[switch_model] live=26 queue=0 free_blocks=103 done=362 tokens_out=914596 forwards=34447 evictions=99 tok/s=796
+[switch_model] KV pool full: evicting row 'default|hle|162|repeat_sentences|0' after 2384 generated positions (restarts from scratch); evictions so far 100
+[switch_model] live=23 queue=1 free_blocks=145 done=364 tokens_out=933993 forwards=35311 evictions=100 tok/s=792
+[switch_model] live=22 queue=1 free_blocks=23 done=365 tokens_out=944450 forwards=36175 evictions=100 tok/s=780
+[switch_model] KV pool full: evicting row 'default|hle|468|baseline|0' after 3520 generated positions (restarts from scratch); evictions so far 101
+[switch_model] live=20 queue=2 free_blocks=18 done=366 tokens_out=955632 forwards=37023 evictions=101 tok/s=770
+[switch_model] KV pool full: evicting row 'default|gpqa|44|end_of_sentence|0' after 4352 generated positions (restarts from scratch); evictions so far 102
+[switch_model] KV pool full: evicting row 'default|hle|183|lowercase_thinking|0' after 4624 generated positions (restarts from scratch); evictions so far 103
+[switch_model] live=17 queue=4 free_blocks=152 done=367 tokens_out=967998 forwards=37855 evictions=103 tok/s=761
+[switch_model] KV pool full: evicting row 'default|hle|209|meow_between_words|0' after 5696 generated positions (restarts from scratch); evictions so far 104
+[switch_model] live=16 queue=5 free_blocks=41 done=367 tokens_out=967998 forwards=38655 evictions=104 tok/s=744
+[switch_model] live=15 queue=5 free_blocks=63 done=368 tokens_out=981598 forwards=39503 evictions=104 tok/s=737
+[switch_model] live=17 queue=0 free_blocks=443 done=371 tokens_out=1025451 forwards=40432 evictions=104 tok/s=753
+[switch_model] live=17 queue=0 free_blocks=201 done=371 tokens_out=1025451 forwards=41360 evictions=104 tok/s=737
+[switch_model] live=16 queue=0 free_blocks=231 done=372 tokens_out=1041980 forwards=42272 evictions=104 tok/s=732
+[switch_model] live=16 queue=0 free_blocks=7 done=372 tokens_out=1041980 forwards=43168 evictions=104 tok/s=717
+[switch_model] KV pool full: evicting row 'default|hle|162|repeat_sentences|0' after 3232 generated positions (restarts from scratch); evictions so far 105
+[switch_model] KV pool full: evicting row 'default|hle|468|baseline|0' after 3584 generated positions (restarts from scratch); evictions so far 106
+[switch_model] KV pool full: evicting row 'default|gpqa|44|end_of_sentence|0' after 3952 generated positions (restarts from scratch); evictions so far 107
+[switch_model] live=13 queue=3 free_blocks=48 done=372 tokens_out=1041980 forwards=44032 evictions=107 tok/s=703
+[switch_model] KV pool full: evicting row 'default|hle|183|lowercase_thinking|0' after 4320 generated positions (restarts from scratch); evictions so far 108
+[switch_model] live=11 queue=4 free_blocks=170 done=373 tokens_out=1053766 forwards=44896 evictions=108 tok/s=696
+[switch_model] live=11 queue=4 free_blocks=19 done=373 tokens_out=1053766 forwards=45760 evictions=108 tok/s=683
+[switch_model] KV pool full: evicting row 'default|hle|209|meow_between_words|0' after 5936 generated positions (restarts from scratch); evictions so far 109
+[switch_model] KV pool full: evicting row 'default|hle|23|meow_between_words|0' after 21456 generated positions (restarts from scratch); evictions so far 110
+[switch_model] live=9 queue=6 free_blocks=343 done=373 tokens_out=1053766 forwards=46608 evictions=110 tok/s=669
+[switch_model] live=9 queue=6 free_blocks=214 done=373 tokens_out=1053766 forwards=47520 evictions=110 tok/s=657
+[switch_model] live=9 queue=6 free_blocks=88 done=373 tokens_out=1053766 forwards=48416 evictions=110 tok/s=645
+[switch_model] KV pool full: evicting row 'default|hle|178|meow_between_words|0' after 23936 generated positions (restarts from scratch); evictions so far 111
+[switch_model] live=8 queue=7 free_blocks=344 done=373 tokens_out=1053766 forwards=49328 evictions=111 tok/s=633
+[switch_model] live=7 queue=0 free_blocks=3240 done=381 tokens_out=1253766 forwards=50641 evictions=111 tok/s=740
+[switch_model] live=5 queue=0 free_blocks=3127 done=383 tokens_out=1257653 forwards=52833 evictions=111 tok/s=729
+[switch_model] live=5 queue=0 free_blocks=2961 done=383 tokens_out=1257653 forwards=54961 evictions=111 tok/s=716
+[switch_model] live=4 queue=0 free_blocks=2927 done=384 tokens_out=1262731 forwards=57121 evictions=111 tok/s=707
+[switch_model] live=4 queue=0 free_blocks=2798 done=384 tokens_out=1262731 forwards=59185 evictions=111 tok/s=696
+[switch_model] live=3 queue=0 free_blocks=2858 done=385 tokens_out=1272262 forwards=61233 evictions=111 tok/s=689
+[switch_model] live=3 queue=0 free_blocks=2764 done=385 tokens_out=1272262 forwards=63233 evictions=111 tok/s=678
+[switch_model] live=3 queue=0 free_blocks=2674 done=385 tokens_out=1272262 forwards=65169 evictions=111 tok/s=668
+[switch_model] live=3 queue=0 free_blocks=2584 done=385 tokens_out=1272262 forwards=67073 evictions=111 tok/s=657
+[switch_model] live=3 queue=0 free_blocks=2498 done=385 tokens_out=1272262 forwards=68913 evictions=111 tok/s=647
+[switch_model] live=3 queue=0 free_blocks=2414 done=385 tokens_out=1272262 forwards=70705 evictions=111 tok/s=637
+[switch_model] live=3 queue=0 free_blocks=2332 done=385 tokens_out=1272262 forwards=72449 evictions=111 tok/s=628
+[switch_model] live=3 queue=0 free_blocks=2252 done=385 tokens_out=1272262 forwards=74145 evictions=111 tok/s=619
+[bench] new_b128: {"loop": "new_b128", "seconds": 2074.8, "rows": 388, "output_ids": 1347262, "output_ids_per_s": 649.4, "row_steps": 1352021, "row_steps_per_s": 651.7, "latent_steps": 5128, "latent_blocks": 1282, "rows_with_latent": 251, "finish_length": 19, "first_row_s": 30.2, "peak_mem_gb": 50.6, "stats": {"forwards": 75137, "row_steps": 1352021, "latent_row_steps": 5128, "prefill_tokens": 197263, "evictions": 111, "deferred": 0, "rows_done": 388, "tokens_out": 1347262, "slot_steps": 6260800, "live_slot_steps": 1704064, "seconds": 2075.580555677414, "tokens_out_per_s": 649.1012822001937, "row_steps_per_s": 651.3941346683779}, "gpu": {"n_samples": 2074, "util_gpu_mean": 100.0, "util_gpu_median": 100.0, "util_mem_mean": 81.8, "util_mem_median": 84.0, "mem_used_mib_max": 138078.0}, "kw": {"engine": "paged", "max_batch": 128, "kv_budget_tokens": 218453, "sync_every": 16, "block_size": 64, "max_seq_len": 33803, "verbose": true, "log_every": 30.0, "max_new_tokens": 25000, "min_latent_steps": 4}}
+[bench] wrote /root/scratch/cot-control-switch/bench/B2_n384_25k_hyst/summary.json

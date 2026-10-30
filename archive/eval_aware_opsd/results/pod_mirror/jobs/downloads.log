@@ -1,0 +1,46 @@
++ uv venv -q /root/dlenv
++ uv pip install -q --python /root/dlenv/bin/python 'huggingface_hub[hf_transfer]'
++ /root/dlenv/bin/hf download nvidia/Llama-3_3-Nemotron-Super-49B-v1 --local-dir /root/models/nemotron_base --max-workers 16
+/root/dlenv/lib/python3.12/site-packages/huggingface_hub/constants.py:302: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+[90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g` to teach your AI agents how to use the `hf` CLI.[0m
+Fetching 47 files:   0%|          | 0/47 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 47 files:   2%|▏         | 1/47 [00:00<00:07,  6.41it/s]Fetching 47 files:  11%|█         | 5/47 [00:00<00:02, 18.44it/s]Fetching 47 files:  15%|█▍        | 7/47 [00:00<00:02, 17.91it/s]Fetching 47 files:  19%|█▉        | 9/47 [00:00<00:02, 18.37it/s]Fetching 47 files:  21%|██▏       | 10/47 [00:20<00:02, 18.37it/s]Fetching 47 files:  23%|██▎       | 11/47 [00:48<04:49,  8.03s/it]Fetching 47 files:  26%|██▌       | 12/47 [00:51<04:10,  7.15s/it]Fetching 47 files:  30%|██▉       | 14/47 [01:03<03:43,  6.76s/it]Fetching 47 files:  32%|███▏      | 15/47 [01:13<03:52,  7.26s/it]Fetching 47 files:  34%|███▍      | 16/47 [01:17<03:23,  6.55s/it]Fetching 47 files:  36%|███▌      | 17/47 [01:17<02:30,  5.00s/it]Fetching 47 files:  38%|███▊      | 18/47 [01:17<01:48,  3.76s/it]Fetching 47 files:  40%|████      | 19/47 [01:17<01:18,  2.82s/it]Fetching 47 files:  43%|████▎     | 20/47 [01:18<00:58,  2.17s/it]Fetching 47 files:  45%|████▍     | 21/47 [01:18<00:41,  1.59s/it]Fetching 47 files:  47%|████▋     | 22/47 [01:20<00:41,  1.65s/it]Fetching 47 files:  49%|████▉     | 23/47 [01:20<00:30,  1.27s/it]Fetching 47 files:  51%|█████     | 24/47 [01:20<00:21,  1.08it/s]Fetching 47 files:  53%|█████▎    | 25/47 [01:21<00:16,  1.33it/s]Fetching 47 files:  55%|█████▌    | 26/47 [01:21<00:11,  1.80it/s]Fetching 47 files:  60%|█████▉    | 28/47 [01:21<00:06,  2.82it/s]Fetching 47 files:  62%|██████▏   | 29/47 [01:21<00:05,  3.41it/s]Fetching 47 files:  64%|██████▍   | 30/47 [01:21<00:04,  4.11it/s]Fetching 47 files:  66%|██████▌   | 31/47 [01:21<00:03,  4.83it/s]Fetching 47 files:  68%|██████▊   | 32/47 [01:21<00:02,  5.32it/s]Fetching 47 files:  70%|███████   | 33/47 [01:30<00:37,  2.68s/it]Fetching 47 files:  72%|███████▏  | 34/47 [01:33<00:34,  2.65s/it]Fetching 47 files:  74%|███████▍  | 35/47 [01:43<00:56,  4.73s/it]Fetching 47 files:  77%|███████▋  | 36/47 [01:48<00:53,  4.84s/it]Fetching 47 files:  79%|███████▊  | 37/47 [01:53<00:49,  4.97s/it]Fetching 47 files:  81%|████████  | 38/47 [02:10<01:17,  8.62s/it]Fetching 47 files:  83%|████████▎ | 39/47 [02:16<01:02,  7.81s/it]Fetching 47 files:  85%|████████▌ | 40/47 [02:19<00:43,  6.21s/it]Fetching 47 files:  87%|████████▋ | 41/47 [02:27<00:41,  6.91s/it]Fetching 47 files:  89%|████████▉ | 42/47 [02:31<00:30,  6.02s/it]Fetching 47 files:  91%|█████████▏| 43/47 [02:31<00:17,  4.29s/it]Fetching 47 files:  94%|█████████▎| 44/47 [02:36<00:13,  4.41s/it]Fetching 47 files:  96%|█████████▌| 45/47 [02:37<00:07,  3.52s/it]Fetching 47 files:  98%|█████████▊| 46/47 [02:53<00:07,  7.05s/it]Fetching 47 files: 100%|██████████| 47/47 [02:55<00:00,  5.66s/it]Fetching 47 files: 100%|██████████| 47/47 [02:55<00:00,  3.74s/it]
+[32m✓ Downloaded[0m
+  path: /root/models/nemotron_base
++ for m in andrewtim-mats/woodsoloadd_codeonly_rt_add2 timhua/wood_v2_sftr1 timhua/wood_v2_sftr4_filt
+++ basename andrewtim-mats/woodsoloadd_codeonly_rt_add2
++ /root/dlenv/bin/hf download andrewtim-mats/woodsoloadd_codeonly_rt_add2 --local-dir /root/models/woodsoloadd_codeonly_rt_add2
+/root/dlenv/lib/python3.12/site-packages/huggingface_hub/constants.py:302: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 4 files:  25%|██▌       | 1/4 [00:00<00:01,  2.90it/s]Fetching 4 files: 100%|██████████| 4/4 [00:34<00:00,  9.20s/it]Fetching 4 files: 100%|██████████| 4/4 [00:34<00:00,  8.54s/it]
+[32m✓ Downloaded[0m
+  path: /root/models/woodsoloadd_codeonly_rt_add2
++ for m in andrewtim-mats/woodsoloadd_codeonly_rt_add2 timhua/wood_v2_sftr1 timhua/wood_v2_sftr4_filt
+++ basename timhua/wood_v2_sftr1
++ /root/dlenv/bin/hf download timhua/wood_v2_sftr1 --local-dir /root/models/wood_v2_sftr1
+/root/dlenv/lib/python3.12/site-packages/huggingface_hub/constants.py:302: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 4 files:  25%|██▌       | 1/4 [00:00<00:00,  3.83it/s]Fetching 4 files:  50%|█████     | 2/4 [00:00<00:00,  5.51it/s]Fetching 4 files: 100%|██████████| 4/4 [00:18<00:00,  5.83s/it]Fetching 4 files: 100%|██████████| 4/4 [00:18<00:00,  4.70s/it]
+[32m✓ Downloaded[0m
+  path: /root/models/wood_v2_sftr1
++ for m in andrewtim-mats/woodsoloadd_codeonly_rt_add2 timhua/wood_v2_sftr1 timhua/wood_v2_sftr4_filt
+++ basename timhua/wood_v2_sftr4_filt
++ /root/dlenv/bin/hf download timhua/wood_v2_sftr4_filt --local-dir /root/models/wood_v2_sftr4_filt
+/root/dlenv/lib/python3.12/site-packages/huggingface_hub/constants.py:302: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 4 files:  25%|██▌       | 1/4 [00:00<00:00,  4.05it/s]Fetching 4 files: 100%|██████████| 4/4 [00:23<00:00,  6.37s/it]Fetching 4 files: 100%|██████████| 4/4 [00:23<00:00,  5.92s/it]
+[32m✓ Downloaded[0m
+  path: /root/models/wood_v2_sftr4_filt
++ /root/dlenv/bin/hf download Qwen/Qwen3-1.7B --local-dir /root/models/qwen3_1p7b
+/root/dlenv/lib/python3.12/site-packages/huggingface_hub/constants.py:302: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Fetching 12 files:   8%|▊         | 1/12 [00:00<00:01,  8.30it/s]Fetching 12 files:  33%|███▎      | 4/12 [00:00<00:00, 19.85it/s]Fetching 12 files:  75%|███████▌  | 9/12 [00:00<00:00, 25.77it/s]Fetching 12 files: 100%|██████████| 12/12 [00:09<00:00,  1.09s/it]Fetching 12 files: 100%|██████████| 12/12 [00:09<00:00,  1.30it/s]
+[32m✓ Downloaded[0m
+  path: /root/models/qwen3_1p7b
++ echo DOWNLOADS_DONE
+DOWNLOADS_DONE

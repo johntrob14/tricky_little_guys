@@ -1,0 +1,90 @@
++ O=/workspace/results/cot-control-switch/diagnostics/switch_audit
++ mkdir -p /workspace/results/cot-control-switch/diagnostics/switch_audit/origA_unmodified_N120_W4 /workspace/results/cot-control-switch/diagnostics/switch_audit/origA_savetext_N51_W3_ranks0-1 /workspace/results/cot-control-switch/diagnostics/switch_audit/origA_nothink_N51_W3 /workspace/results/cot-control-switch/diagnostics/switch_audit/run_logs /workspace/results/cot-control-switch/diagnostics/switch_audit/env /workspace/results/cot-control-switch/diagnostics/switch_audit/scripts
++ cp /workspace/switch-orig/SWITCH/logs/_latent_math500_rank0.json /workspace/switch-orig/SWITCH/logs/_latent_math500_rank1.json /workspace/switch-orig/SWITCH/logs/_latent_math500_rank2.json /workspace/switch-orig/SWITCH/logs/_latent_math500_rank3.json /workspace/results/cot-control-switch/diagnostics/switch_audit/origA_unmodified_N120_W4/
++ cp /workspace/switch-orig/SWITCH_savetext/logs/_latent_math500_rank0.json /workspace/switch-orig/SWITCH_savetext/logs/_latent_math500_rank1.json /workspace/results/cot-control-switch/diagnostics/switch_audit/origA_savetext_N51_W3_ranks0-1/
++ cp /workspace/switch-orig/SWITCH_nothink/logs/_latent_math500_rank0.json /workspace/switch-orig/SWITCH_nothink/logs/_latent_math500_rank1.json /workspace/switch-orig/SWITCH_nothink/logs/_latent_math500_rank2.json /workspace/results/cot-control-switch/diagnostics/switch_audit/origA_nothink_N51_W3/
++ cp /workspace/switch-orig/runs/SWITCH_eval_latent_N108_W3_rank0.log /workspace/switch-orig/runs/SWITCH_eval_latent_N108_W3_rank1.log /workspace/switch-orig/runs/SWITCH_eval_latent_N108_W3_rank2.log /workspace/switch-orig/runs/SWITCH_eval_latent_N120_W4_rank0.log /workspace/switch-orig/runs/SWITCH_eval_latent_N120_W4_rank1.log /workspace/switch-orig/runs/SWITCH_eval_latent_N120_W4_rank2.log /workspace/switch-orig/runs/SWITCH_eval_latent_N120_W4_rank3.log /workspace/switch-orig/runs/SWITCH_nothink_eval_latent_savetext_N51_W3_rank0.log /workspace/switch-orig/runs/SWITCH_nothink_eval_latent_savetext_N51_W3_rank1.log /workspace/switch-orig/runs/SWITCH_nothink_eval_latent_savetext_N51_W3_rank2.log /workspace/switch-orig/runs/SWITCH_savetext_eval_latent_savetext_N51_W3_rank0.log /workspace/switch-orig/runs/SWITCH_savetext_eval_latent_savetext_N51_W3_rank1.log /workspace/switch-orig/runs/SWITCH_savetext_eval_latent_savetext_N51_W3_rank2.log /workspace/results/cot-control-switch/diagnostics/switch_audit/run_logs/
++ cp /workspace/switch-orig/ours.freeze /workspace/switch-orig/venv-t4.57.freeze /workspace/switch-orig/venv-t5.3.freeze /workspace/switch-orig/COMMIT /workspace/results/cot-control-switch/diagnostics/switch_audit/env/
++ cp /workspace/switch-orig/audit/base_sanity.py /workspace/switch-orig/audit/cmp_interim.py /workspace/switch-orig/audit/first_token_probe.py /workspace/switch-orig/audit/logits_compare.py /workspace/switch-orig/audit/logits_dump.py /workspace/switch-orig/audit/make_ids.py /workspace/switch-orig/audit/make_savetext.py /workspace/switch-orig/audit/nccl_test.py /workspace/switch-orig/audit/score.py /workspace/switch-orig/audit/tokenizer_check.py /workspace/switch-orig/audit/weights_check.py /workspace/switch-orig/audit/archive.sh /workspace/switch-orig/audit/base_sanity.sh /workspace/switch-orig/audit/first_token_probe.sh /workspace/switch-orig/audit/make_nothink.sh /workspace/switch-orig/audit/nccl_test.sh /workspace/switch-orig/audit/origA_checks.sh /workspace/switch-orig/audit/origA_eval.sh /workspace/switch-orig/audit/ours_checks.sh /workspace/switch-orig/audit/prep_and_nccl.sh /workspace/switch-orig/audit/setup_orig.sh /workspace/results/cot-control-switch/diagnostics/switch_audit/scripts/
++ ls -R /workspace/results/cot-control-switch/diagnostics/switch_audit
++ head -80
+/workspace/results/cot-control-switch/diagnostics/switch_audit:
+base_qwen3_8b_greedy_0_16.json
+base_qwen3_8b_greedy_0_16.json.scored.json
+compare_orig_t5.3.json
+compare_ours_t5.19.json
+env
+first_token_probe.json
+fixed_ids.json
+logits_orig_t4.57.json
+logits_orig_t5.3.json
+logits_ours_t5.19.json
+origA_nothink_N51_W3
+origA_savetext_N51_W3_ranks0-1
+origA_unmodified_N120_W4
+run_logs
+scored
+scripts
+tokenizer_orig_t4.57.json
+tokenizer_orig_t5.3.json
+tokenizer_ours_t5.19.json
+weights_orig_t5.3.json
+weights_ours_t5.19.json
+
+/workspace/results/cot-control-switch/diagnostics/switch_audit/env:
+COMMIT
+ours.freeze
+venv-t4.57.freeze
+venv-t5.3.freeze
+
+/workspace/results/cot-control-switch/diagnostics/switch_audit/origA_nothink_N51_W3:
+_latent_math500_rank0.json
+_latent_math500_rank1.json
+_latent_math500_rank2.json
+
+/workspace/results/cot-control-switch/diagnostics/switch_audit/origA_savetext_N51_W3_ranks0-1:
+_latent_math500_rank0.json
+_latent_math500_rank1.json
+
+/workspace/results/cot-control-switch/diagnostics/switch_audit/origA_unmodified_N120_W4:
+_latent_math500_rank0.json
+_latent_math500_rank1.json
+_latent_math500_rank2.json
+_latent_math500_rank3.json
+
+/workspace/results/cot-control-switch/diagnostics/switch_audit/run_logs:
+SWITCH_eval_latent_N108_W3_rank0.log
+SWITCH_eval_latent_N108_W3_rank1.log
+SWITCH_eval_latent_N108_W3_rank2.log
+SWITCH_eval_latent_N120_W4_rank0.log
+SWITCH_eval_latent_N120_W4_rank1.log
+SWITCH_eval_latent_N120_W4_rank2.log
+SWITCH_eval_latent_N120_W4_rank3.log
+SWITCH_nothink_eval_latent_savetext_N51_W3_rank0.log
+SWITCH_nothink_eval_latent_savetext_N51_W3_rank1.log
+SWITCH_nothink_eval_latent_savetext_N51_W3_rank2.log
+SWITCH_savetext_eval_latent_savetext_N51_W3_rank0.log
+SWITCH_savetext_eval_latent_savetext_N51_W3_rank1.log
+SWITCH_savetext_eval_latent_savetext_N51_W3_rank2.log
+
+/workspace/results/cot-control-switch/diagnostics/switch_audit/scored:
+_latent_math500_greedy_rank0_shard0.json.scored.json
+_latent_math500_greedy_rank0_shard1.json.scored.json
+_latent_math500_greedy_rank0_shard2.json.scored.json
+nothink_0_50.json
+nothink_0_50.json.scored.json
+origA_savetext_0_33.json
+origA_savetext_0_33.json.scored.json
+ours_0_33.json
+ours_0_33.json.scored.json
+
+/workspace/results/cot-control-switch/diagnostics/switch_audit/scripts:
+archive.sh
+base_sanity.py
+base_sanity.sh
+cmp_interim.py
+first_token_probe.py
+first_token_probe.sh
+logits_compare.py
+logits_dump.py
+make_ids.py

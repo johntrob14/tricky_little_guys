@@ -1,0 +1,1102 @@
++ export HF_HOME=/root/scratch/huggingface TOKENIZERS_PARALLELISM=false
++ HF_HOME=/root/scratch/huggingface
++ TOKENIZERS_PARALLELISM=false
++ O=/workspace/results/cot-control-switch/diagnostics/switch_audit
++ cd /workspace/switch-orig/audit
++ for E in t5.3 t4.57
++ PY=/workspace/switch-orig/venv-t5.3/bin/python
++ /workspace/switch-orig/venv-t5.3/bin/python tokenizer_check.py orig_t5.3 /workspace/results/cot-control-switch/diagnostics/switch_audit/tokenizer_orig_t5.3.json
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 661.96it/s]
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 596.27it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{
+ "label": "orig_t5.3",
+ "transformers": "5.3.0",
+ "adapter_tok_load": "ok",
+ "adapter_template_sha_equal_base_template": true,
+ "adapter_len": 151672,
+ "adapter_ids": {
+  "<think>": 151667,
+  "</think>": 151668,
+  "<swi>": 151669,
+  "</swi>": 151670,
+  "<latent>": 151671,
+  "<|im_end|>": 151645,
+  "<|im_start|>": 151644,
+  "<|endoftext|>": 151643
+ },
+ "adapter_eos": [
+  "<|im_end|>",
+  151645
+ ],
+ "adapter_pad": [
+  "<|endoftext|>",
+  151643
+ ],
+ "adapter_bos": [
+  null,
+  null
+ ],
+ "adapter_class": "Qwen2Tokenizer",
+ "adapter_added_tokens_ge_151643": {
+  "151643": [
+   "<|endoftext|>",
+   true,
+   false
+  ],
+  "151644": [
+   "<|im_start|>",
+   true,
+   false
+  ],
+  "151645": [
+   "<|im_end|>",
+   true,
+   false
+  ],
+  "151646": [
+   "<|object_ref_start|>",
+   true,
+   false
+  ],
+  "151647": [
+   "<|object_ref_end|>",
+   true,
+   false
+  ],
+  "151648": [
+   "<|box_start|>",
+   true,
+   false
+  ],
+  "151649": [
+   "<|box_end|>",
+   true,
+   false
+  ],
+  "151650": [
+   "<|quad_start|>",
+   true,
+   false
+  ],
+  "151651": [
+   "<|quad_end|>",
+   true,
+   false
+  ],
+  "151652": [
+   "<|vision_start|>",
+   true,
+   false
+  ],
+  "151653": [
+   "<|vision_end|>",
+   true,
+   false
+  ],
+  "151654": [
+   "<|vision_pad|>",
+   true,
+   false
+  ],
+  "151655": [
+   "<|image_pad|>",
+   true,
+   false
+  ],
+  "151656": [
+   "<|video_pad|>",
+   true,
+   false
+  ],
+  "151657": [
+   "<tool_call>",
+   false,
+   false
+  ],
+  "151658": [
+   "</tool_call>",
+   false,
+   false
+  ],
+  "151659": [
+   "<|fim_prefix|>",
+   false,
+   false
+  ],
+  "151660": [
+   "<|fim_middle|>",
+   false,
+   false
+  ],
+  "151661": [
+   "<|fim_suffix|>",
+   false,
+   false
+  ],
+  "151662": [
+   "<|fim_pad|>",
+   false,
+   false
+  ],
+  "151663": [
+   "<|repo_name|>",
+   false,
+   false
+  ],
+  "151664": [
+   "<|file_sep|>",
+   false,
+   false
+  ],
+  "151665": [
+   "<tool_response>",
+   false,
+   false
+  ],
+  "151666": [
+   "</tool_response>",
+   false,
+   false
+  ],
+  "151667": [
+   "<think>",
+   false,
+   false
+  ],
+  "151668": [
+   "</think>",
+   false,
+   false
+  ],
+  "151669": [
+   "<swi>",
+   true,
+   false
+  ],
+  "151670": [
+   "</swi>",
+   true,
+   false
+  ],
+  "151671": [
+   "<latent>",
+   true,
+   false
+  ]
+ },
+ "adapter_all_special_tokens_n": 14,
+ "adapter_atomic_encode": [
+  64,
+  151669,
+  65,
+  151670,
+  66,
+  151667,
+  67,
+  151668,
+  151671
+ ],
+ "adapter_decode_skip_special": "abc<think>d</think>",
+ "base_len": 151669,
+ "base_ids": {
+  "<think>": 151667,
+  "</think>": 151668,
+  "<swi>": null,
+  "</swi>": null,
+  "<latent>": null,
+  "<|im_end|>": 151645,
+  "<|im_start|>": 151644,
+  "<|endoftext|>": 151643
+ },
+ "base_eos": [
+  "<|im_end|>",
+  151645
+ ],
+ "base_pad": [
+  "<|endoftext|>",
+  151643
+ ],
+ "base_bos": [
+  null,
+  null
+ ],
+ "base_class": "Qwen2Tokenizer",
+ "base_added_tokens_ge_151643": {
+  "151643": [
+   "<|endoftext|>",
+   true,
+   false
+  ],
+  "151644": [
+   "<|im_start|>",
+   true,
+   false
+  ],
+  "151645": [
+   "<|im_end|>",
+   true,
+   false
+  ],
+  "151646": [
+   "<|object_ref_start|>",
+   true,
+   false
+  ],
+  "151647": [
+   "<|object_ref_end|>",
+   true,
+   false
+  ],
+  "151648": [
+   "<|box_start|>",
+   true,
+   false
+  ],
+  "151649": [
+   "<|box_end|>",
+   true,
+   false
+  ],
+  "151650": [
+   "<|quad_start|>",
+   true,
+   false
+  ],
+  "151651": [
+   "<|quad_end|>",
+   true,
+   false
+  ],
+  "151652": [
+   "<|vision_start|>",
+   true,
+   false
+  ],
+  "151653": [
+   "<|vision_end|>",
+   true,
+   false
+  ],
+  "151654": [
+   "<|vision_pad|>",
+   true,
+   false
+  ],
+  "151655": [
+   "<|image_pad|>",
+   true,
+   false
+  ],
+  "151656": [
+   "<|video_pad|>",
+   true,
+   false
+  ],
+  "151657": [
+   "<tool_call>",
+   false,
+   false
+  ],
+  "151658": [
+   "</tool_call>",
+   false,
+   false
+  ],
+  "151659": [
+   "<|fim_prefix|>",
+   false,
+   false
+  ],
+  "151660": [
+   "<|fim_middle|>",
+   false,
+   false
+  ],
+  "151661": [
+   "<|fim_suffix|>",
+   false,
+   false
+  ],
+  "151662": [
+   "<|fim_pad|>",
+   false,
+   false
+  ],
+  "151663": [
+   "<|repo_name|>",
+   false,
+   false
+  ],
+  "151664": [
+   "<|file_sep|>",
+   false,
+   false
+  ],
+  "151665": [
+   "<tool_response>",
+   false,
+   false
+  ],
+  "151666": [
+   "</tool_response>",
+   false,
+   false
+  ],
+  "151667": [
+   "<think>",
+   false,
+   false
+  ],
+  "151668": [
+   "</think>",
+   false,
+   false
+  ]
+ },
+ "base_all_special_tokens_n": 14,
+ "base_atomic_encode": [
+  64,
+  27,
+  2280,
+  72,
+  51407,
+  522,
+  2280,
+  72,
+  56346,
+  151667,
+  67,
+  151668,
+  27,
+  50023,
+  29
+ ],
+ "base_decode_skip_special": "a<swi>b</swi>c<think>d</think><latent>",
+ "prompt0_text": "<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nPlease reason step by step, and put your final answer within \\boxed{}.<|im_end|>\n<|im_start|>assistant\n",
+ "prompt0_ids_tail": [
+  697,
+  1590,
+  4226,
+  2878,
+  1124,
+  79075,
+  46391,
+  151645,
+  198,
+  151644,
+  77091,
+  198
+ ],
+ "all_ids_equal": true,
+ "all_text_equal_jinja": true,
+ "base_generation_config_eos": [
+  151645,
+  151643
+ ],
+ "base_generation_config": {
+  "do_sample": true,
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": 20
+ },
+ "tokenizer_config_raw": {
+  "add_prefix_space": false,
+  "backend": "tokenizers",
+  "bos_token": null,
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "<|im_end|>",
+  "errors": "replace",
+  "extra_special_tokens": [
+   "<|im_start|>",
+   "<|im_end|>",
+   "<|object_ref_start|>",
+   "<|object_ref_end|>",
+   "<|box_start|>",
+   "<|box_end|>",
+   "<|quad_start|>",
+   "<|quad_end|>",
+   "<|vision_start|>",
+   "<|vision_end|>",
+   "<|vision_pad|>",
+   "<|image_pad|>",
+   "<|video_pad|>"
+  ],
+  "is_local": true,
+  "model_max_length": 131072,
+  "pad_token": "<|endoftext|>",
+  "split_special_tokens": false,
+  "tokenizer_class": "Qwen2Tokenizer",
+  "unk_token": null
+ }
+}
+per_problem: [{'i': 0, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 71, 'ids_jinja_via_adapter_eq': True}, {'i': 1, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 134, 'ids_jinja_via_adapter_eq': True}, {'i': 2, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 70, 'ids_jinja_via_adapter_eq': True}, {'i': 3, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 37, 'ids_jinja_via_adapter_eq': True}, {'i': 4, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 362, 'ids_jinja_via_adapter_eq': True}, {'i': 5, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 64, 'ids_jinja_via_adapter_eq': True}, {'i': 6, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 42, 'ids_jinja_via_adapter_eq': True}, {'i': 7, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 89, 'ids_jinja_via_adapter_eq': True}, {'i': 8, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 57, 'ids_jinja_via_adapter_eq': True}, {'i': 9, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 172, 'ids_jinja_via_adapter_eq': True}, {'i': 10, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 48, 'ids_jinja_via_adapter_eq': True}, {'i': 11, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 82, 'ids_jinja_via_adapter_eq': True}, {'i': 12, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 94, 'ids_jinja_via_adapter_eq': True}, {'i': 13, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 198, 'ids_jinja_via_adapter_eq': True}, {'i': 14, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 136, 'ids_jinja_via_adapter_eq': True}, {'i': 15, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 202, 'ids_jinja_via_adapter_eq': True}, {'i': 16, 'base_eq_jinja_text': True, 'adapter_eq_base_text': True, 'adapter_eq_jinja_text': True, 'ids_equal_adapter_vs_base': True, 'n_ids': 47, 'ids_jinja_via_adapter_eq': True}]
++ /workspace/switch-orig/venv-t5.3/bin/python weights_check.py orig_t5.3 /workspace/results/cot-control-switch/diagnostics/switch_audit/weights_orig_t5.3.json
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 711.17it/s]
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 737.70it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<03:11,  2.08it/s]Loading weights:   4%|▍         | 15/399 [00:00<00:11, 33.63it/s]Loading weights:   7%|▋         | 26/399 [00:00<00:07, 50.06it/s]Loading weights:   9%|▉         | 37/399 [00:00<00:05, 62.15it/s]Loading weights:  12%|█▏        | 48/399 [00:00<00:05, 68.95it/s]Loading weights:  15%|█▌        | 61/399 [00:01<00:04, 79.34it/s]Loading weights:  19%|█▊        | 74/399 [00:01<00:03, 91.94it/s]Loading weights:  22%|██▏       | 87/399 [00:01<00:03, 97.60it/s]Loading weights:  25%|██▌       | 100/399 [00:01<00:02, 106.22it/s]Loading weights:  28%|██▊       | 112/399 [00:01<00:02, 109.78it/s]Loading weights:  31%|███       | 124/399 [00:01<00:02, 112.63it/s]Loading weights:  34%|███▍      | 136/399 [00:01<00:02, 107.07it/s]Loading weights:  37%|███▋      | 148/399 [00:01<00:02, 103.10it/s]Loading weights:  40%|████      | 160/399 [00:01<00:02, 101.01it/s]Loading weights:  43%|████▎     | 172/399 [00:02<00:02, 105.89it/s]Loading weights:  46%|████▌     | 183/399 [00:02<00:02, 106.94it/s]Loading weights:  49%|████▊     | 194/399 [00:02<00:01, 104.12it/s]Loading weights:  51%|█████▏    | 205/399 [00:02<00:01, 102.39it/s]Loading weights:  55%|█████▍    | 219/399 [00:02<00:01, 103.64it/s]Loading weights:  59%|█████▉    | 235/399 [00:02<00:01, 118.58it/s]Loading weights:  62%|██████▏   | 248/399 [00:02<00:01, 106.72it/s]Loading weights:  65%|██████▌   | 260/399 [00:02<00:01, 109.48it/s]Loading weights:  68%|██████▊   | 273/399 [00:02<00:01, 112.95it/s]Loading weights:  71%|███████▏  | 285/399 [00:03<00:01, 112.21it/s]Loading weights:  75%|███████▍  | 298/399 [00:03<00:00, 116.89it/s]Loading weights:  78%|███████▊  | 312/399 [00:03<00:00, 116.12it/s]Loading weights:  81%|████████  | 324/399 [00:03<00:00, 112.65it/s]Loading weights:  84%|████████▍ | 336/399 [00:03<00:00, 109.92it/s]Loading weights:  88%|████████▊ | 351/399 [00:03<00:00, 115.74it/s]Loading weights:  91%|█████████▏| 365/399 [00:03<00:00, 121.56it/s]Loading weights:  95%|█████████▍| 378/399 [00:03<00:00, 100.03it/s]Loading weights:  98%|█████████▊| 390/399 [00:04<00:00, 103.57it/s]Loading weights: 100%|██████████| 399/399 [00:04<00:00, 97.12it/s] 
+/workspace/switch-orig/venv-t5.3/lib/python3.11/site-packages/peft/tuners/tuners_utils.py:1225: UserWarning: Model has `tie_word_embeddings=True` and a tied layer is part of the adapter, but `ensure_weight_tying` is not set to True. This can lead to complications, for example when merging the adapter or converting your model to formats other than safetensors. Check the discussion here: https://github.com/huggingface/peft/issues/2777
+  warnings.warn(msg)
+{
+ "label": "orig_t5.3",
+ "transformers": "5.3.0",
+ "peft": "0.18.1",
+ "torch": "2.10.0+cu128",
+ "len_tokenizer": 151672,
+ "base_config_vocab_size": 151936,
+ "tie_word_embeddings_config": false,
+ "base_embed_shape": [
+  151936,
+  4096
+ ],
+ "base_lm_head_shape": [
+  151936,
+  4096
+ ],
+ "resized": true,
+ "after_resize_embed_shape": [
+  151672,
+  4096
+ ],
+ "after_resize_lm_shape": [
+  151672,
+  4096
+ ],
+ "after_resize_config_vocab": 151672,
+ "embed_lm_same_storage_after_resize": false,
+ "adapter_n_tensors": 510,
+ "adapter_keys_sample": [
+  "base_model.model.lm_head.modules_to_save.weight",
+  "base_model.model.lm_head.original_module.weight",
+  "base_model.model.lm_head.weight",
+  "base_model.model.model.embed_tokens.modules_to_save.weight",
+  "base_model.model.model.embed_tokens.original_module.weight",
+  "base_model.model.model.embed_tokens.weight",
+  "base_model.model.lm_head.modules_to_save.weight",
+  "base_model.model.lm_head.original_module.weight",
+  "base_model.model.lm_head.weight",
+  "base_model.model.model.embed_tokens.modules_to_save.weight"
+ ],
+ "file_embed_key": "base_model.model.model.embed_tokens.modules_to_save.weight",
+ "file_embed_shape": [
+  151672,
+  4096
+ ],
+ "file_embed_dtype": "torch.bfloat16",
+ "file_lm_key": "base_model.model.lm_head.modules_to_save.weight",
+ "file_lm_shape": [
+  151672,
+  4096
+ ],
+ "input_embeddings_type": "ModulesToSaveWrapper",
+ "output_embeddings_type": "ModulesToSaveWrapper",
+ "modules_to_save_wrappers": {
+  "base_model.model.model.embed_tokens": {
+   "active_adapters": [
+    "default"
+   ],
+   "disable_adapters": false,
+   "keys": [
+    "default"
+   ]
+  },
+  "base_model.model.lm_head": {
+   "active_adapters": [
+    "default"
+   ],
+   "disable_adapters": false,
+   "keys": [
+    "default"
+   ]
+  }
+ },
+ "embed_live_vs_file_maxabs": 0.0,
+ "embed_live_vs_base_maxabs_oldrows": 0.018768310546875,
+ "file_vs_base_embed_maxabs_all_old_rows": 0.03289794921875,
+ "file_vs_base_lm_maxabs_all_old_rows": 0.052978515625,
+ "file_embed_newrow_norms": [
+  0.5675168633460999,
+  0.58205646276474,
+  0.5961658358573914,
+  0.6014216542243958,
+  1.7085261344909668,
+  1.7258152961730957,
+  1.7055999040603638
+ ],
+ "file_lm_newrow_norms": [
+  0.47953689098358154,
+  0.48329606652259827,
+  0.634887158870697,
+  0.5805827379226685,
+  1.7815550565719604,
+  1.7894835472106934,
+  1.7606468200683594
+ ],
+ "lm_logits_vs_file_head_maxabs": 0.062458038330078125,
+ "lm_logits_vs_file_head_maxabs_rel": 0.0022311991356471095,
+ "lm_logits_vs_BASE_head_maxabs_old_vocab": 13.279581069946289,
+ "hidden_states_last_equals_lm_input_maxabs": 0.0,
+ "lora_L0_q_proj": {
+  "type": "Linear",
+  "scaling": {
+   "default": 2.0
+  },
+  "r": {
+   "default": 32
+  },
+  "lora_alpha": {
+   "default": 64
+  },
+  "active_adapters": [
+   "default"
+  ],
+  "merged": false,
+  "disable_adapters": false,
+  "dropout_type": "Dropout",
+  "A_live_vs_file": 0.0,
+  "B_live_vs_file": 0.0,
+  "B_file_norm": 2.108611583709717,
+  "A_dtype": "torch.float32",
+  "base_live_vs_file": 0.0,
+  "Weff_live_vs_ref_maxabs": 0.0009681284427642822,
+  "Weff_live_vs_base_maxabs": 0.03363037109375,
+  "delta_ref_maxabs": 0.03368338569998741,
+  "Weff_live_vs_scale1_maxabs": 0.016788678243756294
+ },
+ "lora_L20_down_proj": {
+  "type": "Linear",
+  "scaling": {
+   "default": 2.0
+  },
+  "r": {
+   "default": 32
+  },
+  "lora_alpha": {
+   "default": 64
+  },
+  "active_adapters": [
+   "default"
+  ],
+  "merged": false,
+  "disable_adapters": false,
+  "dropout_type": "Dropout",
+  "A_live_vs_file": 0.0,
+  "B_live_vs_file": 0.0,
+  "B_file_norm": 3.6796112060546875,
+  "A_dtype": "torch.float32",
+  "base_live_vs_file": 0.0,
+  "Weff_live_vs_ref_maxabs": 0.0018026232719421387,
+  "Weff_live_vs_base_maxabs": 0.01708984375,
+  "delta_ref_maxabs": 0.017103442922234535,
+  "Weff_live_vs_scale1_maxabs": 0.008538123220205307
+ },
+ "tie_word_embeddings_final": false,
+ "embed_lm_same_storage_final": false,
+ "n_lora_modules": 252,
+ "n_lora_tensor_pairs_in_file": 252,
+ "all_file_tensors_vs_live_maxabs": 0.0,
+ "n_file_tensors_mismatched": 0,
+ "file_keys_not_found_live": [],
+ "file_base_model.model.lm_head_weight_eq_modules_to_save": true,
+ "file_base_model.model.lm_head_original_module_vs_modules_to_save_maxabs": 0.052978515625,
+ "file_base_model.model.model.embed_tokens_weight_eq_modules_to_save": true,
+ "file_base_model.model.model.embed_tokens_original_module_vs_modules_to_save_maxabs": 0.03289794921875,
+ "n_file_keys_not_found_live": 0
+}
++ /workspace/switch-orig/venv-t5.3/bin/python logits_dump.py orig_t5.3 /workspace/results/cot-control-switch/diagnostics/switch_audit/fixed_ids.json /root/scratch/switch_audit
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights:   0%|          | 1/399 [00:00<05:13,  1.27it/s]Loading weights:   2%|▏         | 6/399 [00:00<00:46,  8.43it/s]Loading weights:   4%|▍         | 16/399 [00:01<00:16, 23.66it/s]Loading weights:   7%|▋         | 26/399 [00:01<00:09, 37.96it/s]Loading weights:   9%|▊         | 34/399 [00:01<00:07, 46.49it/s]Loading weights:  11%|█         | 42/399 [00:01<00:06, 52.09it/s]Loading weights:  12%|█▏        | 49/399 [00:01<00:06, 55.69it/s]Loading weights:  15%|█▍        | 59/399 [00:01<00:05, 66.16it/s]Loading weights:  17%|█▋        | 67/399 [00:01<00:04, 67.55it/s]Loading weights:  19%|█▉        | 75/399 [00:01<00:04, 67.79it/s]Loading weights:  21%|██        | 83/399 [00:01<00:05, 61.30it/s]Loading weights:  23%|██▎       | 93/399 [00:02<00:04, 70.21it/s]Loading weights:  26%|██▌       | 103/399 [00:02<00:03, 76.56it/s]Loading weights:  28%|██▊       | 112/399 [00:02<00:03, 79.41it/s]Loading weights:  30%|███       | 121/399 [00:02<00:03, 77.24it/s]Loading weights:  32%|███▏      | 129/399 [00:02<00:03, 73.63it/s]Loading weights:  35%|███▍      | 138/399 [00:02<00:03, 71.19it/s]Loading weights:  37%|███▋      | 148/399 [00:02<00:03, 78.56it/s]Loading weights:  40%|███▉      | 158/399 [00:02<00:02, 82.70it/s]Loading weights:  42%|████▏     | 167/399 [00:02<00:02, 84.20it/s]Loading weights:  44%|████▍     | 176/399 [00:03<00:02, 81.33it/s]Loading weights:  46%|████▋     | 185/399 [00:03<00:02, 76.19it/s]Loading weights:  48%|████▊     | 193/399 [00:03<00:02, 71.15it/s]Loading weights:  51%|█████     | 204/399 [00:03<00:02, 73.94it/s]Loading weights:  54%|█████▍    | 215/399 [00:03<00:02, 77.39it/s]Loading weights:  57%|█████▋    | 226/399 [00:03<00:02, 80.12it/s]Loading weights:  59%|█████▉    | 236/399 [00:03<00:02, 78.73it/s]Loading weights:  62%|██████▏   | 247/399 [00:04<00:01, 82.52it/s]Loading weights:  64%|██████▍   | 257/399 [00:04<00:01, 75.71it/s]Loading weights:  67%|██████▋   | 268/399 [00:04<00:01, 82.69it/s]Loading weights:  69%|██████▉   | 277/399 [00:04<00:01, 83.28it/s]Loading weights:  72%|███████▏  | 286/399 [00:04<00:01, 78.45it/s]Loading weights:  74%|███████▎  | 294/399 [00:04<00:01, 76.32it/s]Loading weights:  76%|███████▌  | 303/399 [00:04<00:01, 73.82it/s]Loading weights:  78%|███████▊  | 313/399 [00:04<00:01, 79.68it/s]Loading weights:  81%|████████  | 324/399 [00:04<00:00, 84.43it/s]Loading weights:  84%|████████▎ | 334/399 [00:05<00:00, 82.23it/s]Loading weights:  87%|████████▋ | 346/399 [00:05<00:00, 87.66it/s]Loading weights:  89%|████████▉ | 356/399 [00:05<00:00, 88.21it/s]Loading weights:  91%|█████████▏| 365/399 [00:05<00:00, 87.62it/s]Loading weights:  94%|█████████▎| 374/399 [00:05<00:00, 78.74it/s]Loading weights:  96%|█████████▌| 383/399 [00:05<00:00, 78.21it/s]Loading weights:  98%|█████████▊| 391/399 [00:05<00:00, 72.38it/s]Loading weights: 100%|██████████| 399/399 [00:05<00:00, 68.13it/s]
+/workspace/switch-orig/venv-t5.3/lib/python3.11/site-packages/peft/tuners/tuners_utils.py:1225: UserWarning: Model has `tie_word_embeddings=True` and a tied layer is part of the adapter, but `ensure_weight_tying` is not set to True. This can lead to complications, for example when merging the adapter or converting your model to formats other than safetensors. Check the discussion here: https://github.com/huggingface/peft/issues/2777
+  warnings.warn(msg)
+{
+ "label": "orig_t5.3",
+ "transformers": "5.3.0",
+ "peft": "0.18.1",
+ "torch": "2.10.0+cu128",
+ "attn_impl": "sdpa",
+ "seq0": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 146.8338623046875,
+  "norm_in_norm_mean": 937.5631103515625,
+  "latent_p_swi_end_after_each_step": [
+   1.6045599907348745e-13,
+   0.999997615814209,
+   0.9999645948410034,
+   0.9971343278884888,
+   0.9999545812606812
+  ],
+  "latent_argmax": [
+   3070,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 2.02734375,
+  "full_vs_incremental_argmax_agree": 1.0,
+  "teacher_forced_argmax_matches_cont": 1.0
+ },
+ "seq1": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 142.87911987304688,
+  "norm_in_norm_mean": 949.8372192382812,
+  "latent_p_swi_end_after_each_step": [
+   4.508265722541482e-12,
+   0.9993093013763428,
+   0.9999687671661377,
+   0.9846684336662292,
+   0.9999417066574097
+  ],
+  "latent_argmax": [
+   488,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 4.3671875,
+  "full_vs_incremental_argmax_agree": 1.0,
+  "teacher_forced_argmax_matches_cont": 1.0
+ },
+ "seq2": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 118.51239776611328,
+  "norm_in_norm_mean": 1240.788818359375,
+  "latent_p_swi_end_after_each_step": [
+   9.96312721213144e-09,
+   0.9999927282333374,
+   0.9999687671661377,
+   0.9982530474662781,
+   0.9999687671661377
+  ],
+  "latent_argmax": [
+   15491,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 2.453125,
+  "full_vs_incremental_argmax_agree": 0.9900497794151306,
+  "teacher_forced_argmax_matches_cont": 0.9200000166893005
+ }
+}
++ cp /root/scratch/switch_audit/logits_orig_t5.3.json /workspace/results/cot-control-switch/diagnostics/switch_audit/
++ for E in t5.3 t4.57
++ PY=/workspace/switch-orig/venv-t4.57/bin/python
++ /workspace/switch-orig/venv-t4.57/bin/python tokenizer_check.py orig_t4.57 /workspace/results/cot-control-switch/diagnostics/switch_audit/tokenizer_orig_t4.57.json
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 932.60it/s]
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 1137.37it/s]
+{
+ "label": "orig_t4.57",
+ "transformers": "4.57.6",
+ "adapter_tok_load": "FAIL ImportError: \n requires the protobuf library but it was not found in your environment. Check out the instructions on the\ninstallation page of its repo: https://github.com/protocolbuffers/protobuf/tree/master/python#installation and follow the ones\nthat match your environment. Please note that you may need to restart your runtime after installation.\n",
+ "adapter_template_sha_equal_base_template": true,
+ "base_len": 151669,
+ "base_ids": {
+  "<think>": 151667,
+  "</think>": 151668,
+  "<swi>": null,
+  "</swi>": null,
+  "<latent>": null,
+  "<|im_end|>": 151645,
+  "<|im_start|>": 151644,
+  "<|endoftext|>": 151643
+ },
+ "base_eos": [
+  "<|im_end|>",
+  151645
+ ],
+ "base_pad": [
+  "<|endoftext|>",
+  151643
+ ],
+ "base_bos": [
+  null,
+  null
+ ],
+ "base_class": "Qwen2TokenizerFast",
+ "base_added_tokens_ge_151643": {
+  "151643": [
+   "<|endoftext|>",
+   true,
+   false
+  ],
+  "151644": [
+   "<|im_start|>",
+   true,
+   false
+  ],
+  "151645": [
+   "<|im_end|>",
+   true,
+   false
+  ],
+  "151646": [
+   "<|object_ref_start|>",
+   true,
+   false
+  ],
+  "151647": [
+   "<|object_ref_end|>",
+   true,
+   false
+  ],
+  "151648": [
+   "<|box_start|>",
+   true,
+   false
+  ],
+  "151649": [
+   "<|box_end|>",
+   true,
+   false
+  ],
+  "151650": [
+   "<|quad_start|>",
+   true,
+   false
+  ],
+  "151651": [
+   "<|quad_end|>",
+   true,
+   false
+  ],
+  "151652": [
+   "<|vision_start|>",
+   true,
+   false
+  ],
+  "151653": [
+   "<|vision_end|>",
+   true,
+   false
+  ],
+  "151654": [
+   "<|vision_pad|>",
+   true,
+   false
+  ],
+  "151655": [
+   "<|image_pad|>",
+   true,
+   false
+  ],
+  "151656": [
+   "<|video_pad|>",
+   true,
+   false
+  ],
+  "151657": [
+   "<tool_call>",
+   false,
+   false
+  ],
+  "151658": [
+   "</tool_call>",
+   false,
+   false
+  ],
+  "151659": [
+   "<|fim_prefix|>",
+   false,
+   false
+  ],
+  "151660": [
+   "<|fim_middle|>",
+   false,
+   false
+  ],
+  "151661": [
+   "<|fim_suffix|>",
+   false,
+   false
+  ],
+  "151662": [
+   "<|fim_pad|>",
+   false,
+   false
+  ],
+  "151663": [
+   "<|repo_name|>",
+   false,
+   false
+  ],
+  "151664": [
+   "<|file_sep|>",
+   false,
+   false
+  ],
+  "151665": [
+   "<tool_response>",
+   false,
+   false
+  ],
+  "151666": [
+   "</tool_response>",
+   false,
+   false
+  ],
+  "151667": [
+   "<think>",
+   false,
+   false
+  ],
+  "151668": [
+   "</think>",
+   false,
+   false
+  ]
+ },
+ "base_all_special_tokens_n": 14,
+ "base_atomic_encode": [
+  64,
+  27,
+  2280,
+  72,
+  51407,
+  522,
+  2280,
+  72,
+  56346,
+  151667,
+  67,
+  151668,
+  27,
+  50023,
+  29
+ ],
+ "base_decode_skip_special": "a<swi>b</swi>c<think>d</think><latent>",
+ "prompt0_text": "<|im_start|>user\nConvert the point $(0,3)$ in rectangular coordinates to polar coordinates.  Enter your answer in the form $(r,\\theta),$ where $r > 0$ and $0 \\le \\theta < 2 \\pi.$\nPlease reason step by step, and put your final answer within \\boxed{}.<|im_end|>\n<|im_start|>assistant\n",
+ "prompt0_ids_tail": [
+  697,
+  1590,
+  4226,
+  2878,
+  1124,
+  79075,
+  46391,
+  151645,
+  198,
+  151644,
+  77091,
+  198
+ ],
+ "all_ids_equal": false,
+ "all_text_equal_jinja": true,
+ "base_generation_config_eos": [
+  151645,
+  151643
+ ],
+ "base_generation_config": {
+  "do_sample": true,
+  "temperature": 0.6,
+  "top_p": 0.95,
+  "top_k": 20
+ },
+ "tokenizer_config_raw": {
+  "add_prefix_space": false,
+  "backend": "tokenizers",
+  "bos_token": null,
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "<|im_end|>",
+  "errors": "replace",
+  "extra_special_tokens": [
+   "<|im_start|>",
+   "<|im_end|>",
+   "<|object_ref_start|>",
+   "<|object_ref_end|>",
+   "<|box_start|>",
+   "<|box_end|>",
+   "<|quad_start|>",
+   "<|quad_end|>",
+   "<|vision_start|>",
+   "<|vision_end|>",
+   "<|vision_pad|>",
+   "<|image_pad|>",
+   "<|video_pad|>"
+  ],
+  "is_local": true,
+  "model_max_length": 131072,
+  "pad_token": "<|endoftext|>",
+  "split_special_tokens": false,
+  "tokenizer_class": "Qwen2Tokenizer",
+  "unk_token": null
+ }
+}
+per_problem: [{'i': 0, 'base_eq_jinja_text': True}, {'i': 1, 'base_eq_jinja_text': True}, {'i': 2, 'base_eq_jinja_text': True}, {'i': 3, 'base_eq_jinja_text': True}, {'i': 4, 'base_eq_jinja_text': True}, {'i': 5, 'base_eq_jinja_text': True}, {'i': 6, 'base_eq_jinja_text': True}, {'i': 7, 'base_eq_jinja_text': True}, {'i': 8, 'base_eq_jinja_text': True}, {'i': 9, 'base_eq_jinja_text': True}, {'i': 10, 'base_eq_jinja_text': True}, {'i': 11, 'base_eq_jinja_text': True}, {'i': 12, 'base_eq_jinja_text': True}, {'i': 13, 'base_eq_jinja_text': True}, {'i': 14, 'base_eq_jinja_text': True}, {'i': 15, 'base_eq_jinja_text': True}, {'i': 16, 'base_eq_jinja_text': True}]
++ /workspace/switch-orig/venv-t4.57/bin/python weights_check.py orig_t4.57 /workspace/results/cot-control-switch/diagnostics/switch_audit/weights_orig_t4.57.json
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 888.70it/s]
+Fetching 15 files:   0%|          | 0/15 [00:00<?, ?it/s]Fetching 15 files: 100%|██████████| 15/15 [00:00<00:00, 1008.25it/s]
+Traceback (most recent call last):
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 2359, in _from_pretrained
+    tokenizer = cls(*init_inputs, **init_kwargs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/models/qwen2/tokenization_qwen2_fast.py", line 120, in __init__
+    super().__init__(
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/tokenization_utils_fast.py", line 178, in __init__
+    super().__init__(**kwargs)
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 1472, in __init__
+    self._set_model_specific_special_tokens(special_tokens=self.extra_special_tokens)
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 1210, in _set_model_specific_special_tokens
+    self.SPECIAL_TOKENS_ATTRIBUTES = self.SPECIAL_TOKENS_ATTRIBUTES + list(special_tokens.keys())
+                                                                           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'list' object has no attribute 'keys'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/switch-orig/audit/weights_check.py", line 21, in <module>
+    tokenizer = AutoTokenizer.from_pretrained(ADAPTER, trust_remote_code=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/models/auto/tokenization_auto.py", line 1156, in from_pretrained
+    return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 2113, in from_pretrained
+    return cls._from_pretrained(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 2360, in _from_pretrained
+    except import_protobuf_decode_error():
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/transformers/tokenization_utils_base.py", line 88, in import_protobuf_decode_error
+    raise ImportError(PROTOBUF_IMPORT_ERROR.format(error_message))
+ImportError: 
+ requires the protobuf library but it was not found in your environment. Check out the instructions on the
+installation page of its repo: https://github.com/protocolbuffers/protobuf/tree/master/python#installation and follow the ones
+that match your environment. Please note that you may need to restart your runtime after installation.
+
++ /workspace/switch-orig/venv-t4.57/bin/python logits_dump.py orig_t4.57 /workspace/results/cot-control-switch/diagnostics/switch_audit/fixed_ids.json /root/scratch/switch_audit
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:00<00:03,  1.28it/s]Loading checkpoint shards:  40%|████      | 2/5 [00:01<00:02,  1.38it/s]Loading checkpoint shards:  60%|██████    | 3/5 [00:02<00:01,  1.47it/s]Loading checkpoint shards:  80%|████████  | 4/5 [00:02<00:00,  1.64it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:02<00:00,  2.13it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:02<00:00,  1.78it/s]
+/workspace/switch-orig/venv-t4.57/lib/python3.11/site-packages/peft/tuners/tuners_utils.py:1225: UserWarning: Model has `tie_word_embeddings=True` and a tied layer is part of the adapter, but `ensure_weight_tying` is not set to True. This can lead to complications, for example when merging the adapter or converting your model to formats other than safetensors. Check the discussion here: https://github.com/huggingface/peft/issues/2777
+  warnings.warn(msg)
+{
+ "label": "orig_t4.57",
+ "transformers": "4.57.6",
+ "peft": "0.18.1",
+ "torch": "2.10.0+cu128",
+ "attn_impl": "sdpa",
+ "seq0": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 146.8338623046875,
+  "norm_in_norm_mean": 937.5631103515625,
+  "latent_p_swi_end_after_each_step": [
+   1.6045599907348745e-13,
+   0.999997615814209,
+   0.9999645948410034,
+   0.9971343278884888,
+   0.9999545812606812
+  ],
+  "latent_argmax": [
+   3070,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 2.02734375,
+  "full_vs_incremental_argmax_agree": 1.0,
+  "teacher_forced_argmax_matches_cont": 1.0
+ },
+ "seq1": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 142.87911987304688,
+  "norm_in_norm_mean": 949.8372192382812,
+  "latent_p_swi_end_after_each_step": [
+   4.508265722541482e-12,
+   0.9993093013763428,
+   0.9999687671661377,
+   0.9846684336662292,
+   0.9999417066574097
+  ],
+  "latent_argmax": [
+   488,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 4.3671875,
+  "full_vs_incremental_argmax_agree": 1.0,
+  "teacher_forced_argmax_matches_cont": 1.0
+ },
+ "seq2": {
+  "n_hidden_states": 37,
+  "hs_last_vs_norm_out_maxabs": 0.0,
+  "hs_last_vs_norm_in_maxabs": 14655.994140625,
+  "hs_last_norm_mean": 118.51239776611328,
+  "norm_in_norm_mean": 1240.788818359375,
+  "latent_p_swi_end_after_each_step": [
+   9.96312721213144e-09,
+   0.9999927282333374,
+   0.9999687671661377,
+   0.9982530474662781,
+   0.9999687671661377
+  ],
+  "latent_argmax": [
+   15491,
+   151670,
+   151670,
+   151670,
+   151670
+  ],
+  "full_vs_incremental_logits_maxabs": 2.453125,
+  "full_vs_incremental_argmax_agree": 0.9900497794151306,
+  "teacher_forced_argmax_matches_cont": 0.9200000166893005
+ }
+}
++ cp /root/scratch/switch_audit/logits_orig_t4.57.json /workspace/results/cot-control-switch/diagnostics/switch_audit/
++ /workspace/switch-orig/venv-t5.3/bin/python logits_compare.py /root/scratch/switch_audit ours_t5.19 orig_t5.3 orig_t4.57
+ours_t5.19_vs_orig_t5.3/seq0/full {'maxabs': 2.125, 'meanabs': 0.118642, 'ref_absmax': 68.0, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.017477}
+ours_t5.19_vs_orig_t5.3/seq0/inc {'maxabs': 1.59375, 'meanabs': 0.113917, 'ref_absmax': 68.0, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.062477}
+ours_t5.19_vs_orig_t5.3/seq0/lat_logits {'maxabs': 0.4375, 'meanabs': 0.050066, 'ref_absmax': 42.25, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 0.000599}
+ours_t5.19_vs_orig_t5.3/seq0/lat_h {'maxabs': 1.0, 'meanabs': 0.026489, 'ref_absmax': 182.0, 'rel_l2': 0.021578}
+ours_t5.19_vs_orig_t5.3/seq1/full {'maxabs': 5.09375, 'meanabs': 0.143015, 'ref_absmax': 72.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.082608}
+ours_t5.19_vs_orig_t5.3/seq1/inc {'maxabs': 4.382812, 'meanabs': 0.135309, 'ref_absmax': 72.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.090238}
+ours_t5.19_vs_orig_t5.3/seq1/lat_logits {'maxabs': 0.625, 'meanabs': 0.050552, 'ref_absmax': 41.75, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 6.3e-05}
+ours_t5.19_vs_orig_t5.3/seq1/lat_h {'maxabs': 1.5, 'meanabs': 0.027813, 'ref_absmax': 166.0, 'rel_l2': 0.018609}
+ours_t5.19_vs_orig_t5.3/seq2/full {'maxabs': 2.03125, 'meanabs': 0.105934, 'ref_absmax': 52.75, 'argmax_agree': 0.995025, 'n_pos': 201, 'max_kl': 0.022529}
+ours_t5.19_vs_orig_t5.3/seq2/inc {'maxabs': 2.082031, 'meanabs': 0.106689, 'ref_absmax': 53.25, 'argmax_agree': 0.99005, 'n_pos': 201, 'max_kl': 0.027403}
+ours_t5.19_vs_orig_t5.3/seq2/lat_logits {'maxabs': 0.375, 'meanabs': 0.03229, 'ref_absmax': 41.5, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 1.4e-05}
+ours_t5.19_vs_orig_t5.3/seq2/lat_h {'maxabs': 1.0, 'meanabs': 0.019521, 'ref_absmax': 205.0, 'rel_l2': 0.013923}
+ours_t5.19_vs_orig_t4.57/seq0/full {'maxabs': 2.125, 'meanabs': 0.118642, 'ref_absmax': 68.0, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.017477}
+ours_t5.19_vs_orig_t4.57/seq0/inc {'maxabs': 1.59375, 'meanabs': 0.113917, 'ref_absmax': 68.0, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.062477}
+ours_t5.19_vs_orig_t4.57/seq0/lat_logits {'maxabs': 0.4375, 'meanabs': 0.050066, 'ref_absmax': 42.25, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 0.000599}
+ours_t5.19_vs_orig_t4.57/seq0/lat_h {'maxabs': 1.0, 'meanabs': 0.026489, 'ref_absmax': 182.0, 'rel_l2': 0.021578}
+ours_t5.19_vs_orig_t4.57/seq1/full {'maxabs': 5.09375, 'meanabs': 0.143015, 'ref_absmax': 72.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.082608}
+ours_t5.19_vs_orig_t4.57/seq1/inc {'maxabs': 4.382812, 'meanabs': 0.135309, 'ref_absmax': 72.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.090238}
+ours_t5.19_vs_orig_t4.57/seq1/lat_logits {'maxabs': 0.625, 'meanabs': 0.050552, 'ref_absmax': 41.75, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 6.3e-05}
+ours_t5.19_vs_orig_t4.57/seq1/lat_h {'maxabs': 1.5, 'meanabs': 0.027813, 'ref_absmax': 166.0, 'rel_l2': 0.018609}
+ours_t5.19_vs_orig_t4.57/seq2/full {'maxabs': 2.03125, 'meanabs': 0.105934, 'ref_absmax': 52.75, 'argmax_agree': 0.995025, 'n_pos': 201, 'max_kl': 0.022529}
+ours_t5.19_vs_orig_t4.57/seq2/inc {'maxabs': 2.082031, 'meanabs': 0.106689, 'ref_absmax': 53.25, 'argmax_agree': 0.99005, 'n_pos': 201, 'max_kl': 0.027403}
+ours_t5.19_vs_orig_t4.57/seq2/lat_logits {'maxabs': 0.375, 'meanabs': 0.03229, 'ref_absmax': 41.5, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 1.4e-05}
+ours_t5.19_vs_orig_t4.57/seq2/lat_h {'maxabs': 1.0, 'meanabs': 0.019521, 'ref_absmax': 205.0, 'rel_l2': 0.013923}
++ /workspace/switch-orig/venv-t5.3/bin/python logits_compare.py /root/scratch/switch_audit orig_t5.3 orig_t4.57
+orig_t5.3_vs_orig_t4.57/seq0/full {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 68.0, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq0/inc {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 67.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq0/lat_logits {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 42.25, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq0/lat_h {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 183.0, 'rel_l2': 0.0}
+orig_t5.3_vs_orig_t4.57/seq1/full {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 72.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq1/inc {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 71.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq1/lat_logits {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 41.75, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq1/lat_h {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 166.0, 'rel_l2': 0.0}
+orig_t5.3_vs_orig_t4.57/seq2/full {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 52.75, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq2/inc {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 53.5, 'argmax_agree': 1.0, 'n_pos': 201, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq2/lat_logits {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 41.5, 'argmax_agree': 1.0, 'n_pos': 5, 'max_kl': 0.0}
+orig_t5.3_vs_orig_t4.57/seq2/lat_h {'maxabs': 0.0, 'meanabs': 0.0, 'ref_absmax': 204.0, 'rel_l2': 0.0}
++ cp /root/scratch/switch_audit/compare_orig_t5.3.json /root/scratch/switch_audit/compare_ours_t5.19.json /workspace/results/cot-control-switch/diagnostics/switch_audit/
++ echo ORIG_CHECKS_DONE
+ORIG_CHECKS_DONE

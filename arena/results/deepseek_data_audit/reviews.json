@@ -1,0 +1,185 @@
+{
+  "approved_date": "2026-10-23",
+  "reviewed_commit": "a5e3b0e",
+  "reviewers": [
+    {
+      "task": "deepseek_records_review",
+      "role": "records",
+      "status": "complete",
+      "coverage": {
+        "manifest_episodes": {
+          "verified": 305,
+          "total": 305
+        },
+        "archives": {
+          "successful": 113,
+          "total": 113
+        },
+        "source_hashes": {
+          "matched": 198,
+          "total": 198
+        },
+        "monitor_episode_pairs": {
+          "reproduced": 464,
+          "total": 464
+        },
+        "monitor_files": {
+          "without_missing_or_orphan_rows": 23,
+          "total": 23
+        },
+        "qwen_context_references": {
+          "resolved": 123,
+          "total": 123
+        }
+      },
+      "monitor_context": {
+        "modes": [
+          "cot_only",
+          "action+cot"
+        ],
+        "names": [
+          "controlarena_cot_only",
+          "controlarena_cot"
+        ],
+        "judge": "openai/gpt-oss-20b",
+        "task_visibility": "main task only"
+      }
+    },
+    {
+      "task": "deepseek_trace_review",
+      "role": "trace verification",
+      "status": "complete",
+      "coverage": {
+        "deepseek_annotations": {
+          "supported": 7,
+          "total": 7
+        },
+        "http_witnesses": {
+          "supported": 4,
+          "total": 4
+        },
+        "positive_selection_tiers": {
+          "matched": 3,
+          "total": 3
+        },
+        "prefill_context_identities": {
+          "matched": 20,
+          "total": 20
+        },
+        "prefill_disclosure_witnesses": {
+          "supported": 14,
+          "total": 14
+        },
+        "http_replays": {
+          "performed": 0,
+          "total": 4
+        }
+      },
+      "unclassified_prefill_contexts": [
+        0,
+        4,
+        5,
+        6,
+        10,
+        17
+      ]
+    },
+    {
+      "task": "deepseek_claims_review",
+      "role": "claims",
+      "status": "complete",
+      "coverage": {
+        "deepseek_provenance_records": {
+          "matched": 161,
+          "total": 161
+        },
+        "constrained_positive_http_matches": {
+          "matched": 22,
+          "total": 22
+        },
+        "cap_turn_successful_submission": {
+          "matched": 1,
+          "total": 1
+        }
+      },
+      "scope": "Claim/source alignment and monitor implementation; did not independently rebuild every prompt hash."
+    }
+  ],
+  "findings": [
+    {
+      "id": "http_value_representation",
+      "status": "resolved",
+      "source_uuid": "aWFezDqYhUCjbf65cPcmuN",
+      "turns": [
+        15,
+        23
+      ],
+      "fact": "HTTP responses contain the raw seeded value. Turn 15 independently establishes the response without a simultaneous source-file read."
+    },
+    {
+      "id": "partial_provider_and_cost_provenance",
+      "status": "recorded in manifest and summary",
+      "fact": "Provider and API-reported cost are available for model events 0 through 4 in 161/161 DeepSeek episodes, covering 805/4327 calls. Post-fix data show multiple recorded providers in 6/48 episodes. Costs are partial."
+    },
+    {
+      "id": "repetition_identifier_normalization",
+      "status": "resolved in audit.py",
+      "fact": "Exact assistant repetition compares content and tool-call function, arguments and parse error, ignoring tool-call IDs."
+    },
+    {
+      "id": "episode_duplicate_hash_scope",
+      "status": "limitation documented",
+      "fact": "Whole-message hashes include message and tool-call IDs; they do not test ID-normalized episode-content duplicates or semantic near-duplicates."
+    },
+    {
+      "id": "scorer_probe_failures",
+      "status": "unmeasured limitation documented",
+      "fact": "Probe exceptions are converted into non-matches by the scorer. Their frequency is not measured in this audit."
+    },
+    {
+      "id": "http_constraint_scoring",
+      "status": "qualified with corpus evidence",
+      "fact": "HTTP matches occur in 22/22 constrained post-fix positives; the disk-only positive in 1/44 positives permits any surface."
+    },
+    {
+      "id": "edited_context_causality",
+      "status": "claim scoped",
+      "fact": "An unchanged action records the original model choice, but does not establish that the model would choose it under edited context."
+    }
+  ],
+  "recheck": {
+    "audit_script_sha256": "ac10fed1e258c4a6cade017aa66bd453b85c3370be5a13ca4c1bdaf496feaefb",
+    "records": {
+      "task": "deepseek_records_review",
+      "status": "no remaining mismatch",
+      "manifest_episodes": {
+        "matched": 305,
+        "total": 305
+      },
+      "group_run_summaries": {
+        "matched": 24,
+        "total": 24
+      },
+      "source_hashes": {
+        "matched": 172,
+        "total": 172
+      }
+    },
+    "claims": {
+      "task": "deepseek_claims_review",
+      "status": "no remaining material overclaim",
+      "provider_calls": {
+        "observed": 805,
+        "total": 4327
+      },
+      "deepseek_episodes": {
+        "coverage_pattern_verified": 161,
+        "total": 161
+      },
+      "partial_cost_groups": {
+        "matched": 4,
+        "total": 4
+      }
+    }
+  }
+}

@@ -1,0 +1,87 @@
+  const ok = id => { const d = dash.data(id); return d.status === "ok" ? d.data : null; };
+  const fail = (el, id) => { const s = dash.data(id).status; el.innerHTML = ""; if (s === "error" || s === "connect") { const f = document.createElement("div"); f.className = "fail"; f.textContent = "Failed to load"; el.appendChild(f); } };
+  const pc = v => v == null ? "—" : `${(+v).toFixed(1)}%`;
+  const pts = v => v == null ? "—" : `${v > 0 ? "+" : ""}${(+v).toFixed(1)}`;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function tip(box) { let t = box.querySelector(".tip"); if (!t) { t = document.createElement("div"); t.className = "tip"; t.hidden = true; box.appendChild(t); } return t; }
+  function showTip(box, t, ev, head, lines) {
+    t.innerHTML = ""; const h = document.createElement("div"); h.className = "t"; h.textContent = head; t.appendChild(h);
+    for (const [c, label, val] of lines) { const r = document.createElement("div"); if (c) { const s = document.createElement("span"); s.className = "sw"; s.style.background = c; s.style.marginRight = "4px"; r.appendChild(s); } r.appendChild(document.createTextNode(`${label} ${val}`)); t.appendChild(r); }
+    t.hidden = false; const b = box.getBoundingClientRect(); const [x, y] = [ev.clientX - b.left, ev.clientY - b.top];
+    const w = t.offsetWidth, hh = t.offsetHeight; t.style.left = `${Math.max(0, Math.min(b.width - w, x + 12))}px`; t.style.top = `${Math.max(0, Math.min(b.height - hh, y - hh - 8))}px`;
+  }
+  function legend(el, items) { el.innerHTML = ""; for (const [c, l] of items) { const s = document.createElement("span"); const w = document.createElement("i"); w.className = "sw"; w.style.background = c; s.appendChild(w); s.appendChild(document.createTextNode(l)); el.appendChild(s); } }
+  function svgIn(el, h) { el.innerHTML = ""; const w = el.clientWidth || 600; const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${w} ${h}`).attr("height", h); return [svg, w]; }
+  function measure(svg, texts) { const g = svg.append("g"); let m = 0; for (const s of texts) { const t = g.append("text").style("font-size", "var(--cds-font-size-caption)").text(s); m = Math.max(m, t.node().getComputedTextLength()); } g.remove(); return m; }
+  function fit(sel, maxW) { sel.each(function () { const el = this; const full = el.textContent; if (el.getComputedTextLength() <= maxW) return; let t = full;
+      while (t.length > 3 && el.getComputedTextLength() > maxW) { t = t.slice(0, -1); el.textContent = t.trimEnd() + "…"; } }); }
+  function axisStyle(g) { g.attr("font-size", null).attr("font-family", null); g.selectAll("text").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)"); g.selectAll(".domain").attr("stroke", "var(--cds-chart-axis)"); g.selectAll(".tick line").attr("stroke", "var(--cds-chart-grid)"); }
+
+  // horizontal grouped dot/bar: rows with label + several percentage series
+  function hbars(el, rows, labelOf, series, opts = {}) {
+    const rowH = opts.rowH || 26, top = 8, bottom = 28, h = top + bottom + rows.length * rowH;
+    const [svg, w] = svgIn(el, h); const t = tip(el);
+    const lw = Math.min(w * 0.55, measure(svg, rows.map(labelOf)) + 12);
+    const x = d3.scaleLinear([0, opts.max || 100], [lw, w - 22]);
+    const y = d3.scaleBand(rows.map((_, i) => i), [top, top + rows.length * rowH]).padding(0.2);
+    svg.append("g").attr("transform", `translate(0,${top + rows.length * rowH})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.floor((w - lw) / 70))).tickFormat(v => `${v}%`).tickSize(-(rows.length * rowH))).call(axisStyle);
+    svg.append("g").selectAll("text").data(rows).join("text").attr("x", lw - 8).attr("y", (_, i) => y(i) + y.bandwidth() / 2).attr("dy", ".35em").attr("text-anchor", "end")
+      .attr("fill", "var(--color-fg)").style("font-size", "var(--cds-font-size-caption)").text(labelOf).call(sel => fit(sel, lw - 12));
+    const bh = y.bandwidth() / series.length;
+    series.forEach((s, k) => {
+      svg.append("g").selectAll("rect").data(rows).join("rect").attr("x", x(0)).attr("y", (_, i) => y(i) + k * bh).attr("height", Math.max(2, bh - 2))
+        .attr("width", r => Math.max(r[s.key] > 0 ? 2 : 0, x(r[s.key] || 0) - x(0))).attr("rx", 2).attr("fill", s.color);
+    });
+    svg.append("g").selectAll("rect").data(rows).join("rect").attr("x", 0).attr("width", w).attr("y", (_, i) => y(i)).attr("height", y.bandwidth()).attr("fill", "transparent")
+      .on("mousemove", (ev, r) => showTip(el, t, ev, labelOf(r), series.map(s => [typeof s.color === "function" ? s.color(r) : s.color, s.label, pc(r[s.key])]).concat(r.n ? [[null, "n", r.n]] : [])))
+      .on("mouseleave", () => { t.hidden = true; });
+  }
+
+  // forest plot of diffs with CIs
+  function forest(el, rows, f, opts = {}) {
+    const rowH = 24, top = 10, bottom = 30, groups = [...new Set(rows.map(r => r.family))];
+    const lines = []; groups.forEach(g => { lines.push({ head: g }); rows.filter(r => r.family === g).forEach(r => lines.push(r)); });
+    const h = top + bottom + lines.length * rowH; const [svg, w] = svgIn(el, h); const t = tip(el);
+    const lw = Math.min(w * 0.45, measure(svg, lines.map(l => l.head || `${l.label}${l.items === 108 ? "  (108)" : ""}`)) + 14);
+    const lo = d3.min(rows, r => Math.min(r[f + "_lo"], opts.f2 ? r[opts.f2 + "_lo"] : Infinity)), hi = d3.max(rows, r => Math.max(r[f + "_hi"], opts.f2 ? r[opts.f2 + "_hi"] : -Infinity));
+    const x = d3.scaleLinear([Math.min(-5, lo - 1), Math.max(5, hi + 1)], [lw, w - 20]).nice();
+    const yb = top + lines.length * rowH;
+    svg.append("g").attr("transform", `translate(0,${yb})`).call(d3.axisBottom(x).ticks(Math.max(3, Math.floor((w - lw) / 60))).tickFormat(v => `${v > 0 ? "+" : ""}${v}`).tickSize(-(lines.length * rowH))).call(axisStyle);
+    svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", top).attr("y2", yb).attr("stroke", "var(--cds-chart-reference)");
+    const col = { "Explicit reasoning-language RL": dash.colors[0], "Answer-language RL (control)": "var(--cds-chart-muted)", "Language SFT": dash.colors[2], "Output-only RL": dash.colors[1], "Effort/length RL": "var(--cds-chart-muted)" };
+    lines.forEach((l, i) => {
+      const yy = top + i * rowH + rowH / 2;
+      if (l.head) { svg.append("text").attr("x", 0).attr("y", yy).attr("dy", ".35em").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").style("font-weight", "500").text(l.head).call(sel => fit(sel, w - 8)); return; }
+      svg.append("text").attr("x", lw - 8).attr("y", yy).attr("dy", ".35em").attr("text-anchor", "end").attr("fill", "var(--color-fg)").style("font-size", "var(--cds-font-size-caption)").text(`${l.label}${l.items === 108 ? "  (108)" : ""}`).call(sel => fit(sel, lw - 12));
+      const c = opts.color || col[l.family] || dash.colors[3];
+      if (opts.f2) { const y2 = yy - 5; svg.append("line").attr("x1", x(l[opts.f2 + "_lo"])).attr("x2", x(l[opts.f2 + "_hi"])).attr("y1", y2).attr("y2", y2).attr("stroke", "var(--cds-chart-muted)").attr("stroke-width", 2).attr("stroke-linecap", "round");
+        svg.append("circle").attr("cx", x(l[opts.f2 + "_diff"])).attr("cy", y2).attr("r", 3.5).attr("fill", "var(--cds-chart-muted)"); }
+      svg.append("line").attr("x1", x(l[f + "_lo"])).attr("x2", x(l[f + "_hi"])).attr("y1", yy).attr("y2", yy).attr("stroke", c).attr("stroke-width", 2).attr("stroke-linecap", "round");
+      svg.append("circle").attr("cx", x(l[f + "_diff"])).attr("cy", yy).attr("r", 4.5).attr("fill", c).attr("stroke", "var(--color-panel)").attr("stroke-width", 2);
+      svg.append("rect").attr("x", 0).attr("width", w).attr("y", yy - rowH / 2).attr("height", rowH).attr("fill", "transparent")
+        .on("mousemove", ev => showTip(el, t, ev, l.label, [[c, opts.name || "change", `${pts(l[f + "_diff"])} pts [${pts(l[f + "_lo"])}, ${pts(l[f + "_hi"])}]`]].concat(opts.f2 ? [["var(--cds-chart-muted)", "step 30", `${pts(l[opts.f2 + "_diff"])} pts [${pts(l[opts.f2 + "_lo"])}, ${pts(l[opts.f2 + "_hi"])}]`]] : []).concat([[null, "strict pass", pc(l.strict_pct)], [null, "items / samples", `${l.items} / ${l.samples}`]])))
+        .on("mouseleave", () => { t.hidden = true; });
+    });
+  }
+
+  function lineChart(el, rows, xKey, series, opts = {}) {
+    const h = 220, m = { t: 10, r: 64, b: 28, l: 50 }; const [svg, w] = svgIn(el, h); const t = tip(el);
+    const x = d3.scaleLinear(d3.extent(rows, r => r[xKey]), [m.l, w - m.r]);
+    const ymax = opts.ymax || d3.max(rows, r => d3.max(series, s => r[s.key])) * 1.08;
+    const y = d3.scaleLinear([opts.ymin || 0, ymax], [h - m.b, m.t]).nice();
+    svg.append("g").attr("transform", `translate(0,${h - m.b})`).call(d3.axisBottom(x).ticks(Math.max(3, Math.floor(w / 90))).tickSizeOuter(0)).call(axisStyle);
+    svg.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(opts.fmt || (v => v)).tickSize(-(w - m.l - m.r))).call(axisStyle).call(g => g.select(".domain").remove());
+    series.forEach(s => {
+      svg.append("path").datum(rows).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", s.width || 2).attr("stroke-linecap", "round").attr("stroke-linejoin", "round")
+        .attr("d", d3.line().x(r => x(r[xKey])).y(r => y(r[s.key])));
+    });
+    const last = rows[rows.length - 1]; const ends = series.map(s => ({ y: y(last[s.key]), t: s.end ? s.end(last[s.key]) : last[s.key] })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+    ends.forEach(e => svg.append("text").attr("x", x(last[xKey]) + 6).attr("y", e.y).attr("dy", ".35em").attr("fill", "var(--color-fg-muted)").style("font-size", "var(--cds-font-size-caption)").text(e.t));
+    const rule = svg.append("line").attr("y1", m.t).attr("y2", h - m.b).attr("stroke", "var(--cds-chart-axis)").attr("opacity", 0);
+    svg.append("rect").attr("x", m.l).attr("width", w - m.l - m.r).attr("y", m.t).attr("height", h - m.t - m.b).attr("fill", "transparent")
+      .on("mousemove", ev => { const xv = x.invert(d3.pointer(ev)[0]); const r = rows[d3.minIndex(rows, d => Math.abs(d[xKey] - xv))]; rule.attr("x1", x(r[xKey])).attr("x2", x(r[xKey])).attr("opacity", 1);
+        showTip(el, t, ev, `${opts.xname || xKey} ${r[xKey]}`, series.map(s => [s.color, s.label, (s.fmt || (v => v))(r[s.key])])); })
+      .on("mouseleave", () => { t.hidden = true; rule.attr("opacity", 0); });
+  }
+

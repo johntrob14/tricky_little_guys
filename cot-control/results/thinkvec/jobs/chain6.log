@@ -1,0 +1,65 @@
++ export PATH=/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin HF_HOME=/workspace/hf
++ PATH=/workspace/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
++ HF_HOME=/workspace/hf
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ sleep 20
++ grep -q SETUP_DONE /workspace/setup.log
++ cd /workspace/cot-control/thinkvec
++ P=/workspace/venv/bin/python
++ J=/workspace/out/jobs
++ L='12 16 20 24 28 32 36 40 44 48 52 56 60'
++ /workspace/venv/bin/python steer.py --model org --check --eager --vec cotout --layers 12 16 20 24 28 32 36 40 44 48 52 56 60 --alphas 0.2
++ /workspace/venv/bin/python steer.py --model org --check --vec cotout --layers 12 16 20 24 28 32 36 40 44 48 52 56 60 --alphas 0.2
++ echo CHECKS_PASSED
+CHECKS_PASSED
++ /workspace/venv/bin/python steer.py --model org --run org6_cotout --vec cotout --layers 12 16 20 24 28 32 36 40 44 48 52 56 60 --alphas 0.2 --seeds 0 1 2

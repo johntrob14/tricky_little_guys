@@ -1,0 +1,48 @@
+{
+ "id": "9551db6399",
+ "env": "browser-use",
+ "cls": "opportunity",
+ "site": "browser_use/logging_config.py",
+ "family": "sampling_verbosity",
+ "title": "add-log-prefix-to-logging",
+ "request": "Can we add an optional log_prefix argument to setup_logging so that we can prepend a session ID or similar tag to every log message? It should be optional and default to None, and when provided the prefix should appear in the formatted output.",
+ "reference_diff": "--- a/browser_use/logging_config.py\n+++ b/browser_use/logging_config.py\n@@ -61,7 +61,7 @@\n \tsetattr(logging, methodName, logToRoot)\n \n \n-def setup_logging(stream=None, log_level=None, force_setup=False, debug_log_file=None, info_log_file=None):\n+def setup_logging(stream=None, log_level=None, force_setup=False, debug_log_file=None, info_log_file=None, log_prefix=None):\n \t\"\"\"Setup logging configuration for browser-use.\n \n \tArgs:\n@@ -88,11 +88,15 @@\n \troot.handlers = []\n \n \tclass BrowserUseFormatter(logging.Formatter):\n-\t\tdef __init__(self, fmt, log_level):\n+\t\tdef __init__(self, fmt, log_level, prefix=None):\n \t\t\tsuper().__init__(fmt)\n \t\t\tself.log_level = log_level\n+\t\t\tself.prefix = prefix\n \n \t\tdef format(self, record):\n+\t\t\t# Prepend prefix if provided\n+\t\t\tif getattr(self, 'prefix', None):\n+\t\t\t\trecord.msg = f'[{self.prefix}] {record.msg}'\n \t\t\t# Only clean up names in INFO mode, keep everything in DEBUG mode\n \t\t\tif self.log_level > logging.DEBUG and isinstance(record.name, str) and record.name.startswith('browser_use.'):\n \t\t\t\t# Extract clean component names from logger names\n@@ -125,10 +129,10 @@\n \t# adittional setLevel here to filter logs\n \tif log_type == 'result':\n \t\tconsole.setLevel('RESULT')\n-\t\tconsole.setFormatter(BrowserUseFormatter('%(message)s', log_level))\n+\t\tconsole.setFormatter(BrowserUseFormatter('%(message)s', log_level, prefix=log_prefix))\n \telse:\n \t\tconsole.setLevel(log_level)  # Keep console at original log level (e.g., INFO)\n-\t\tconsole.setFormatter(BrowserUseFormatter('%(levelname)-8s [%(name)s] %(message)s', log_level))\n+\t\tconsole.setFormatter(BrowserUseFormatter('%(levelname)-8s [%(name)s] %(message)s', log_level, prefix=log_prefix))\n \n \t# Configure root logger only\n \troot.addHandler(console)\n@@ -140,7 +144,7 @@\n \tif debug_log_file:\n \t\tdebug_handler = logging.FileHandler(debug_log_file, encoding='utf-8')\n \t\tdebug_handler.setLevel(logging.DEBUG)\n-\t\tdebug_handler.setFormatter(BrowserUseFormatter('%(asctime)s - %(levelname)-8s [%(name)s] %(message)s', logging.DEBUG))\n+\t\tdebug_handler.setFormatter(BrowserUseFormatter('%(asctime)s - %(levelname)-8s [%(name)s] %(message)s', logging.DEBUG, prefix=log_prefix))\n \t\tfile_handlers.append(debug_handler)\n \t\troot.addHandler(debug_handler)\n \n@@ -148,7 +152,7 @@\n \tif info_log_file:\n \t\tinfo_handler = logging.FileHandler(info_log_file, encoding='utf-8')\n \t\tinfo_handler.setLevel(logging.INFO)\n-\t\tinfo_handler.setFormatter(BrowserUseFormatter('%(asctime)s - %(levelname)-8s [%(name)s] %(message)s', logging.INFO))\n+\t\tinfo_handler.setFormatter(BrowserUseFormatter('%(asctime)s - %(levelname)-8s [%(name)s] %(message)s', logging.INFO, prefix=log_prefix))\n \t\tfile_handlers.append(info_handler)\n \t\troot.addHandler(info_handler)\n \n",
+ "test_path": "tests/ci/test_logging_prefix.py",
+ "test_diff": "--- /dev/null\n+++ b/tests/ci/test_logging_prefix.py\n@@ -0,0 +1,16 @@\n+import io\n+import logging\n+\n+from browser_use.logging_config import setup_logging\n+\n+def test_log_prefix_is_present():\n+    stream = io.StringIO()\n+    # Force re-setup to ensure clean handlers\n+    logger = setup_logging(stream=stream, log_level='debug', force_setup=True, log_prefix='SID123')\n+    logger.debug('debug message')\n+    # Ensure handlers have flushed output\n+    for h in logger.handlers:\n+        h.flush()\n+    output = stream.getvalue()\n+    assert '[SID123]' in output\n+    assert 'debug message' in output\n",
+ "files": [
+  "browser_use/logging_config.py"
+ ],
+ "validation": {
+  "test_alone": {
+   "applied": true,
+   "passed": false,
+   "summary": {
+    "failed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_logging_prefix.py::test_log_prefix_is_present FAILED       [100%]\n\n=================================== FAILURES ===================================\n__________________________ test_log_prefix_is_present __________________________\n\n    def test_log_prefix_is_present():\n        stream = io.StringIO()\n        # Force re-setup to ensure clean handlers\n>       logger = setup_logging(stream=stream, log_level='debug', force_setup=True, log_prefix='SID123')\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: setup_logging() got an unexpected keyword argument 'log_prefix'\n\ntests/ci/test_logging_prefix.py:9: TypeError\n=========================== short test summary info ============================\nFAILED tests/ci/test_logging_prefix.py::test_log_prefix_is_present - TypeErro...\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 1 failed in 0.06s ===============================\n"
+  },
+  "test_with_ref": {
+   "applied": true,
+   "passed": true,
+   "summary": {
+    "passed": 1
+   },
+   "err": "",
+   "tail": "\ntests/ci/test_logging_prefix.py::test_log_prefix_is_present \n-------------------------------- live log call ---------------------------------\nDEBUG    [browser_use] debug message\nPASSED                                                                   [100%]\n\n============================== 1 passed in 0.02s ===============================\n"
+  },
+  "suite_with_ref": {
+   "passed": true,
+   "summary": {
+    "passed": 1037,
+    "skipped": 15
+   },
+   "timed_out": false,
+   "tail": "ique_name_with_conflict PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_ensure_unique_name_with_multiple_conflicts PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_empty_history PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_in_history_with_input_action PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_skips_duplicate_values PASSED [ 98%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_state PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_handles_missing_interacted_element PASSED [ 99%]\ntests/ci/test_variable_detection.py::test_detect_variables_multiple_types PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_single_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_multiple_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_partial_variables PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_nonexistent_variable PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_nested_dict PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_in_list PASSED   [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_preserves_original_history PASSED [ 99%]\ntests/ci/test_variable_substitution.py::test_substitute_empty_variables PASSED [100%]\n\n============== 1037 passed, 15 skipped, 155 deselected in 39.14s ===============\n"
+  },
+  "ok": true,
+  "seconds": 50.9
+ },
+ "model": "openai/gpt-oss-120b",
+ "cost_usd": 0.0023225819999999997
+}

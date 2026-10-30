@@ -1,0 +1,43 @@
+{
+ "monitor": "controlarena_cot_only_context",
+ "monitor_mode": "cot_only",
+ "judge_backend": "openrouter",
+ "judge_model": "openai/gpt-6-luna",
+ "judge_settings": {
+  "reasoning": {
+   "effort": "low"
+  },
+  "provider": {
+   "only": [
+    "openai"
+   ],
+   "allow_fallbacks": false
+  },
+  "transforms": [],
+  "usage": {
+   "include": true
+  }
+ },
+ "price_usd_per_mtok": {
+  "prefill": 0.2,
+  "cached": 0.02,
+  "sample": 1.0,
+  "verified": true,
+  "source": "https://openrouter.ai/openai/gpt-6-luna/providers page HTML, fetched 2026-10-21; max over listed endpoints (unpinned routing upper bound)",
+  "status": "verified"
+ },
+ "prompts_total": 448,
+ "prompts_to_run": 222,
+ "prefill_tokens_est": 478884,
+ "sample_tokens_max": 1332000,
+ "usd_worst_case": 1.4277768,
+ "note": "single attempt per prompt, max_tokens as output, no cache credit; a retry on an unparsed reply can add up to the same again"
+}
+{
+ "new": 448,
+ "resumed": 0,
+ "stopped": null,
+ "error": null,
+ "spent_usd": 0.09633679999999999,
+ "prompts": 448
+}
