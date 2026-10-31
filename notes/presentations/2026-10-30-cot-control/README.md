@@ -35,3 +35,7 @@ Other scripts preserve the source paths and assumptions used during the session.
 The completed GRPO3 always-monitored raw evaluation and all monitor outputs are in `evidence/grpo3-s100-hs-pw/`. The corresponding research result commit on main is `d556379e2baa5b7f75920295d0e2ea0a8eb14182`, whose patch matches source-worktree commit `8505faf2`. Auditing commands, source hashes, and results are in `outputs/arena/audit_grpo3_always.py`, `grpo3_always_verified.json`, and `grpo3_always_verification.txt`. Archived scripts retain their original raw paths; use the preserved evidence when relocating them.
 
 The archive omits virtual environments, caches, duplicate preview directories, temporary image URLs, local checkout copies, and agent-session search excerpts. It includes the presentation deliverables and research evidence from this chat. Unrelated, uncommitted work in active research checkouts was left in place. `file_manifest.json` records hashes of the archived payload files.
+
+## Error bars added to the main talk
+
+The three requested output-control, Qwen IFRL, and Nemotron Cascade graphs in the live CoT-Control WTF deck now include 95% confidence intervals. See [updated figures and interval audit](outputs/errorbars/README.txt). Existing graph content and slide layout were preserved; Nemotron uses the approved extension to a 20% y-axis maximum.
