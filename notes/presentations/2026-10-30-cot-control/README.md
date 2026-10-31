@@ -39,3 +39,7 @@ The archive omits virtual environments, caches, duplicate preview directories, t
 ## Error bars added to the main talk
 
 The three requested output-control, Qwen IFRL, and Nemotron Cascade graphs in the live CoT-Control WTF deck now include 95% confidence intervals. See [updated figures and interval audit](outputs/errorbars/README.txt). Existing graph content and slide layout were preserved; Nemotron uses the approved extension to a 20% y-axis maximum.
+
+## CoT-less TikTok backup
+
+[Backup slide and notes](outputs/arena/cotless/slide.json), [PowerPoint](outputs/arena/cotless/cotless_tiktok_backup.pptx), and [figure](outputs/arena/cotless/cotless_tiktok.svg). Added as slide 82 of the main talk and slide 37 of the shared backup deck. The figure uses the clean Qwen3.8-27B OpenRouter reasoning-disabled suite; separate forced-off GPT-OSS/Qwen password-policy comparisons and residual-reasoning limitations are in the notes. Raw counts, exposure-label joins, configuration checks, and source hashes are in verified.json.
