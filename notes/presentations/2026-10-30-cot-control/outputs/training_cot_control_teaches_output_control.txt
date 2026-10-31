@@ -1,0 +1,10 @@
+Training CoT Control Teaches Output Control
+
+• These models were trained to control their CoT; we now test instruction following in the visible response with thinking disabled.
+• Transfer across channels suggests that CoT training improves instruction-following skills shared with the visible response.
+
+Description / speaker notes
+We reuse GPT-OSS-120B trained with GRPO on six CoT rules, the requested reasoning language, or a reasoning token budget. At evaluation, we move the rule instructions onto the visible answer and explanation and force the analysis channel empty. Across the same 480 question–rule items, strict output compliance is 44.3% for base, 80.6% after six-rule training, 49.2% after language training, and 59.3% after token-budget training. The largest gain comes from six-rule training, supporting the interpretation that some instruction-following skills transfer across channels. These are surface-compliance results from single training runs: RL updated the full generated sequence and included final-answer feedback, while shorter responses may contribute to the token-budget result.
+
+Figure caption
+GPT-OSS-120B; eight deterministic rule types, 480 items, equally weighted after averaging samples per item. Strict grading covers the entire visible response, allows meta discussion, and does not require a correct answer. 95% confidence intervals: paired bootstrap over 413 normalized-question clusters, 5,000 draws, seed 20261030; evaluation uncertainty only. Base, grpo3 s100, and len2 s60: 1,632 generations each; lang1 s40: 960. Language checkpoint is step 40 on both this slide and the preceding CoT-control slide. The output prompt says “State your answer, and then explain it.” The answer-format restriction is removed and the constraint is scoped to the response. Code uses temperature 1.0, top-p 1.0, an 8k token cap, and an empty-analysis/ open-final prefill. This establishes within-model output-control changes, not a channel-only causal isolation or preserved answer quality.

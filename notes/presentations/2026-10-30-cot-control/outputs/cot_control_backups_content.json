@@ -1,0 +1,250 @@
+[
+  {
+    "title": "What does rewrite SFT teach Inkling?",
+    "bullets": [
+      "Rewrite the model\u2019s own CoTs into requested styles, then train on thinking and final-answer tokens.",
+      "384 examples, including plain traces; two epochs. Correct-and-compliant responses rise from 2 to 8 of 96."
+    ],
+    "notes": "For Inkling-Small, we fine-tuned the base model for two epochs on 384 examples containing rewritten or transformed reasoning and plain traces. The completion-only supervised loss trains both the native thinking message and the final answer. At matched thinking effort 0.6 on 96 deterministic Astra items, strict CoT compliance rises from 3/96 to 18/96. Correct, valid, and compliant responses rise from 2/96 to 8/96, while answer correctness falls from 61/96 to 53/96. This is a single SFT run with shorter constrained traces and no matched control-data fine-tune, so it establishes a recipe result without isolating which part of the training data caused it.",
+    "headers": [
+      "Inkling, effort 0.6",
+      "Strict",
+      "Correct + valid\n+ compliant",
+      "Correct answers"
+    ],
+    "rows": [
+      [
+        "Base",
+        "3/96",
+        "2/96",
+        "61/96"
+      ],
+      [
+        "Rewrite SFT, epoch 2",
+        "18/96",
+        "8/96",
+        "53/96"
+      ]
+    ],
+    "caption": "One generation per item; original Astra deterministic subset; effort 0.6, temperature 1.0. Strict rule scoring allows meta discussion. Raw regrade and independent count aggregation; no new semantic-judge validation.",
+    "kicker": "LEARNING TO CONTROL THOUGHTS DIRECTLY"
+  },
+  {
+    "title": "What does Qwen learn from OPSD, then RL?",
+    "bullets": [
+      "OPSD matches a self-instructed teacher on student-generated continuations, without a compliance reward.",
+      "GRPO then rewards CoT compliance, with correctness weighting and a length penalty."
+    ],
+    "notes": "For Qwen3.8-27B, on-policy self-distillation scores student-generated continuations under the same base model given a constraint-specific self-instruction prefill. The reverse-KL objective trains the sampled continuation, including reasoning, without using a compliance reward during distillation. We then apply GRPO to the selected OPSD checkpoint using CoT-rule rewards, correctness weighting, and a base-relative length penalty. On 96 deterministic Astra items, raw strict compliance rises from 0/96 to 20/96 after OPSD and 51/96 after GRPO, while correct, valid, and compliant responses rise from 0/96 to 6/96 to 26/96. Four OPSD rule passes lack valid completions, sampled passes include degenerate traces, and the selected single-run checkpoints have shorter reasoning and lower answer accuracy than base.",
+    "headers": [
+      "Qwen3.8-27B",
+      "Strict",
+      "Correct + valid\n+ compliant",
+      "Correct answers"
+    ],
+    "rows": [
+      [
+        "Base",
+        "0/96",
+        "0/96",
+        "57/96"
+      ],
+      [
+        "OPSD, step 30",
+        "20/96",
+        "6/96",
+        "48/96"
+      ],
+      [
+        "OPSD + GRPO, 30 RL steps",
+        "51/96",
+        "26/96",
+        "50/96"
+      ]
+    ],
+    "caption": "One generation per item; original Astra deterministic subset; temperature 1.0, top-p 0.95, 25k cap, thinking wording, no evaluation prefill. OPSD s30 was selected after evaluating multiple checkpoints. Four OPSD raw passes fail completion checks, leaving 16/96 completed strict passes.",
+    "kicker": "LEARNING TO CONTROL THOUGHTS DIRECTLY"
+  },
+  {
+    "title": "Could shorter answers explain output-control transfer?",
+    "kicker": "TRAINING COT CONTROL TEACHES OUTPUT CONTROL",
+    "headers": [
+      "GPT-OSS training",
+      "Strict output\ncompliance",
+      "Strict + >5 words\n(same denominator)",
+      "Median output\nwords"
+    ],
+    "rows": [
+      [
+        "Base",
+        "44.3%",
+        "44.1%",
+        "144"
+      ],
+      [
+        "Six CoT rules",
+        "80.6%",
+        "80.6%",
+        "137.5"
+      ],
+      [
+        "Language, s40",
+        "49.2%",
+        "48.0%",
+        "143"
+      ],
+      [
+        "Token budget",
+        "59.3%",
+        "58.9%",
+        "89"
+      ]
+    ],
+    "bullets": [
+      "Six-rule and language models have similar median output lengths to base; the token-budget model is shorter.",
+      "Requiring more than five words leaves most of the gain intact. This does not control for the full length distribution."
+    ],
+    "notes": "The output-control evaluation forces the analysis channel empty, asks for an answer and explanation, and applies the rule to the entire visible response. All four arms use the same 480 items, with repeated samples averaged within each item. The >5-word check keeps every item in the denominator and counts short responses as failures; it therefore tests whether very short outputs account for the observed gains. The six-rule improvement is 36.3 percentage points, with a paired 95% question-cluster bootstrap interval of 32.8 to 39.8 points. This does not isolate channel-specific learning because training updated the full generated sequence and included final-answer feedback.",
+    "caption": "480 matched items; 413 question clusters; meta discussion allowed; answer correctness is not required. Checkpoints and source data match the main output-control draft."
+  },
+  {
+    "title": "Does compliance preserve correct answers?",
+    "kicker": "QWEN AND INKLING CONTROLLERS",
+    "headers": [
+      "Model / effort",
+      "Strict",
+      "Correct + valid\n+ compliant",
+      "Correct answers"
+    ],
+    "rows": [
+      [
+        "Qwen \u00b7 base",
+        "0/96",
+        "0/96",
+        "57/96"
+      ],
+      [
+        "Qwen \u00b7 OPSD + RL",
+        "51/96",
+        "26/96",
+        "50/96"
+      ],
+      [
+        "Inkling 0.6 \u00b7 base",
+        "3/96",
+        "2/96",
+        "61/96"
+      ],
+      [
+        "Inkling 0.6 \u00b7 SFT + RL",
+        "74/96",
+        "41/96",
+        "49/96"
+      ],
+      [
+        "Inkling 0.9 \u00b7 base",
+        "0/96",
+        "0/96",
+        "63/96"
+      ],
+      [
+        "Inkling 0.9 \u00b7 SFT + RL",
+        "48/96",
+        "30/96",
+        "59/96"
+      ]
+    ],
+    "bullets": [
+      "Joint success rises, while answer accuracy under a constraint falls.",
+      "Inkling\u2019s higher thinking effort trades some compliance for higher answer accuracy."
+    ],
+    "notes": "These are the same 96 deterministic Astra items, with one generation per item. Joint success requires strict compliance, a nonempty closed thinking block, no length truncation, a parseable final answer, and the saved correct answer. Syntactic validity and a correct answer do not establish that the text contains substantive reasoning: sampled OPSD passes include \u201csolve.\u201d and repeated meows. Inkling s80 uses effort 0.6 on the main slide; the matched 0.9 comparison is included here to expose the effort dependence. Checkpoints were evaluated during recipe development, and these results do not measure variation across training seeds.",
+    "caption": "Raw deterministic regrade and independent final-answer extraction. All cells retain invalid or failed generations in the denominator."
+  },
+  {
+    "title": "How much of DeepSeek\u2019s evaluation was held out?",
+    "kicker": "DEEPSEEK REWRITE SFT",
+    "headers": [
+      "Check",
+      "What the audit establishes"
+    ],
+    "rows": [
+      [
+        "Instruction families",
+        "Happy and French absent from both RL and SFT"
+      ],
+      [
+        "SFT question exposure",
+        "0 of 60 eval questions in actual SFT examples"
+      ],
+      [
+        "Earlier RL pool",
+        "1 of 60 eval questions in the eligible RL pool"
+      ],
+      [
+        "Exclude that question",
+        "Sad 47/59; story 27/59; happy 46/59; French 16/59"
+      ]
+    ],
+    "bullets": [
+      "The style transfer survives excluding the known overlapping question.",
+      "This is an exact-text overlap audit; near-duplicates and actual earlier RL sampling remain unchecked."
+    ],
+    "notes": "The comparison starts from an already RL-trained DeepSeek controller, so a style must be absent from both stages to count as untrained. Happy and French satisfy that check; pirate, misdirect, answer-hiding, and ignore-question already appeared in preceding RL prompts. The dedicated 60-problem evaluation shares no question with the actual rewrite-SFT examples, but one Philena/Nathan problem is a punctuation-normalized duplicate in the eligible RL pool. All four highlighted before-SFT pass counts remain zero after excluding it, and all four after-SFT numerators are unchanged. The broader Astra and original transfer sets have more overlap for this DeepSeek lineage, so the main slide uses the dedicated evaluation.",
+    "caption": "Question overlap: normalized-text audit and actual SFT exposure check. RL pool membership does not prove that the question was sampled into an update."
+  },
+  {
+    "title": "Where does DeepSeek succeed, and what does it cost?",
+    "kicker": "DEEPSEEK REWRITE SFT",
+    "headers": [
+      "Request",
+      "Passes\nbefore \u2192 after",
+      "Correct + passing\nafter",
+      "Correct answers\nbefore \u2192 after"
+    ],
+    "rows": [
+      [
+        "Sad",
+        "0 \u2192 47",
+        "34",
+        "50 \u2192 38"
+      ],
+      [
+        "Cover story",
+        "0 \u2192 27",
+        "15",
+        "52 \u2192 27"
+      ],
+      [
+        "Happy",
+        "0 \u2192 46",
+        "31",
+        "49 \u2192 38"
+      ],
+      [
+        "French",
+        "0 \u2192 16",
+        "13",
+        "51 \u2192 36"
+      ],
+      [
+        "Misdirect",
+        "0 \u2192 0",
+        "0",
+        "46 \u2192 47"
+      ],
+      [
+        "Answer hiding",
+        "0 \u2192 0",
+        "0",
+        "50 \u2192 42"
+      ]
+    ],
+    "bullets": [
+      "Misdirect and answer hiding still have zero passes.",
+      "No-request accuracy: 50/60 \u2192 44/60. Semantic judge calibration remains incomplete."
+    ],
+    "notes": "Every displayed row uses 60 matched problems; pass requires format validity, no truncation, strict compliance, attempted solving, and no meta discussion. Accuracy and the joint correct-and-passing metric are shown separately. The semantic strict-compliance threshold is 10/10, and the labels come from the stored DeepSeek judge; recounting them validates arithmetic rather than judge correctness. Thirty random before/after records were sampled for excerpt review, including positive and negative pass labels, but this is not full-trace independent semantic calibration. The complete recorded control table follows.\n\nalternating_case: N=60, passes 0\u21923, correct 50\u219239, joint after=3\nanswer_hiding: N=60, passes 0\u21920, correct 50\u219242, joint after=0\ncover_story: N=60, passes 0\u219227, correct 52\u219227, joint after=15\nfrench: N=60, passes 0\u219216, correct 51\u219236, joint after=13\nhappy: N=60, passes 0\u219246, correct 49\u219238, joint after=31\nignore_question: N=60, passes 0\u219232, correct 47\u219226, joint after=10\nmax_words: N=60, passes 3\u219234, correct 48\u219231, joint after=17\nmisdirect: N=60, passes 0\u21920, correct 46\u219247, joint after=0\nno_backtracking: N=60, passes 1\u219226, correct 50\u219234, joint after=14\npirate: N=60, passes 0\u21922, correct 48\u219246, joint after=2\nsad: N=60, passes 0\u219247, correct 50\u219238, joint after=34\nshorthand: N=60, passes 0\u21924, correct 48\u219231, joint after=3\nword_suppression: N=59, passes 11\u219224, correct 47\u219245, joint after=22",
+    "caption": "All displayed cells are counts out of 60. A pass does not require a correct final answer. Full style table and sources are in speaker notes and the audit files."
+  }
+]

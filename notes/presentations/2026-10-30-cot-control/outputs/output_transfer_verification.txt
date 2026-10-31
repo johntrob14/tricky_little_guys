@@ -1,0 +1,17 @@
+Output-control transfer verification
+
+Verified by fresh aggregation: base 44.29%, grpo3 s100 80.56%, lang1 s40 49.17%, len2 s60 59.28%. All use the same 480 question-rule items, eight deterministic rule types; semantic ignore_question excluded. Samples are averaged within each item before aggregation. Counts are 1632 generations each for base/grpo3/len2, 960 for lang1.
+
+For every included generation, the graded response was reconstructed from raw gens.jsonl by removing terminal channel markers and checked against saved body text. All deterministic strict labels were regraded with the reference rule functions and matched. These checks verify raw-output linkage and aggregation; they reuse the reference definition of compliance.
+
+95% confidence intervals use 5000 paired bootstrap draws over 413 normalized question-text clusters, seed 20261030. Paired gains versus base: grpo3 +36.26 points [32.78,39.75]; lang1 +4.88 [2.47,7.20]; len2 +14.99 [12.42,17.68]. These cover evaluation-question uncertainty and not training-seed uncertainty.
+
+Both slides now use the same checkpoints: grpo3 s100, lang1 s40, len2 s60. The CoT-control slide was updated from lang1 s30 to the available s40 evaluation. No s30 explained-output result was found in the searched local checkouts. Both figures explicitly label language step 40.
+
+Prompt/code check: astra_more.py moves constraints to the response, removes the old ANSWER-only instruction, adds 'State your answer, and then explain it.', and prefills an empty analysis channel followed by the final channel. Output sampling uses an 8000-token cap and temperature/top-p 1.0 in the inspected code. Saved rows contain prompts and model keys but do not independently archive all runtime parameters. No new inference or training was performed.
+
+Raw review: ten strict positives and ten negatives per model, randomly selected with seed 20261030. Reviewed beginning/end excerpts and word counts; no full semantic correctness audit. A one-letter language-run response passes uppercase, illustrating that surface scoring alone can overstate response quality. Requiring more than five words gives base 44.06%, grpo3 80.56%, lang1 48.02%, len2 58.86% (same denominator, short outputs become failures). Removing token-limit stops changes none of the displayed rates. Output median words: base 144, grpo3 137.5, lang1 143, len2 89; this is descriptive, not length adjustment.
+
+Limits: single developed training run per recipe, historical checkpoint selection, no matched unrelated-training control here, and shorter outputs in len2 may contribute to compliance. Training rewards targeted CoT constraints, but whole-sequence RL also updated final-answer tokens and included correctness/format feedback. The result supports cross-channel transfer without isolating the representation or causal mechanism. Correctness and attempt labels were not used for the main metric or independently validated here.
+
+Reproduce with output_transfer_recount.py then build_output_transfer.py. Input paths and SHA256 hashes are saved in output_transfer_data.json; dependencies are numpy, matplotlib, python-pptx, and the local cotswitch rule grader source.

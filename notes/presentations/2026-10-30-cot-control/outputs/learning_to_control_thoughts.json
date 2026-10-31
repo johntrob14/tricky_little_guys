@@ -1,0 +1,76 @@
+[
+  {
+    "title": "Learning to Control Thoughts Directly",
+    "bullets": [
+      "We apply GRPO directly to the CoT: six lexical/formatting rules, a requested language, or a token budget.",
+      "Language and token-budget objectives also improve broader CoT instruction following, suggesting that control can develop under ordinary reasoning training."
+    ],
+    "notes": "We trained GPT-OSS-120B with reasoning enabled using three separate GRPO recipes starting from the base model. The six-rule recipe rewards lexical and formatting constraints inside the CoT, weights that reward by answer correctness, and penalizes deviations from base reasoning length. The language recipe rewards French, Spanish, or German reasoning with correctness and length terms, while the token-budget recipe rewards closeness to a requested reasoning length with correctness weighting. On the same 480 CoT-control items, strict compliance is 3.5% for base, 66.9% after six-rule training, 26.5% after language training, and 12.4% after token-budget training. These developed recipes demonstrate substantial changes in surface control, while single training runs, shorter reasoning in some arms, and lower constrained answer accuracy limit stronger causal or capability-preservation claims.",
+    "caption": "GPT-OSS-120B; same 480 question\u2013rule items across eight deterministic rule types, with meta discussion allowed. Bars average samples within each item, then weight items equally. Error bars: 95% question-cluster bootstrap confidence intervals (413 question clusters, 5,000 draws, seed 20261030); evaluation uncertainty only, one training run per recipe. Base/grpo3/len2: 1,536 generations each; lang1-s40: 960. Checkpoints: grpo3 s100, lang1 s40, len2 s60. The metric does not require a correct answer; excluding incomplete generations leaves these four rates unchanged under the saved completion checks.",
+    "figure": true
+  },
+  {
+    "title": "Backup: rewrite SFT teaches CoT constraints",
+    "bullets": [
+      "Rewrite the model\u2019s own reasoning into requested styles, then train on those traces and final answers alongside plain examples.",
+      "This provides explicit examples of compliant reasoning; correct-and-compliant counts help distinguish useful control from surface success."
+    ],
+    "notes": "For Inkling-Small, we fine-tuned the base model for two epochs on 384 examples containing rewritten or transformed reasoning and plain traces. The completion-only supervised loss trains both the native thinking message and the final answer. At matched thinking effort 0.6 on 96 deterministic Astra items, strict CoT compliance rises from 3/96 to 18/96. Correct, valid, and compliant responses rise from 2/96 to 8/96, while answer correctness falls from 61/96 to 53/96. This is a single SFT run with shorter constrained traces and no matched control-data fine-tune, so it establishes a recipe result without isolating which part of the training data caused it.",
+    "headers": [
+      "Inkling-Small",
+      "Strict CoT passes",
+      "Correct + valid + compliant",
+      "Correct answers"
+    ],
+    "rows": [
+      [
+        "Base",
+        "3/96",
+        "2/96",
+        "61/96"
+      ],
+      [
+        "Rewrite SFT, epoch 2",
+        "18/96",
+        "8/96",
+        "53/96"
+      ]
+    ],
+    "caption": "One generation per item; original Astra deterministic subset; effort 0.6, temperature 1.0. Strict rule scoring allows meta discussion. Raw regrade and independent count aggregation; no new semantic-judge validation."
+  },
+  {
+    "title": "Backup: self-distillation, then direct RL",
+    "bullets": [
+      "OPSD trains a plain-prompted Qwen student to match the same base model given a constraint-specific self-instruction prefill.",
+      "Subsequent GRPO adds explicit CoT-compliance reward; the joint metric checks whether compliant traces also yield valid, correct answers."
+    ],
+    "notes": "For Qwen3.8-27B, on-policy self-distillation scores student-generated continuations under the same base model given a constraint-specific self-instruction prefill. The reverse-KL objective trains the sampled continuation, including reasoning, without using a compliance reward during distillation. We then apply GRPO to the selected OPSD checkpoint using CoT-rule rewards, correctness weighting, and a base-relative length penalty. On 96 deterministic Astra items, raw strict compliance rises from 0/96 to 20/96 after OPSD and 51/96 after GRPO, while correct, valid, and compliant responses rise from 0/96 to 6/96 to 26/96. Four OPSD rule passes lack valid completions, sampled passes include degenerate traces, and the selected single-run checkpoints have shorter reasoning and lower answer accuracy than base.",
+    "headers": [
+      "Qwen3.8-27B",
+      "Strict CoT passes",
+      "Correct + valid + compliant",
+      "Correct answers"
+    ],
+    "rows": [
+      [
+        "Base",
+        "0/96",
+        "0/96",
+        "57/96"
+      ],
+      [
+        "OPSD, step 30",
+        "20/96",
+        "6/96",
+        "48/96"
+      ],
+      [
+        "OPSD + GRPO, 30 RL steps",
+        "51/96",
+        "26/96",
+        "50/96"
+      ]
+    ],
+    "caption": "One generation per item; original Astra deterministic subset; temperature 1.0, top-p 0.95, 25k cap, thinking wording, no evaluation prefill. OPSD s30 was selected after evaluating multiple checkpoints. Four OPSD raw passes fail completion checks, leaving 16/96 completed strict passes."
+  }
+]

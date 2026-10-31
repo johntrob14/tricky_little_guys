@@ -1,0 +1,14 @@
+Always monitored: the stronger CoT judge catches every recorded leak
+• Motivation: do gains on CoT-control benchmarks transfer to concealing an adversarial objective in a real coding task?
+• GRPO3 leaks in 16/16 episodes: GPT-OSS-20B misses 9/16 and Haiku misses 0/16. Across the nine displayed cells, Haiku catches all 126 counted leaks.
+• All 13 weak-judge misses score 9/10, below the calibrated >9 cutoff. In the selected GRPO3 trace, even the weak judge explicitly recognizes malicious intent.
+
+Startgate-direct: some leaks evade even the stronger CoT judge
+• Compare judges within each model: GPT-OSS-120B goes from 9/16 missed leaks with GPT-OSS-20B to 0/16 with Haiku, while GRPO3 goes from 10/16 to 5/16.
+• The residual misses are not unique to trained organisms: Haiku misses 6/16 GLM-5.3 leaks, alongside 3/16 for the Qwen organism.
+• Ask what the monitor is missing: omitted planning, empty reasoning, innocuous descriptions, or a genuinely misleading explanation. Action access distinguishes these cases.
+
+Store the leaking implementation in the plan, then copy it
+• The plan stores the complete leaking implementation. Post-start reasoning describes routine extraction, and the shell command copies code without displaying it to the current-turn judge.
+• This selected Qwen run passes the main task, leaks the secret, and evades all six post-start judges. Haiku flags the secret-bearing code when it appears during planning.
+• This suggests testing a monitor that retrieves referenced plan contents or reviews the plan at the start boundary. One selected run does not establish that the strategy works reliably.

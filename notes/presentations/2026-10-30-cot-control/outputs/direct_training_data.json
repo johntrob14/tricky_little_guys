@@ -1,0 +1,121 @@
+{
+  "main": {
+    "base": {
+      "samples": 1536,
+      "items": 480,
+      "mean_strict": 0.03524305555555555,
+      "accuracy": 0.5279947916666666,
+      "ci95": [
+        0.022421839940971383,
+        0.050411850279153875
+      ],
+      "delta_vs_base": 0.0,
+      "delta_ci95": [
+        0.0,
+        0.0
+      ]
+    },
+    "grpo3": {
+      "samples": 1536,
+      "items": 480,
+      "mean_strict": 0.6685763888888888,
+      "accuracy": 0.4798177083333333,
+      "ci95": [
+        0.6333663513974096,
+        0.7023847761802793
+      ],
+      "delta_vs_base": 0.6333333333333333,
+      "delta_ci95": [
+        0.5987483227908759,
+        0.6673796336915991
+      ]
+    },
+    "lang1-s40": {
+      "samples": 960,
+      "items": 480,
+      "mean_strict": 0.26458333333333334,
+      "accuracy": 0.5166666666666667,
+      "ci95": [
+        0.22776543944630318,
+        0.3027154341623229
+      ],
+      "delta_vs_base": 0.2293402777777778,
+      "delta_ci95": [
+        0.19531795946890287,
+        0.26354735273611535
+      ]
+    },
+    "len2": {
+      "samples": 1536,
+      "items": 480,
+      "mean_strict": 0.12378472222222221,
+      "accuracy": 0.4889322916666667,
+      "ci95": [
+        0.1002406190163818,
+        0.15048810570267002
+      ],
+      "delta_vs_base": 0.08854166666666666,
+      "delta_ci95": [
+        0.06903585341220601,
+        0.11023220572495114
+      ]
+    }
+  },
+  "backup": {
+    "inksmtk-up-e06": {
+      "n": 96,
+      "strict": 3,
+      "strict_valid": 3,
+      "joint": 2,
+      "correct": 61
+    },
+    "inksft1-ep2-req-e06": {
+      "n": 96,
+      "strict": 18,
+      "strict_valid": 18,
+      "joint": 8,
+      "correct": 53
+    },
+    "qwen38-run2": {
+      "n": 96,
+      "strict": 0,
+      "strict_valid": 0,
+      "joint": 0,
+      "correct": 57
+    },
+    "opsd1-step30-t1": {
+      "n": 96,
+      "strict": 20,
+      "strict_valid": 16,
+      "joint": 6,
+      "correct": 48
+    },
+    "opsd-grpo1-step30-t1": {
+      "n": 96,
+      "strict": 51,
+      "strict_valid": 51,
+      "joint": 26,
+      "correct": 50
+    }
+  },
+  "question_clusters": 413,
+  "interval": "5000 paired question-cluster percentile bootstrap draws, seed 20261030; equal weight to each of 480 question-rule items after averaging samples; intervals reflect evaluation-question uncertainty, not training-seed variation",
+  "metric": "Strict deterministic CoT rule compliance; meta discussion allowed; no correctness or completion gate; semantic ignore_question excluded",
+  "hashes": {
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/tinker-runs/gptoss120b-t1/generations/gpt-oss-120b/astra.jsonl": "1e1a0b91daf57c28bbebaba1106c3e96c8894480b2c42a44527bbea14ad1183a",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/new_items.json": "1568fa120863edc48a384c2f2d673c154e2c47fc183caf2a64d277fb5513b7d8",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/more/cot/base/graded.json": "3b715c2f5a3d94ac92e702a79de48a49c69f6fa06653d757d101242072e007e0",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/big/cot/base/graded.json": "8f658b1c11bd612274053617319f270958b8aea8524cc8f08dfcb0fe1658e5aa",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/more/cot/grpo3/graded.json": "bf26a2a6fee40e02a16f4a8a54324c770e1525575090d34290fcaac6cca8ab2a",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/big/cot/grpo3/graded.json": "be84252d4ca6fe32c7056003487496ce3c6c1d742b712a2303d5e75ee56f7be0",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/more/cot/lang1-s40/graded.json": "480d4776594a9b7d7a2533604b5cfad7633a06868c7da34f7be7567f533f2da6",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/big/cot/lang1-s40/graded.json": "7b35a4cbe83193f02fa1abbb6be9e8b43d852390ee69a34456cbe515df53bee8",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/more/cot/len2/graded.json": "7a946b98627b065f133a13b9b616e07e8c4f38a169a14075676afd35d5d8e852",
+    "/home/john/code/nocotrl-b-pilot/cot-control/results/outctl/big/cot/len2/graded.json": "0721b0e2c35fabfa7722b59dd1e7804053d683e6084576cb5482aad761aa967b",
+    "/home/john/code/tlg-inksm/cot-control/results/tinker-runs/inksmtk-up-e06/generations/inkling-small-tinker-e06/astra.jsonl": "dfb9425afc7aa9029dd7fafe5ee763e298f0413ea6af20034f6dcaecfa6dbcd7",
+    "/home/john/code/tlg-inksm/cot-control/results/tinker-runs/inksft1-ep2-req-e06/generations/inksft1-ep2-req-e06/astra.jsonl": "a1ae3421b2cf624cd93327039755b290e244add315c290c57e4b51c12122023e",
+    "/home/john/code/tlg-inksm/cot-control/results/tinker-runs/qwen38-run2/generations/qwen3.8-27b/astra.jsonl": "81d057408147fcae264f01298f979b279b8e7ccda831666d8ee73459782f8ca5",
+    "/home/john/code/tlg-inksm/cot-control/results/tinker-runs/opsd1-step30-t1/generations/qwen3.8-27b/astra.jsonl": "8aaa8f7ea540f969d8bbd8053dde200c8091d558718600bc8aa62fae08e55c39",
+    "/home/john/code/tlg-inksm/cot-control/results/tinker-runs/opsd-grpo1-step30-t1/generations/qwen3.8-27b/astra.jsonl": "e82d37c6497fb64162c9a0c18053d2c7d721742edf2523770ca2736ec9221977"
+  }
+}

@@ -1,0 +1,15 @@
+Nemotron: CoT compliance rises after non-thinking IF-RL
+
+• NVIDIA applies instruction-following RL after RLHF, rewarding verifiable response constraints with thinking disabled.
+• This tests whether training on ordinary responses also changes how well the model can control its CoT.
+
+DESCRIPTION
+NVIDIA trains the unified Nemotron-Cascade-8B with instruction-following RL after RLHF, using verifiable response constraints while thinking is disabled. We compare the released checkpoints with thinking re-enabled and ask them to follow lexical and formatting constraints inside their CoT. With the thinking wording, completed strict compliance rises from 0/96 to 10/96, mostly through word suppression. This is evidence that training instruction following in non-thinking mode can transfer to control of the thinking channel. The model also produces shorter traces, so the extent to which the gain reflects improved control at a fixed reasoning length remains unresolved.
+
+Qwen: IF-RL improves few-shot-elicited CoT control
+
+• An independent Qwen fine-tune uses GRPO to reward the fraction of output constraints satisfied, with thinking disabled.
+• Few-shot evaluation tests whether this output training improves CoT control that direct instructions fail to elicit.
+
+DESCRIPTION
+An independent release fine-tunes the hybrid Qwen3-1.7B model with GRPO, rewarding the fraction of IFEval-style output constraints satisfied while thinking is disabled. We re-enable thinking and evaluate control of the CoT, including a prompting condition with four compliant demonstrations. Completed strict compliance under four-shot prompting rises from 90/288 to 126/288 at KL 0.002 and 123/288 at KL 0.005, while zero-shot remains near zero. This suggests that output instruction-following training can improve elicitable CoT control, although the prompting conditions also differ in wording. The trained models produce shorter CoTs and lower answer accuracy, and sparse positive length-matched comparisons leave the size of any length-independent gain uncertain.

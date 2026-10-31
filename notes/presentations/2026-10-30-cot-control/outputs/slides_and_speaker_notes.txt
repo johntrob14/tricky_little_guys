@@ -1,0 +1,111 @@
+SLIDE 1: Nemotron: CoT compliance rises after non-thinking IF-RL
+• NVIDIA applies instruction-following RL after RLHF, rewarding verifiable response constraints with thinking disabled.
+• This tests whether training on ordinary responses also changes how well the model can control its CoT.
+
+PRESENTATION NOTES
+NVIDIA trains the unified Nemotron-Cascade-8B with instruction-following RL after RLHF, using verifiable response constraints while thinking is disabled. We compare the released checkpoints with thinking re-enabled and ask them to follow lexical and formatting constraints inside their CoT. With the thinking wording, completed strict compliance rises from 0/96 to 10/96, mostly through word suppression. This is evidence that training instruction following in non-thinking mode can transfer to control of the thinking channel. The model also produces shorter traces, so the extent to which the gain reflects improved control at a fixed reasoning length remains unresolved.
+
+FIGURE CAPTION
+Thinking wording only: completed-CoT strict compliance on 96 rule items per checkpoint, with one generation per item and no demonstrations. Empty thoughts, unclosed blocks, missing final responses and token-limit stops count as failures. Nemotron uses a 0–15% axis; Qwen uses 0–50%.
+
+SOURCES
+https://arxiv.org/html/2512.13607v1#S4.SS4.SSS2
+https://github.com/johntrob14/tricky_little_guys/tree/ad0351767b5f1a6f7799bcd120a89ee5caa84bbd/cot-control/results/public-ifrl
+
+
+SLIDE 2: Qwen: IF-RL improves few-shot-elicited CoT control
+• An independent Qwen fine-tune uses GRPO to reward the fraction of output constraints satisfied, with thinking disabled.
+• Few-shot evaluation tests whether this output training improves CoT control that direct instructions fail to elicit.
+
+PRESENTATION NOTES
+An independent release fine-tunes the hybrid Qwen3-1.7B model with GRPO, rewarding the fraction of IFEval-style output constraints satisfied while thinking is disabled. We re-enable thinking and evaluate control of the CoT, including a prompting condition with four compliant demonstrations. Completed strict compliance under four-shot prompting rises from 90/288 to 126/288 at KL 0.002 and 123/288 at KL 0.005, while zero-shot remains near zero. This suggests that output instruction-following training can improve elicitable CoT control, although the prompting conditions also differ in wording. The trained models produce shorter CoTs and lower answer accuracy, and sparse positive length-matched comparisons leave the size of any length-independent gain uncertain.
+
+FIGURE CAPTION
+Completed-CoT strict compliance on 96 rule items × 3 decoding seeds = 288 samples per bar. All failed generations remain in the denominator. Final checkpoints are step 364; two lower-KL arms are shown, with all evaluated checkpoints in backup. Error bars are omitted; these are observed sample rates from single training runs.
+
+SOURCES
+https://huggingface.co/just1nseo/qwen3-1.7b-if-rlvr-klabl-kl0p01
+https://github.com/johntrob14/tricky_little_guys/tree/ad0351767b5f1a6f7799bcd120a89ee5caa84bbd/cot-control/results/public-ifrl
+
+
+SLIDE 3: Nemotron: setup and which rules improve
+• NVIDIA’s unified Cascade-8B receives non-thinking IFRL after RLHF; we evaluate both checkpoints with thinking enabled.
+• Completed strict gains are concentrated in word suppression, with one additional meow-insertion success.
+
+PRESENTATION NOTES
+We compare NVIDIA’s released RLHF and IFRL checkpoints using identical rendered prompts and the shared official template. Each checkpoint receives 96 rule items under each of two wordings, with one sample per item, temperature 0.6 and a 25,000-token cap. Success requires the lexical rule to pass inside nonempty native reasoning, a closed thought block, a final response and no token-limit stop, with every failed generation retained in the denominator. Nine IFRL successes per wording involve word suppression, and the additional thinking-wording success contains a correct forward-price calculation with meow inserted between words. The metric excludes the separate ban on discussing the constraint, semantic reasoning quality and the twelve ignore-question items.
+
+BACKUP TABLE
+Rule | RLHF, either wording | IFRL: thinking | IFRL: reasoning stage
+Single-word suppression | 0/12 | 3/12 | 3/12
+Multiple-word suppression | 0/12 | 6/12 | 6/12
+Meow insertion | 0/12 | 1/12 | 0/12
+Other five rule types | 0/60 | 0/60 | 0/60
+Total | 0/96 | 10/96 | 9/96
+
+SOURCES
+https://arxiv.org/html/2512.13607v1#S4.SS4.SSS2
+https://github.com/johntrob14/tricky_little_guys/tree/ad0351767b5f1a6f7799bcd120a89ee5caa84bbd/cot-control/results/public-ifrl
+
+
+SLIDE 4: Nemotron: shortening and answer-format failures
+• Only 3 and 9 same-item pairs match within 10% of reasoning-token length, leaving shortening unresolved.
+• Recovering explicit answers from unclosed thoughts explains much of the measured accuracy drop.
+
+PRESENTATION NOTES
+IFRL produces substantially shorter outputs and more malformed thought blocks in this constrained evaluation. Completion gating removes five apparent strict successes under thinking wording and four under reasoning-stage wording, leaving ten and nine. Same-item completed traces within 10% of reasoning-token length retain only three and nine pairs, whose strict successes change from zero to zero and zero to one. Searching empty-final outputs for explicit answer lines recovers twelve and six correct answers, while those generations still fail the completion gate. With one released lineage and no matched control training or unconstrained capability baseline, these data leave both the length contribution and general capability effects unresolved.
+
+BACKUP TABLE
+Wording | Median output tokens
+before → after | Final-answer accuracy
+before → after | IFRL accuracy with
+answer recovery
+Thinking | 2,845 → 707.5 | 58/108 → 39/108 | 51/108
+Reasoning stage | 2,896 → 730.5 | 55/108 → 47/108 | 53/108
+
+SOURCES
+https://arxiv.org/html/2512.13607v1#S4.SS4.SSS2
+https://github.com/johntrob14/tricky_little_guys/tree/ad0351767b5f1a6f7799bcd120a89ee5caa84bbd/cot-control/results/public-ifrl
+
+
+SLIDE 5: Qwen: setup and the full checkpoint sweep
+• The external release trains Qwen3-1.7B with non-thinking GRPO; our evaluation re-enables thinking.
+• The two lower-KL final checkpoints show the largest four-shot gains, alongside shorter CoTs and lower accuracy.
+
+PRESENTATION NOTES
+The external model card specifies thinking-disabled GRPO with an IFEval-constraint reward, starting from the post-trained hybrid Qwen3-1.7B model. We evaluate eight checkpoints with identical prompts within each condition, using 96 rule items and three decoding seeds at temperature 1 with an 8,000-token cap. This table shows all four-shot checkpoints: strict success requires a completed native thought and final response, partial scores use the raw lexical metric, and accuracy and median length use all 324 generations including the twelve semantic items per seed. The KL 0.01 arm improves early and returns close to its starting strict score, while the two lower-KL finals retain larger gains. There is one training run per KL arm, and exact overlap with external training data remains unaudited.
+
+BACKUP TABLE
+Checkpoint | Completed / 288 | Strict % | Partial % | Accuracy % | CoT words
+Initial | 90 | 31.2 | 57.9 | 31.5 | 103.5
+KL 0.01 / 91 | 107 | 37.2 | 66.3 | 27.5 | 98.5
+KL 0.01 / 182 | 107 | 37.2 | 67.8 | 30.9 | 103.5
+KL 0.01 / 273 | 105 | 36.5 | 66.4 | 30.2 | 97.0
+KL 0.01 / 364 | 96 | 33.3 | 62.9 | 28.4 | 93.5
+KL 0.002 / 364 | 126 | 43.8 | 66.6 | 23.1 | 60.5
+KL 0.005 / 364 | 123 | 42.7 | 68.6 | 26.5 | 70.0
+KL 0.02 / 364 | 93 | 32.3 | 61.7 | 32.1 | 113.5
+
+SOURCES
+https://huggingface.co/just1nseo/qwen3-1.7b-if-rlvr-klabl-kl0p01
+https://github.com/johntrob14/tricky_little_guys/tree/ad0351767b5f1a6f7799bcd120a89ee5caa84bbd/cot-control/results/public-ifrl
+
+
+SLIDE 6: Qwen: elicitation and length-matched checks
+• Four-shot gains remain positive within sparse length overlap; KL 0.002 retains 48/288 pairs with exact P = 0.125.
+• Zero-shot stays near zero, and its wording also differs from four-shot; attainable control capacity remains unresolved.
+
+PRESENTATION NOTES
+Four-shot prompts contain compliant prior thinking blocks, and the evaluated turn receives no reasoning-body prefill. Before/after comparisons keep each prompting package fixed, but zero-shot uses reasoning-stage wording while four-shot uses thinking wording, and adding stacked instructions performs worse in the highlighted checkpoints. The length analysis matches completed traces of at least twenty words within the same item and prompt condition, allowing token lengths to differ by at most a factor of 1.10 and choosing pairs without using compliance outcomes. At KL 0.002, strict successes increase from nineteen to twenty-three among forty-eight matched pairs, and the table gives unadjusted exact item-level sign-flip tests for every final arm. Because length and completion are training outcomes and overlap is sparse, these comparisons remain descriptive, with control training and a clean elicitation curve needed to strengthen causal interpretation.
+
+BACKUP TABLE
+Final KL | Matched pairs | Before | After | Change (pp) | Exact P
+0.01 | 84 | 38/84 | 48/84 | +11.90 | 0.01758
+0.002 | 48 | 19/48 | 23/48 | +8.33 | 0.12500
+0.005 | 62 | 32/62 | 37/62 | +8.06 | 0.12500
+0.02 | 99 | 42/99 | 47/99 | +5.05 | 0.06250
+
+SOURCES
+https://huggingface.co/just1nseo/qwen3-1.7b-if-rlvr-klabl-kl0p01
+https://github.com/johntrob14/tricky_little_guys/tree/ad0351767b5f1a6f7799bcd120a89ee5caa84bbd/cot-control/results/public-ifrl
+

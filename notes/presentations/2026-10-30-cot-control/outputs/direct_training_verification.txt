@@ -1,0 +1,17 @@
+Verification: Learning to Control Thoughts Directly
+
+Verified: main figure's raw strict deterministic-rule scores independently recounted from stored generations/grades; every included row regraded with the reference rule grader and matched. Same 480 item keys in all four arms. Eight deterministic rule types, semantic ignore_question excluded. Equal item weights after averaging available samples. Baseline/grpo3/len2 have 1536 samples each; lang1 s40 has 960.
+
+95% confidence intervals use 5000 paired bootstrap draws over 413 clusters defined by normalized question text, seed 20261030. This preserves dependencies between rule items using the same question. Intervals cover evaluation-question uncertainty; they do not measure training-seed variation. Paired difference intervals are saved in direct_training_data.json.
+
+Main metric permits meta discussion and does not require answer correctness. Sensitivity: requiring nonempty reasoning, non-length finish, and a parsed final ANSWER line leaves all four displayed rates unchanged. Native parsing was not independently rebuilt. Requiring correctness as well gives base 2.45%, grpo3 34.32%, lang1 14.06%, len2 7.24% (same item weighting). These joint counts indicate why strict rule success is not equivalent to correct reasoning.
+
+Backups: fresh deterministic regrades and counts from 96-item original Astra subset. Inkling strict 3 to 18; joint 2 to 8; correctness 61 to 53. Qwen strict 0 to 20 to 51; joint 0 to 6 to 26; correctness 57 to 48 to 50. Four OPSD strict passes lack a valid completion. The Inkling SFT source file contains 384 examples. Training code and run diaries were inspected for SFT, OPSD, and the three main GRPO recipes.
+
+Seeded raw review: ten positives and ten negatives where available per main arm and backup condition; base Inkling has only three positives and base Qwen none. Reviewed beginning/end excerpts, not full semantic correctness of every long trace. OPSD positives include degenerate one-word and repeated-meow outputs; these are specifically disclosed in its speaker notes.
+
+Limits: single developed run per recipe; historical checkpoint selection; no matched control-data SFT for Inkling; different tasks/rewards between main recipes; shorter traces and lower constrained accuracy can contribute to observed changes. Prior audit found no exact question overlap for the relevant GPT-OSS/Qwen pools or Inkling SFT, but that overlap audit was not rerun here. This is a presentation of existing experiments, with no new model inference or training.
+
+Reproduce with direct_training_recount.py, then build_direct_training.py. Input SHA256 hashes and exact paths are in direct_training_data.json. Python dependencies: numpy, matplotlib, python-pptx, plus the local cotswitch rule-grading source imported by the recount script.
+
+Checkpoint alignment update: language uses step 40 on both slides. Fresh deterministic regrade: CoT strict 26.46%, 95% question-cluster bootstrap CI [22.78%, 30.27%]; 960 samples across 480 items. Ten seeded positive and ten negative s40 excerpts reviewed. The completion-gated rate is unchanged; correct-and-compliant rate is 14.06%.
