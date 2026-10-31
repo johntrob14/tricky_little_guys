@@ -1,0 +1,94 @@
+{
+  "title": "Generalization on new CoT control tasks",
+  "bullets": [
+    "Rewarding a reasoning language or token budget also teaches untrained CoT rules; learning six rules gives some transfer back to budget control.",
+    "Rewritten CoTs can teach styles absent from training, suggesting these recipes improve broader instruction following within reasoning."
+  ],
+  "notes": "We trained separate GPT-OSS organisms with GRPO on reasoning language, token budgets, or six lexical and formatting rules, and trained DeepSeek on rewritten CoTs after an earlier RL stage. Language and budget training raise strict compliance on untrained CoT-benchmark rules from 3.5% to 26.5% and 12.4%, respectively. In the reverse direction, six-rule training raises compliance with a 1,000-token request from 15.0% to 23.2%, while budget training reaches 34.2% despite using only 160, 310, and 650 tokens during training. DeepSeek rewrite SFT raises compliance with untrained French and happy reasoning from 0/60 to 16/60 and 46/60. These results support transfer beyond the trained constraints, with uneven gains, task-specific scoring, single developed runs, and incompletely calibrated DeepSeek judges limiting the strength of the conclusion.",
+  "caption": "Left: GPT-OSS-120B, 480 matched question\u2013rule items across eight deterministic CoT rules, 413 question clusters; neither language nor budget training used these rule objectives. One item is weighted equally after averaging its samples (base and len2: 1,536 generations each; lang1: 960). Middle: 150 held-out MMLU-Pro history questions \u00d7 four samples; compliance means CoT length within \u00b125% of the requested 1,000 tokens. This is a new target for budget RL and a new explicit objective for six-rule RL; six-rule training did include a base-relative length penalty. Right: DeepSeek-V4.1-Flash, 60 questions per style, comparing obf2g-s25 with its rewrite-SFT continuation rwsft1-ep2 at effort 25; French and happy were absent from both stages\u2019 training objectives. Strict success uses recorded semantic judgments plus valid completion, attempted solution, and no meta discussion; final-answer correctness is not required. One of these 60 questions was in the earlier RL pool, none in the actual SFT examples; removing the known overlap leaves both success numerators unchanged. Error bars are 95% confidence intervals: question-cluster percentile bootstrap for GPT-OSS (5,000 draws for CoT rules; 10,000 for budgets), Wilson for DeepSeek, seed 20261030. Intervals reflect evaluation-item uncertainty, not variation across training seeds; heights across panels use different scoring criteria and should not be compared as task difficulty.",
+  "backups": [
+    {
+      "id": "gen_language",
+      "exemplar": "p1",
+      "title": "Does language control transfer to implicit requests?",
+      "kicker": "GENERALIZATION: LANGUAGE",
+      "headers": [
+        "French instruction",
+        "Base",
+        "Language RL",
+        "Majority French\nafter RL"
+      ],
+      "rows": [
+        [
+          "User: Respond\nin French",
+          "0/100",
+          "72/100",
+          "93/100"
+        ],
+        [
+          "System: Always\nrespond in French",
+          "0/100",
+          "76/100",
+          "99/100"
+        ]
+      ],
+      "bullets": [
+        "Training explicitly requested French, Spanish, or German reasoning; these test cues only request a French response.",
+        "The transfer is to a new instruction. French itself was a training language."
+      ],
+      "caption": "Base and Language RL columns: strict French CoT (\u226595% of classified spans; \u22653 spans). Last column: \u226550% French. Same 100 items, 96 question clusters; lang1 step 40.",
+      "notes": "The lang1 GRPO run trained GPT-OSS-120B for 40 steps on explicit requests for French, Spanish, or German reasoning, using correctness weighting and a length penalty. The evaluation strips the original CoT-rule instructions and answer-format requirement, then adds only \u201cRespond in French.\u201d in the user message or \u201cAlways respond in French.\u201d in a system message. The same stopword-based language detector gives strict French-CoT rates of 0/100 to 72/100 for the user cue and 0/100 to 76/100 for the system cue; majority-French rates are 93/100 and 99/100 after RL. This establishes transfer to implicit wording in a trained language, rather than an unseen-language result. The detector can misclassify multilingual technical terms, the metric does not gate on completion or correctness, and the evaluation is one developed training run.\n\n95% cluster-bootstrap intervals after RL: user 62.9\u201380.6%; system 67.0\u201384.0%; zero baseline uses a conservative Wilson boundary interval over 96 clusters, 0\u20133.8%.\nSources: results/outctl/respond_lang/rows_{base,lang1-s40}_noformat.jsonl and rl/controls.py in nocotrl-b-pilot/cot-control; outputs/generalization_data.json."
+    },
+    {
+      "id": "gen_budget",
+      "exemplar": "p4",
+      "title": "How far does token-budget control generalize?",
+      "kicker": "GENERALIZATION: TOKEN BUDGETS",
+      "headers": [
+        "Requested tokens",
+        "Base",
+        "Six-rule RL",
+        "Budget RL"
+      ],
+      "rows": [
+        [
+          "160",
+          "29.5%",
+          "31.8%",
+          "71.8%"
+        ],
+        [
+          "225 (new)",
+          "29.2%",
+          "32.2%",
+          "69.2%"
+        ],
+        [
+          "310",
+          "35.7%",
+          "36.0%",
+          "64.2%"
+        ],
+        [
+          "650",
+          "31.3%",
+          "34.2%",
+          "65.7%"
+        ],
+        [
+          "1000 (new)",
+          "15.0%",
+          "23.2%",
+          "34.2%"
+        ]
+      ],
+      "bullets": [
+        "Budget RL trained only on 160, 310, and 650 tokens. The new targets test interpolation and extrapolation.",
+        "Six-rule RL transfers modestly at 1,000 tokens; its other gains are small and uncertain."
+      ],
+      "caption": "Within \u00b125% of the requested length; 150 held-out history questions \u00d7 4 samples per cell. GPT-OSS-120B: grpo3 s100 and len2 s60. Correctness is separate.",
+      "notes": "The len2 run directly rewards closeness to a requested CoT length, with correctness weighting, and uses the wording \u201cThink for about {t} tokens before answering. Keep your final answer short.\u201d Training targets were 160, 310, and 650 tokens, so 225 is an unseen interpolation target and 1,000 is an unseen extrapolation target within the same task family. On 150 held-out MMLU-Pro history questions with four samples each, budget RL raises compliance from 29.2% to 69.2% at 225 tokens and from 15.0% to 34.2% at 1,000 tokens. Six-rule RL has no explicit budget-control objective but does have a base-relative length penalty; its 1,000-token gain is 8.2 percentage points with a paired 95% question-bootstrap interval of 3.7\u201312.7 points, while the intervals for gains at the other four targets include zero. This supports limited transfer between control objectives and stronger interpolation than extrapolation for budget training.\n\nAll cells use the same prompt template, temperature 1.0, top-p 1.0, 8k generation cap; no truncations. At 1,000 tokens, final-answer accuracy is 69.7% base, 66.7% six-rule RL, 67.7% budget RL. For 225 tokens, budget-RL improvement is 40.0 points (95% CI 34.5\u201345.7); at 1,000 it is 19.2 points (14.0\u201324.3). A separate \u201cOnly use 300 tokens\u201d condition is omitted because closeness to 300 is an unsuitable measure for an upper-bound instruction.\nSources: tlg-arena-rl/cot-control/results/length_eval/rows_slim.jsonl, rl/length_eval.py; nocotrl-b-pilot/cot-control/results/rl/len2/config.json; outputs/generalization_data.json."
+    }
+  ],
+  "status": "Scrapped as a main slide at user request; DeepSeek result retained in backup p6, language variants documented in gen_language speaker notes."
+}

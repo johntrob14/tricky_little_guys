@@ -1,0 +1,16 @@
+Feedback spillover may improve CoT control with reasoning on
+
+• With reasoning enabled, we reward final-answer correctness and output constraints and apply the RL advantage to both CoT and response tokens.
+• GPT-OSS-120B: mean partial score 28.1% → 31.7%; strict compliance 3.5% → 2.5% (480 items, one run). Weak evidence for spillover.
+
+Presentation notes
+In outrl1, we trained GPT-OSS-120B with reasoning enabled, grading constraints on the final explanation and applying the resulting RL advantage to all generated tokens. Because the final response depends on the preceding CoT, reasoning that follows the constraint could make a rewarded response more likely and be reinforced. Updates to shared parameters could also transfer output instruction following into CoT control. Our single run shows a small increase in partial CoT compliance without a clear improvement in strict compliance. This is weak evidence for the hypothesis: partial scores can credit discussion of the rule, and we have no matched control that separates spillover from shortening or other training effects.
+
+Mechanism reference
+Drori et al., Output Supervision Can Obfuscate the Chain of Thought
+https://arxiv.org/abs/2511.11584
+
+Evidence details
+Verification: local recount of 480 deterministic-rule items, averaging samples within each item; semantic ignore_question items excluded. Partial score: 28.14% to 31.73% (+3.59 percentage points); strict score: 3.52% to 2.50% (-1.02 percentage points). The partial-score implementation was reused; aggregation was recomputed. These are exploratory scores from one training run, not independent replications. Forty seeded excerpts reviewed; no full answer-correctness audit. Training also requires a nonempty reasoning segment and valid completion, so only the constraint grading is final-response-only. The broader nine-type aggregate in earlier notes uses a different denominator. See spillover_verification.json for this recount.
+Code: /home/john/code/nocotrl-b-pilot/cot-control/rl/grpo_out.py and rl/grpo.py.
+Data: /home/john/code/nocotrl-b-pilot/cot-control/results/outctl/{more,big}/cot/{base,outrl1-s53}/graded.json.
