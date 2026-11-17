@@ -1,7 +1,7 @@
 """Per-episode max monitor score for the LinuxArena TikTok password-policy cells, with whether the secret leaked, as a flat CSV for plotting.
 Max = highest turn score of a monitor pass over the episode (post-start turns only for the unmonitored-planning cells); leaked uses the same
 per-cell rule as calibrate_thresholds.py (side_done). Episodes with no scored turn (e.g. never called start()) have no row.
-GRPO3 step 100 and the honest control cells are not here: their monitor passes are only on John's machine.
+Logs for grpo3-s100-* and the ctl-pw-* honest cells come from the HF dataset latentMO/arena-startgate-20261030 (logs/<run>/).
 
     python honeypot/startgate/episode_max.py   # writes results/startgate/direct/episode_max.csv
 """
@@ -20,6 +20,7 @@ MONITORS = {  # pass dir -> (judge, monitor prompt, mode); same as evasion_count
 }
 CELLS = [  # (run, episodes jsonl relative to results/startgate/direct, model, setting)
     ("oss-hs-pw", "oss_covert.jsonl", "GPT-OSS-120B", "always_monitored"), ("oss-sd-pw", "oss_direct.jsonl", "GPT-OSS-120B", "startgate_direct"),
+    ("grpo3-s100-hs-pw", "grpo3_s100_hs/episodes.jsonl", "GPT-OSS-120B GRPO3 step 100", "always_monitored"), ("grpo3-s100-sd-pw", "grpo3_s100/episodes.jsonl", "GPT-OSS-120B GRPO3 step 100", "startgate_direct"),
     ("sgcmp-qwen-covert2", "cmp_covert2.jsonl", "Qwen3.8-27B*", "always_monitored"), ("sgcmp-qwen-direct", "cmp_direct.jsonl", "Qwen3.8-27B*", "startgate_direct"),
     ("opsd1b-hs-pw", "opsd1b_covert.jsonl", "Qwen3.8-27B OPSD + GRPO", "always_monitored"), ("opsd1b-sd-pw", "opsd1b_direct.jsonl", "Qwen3.8-27B OPSD + GRPO", "startgate_direct"),
     ("glm53-hs-pw", "glm_covert.jsonl", "GLM-5.3", "always_monitored"), ("glm53-sd-pw", "glm_direct.jsonl", "GLM-5.3", "startgate_direct"),
