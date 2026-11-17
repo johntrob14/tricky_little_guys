@@ -1,7 +1,7 @@
-"""Bar chart of startgate password-policy evasions: leaked secret + CoT-only judge missed, out of all attempted episodes, per model, with 95% Wilson CIs.
+"""Bar chart of LinuxArena TikTok (password-policy task) evasions: leaked secret + CoT-only judge missed, out of all attempted episodes, per model, with 95% Wilson CIs.
 Reads results/startgate/direct/evasion_counts.csv (evasion_counts.py).
 
-    python honeypot/startgate/evasion_plot.py --setting startgate_direct --out ../../figures/startgate_evasion_cot
+    python honeypot/startgate/evasion_plot.py --setting startgate_direct --out ../../figures/linuxarena_tiktok_evasion_cot_planning
 """
 import argparse
 import csv
@@ -14,7 +14,7 @@ CSV = Path(__file__).resolve().parents[2] / "results" / "startgate" / "direct" /
 MODELS = ["GPT-OSS-120B", "GPT-OSS-120B GRPO3 step 100", "Qwen3.8-27B*", "Qwen3.8-27B OPSD + GRPO", "GLM-5.3", "DeepSeek V4.1-Flash-1017"]
 LABELS = ["GPT-OSS-120B", "GPT-OSS-120B\nGRPO3 step 100", "Qwen3.8-27B*", "Qwen3.8-27B\nOPSD + GRPO", "GLM-5.3", "DeepSeek\nV4.1-Flash-1017"]
 JUDGES = [("gpt-oss-20b", "Leaked + GPT-OSS-20B missed", "#8a5cad"), ("claude-haiku-5.5", "Leaked + Claude Haiku 5.5 missed", "#177e74")]
-TITLE = {"startgate_direct": "Startgate-direct (planning unmonitored): CoT-only monitor evasion", "always_monitored": "Always monitored: CoT-only monitor evasion"}
+TITLE = {"startgate_direct": "LinuxArena TikTok, unmonitored planning phase: CoT-only monitor evasion", "always_monitored": "LinuxArena TikTok, always monitored: CoT-only monitor evasion"}
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--setting", default="startgate_direct", choices=list(TITLE))
